@@ -1,0 +1,169 @@
+import type { Server } from 'node:http';
+import path from 'node:path';
+import { formatError, globalSymbol } from '../misc';
+import {
+  createSidecarServer,
+  SIDECAR_HOST,
+  startSidecarServer,
+  type SidecarRouteHandler,
+} from './server';
+import {
+  createSourceUrl,
+  getPortFilePath,
+  getRoutePath,
+  normalizeSidecarRoutePath,
+} from './utils';
+
+const SIDECAR_SERVERS_KEY = globalSymbol('plugin.sidecar.servers');
+
+type SidecarGlobal = typeof globalThis & {
+  [SIDECAR_SERVERS_KEY]?: Map<string, SidecarServer>;
+};
+
+type SidecarServer = {
+  cacheDir: string;
+  handlers: Map<string, SidecarRouteHandler>;
+  projectDir: string;
+  port: number | null;
+  portFilePath: string;
+  routes: Map<string, string>;
+  server: Server;
+  startError: Error | null;
+  startPromise: Promise<void>;
+};
+
+export type SourcemapSidecar = {
+  cacheDir: string;
+  projectDir: string;
+  ensureStarted(): Promise<void>;
+  getRouteUrl(routePath: string): string;
+  getSourceUrl(filePath: string, relativePath?: string | null): string;
+  registerSource(filePath: string, routePath: string): string;
+  registerRoute(routePath: string, handler: SidecarRouteHandler): string;
+};
+
+export type SourcemapSidecarArgs = {
+  cacheDir: string;
+  projectDir: string;
+  routes?: Record<string, SidecarRouteHandler>;
+};
+
+export function getSourcemapSidecar(args: SourcemapSidecarArgs): SourcemapSidecar {
+  const normalizedProjectDir = path.resolve(args.projectDir);
+  const normalizedCacheDir = path.resolve(args.cacheDir);
+  const state = getOrCreateServer(normalizedProjectDir, normalizedCacheDir);
+
+  if (args.routes) {
+    for (const [routePath, handler] of Object.entries(args.routes)) {
+      state.handlers.set(normalizeSidecarRoutePath({ routePath }), handler);
+    }
+  }
+
+  return {
+    cacheDir: normalizedCacheDir,
+    projectDir: normalizedProjectDir,
+    ensureStarted() {
+      return state.startPromise;
+    },
+    getRouteUrl(routePath) {
+      return createSidecarSourceUrl(
+        state,
+        normalizeSidecarRoutePath({ routePath }),
+      );
+    },
+    getSourceUrl(filePath, relativePath) {
+      return createSidecarSourceUrl(
+        state,
+        getRoutePath({
+          filePath,
+          projectDir: normalizedProjectDir,
+          relativePath,
+        }),
+      );
+    },
+    registerSource(filePath, routePath) {
+      routePath = normalizeSidecarRoutePath({ routePath });
+
+      state.routes.set(routePath, path.resolve(filePath));
+
+      return createSidecarSourceUrl(state, routePath);
+    },
+    registerRoute(routePath, handler) {
+      routePath = normalizeSidecarRoutePath({ routePath });
+
+      state.handlers.set(routePath, handler);
+
+      return createSidecarSourceUrl(state, routePath);
+    },
+  };
+}
+
+function createSidecarSourceUrl(state: SidecarServer, routePath: string) {
+  if (state.startError) {
+    throw new Error(formatError(
+      `The sourcemap dev server could not start: ${state.startError.message}`,
+    ));
+  }
+
+  if (state.port === null) {
+    throw new Error(formatError(
+      'The sourcemap dev server is not ready yet. Try rebuilding after the dev server finishes starting.',
+    ));
+  }
+
+  return createSourceUrl({
+    host: SIDECAR_HOST,
+    port: state.port,
+    routePath,
+  });
+}
+
+function getOrCreateServer(projectDir: string, cacheDir: string) {
+  const servers = getSidecarServers();
+
+  const existing = servers.get(cacheDir);
+  if (existing) return existing;
+
+  const routes = new Map<string, string>();
+  const handlers = new Map<string, SidecarRouteHandler>();
+
+  const state: SidecarServer = {
+    cacheDir,
+    handlers,
+    projectDir,
+    port: null,
+    portFilePath: getPortFilePath({ cacheDir }),
+    routes,
+    server: createSidecarServer({ routes, handlers }),
+    startError: null,
+    startPromise: Promise.resolve(),
+  };
+
+  state.startPromise = startServer(state).catch((error: Error) => {
+    state.startError = error;
+    throw error;
+  });
+
+  state.startPromise.catch(() => {});
+  state.server.unref();
+  servers.set(cacheDir, state);
+
+  return state;
+}
+
+async function startServer(state: SidecarServer) {
+  state.port = await startSidecarServer({
+    host: SIDECAR_HOST,
+    portFilePath: state.portFilePath,
+    server: state.server,
+  });
+}
+
+function getSidecarServers() {
+  const global = globalThis as SidecarGlobal;
+  const key = SIDECAR_SERVERS_KEY;
+
+  if (!global[key]) global[key] = new Map();
+
+  return global[key];
+}

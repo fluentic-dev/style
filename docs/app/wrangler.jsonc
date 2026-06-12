@@ -1,0 +1,22 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "fluenticstack-sites-style",
+  "compatibility_date": "2026-06-10",
+  "main": "./src/worker.js",
+  "routes": [
+    {
+      "pattern": "fluenticstack.com/style",
+      "zone_name": "fluenticstack.com"
+    },
+    {
+      "pattern": "fluenticstack.com/style/*",
+      "zone_name": "fluenticstack.com"
+    }
+  ],
+  "assets": {
+    "binding": "ASSETS",
+    "directory": "./out",
+    "run_worker_first": true,
+    "not_found_handling": "404-page"
+  }
+}

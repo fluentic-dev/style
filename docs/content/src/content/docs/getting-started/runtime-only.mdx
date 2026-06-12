@@ -1,0 +1,51 @@
+---
+title: Runtime-Only Mode
+description: Use Fluentic Style without a compiler plugin.
+---
+
+Runtime-only mode is the lowest-friction setup. You configure the JSX runtime,
+write styles normally, and let `useCss` insert rules when components render.
+
+Use runtime-only mode when:
+
+- you are prototyping;
+- you are publishing a component library and do not control the consumer bundler;
+- you are testing components;
+- your styles depend on runtime values that cannot be statically evaluated.
+
+## Example
+
+```tsx
+/** @jsxImportSource @fluentic/style */
+import { style, useCss } from '@fluentic/style';
+
+const styles = {
+  root: style.slot({
+    padding: 12,
+    borderRadius: 6,
+  }),
+};
+
+export function Panel() {
+  const css = useCss(styles);
+  return <section css={css.root} />;
+}
+```
+
+## What happens
+
+When `useCss(styles)` runs, Fluentic Style:
+
+1. Creates or reuses a `CssInstance` for the styles object and scope inputs.
+2. Resolves slots to generated class names.
+3. Inserts missing atomic CSS rules into the active style sheet.
+4. Flushes the sheet in an insertion effect.
+
+The runtime is intentionally small. It resolves metadata, injects missing rules,
+and strips special JSX props from DOM elements.
+
+## Tradeoffs
+
+Runtime-only mode is flexible, but the browser does some work after JavaScript
+loads. If most of your chains are static, use a bundler plugin for production
+builds so those rules can be extracted.

@@ -1,0 +1,25 @@
+{
+  "name": "@benchmark/app-stylex",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "prod": "pnpm build && vite preview"
+  },
+  "dependencies": {
+    "@benchmark/main": "workspace:*",
+    "@stylexjs/stylex": "^0.18.3",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@stylexjs/babel-plugin": "^0.18.3",
+    "@stylexjs/rollup-plugin": "^0.18.3",
+    "@stylexjs/unplugin": "^0.18.3",
+    "@vitejs/plugin-react": "latest",
+    "vite": "^8.0.0"
+  }
+}

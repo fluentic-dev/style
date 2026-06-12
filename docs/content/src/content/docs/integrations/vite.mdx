@@ -1,0 +1,28 @@
+---
+title: Vite
+description: Configure Fluentic Style with Vite and React.
+---
+
+```ts
+import { plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: [
+    stylePlugin(),
+    react({
+      jsxImportSource: '@fluentic/style',
+    }),
+  ],
+});
+```
+
+Import the virtual runtime module in your entry:
+
+```tsx
+import 'virtual:fluentic-styles';
+```
+
+In Vite, the plugin defaults to runtime-friendly behavior during development and
+build-aware behavior in production.

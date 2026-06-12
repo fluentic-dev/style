@@ -1,0 +1,36 @@
+{
+  "name": "@docs/app",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1 --port 6789",
+    "build": "next build --webpack",
+    "build:cf": "DOCS_SITE=https://fluenticstack.com DOCS_BASE=/style next build --webpack",
+    "deploy:cf": "npx wrangler@latest deploy",
+    "preview": "next dev --hostname 127.0.0.1 --port 6789",
+    "source:gen": "fumadocs-mdx",
+    "typecheck": "pnpm run source:gen && tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@babel/standalone": "^7.29.7",
+    "@fontsource/inter": "^5.2.8",
+    "@fontsource/jetbrains-mono": "^5.2.8",
+    "@tailwindcss/postcss": "4.3.0",
+    "@types/mdx": "^2.0.13",
+    "fumadocs-core": "16.9.3",
+    "fumadocs-mdx": "15.0.11",
+    "fumadocs-ui": "16.9.3",
+    "monaco-editor": "^0.55.1",
+    "next": "^16.2.9",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "sharp": "^0.34.5",
+    "tailwindcss": "4.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
+  }
+}

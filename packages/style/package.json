@@ -1,0 +1,231 @@
+{
+  "name": "@fluentic/style",
+  "version": "0.1.0-beta.0",
+  "description": "Type-safe styles that scale with your components.",
+  "homepage": "https://fluenticstack.com/style",
+  "license": "MIT",
+  "type": "module",
+  "keywords": [
+    "react",
+    "css-in-js",
+    "atomic-css",
+    "design-system",
+    "component-library",
+    "styling",
+    "vite",
+    "nextjs",
+    "compiler"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "types": "./index.ts",
+      "react-server": "./dist/server.js",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./server.ts",
+      "import": "./dist/server.js"
+    },
+    "./compiler": {
+      "types": "./compiler/index.ts",
+      "import": "./dist/compiler/index.mjs",
+      "default": "./dist/compiler/index.mjs"
+    },
+    "./babel": {
+      "types": "./plugin/babel/index.ts",
+      "import": "./dist/plugin/babel/index.mjs"
+    },
+    "./plugin/babel": {
+      "types": "./plugin/babel/index.ts",
+      "import": "./dist/plugin/babel/index.mjs"
+    },
+    "./plugin/vite": {
+      "types": "./plugin/vite/index.ts",
+      "import": "./dist/plugin/vite/index.mjs"
+    },
+    "./plugin/sidecar": {
+      "types": "./plugin/sidecar/index.ts",
+      "import": "./dist/plugin/sidecar/index.mjs"
+    },
+    "./plugin/rollup": {
+      "types": "./plugin/rollup/index.ts",
+      "import": "./dist/plugin/rollup/index.mjs"
+    },
+    "./plugin/webpack": {
+      "types": "./plugin/webpack/index.ts",
+      "import": "./dist/plugin/webpack/index.mjs"
+    },
+    "./plugin/webpack/loader": {
+      "types": "./plugin/webpack/loader.ts",
+      "import": "./dist/plugin/webpack/loader.mjs",
+      "default": "./dist/plugin/webpack/loader.mjs"
+    },
+    "./plugin/esbuild": {
+      "types": "./plugin/esbuild/index.ts",
+      "import": "./dist/plugin/esbuild/index.mjs"
+    },
+    "./plugin/rspack": {
+      "types": "./plugin/rspack/index.ts",
+      "import": "./dist/plugin/rspack/index.mjs"
+    },
+    "./plugin/rolldown": {
+      "types": "./plugin/rolldown/index.ts",
+      "import": "./dist/plugin/rolldown/index.mjs"
+    },
+    "./plugin/nextjs": {
+      "types": "./plugin/nextjs/index.ts",
+      "import": "./dist/plugin/nextjs/index.mjs",
+      "default": "./dist/plugin/nextjs/index.mjs"
+    },
+    "./plugin/nextjs/loader": {
+      "types": "./plugin/nextjs/loader.ts",
+      "import": "./dist/plugin/nextjs/loader.mjs",
+      "default": "./dist/plugin/nextjs/loader.mjs"
+    },
+    "./plugin/nextjs/runtime/client": {
+      "types": "./plugin/nextjs/runtime/client.ts",
+      "import": "./dist/plugin/nextjs/runtime/client.js"
+    },
+    "./plugin/nextjs/runtime/server": {
+      "types": "./plugin/nextjs/runtime/server.ts",
+      "import": "./dist/plugin/nextjs/runtime/server.js"
+    },
+    "./builder/extract": {
+      "types": "./builder/extract/index.ts",
+      "import": "./dist/builder/extract/index.js"
+    },
+    "./config": {
+      "types": "./config/index.ts",
+      "import": "./dist/config/index.js"
+    },
+    "./config/build": {
+      "types": "./config/build.ts",
+      "import": "./dist/config/build.js"
+    },
+    "./dev": {
+      "types": "./dev/index.ts",
+      "import": "./dist/dev.js"
+    },
+    "./runtime/rsc": {
+      "types": "./runtime/rsc/index.ts",
+      "import": "./dist/runtime/rsc.js"
+    },
+    "./runtime/dev": {
+      "types": "./runtime/dev/index.ts",
+      "import": "./dist/runtime/dev.js"
+    },
+    "./runtime/static": {
+      "types": "./runtime/static/index.ts",
+      "import": "./dist/runtime/static/index.js"
+    },
+    "./jsx-runtime": {
+      "types": "./jsx/jsx-runtime.ts",
+      "react-server": "./dist/jsx-runtime/server.js",
+      "import": "./dist/jsx-runtime/index.js"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./jsx/jsx-dev-runtime.ts",
+      "react-server": "./dist/jsx-dev-runtime/server.js",
+      "import": "./dist/jsx-dev-runtime/index.js"
+    },
+    "./jsx/runtime": {
+      "types": "./jsx/jsx-runtime.ts",
+      "react-server": "./dist/jsx-runtime/server.js",
+      "import": "./dist/jsx-runtime/index.js"
+    },
+    "./jsx/dev-runtime": {
+      "types": "./jsx/jsx-dev-runtime.ts",
+      "react-server": "./dist/jsx-dev-runtime/server.js",
+      "import": "./dist/jsx-dev-runtime/index.js"
+    },
+    "./plugin/compiler": {
+      "types": "./compiler/index.ts",
+      "import": "./dist/compiler/index.mjs",
+      "default": "./dist/compiler/index.mjs"
+    }
+  },
+  "files": [
+    "README.md",
+    "dist",
+    "atomic",
+    "builder",
+    "config",
+    "compiler",
+    "dev",
+    "jsx",
+    "plugin",
+    "runtime",
+    "selector",
+    "server.ts",
+    "sheet",
+    "style",
+    "utils",
+    "index.ts"
+  ],
+  "scripts": {
+    "build": "tsdown",
+    "dev": "tsdown --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "tsx ./test/run-tests.ts"
+  },
+  "dependencies": {
+    "@jridgewell/trace-mapping": "^0.3.31",
+    "css-what": "^8.0.0",
+    "oxc-resolver": "^11.20.0",
+    "picomatch": "^4.0.4"
+  },
+  "devDependencies": {
+    "@babel/types": "^7.29.7",
+    "@types/babel__core": "^7.20.5",
+    "@types/picomatch": "^4.0.3",
+    "@types/react": "^19.2.14",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tsdown": "^0.22.1",
+    "tsx": "^4.20.6",
+    "typescript": "^5.8.3",
+    "vite": "^8.0.16",
+    "webpack": "^5.107.2"
+  },
+  "peerDependencies": {
+    "@babel/core": ">=7",
+    "@rspack/core": ">=1",
+    "esbuild": ">=0.20",
+    "next": ">=15",
+    "react": ">=18",
+    "react-dom": ">=18",
+    "rolldown": ">=1",
+    "rollup": ">=4",
+    "vite": ">=5",
+    "webpack": ">=5"
+  },
+  "peerDependenciesMeta": {
+    "@babel/core": {
+      "optional": true
+    },
+    "@rspack/core": {
+      "optional": true
+    },
+    "esbuild": {
+      "optional": true
+    },
+    "next": {
+      "optional": true
+    },
+    "rollup": {
+      "optional": true
+    },
+    "rolldown": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    },
+    "webpack": {
+      "optional": true
+    }
+  }
+}

@@ -1,0 +1,120 @@
+---
+title: Plugin Options
+description: Configure compiler behavior, virtual modules, and transform filters.
+---
+
+Bundler plugins accept compiler options, transform filter options, and virtual
+module options.
+
+```ts
+stylePlugin({
+  extract: true,
+  include: /\.[jt]sx?$/,
+  exclude: /node_modules/,
+  runtimeModuleId: 'virtual:fluentic-styles',
+  cssModuleId: 'virtual:fluentic-styles.css',
+  importSources: [
+    {
+      source: '@my/design-system',
+      name: 'style',
+    },
+  ],
+  getSourcemapFilePath({ relativePath }) {
+    return `/src/${relativePath}`;
+  },
+});
+```
+
+## `extract`
+
+Controls whether supported static chains are extracted.
+
+```ts
+extract?: boolean
+```
+
+## `include` and `exclude`
+
+Control which files are transformed.
+
+```ts
+include?: RegExp | string | string[]
+exclude?: RegExp | string | string[]
+```
+
+The default include is JavaScript and TypeScript files. The default exclude is
+`node_modules`.
+
+## `runtimeModuleId`
+
+Virtual runtime module ID. Default:
+
+```txt
+virtual:fluentic-styles
+```
+
+## `cssModuleId`
+
+Virtual CSS module ID. Default:
+
+```txt
+virtual:fluentic-styles.css
+```
+
+Vite, Rollup, and Rolldown import this CSS module automatically from the runtime
+virtual module. Import it explicitly only when a bundler setup cannot turn CSS
+side-effect imports from virtual modules into CSS assets.
+
+## `importSources`
+
+Teach the compiler about additional style builder imports.
+
+```ts
+importSources?: Array<{
+  source?: string | string[];
+  name?: string | string[];
+  check?: (args: { name: string; source: string }) => boolean;
+}>
+```
+
+Use this if your design system re-exports `style` from another package.
+
+## `getSourcemapFilePath`
+
+Customize the source path or URL written into CSS sourcemaps for a transformed
+source file.
+
+```ts
+getSourcemapFilePath?: (info: {
+  filePath: string;
+  absolutePath: string;
+  relativePath: string;
+  rootDir?: string;
+  sourceUrl?: string | null;
+}) => string | null | undefined;
+```
+
+Use this when a framework serves browser sourcemap sources under a different
+path than the absolute file path seen by the plugin.
+
+```ts
+stylePlugin({
+  getSourcemapFilePath({ relativePath }) {
+    return `webpack://_N_E/./${relativePath}`;
+  },
+});
+```
+
+Return `null` or `undefined` to keep the integration default.
+
+## `css`
+
+Configure generated CSS behavior.
+
+```ts
+css?: {
+  layer?: boolean;
+}
+```
+
+Additional generated CSS config can be passed through this object.

@@ -1,0 +1,31 @@
+{
+  "name": "@example/nextjs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clear": "rm -rf .next out",
+    "dev:turbo": "next dev --hostname 127.0.0.1 --port 4180",
+    "dev:webpack": "next dev --webpack --hostname 127.0.0.1 --port 4180",
+    "build:turbo": "next build",
+    "build:webpack": "next build --webpack",
+    "start": "next start --hostname 127.0.0.1 --port 4180",
+    "ssg:turbo": "MODE=ssg next build",
+    "ssg:webpack": "MODE=ssg next build --webpack",
+    "serve": "npx serve out -l tcp://127.0.0.1:4180",
+    "test:prod": "pnpm run build:turbo && pnpm run verify:prod",
+    "test:ssg": "pnpm run ssg:turbo && node ./scripts/verify-static.mjs",
+    "verify:prod": "node ./scripts/verify-prod.mjs"
+  },
+  "dependencies": {
+    "@fluentic/style": "workspace:*",
+    "next": "^16.2.7",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.2",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
+  }
+}

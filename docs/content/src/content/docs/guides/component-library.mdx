@@ -1,0 +1,68 @@
+---
+title: Component Library Guide
+description: Design public styling APIs with slots, themes, and consumer overrides.
+---
+
+Fluentic Style is especially useful when you are building reusable components.
+The guiding rule is simple: publish slots, not class names.
+
+## Shape your slots
+
+Expose only meaningful parts:
+
+```ts
+export const tabsStyles = {
+  root: style.slot({ display: 'grid' }),
+  list: style.slot({ display: 'flex' }),
+  trigger: style.slot({ border: 0 }),
+  panel: style.slot({ padding: 16 }),
+};
+```
+
+Avoid making every internal wrapper public. A slot is a contract.
+
+## Type props
+
+```ts
+import type { CssProp, CssTheme } from '@fluentic/style';
+
+type TabsProps = {
+  css?: CssProp;
+  theme?: CssTheme;
+};
+```
+
+Use `css` for one rendered element. Use `theme` for slot-aware component
+customization.
+
+## Resolve internal state first
+
+```tsx
+const css = useCss(
+  tabsStyles,
+  selectedState(tabsStyles.trigger),
+  ...scopeTarget(tabsStyles.root, props.theme),
+);
+```
+
+Keep internal state near the component. Let external themes layer on top.
+
+## Forward root overrides
+
+```tsx
+<div css={[css.root, props.css]} scope={css} />
+```
+
+This lets consumers make one-off layout adjustments without defining a theme.
+
+## Document your slots
+
+For every component, document:
+
+- slot names;
+- which element each slot maps to;
+- what `css` affects;
+- what `theme` can override;
+- whether nested components inherit scope.
+
+This makes the styling surface discoverable and stable.

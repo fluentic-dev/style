@@ -1,0 +1,104 @@
+---
+title: Mental Model
+description: Understand styles, slots, scopes, themes, and resolution.
+---
+
+Fluentic Style is easiest to understand as a small contract between authoring
+and rendering:
+
+1. Author style metadata with builders.
+2. Publish component parts as slots.
+3. Resolve the relevant styles, scopes, and inherited themes with `useCss`.
+
+Builders are immutable. Calling `.hover(...)` or `.media(...)` returns a new
+chain. This makes it safe to share base styles and fork variants.
+
+## Style chain
+
+Use `style(...)` for standalone styles:
+
+```ts
+const elevated = style({
+  boxShadow: '0 12px 40px rgb(0 0 0 / 0.16)',
+}).hover({
+  boxShadow: '0 16px 52px rgb(0 0 0 / 0.18)',
+});
+```
+
+Standalone style chains are useful for one-off `css` props, local layout
+adjustments, and reusable visual fragments that are not part of a component's
+public styling API.
+
+## Slot
+
+Use `style.slot(...)` for a component part you want to make targetable:
+
+```ts
+const card = {
+  root: style.slot({ padding: 16 }),
+  title: style.slot({ fontWeight: 700 }),
+};
+```
+
+A slot can also be called to create a slot override:
+
+```ts
+card.title({ color: 'tomato' });
+```
+
+That override is meant to live inside a scope. This is what gives themes a typed
+target instead of asking them to know which class name was generated.
+
+## Scope
+
+Use `style.scope(...)` to group slot overrides:
+
+```ts
+const dangerTheme = style.scope([
+  card.root({ borderColor: 'crimson' }),
+  card.title({ color: 'crimson' }),
+]);
+```
+
+Scopes can be chained with selectors and at-rules, so state and responsive
+styling can target the same slots:
+
+```ts
+const interactive = style.scope()
+  .hover([
+    card.root({ borderColor: 'royalblue' }),
+  ])
+  .media('(max-width: 700px)', [
+    card.root({ padding: 12 }),
+  ]);
+```
+
+## Target
+
+A scope is callable. Calling a scope with a slot creates a target:
+
+```ts
+interactive(card.root);
+```
+
+Targets tell `useCss` which scoped rules are relevant for a resolved slots
+object. In practice, most components target their root slot:
+
+## Resolution
+
+```ts
+const css = useCss(card, interactive(card.root));
+```
+
+The returned `css` object mirrors the original slots object. You can pass
+`css.root` to a DOM element and pass the whole `css` instance to `scope`.
+
+```tsx
+<article css={css.root} scope={css}>
+  <h2 css={css.title}>Title</h2>
+</article>
+```
+
+This is the central loop: define slots, define scopes that target slots, resolve
+them with `useCss`, render resolved items. Static extraction can move supported
+chains into CSS at build time, but the component code keeps the same shape.

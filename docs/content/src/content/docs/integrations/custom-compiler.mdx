@@ -1,0 +1,35 @@
+---
+title: Custom Compiler
+description: Use createCompiler for custom build systems.
+---
+
+For build systems that do not fit the provided adapters, use the compiler
+entrypoint:
+
+```ts
+import { createCompiler } from '@fluentic/style/compiler';
+
+const compiler = createCompiler({
+  extract: true,
+});
+
+const result = compiler.transform(sourceCode, filePath);
+
+if (result) {
+  console.log(result.code);
+  console.log(result.css);
+}
+```
+
+The compiler transform result contains:
+
+```ts
+type CompilerTransformResult = {
+  code: string;
+  map: string | null;
+  css: string[];
+};
+```
+
+Use this only if you are writing tooling. Application users should prefer a
+bundler adapter.

@@ -1,0 +1,105 @@
+---
+title: API Reference
+description: Public runtime, style, selector, and sheet APIs.
+---
+
+## Main import
+
+```ts
+import {
+  StyleProvider,
+  combineScope,
+  configureRuntime,
+  createStyleFn,
+  createStyleSheet,
+  createStyleToken,
+  scopeTarget,
+  selector,
+  selectorPriority,
+  setGlobalSheet,
+  style,
+  type,
+  useCss,
+  useCssProvider,
+  useCssRef,
+} from '@fluentic/style';
+```
+
+## `style`
+
+Default builder for React CSS properties and default priority selectors.
+
+```ts
+style({ display: 'grid' })
+style.slot({ padding: 12 })
+style.scope([slot({ color: 'red' })])
+style.priority('red', 2)
+```
+
+## `createStyleFn`
+
+Create a custom style function with your own type and selector map.
+
+```ts
+const { style } = createStyleFn({
+  style: type<CSSProperties>,
+  selectors,
+});
+```
+
+## `useCss`
+
+Resolve a styles object and optional scope targets.
+
+```ts
+const css = useCss(styles, ...items);
+```
+
+## `scopeTarget`
+
+Target incoming themes to a slot.
+
+```ts
+const targets = scopeTarget(styles.root, props.theme);
+```
+
+## `StyleProvider`
+
+Create an isolated runtime context.
+
+```tsx
+<StyleProvider>{children}</StyleProvider>
+```
+
+## `createStyleToken`
+
+Create a typed token value.
+
+```ts
+const accent = createStyleToken('#2563eb');
+const darkAccent = accent('#60a5fa');
+```
+
+## `selector` and `selectorPriority`
+
+Create and prioritize selector methods for custom style functions.
+
+```ts
+const selectors = selectorPriority({
+  hover: selector(':hover'),
+  pressed: selector('[aria-pressed="true"]'),
+}, ['hover', 'pressed']);
+```
+
+## Types
+
+Common exported types:
+
+```ts
+type CSSProperties
+type CssProp
+type CssTheme
+type RuntimeOptions
+type StyleObject
+type StyleToken
+```

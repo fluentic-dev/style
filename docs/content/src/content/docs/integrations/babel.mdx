@@ -1,0 +1,36 @@
+---
+title: Babel
+description: Use the Babel plugin directly when you own the transform pipeline.
+---
+
+```js
+import { plugin as fluenticBabel } from '@fluentic/style/babel';
+
+export default {
+  plugins: [
+    fluenticBabel({
+      extract: true,
+    }),
+  ],
+};
+```
+
+The Babel plugin is useful for custom build systems and framework integrations.
+Bundler users should usually use the bundler-specific plugin instead, because it
+also manages virtual CSS/runtime modules.
+
+## Options
+
+The Babel plugin accepts compiler options:
+
+```ts
+type CompilerOptions = {
+  importSources?: ImportSource[];
+  selectors?: Record<string, Selector>;
+  css?: CompilerCssOptions;
+  extract?: boolean;
+};
+```
+
+Use `importSources` if you re-export or rename the `style` builder from your own
+package.

@@ -1,0 +1,31 @@
+{
+  "name": "@benchmark/main",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "bench": "node bench.mjs",
+    "bench:contract": "node contract-bench.mjs",
+    "bench:dynamic-values": "BENCH_KIND=dynamic-value-browser-benchmark BENCH_LABEL='Dynamic value benchmark' OUTPUT_PREFIX=dynamic-values VARIANTS=fluenticDynamicVars,fluenticInlineDynamicValues,gooberDynamicVars,emotionDynamicVars,styledComponentsDynamicVars node fluentic-cache-bench.mjs",
+    "bench:fluentic-cache": "node fluentic-cache-bench.mjs",
+    "bench:ssr-style": "node ssr-style-bench.mjs"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "dependencies": {
+    "@emotion/react": "latest",
+    "@emotion/styled": "latest",
+    "@fluentic/style": "workspace:*",
+    "benchmark": "^2.1.4",
+    "goober": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "styled-components": "latest"
+  },
+  "devDependencies": {
+    "playwright-core": "^1.54.2"
+  }
+}

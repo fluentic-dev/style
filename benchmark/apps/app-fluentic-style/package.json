@@ -1,0 +1,27 @@
+{
+  "name": "@benchmark/app-fluentic-style",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:extract": "vite",
+    "dev:plugin": "vite",
+    "build": "vite build",
+    "build:extract": "vite build",
+    "build:plugin": "vite build",
+    "preview": "vite preview",
+    "prod:extract": "pnpm build:extract --outDir dist-extract && vite preview --outDir dist-extract",
+    "prod:plugin": "pnpm build:extract && vite preview"
+  },
+  "dependencies": {
+    "@benchmark/main": "workspace:*",
+    "@fluentic/style": "workspace:*",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "latest",
+    "vite": "^8.0.0"
+  }
+}

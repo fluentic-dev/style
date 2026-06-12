@@ -1,0 +1,9 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style",
+    "lib": ["ES2020", "DOM"]
+  },
+  "include": ["."]
+}

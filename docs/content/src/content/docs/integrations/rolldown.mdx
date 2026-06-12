@@ -1,0 +1,32 @@
+---
+title: Rolldown
+description: Configure Fluentic Style with Rolldown.
+---
+
+```js
+import { plugin as stylePlugin } from '@fluentic/style/plugin/rolldown';
+import { defineConfig } from 'rolldown';
+
+export default defineConfig({
+  input: './src/main.tsx',
+  output: {
+    dir: 'dist',
+    format: 'esm',
+  },
+  plugins: [
+    stylePlugin(),
+  ],
+  transform: {
+    jsx: 'react-jsx',
+  },
+});
+```
+
+Import the virtual runtime module once in your app entry:
+
+```tsx
+import 'virtual:fluentic-styles';
+```
+
+If your Rolldown setup does not emit CSS imports by default, pass the virtual CSS
+module to your CSS pipeline or emit it as an asset.

@@ -1,0 +1,23 @@
+{
+  "name": "@benchmark/app-panda",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "codegen": "panda codegen",
+    "cssgen": "panda cssgen --minimal --minify",
+    "dev": "pnpm run codegen && pnpm run cssgen && vite",
+    "build": "pnpm run codegen && pnpm run cssgen && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@benchmark/main": "workspace:*",
+    "react": "latest",
+    "react-dom": "latest"
+  },
+  "devDependencies": {
+    "@pandacss/dev": "latest",
+    "vite": "^8.0.0",
+    "@vitejs/plugin-react": "latest"
+  }
+}

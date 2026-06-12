@@ -1,0 +1,7 @@
+packages:
+  - "packages/*"
+  - "docs/*"
+  - "examples/bundlers/*"
+  - "examples/*"
+  - "benchmark/main"
+  - "benchmark/apps/*"

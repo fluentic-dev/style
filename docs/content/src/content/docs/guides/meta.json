@@ -1,0 +1,11 @@
+{
+  "title": "Guides",
+  "pages": [
+    "component-library",
+    "theming",
+    "composition",
+    "best-practices",
+    "troubleshooting"
+  ]
+}
+

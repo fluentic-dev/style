@@ -1,0 +1,42 @@
+---
+title: Webpack
+description: Configure Fluentic Style with Webpack.
+---
+
+```js
+import { plugin as stylePlugin } from '@fluentic/style/plugin/webpack';
+
+export default {
+  module: {
+    rules: [
+      {
+        test: /\.[jt]sx?$/,
+        exclude: /node_modules/,
+        use: {
+          loader: 'babel-loader',
+          options: {
+            presets: [
+              ['@babel/preset-react', {
+                runtime: 'automatic',
+                importSource: '@fluentic/style',
+              }],
+              ['@babel/preset-typescript', {
+                isTSX: true,
+                allExtensions: true,
+              }],
+            ],
+          },
+        },
+      },
+    ],
+  },
+  plugins: [
+    stylePlugin({
+      extract: true,
+    }),
+  ],
+};
+```
+
+For development, you may choose `extract: false` to lean on runtime insertion.
+For production, extraction is usually preferred.

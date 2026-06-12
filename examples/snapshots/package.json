@@ -1,0 +1,21 @@
+{
+  "name": "@example/snapshots",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "generate": "tsx generate.ts",
+    "generate:002": "tsx generate.ts 002",
+    "verify": "tsx verify.ts",
+    "generate-and-verify": "tsx generate.ts 002 && tsx verify.ts"
+  },
+  "dependencies": {
+    "@fluentic/style": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.2.14",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3"
+  }
+}

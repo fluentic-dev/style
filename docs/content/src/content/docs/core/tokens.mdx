@@ -1,0 +1,72 @@
+---
+title: Tokens
+description: Create typed design values that can be reused and retargeted.
+---
+
+Use `createToken` for a single design value and `createTokens` for a small
+scale.
+
+```ts
+import { createToken, createTokens } from '@fluentic/style';
+
+export const color = {
+  accent: createToken('#2563eb'),
+  surface: createToken('#ffffff'),
+  text: createToken('#0f172a'),
+};
+
+export const radius = createTokens({
+  sm: 4,
+  md: 8,
+  lg: 12,
+});
+```
+
+Tokens can be used as style values:
+
+```ts
+const button = style({
+  backgroundColor: color.accent,
+  borderRadius: radius.md,
+  color: color.text,
+});
+```
+
+## Token references
+
+Calling a token creates a new token value that keeps a reference to the original
+token identity.
+
+```ts
+const darkAccent = color.accent('#60a5fa');
+```
+
+This gives you a value that keeps a relationship with the original token while
+carrying a new concrete value. In extracted CSS, token values are emitted through
+CSS variables so a theme can retarget the value without changing every rule that
+uses it.
+
+```ts
+const darkTheme = style.scope([
+  buttonStyles.root({
+    backgroundColor: color.surface('#0f172a'),
+    color: color.text('#f8fafc'),
+  }),
+]);
+```
+
+## When to use tokens
+
+Use tokens for:
+
+- design system colors;
+- spacing and radius scales;
+- type sizes and weights;
+- values you expect themes to retarget.
+
+Use plain constants when a value has no theme meaning.
+
+Avoid placing tokens inside CSS shorthand strings such as
+`border: "1px solid ${color.accent}"`. Keep token values in individual
+properties like `borderColor`, `backgroundColor`, or `paddingInline` so the
+runtime and extractor can see the token directly.

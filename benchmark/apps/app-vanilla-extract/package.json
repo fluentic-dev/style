@@ -1,0 +1,22 @@
+{
+  "name": "@benchmark/app-vanilla-extract",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@benchmark/main": "workspace:*",
+    "react": "latest",
+    "react-dom": "latest",
+    "@vanilla-extract/css": "^1.20.1"
+  },
+  "devDependencies": {
+    "vite": "^8.0.0",
+    "@vitejs/plugin-react": "latest",
+    "@vanilla-extract/vite-plugin": "^5.2.2"
+  }
+}

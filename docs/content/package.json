@@ -1,0 +1,8 @@
+{
+  "name": "@docs/content",
+  "private": true,
+  "type": "module",
+  "files": [
+    "src"
+  ]
+}

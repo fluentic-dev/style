@@ -1,0 +1,117 @@
+---
+title: Introduction
+description: A practical guide to Fluentic Style, the styling model it introduces, and the problems it is designed to solve.
+---
+
+## Make the supported styling surface visible
+
+Fluentic Style is for component libraries where styling is part of the API.
+Authors define slots, themes target those slots, and consumers get a clear path
+for supported overrides without depending on generated class names.
+
+```ts title="button.styles.ts"
+const button = {
+  root: style.slot({
+    display: 'inline-flex',
+    borderRadius: 8,
+    padding: '8px 12px',
+  }).hover({ opacity: 0.88 }),
+  label: style.slot({ fontWeight: 650 }),
+};
+
+const primary = style.scope([
+  button.root({ backgroundColor: token.accent }),
+  button.label({ fontWeight: 760 }),
+]);
+```
+
+| Step | Model |
+| --- | --- |
+| Author | Write fluent TypeScript chains close to the component. |
+| Expose | Publish slots as stable styling targets. |
+| Theme | Compose scoped overrides for state, variants, and context. |
+| Deliver | Resolve at runtime or extract static atomic CSS. |
+
+## The problem
+
+Styling a component library gets difficult when you need all of these at once:
+
+- base styles that are local to each component;
+- hover, focus, media, container, and selector variants;
+- consumer overrides that target specific component parts;
+- themes that can be inherited through a subtree;
+- predictable CSS order without hand-managed specificity wars;
+- performance that does not require every style to be recalculated on every render;
+- an escape hatch for dynamic styles;
+- support for more than browser-only builds.
+
+Fluentic Style approaches that by separating three concerns:
+
+- **authoring:** write typed style chains in TypeScript;
+- **contract:** publish slots as the parts consumers may target;
+- **delivery:** resolve styles at runtime, or precompile static chains into CSS.
+
+That separation is the important part. A component author can describe the base
+parts once, a theme can override those parts through scopes, and the build can
+extract what is static without turning the source into a different styling
+language.
+
+## The model
+
+Fluentic Style has three main objects:
+
+| Object | Use it for |
+| --- | --- |
+| `style(...)` | A standalone style chain for one-off or reusable visual fragments. |
+| `style.slot(...)` | A named component part that becomes a typed override target. |
+| `style.scope(...)` | A bundle of slot overrides for state, theme, media, or context. |
+
+Here is a tiny component:
+
+```tsx
+/** @jsxImportSource @fluentic/style */
+import { style, useCss } from '@fluentic/style';
+
+const styles = {
+  root: style.slot({
+    display: 'inline-flex',
+    alignItems: 'center',
+    borderRadius: 6,
+    padding: '8px 12px',
+  }).hover({
+    opacity: 0.88,
+  }),
+  label: style.slot({
+    fontWeight: 600,
+  }),
+};
+
+export function Button() {
+  const css = useCss(styles);
+
+  return (
+    <button css={css.root} scope={css}>
+      <span css={css.label}>Save</span>
+    </button>
+  );
+}
+```
+
+The `scope={css}` prop exposes the resolved slots to descendants. That is what
+lets a theme or state override flow through a subtree without asking consumers
+to know the generated classes.
+
+## What this unlocks
+
+- **For library authors:** define `root`, `icon`, `label`, `content`, or any
+  supported part as a slot while keeping internal wrappers private.
+- **For app teams:** use scopes to layer local, nested, conditional themes
+  through the slots a component intentionally exposes.
+- **For production builds:** runtime mode keeps libraries and tests working;
+  extraction moves supported static chains into CSS assets.
+
+## What to read next
+
+Start with [Installation](getting-started/installation), then read the
+[Mental Model](core/mental-model). If you want to use this in an app
+immediately, jump to the [Vite guide](integrations/vite).

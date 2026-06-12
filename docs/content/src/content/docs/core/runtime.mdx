@@ -1,0 +1,56 @@
+---
+title: Runtime
+description: Learn how StyleProvider, useCss, and sheets fit together.
+---
+
+The runtime is intentionally small. Its job is not to parse CSS; it resolves
+builder metadata into CSS instances and inserts rules that are not already
+extracted.
+
+## `useCss`
+
+```ts
+const css = useCss(styles, ...scopeTargets);
+```
+
+`useCss`:
+
+1. Reads the current runtime context.
+2. Reads inherited scope context.
+3. Normalizes scope target inputs.
+4. Gets a cached CSS instance from the instance pool.
+5. Inserts runtime rules when CSS has not been extracted.
+
+## `StyleProvider`
+
+```tsx
+import { StyleProvider } from '@fluentic/style';
+
+export function App() {
+  return (
+    <StyleProvider>
+      <Routes />
+    </StyleProvider>
+  );
+}
+```
+
+`StyleProvider` creates a local runtime context with its own instance pool and
+style sheet. If you do not render one, Fluentic Style uses a default singleton
+context.
+
+Use a provider when you want isolation for tests, embedded apps, or server/client
+boundaries.
+
+## Style sheets
+
+The public sheet utilities include:
+
+```ts
+createStyleSheet
+createMemoryStyleSheet
+setGlobalSheet
+```
+
+Most apps do not need to touch these directly. They are useful when integrating
+with SSR, tests, or custom runtimes.

@@ -1,0 +1,29 @@
+{
+  "name": "@example/bundler-vite",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "clear": "rm -rf dist node_modules/.vite",
+    "dev": "vite --port 5174",
+    "dev:runtime": "FLUENTIC_STYLE_MODE=runtime vite",
+    "dev:sourcemap.sidecarServer": "SOURCEMAP=sidecarServer vite",
+    "dev:sourcemap.sourceContent": "SOURCEMAP=sourceContent vite",
+    "build": "vite build",
+    "build:runtime": "FLUENTIC_STYLE_MODE=runtime vite build",
+    "serve": "vite preview --port 5174"
+  },
+  "dependencies": {
+    "@example/bundler-shared": "workspace:*",
+    "@fluentic/style": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.16"
+  }
+}

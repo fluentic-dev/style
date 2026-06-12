@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": [
+    "**/*.ts",
+    "**/*.tsx"
+  ],
+  "exclude": [
+    "compiler_old",
+    "node_modules",
+    "plugin_old",
+    "dist"
+  ],
+  "compilerOptions": {
+    "lib": ["ES2020", "DOM"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style",
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": false
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react", "unicorn", "oxc", "import", "promise", "node"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "env": {
+    "builtin": true
+  },
+  "ignorePatterns": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/coverage/**",
+    "benchmark/apps/app-panda/styled-system/**",
+    "benchmark/main/**/*.mjs",
+    "benchmark/main/**/*.jsx",
+    "benchmark/apps/app-stylex/src/main.jsx",
+    "benchmark/apps/app-stylex/vite.config.js"
+  ],
+  "rules": {
+    "no-debugger": "error",
+    "no-console": "off",
+    "no-shadow": "off",
+    "no-underscore-dangle": "off",
+    "preserve-caught-error": "off",
+    "promise/always-return": "off",
+    "typescript/no-this-alias": "off",
+    "typescript/no-explicit-any": "off",
+    "typescript/ban-ts-comment": "warn",
+    "react/react-in-jsx-scope": "off",
+    "import/no-unassigned-import": "off",
+    "eslint/no-await-in-loop": "off",
+    "unicorn/prefer-node-protocol": "error",
+    "unicorn/no-array-sort": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "unicorn/require-module-specifiers": "off",
+    "oxc/no-this-in-exported-function": "off"
+  }
+}

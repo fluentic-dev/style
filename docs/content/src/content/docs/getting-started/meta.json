@@ -1,0 +1,11 @@
+{
+  "title": "Start",
+  "pages": [
+    "installation",
+    "quick-start",
+    "jsx-runtime",
+    "runtime-only",
+    "static-extraction"
+  ]
+}
+

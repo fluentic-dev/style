@@ -1,0 +1,96 @@
+---
+title: Slots
+description: Model component parts as stable styling targets.
+---
+
+Slots are how a component publishes the parts it is willing to let themes and
+consumers style. They are small, but they matter: a slot turns an internal
+element into an explicit API target.
+
+```ts
+export const dialogStyles = {
+  root: style.slot({ position: 'fixed', inset: 0 }),
+  panel: style.slot({ borderRadius: 8, padding: 24 }),
+  title: style.slot({ margin: 0, fontWeight: 700 }),
+};
+```
+
+Each slot is both:
+
+- a base style builder;
+- a callable override target.
+
+## Base slot
+
+```ts
+const title = style.slot({
+  fontWeight: 700,
+});
+```
+
+## Slot override
+
+```ts
+title({
+  color: 'royalblue',
+});
+```
+
+Slot overrides are usually placed inside `style.scope(...)`, where they can be
+shared as themes, variants, or state styles.
+
+## Rendering slots
+
+```tsx
+const css = useCss(dialogStyles);
+
+return (
+  <section css={css.root} scope={css}>
+    <div css={css.panel}>
+      <h2 css={css.title}>Settings</h2>
+    </div>
+  </section>
+);
+```
+
+## Why slots matter
+
+Slots give you stable override boundaries:
+
+- Consumers target `dialogStyles.title`, not `.abc123`.
+- Themes can override multiple parts in one scope.
+- Internal class names remain generated and atomic.
+- Component authors decide which parts are public.
+
+For libraries, this keeps the styling surface honest. If a part is supported,
+make it a slot. If it is just implementation detail, keep it inside the
+component.
+
+## Base component pattern
+
+Export the slots next to the component when you want consumers to build themes:
+
+```tsx
+export const cardStyles = {
+  root: style.slot({ borderRadius: 8, padding: 16 }),
+  header: style.slot({ display: 'flex', alignItems: 'center' }),
+  title: style.slot({ fontWeight: 700 }),
+};
+
+export const compactCard = style.scope([
+  cardStyles.root({ padding: 12 }),
+  cardStyles.title({ fontSize: 14 }),
+]);
+```
+
+Then resolve them in the component:
+
+```tsx
+const css = useCss(
+  cardStyles,
+  ...scopeTarget(cardStyles.root, props.theme),
+);
+```
+
+This gives consumers a typed way to say "make this card compact" without tying
+their code to the CSS classes emitted today.

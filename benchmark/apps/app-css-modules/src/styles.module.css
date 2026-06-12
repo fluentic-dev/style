@@ -1,0 +1,18 @@
+.page { min-height: 100vh; background: #0f172a; color: #e5e7eb; padding: 18px; font-family: system-ui, sans-serif; }
+.header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border:1px solid #334155; border-radius:10px; padding:10px 12px; background:#0b1220; }
+.shell { display:grid; grid-template-columns:250px 1fr; gap:12px; }
+.card { border:1px solid #334155; border-radius:10px; background:#111827; padding:12px; }
+.title { margin:0; font-size:20px; }
+.muted { color:#94a3b8; font-size:12px; }
+.muted:hover { color:#cbd5e1; }
+.table { width:100%; border-collapse:collapse; font-size:13px; }
+.thtd { border-bottom:1px solid #334155; text-align:left; padding:8px 6px; }
+.badge { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #334155; font-size:11px; }
+.menuBtn { width:100%; margin-bottom:6px; text-align:left; border:1px solid #334155; background:#1f2937; color:#e5e7eb; border-radius:8px; padding:8px 10px; }
+.menuBtn:hover { border-color:#22d3ee; }
+.select { background:#0b1220; color:#e5e7eb; border:1px solid #334155; border-radius:8px; padding:6px 8px; }
+.detailsHero { border:1px solid #334155; background:#0b1220; border-radius:10px; padding:16px; margin-bottom:12px; }
+.rowActive { background: rgba(34,211,238,0.08); }
+@media (max-width: 900px) {
+  .title { font-size:18px; }
+}

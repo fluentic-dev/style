@@ -1,0 +1,183 @@
+---
+title: Next.js
+description: Configure Fluentic Style with the Next.js App Router, RSC, production builds, and static export.
+---
+
+Fluentic Style ships a dedicated Next.js integration for App Router projects.
+It wires the runtime, development CSS, source maps, production extraction, and
+static export support through one config helper.
+
+## Setup
+
+Install Fluentic Style:
+
+```bash
+pnpm add @fluentic/style
+```
+
+Configure the JSX runtime:
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style"
+  }
+}
+```
+
+Add the Next.js integration:
+
+```js
+// next.config.mjs
+import style from '@fluentic/style/plugin/nextjs';
+
+/** @type {import('next').NextConfig} */
+let nextConfig = {};
+
+nextConfig = style(nextConfig, {
+  include: /\.[jt]sx?$/,
+  exclude: /node_modules/,
+});
+
+export default nextConfig;
+```
+
+The integration uses webpack in current examples. Run Next with webpack while
+using this adapter:
+
+```bash
+next dev --webpack
+next build --webpack
+```
+
+## Root Layout
+
+Import the RSC StyleDev for dev mode from the runtime package:
+
+```tsx
+// app/layout.tsx
+import { StyleDev } from '@fluentic/style/runtime/rsc';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {children}
+        {process.env.NODE_ENV === 'development' && <StyleDev />}
+      </body>
+    </html>
+  );
+}
+```
+
+The plugin also injects the Fluentic runtime module in development and wires the
+server-side package alias needed for RSC.
+
+## Development
+
+In development, the Next.js integration keeps style chains live at runtime and
+injects debug metadata into style calls. That lets DevTools sourcemaps point
+back to the exact style property:
+
+```ts
+const styles = {
+  heading: style.slot({
+    backgroundColor: 'red',
+  }),
+};
+```
+
+The generated CSS rule for `background-color: red` maps back to the
+`backgroundColor` line instead of the render site.
+
+Development CSS uses two paths:
+
+- a pre-collected CSS link for fast first paint;
+- `data-css-dev` payloads consumed by the client observer for the real dev
+  sheet and CSS sourcemaps.
+
+The pre-collected CSS path is an optimization. If the browser misses it during a future
+framework change, the `data-css-dev` observer still inserts the rules after the
+page loads.
+
+## Production Build
+
+In production builds, the integration runs the full Fluentic compiler. Static
+style chains are evaluated, atomic CSS is collected, and the CSS is written into
+Next's emitted CSS assets. Extraction is always enabled for Next.js production
+builds and is not configurable on the Next.js plugin.
+
+```bash
+pnpm --filter @fluentic/style build
+next build --webpack
+next start
+```
+
+Runtime behavior remains available for dynamic values and cases the compiler
+cannot statically evaluate.
+
+## Static Export
+
+Static export works with the same plugin. Configure your Next app for export:
+
+```js
+// next.config.mjs
+import style from '@fluentic/style/plugin/nextjs';
+
+let nextConfig = {
+  output: 'export',
+  trailingSlash: true,
+};
+
+nextConfig = style(nextConfig);
+
+export default nextConfig;
+```
+
+Build with webpack:
+
+```bash
+next build --webpack
+```
+
+Next writes the exported site to `out`, including the extracted CSS assets.
+
+## Sourcemap Paths
+
+By default, development CSS sourcemaps point at a source URL served by the
+Fluentic Next dev sidecar. If you want the CSS sourcemap `sources[]` entry to
+match a bundler path, use `getSourcemapFilePath`:
+
+```js
+style(nextConfig, {
+  getSourcemapFilePath({ relativePath, sourceUrl }) {
+    return `webpack://_N_E/./${relativePath}`;
+  },
+});
+```
+
+The callback receives:
+
+```ts
+{
+  filePath: string;
+  absolutePath: string;
+  relativePath: string;
+  rootDir?: string;
+  sourceUrl?: string | null;
+}
+```
+
+Return `null` or `undefined` to keep the integration default.
+
+## Example
+
+The repository includes a complete App Router example:
+
+```bash
+pnpm --filter @fluentic/style build
+pnpm --filter @example/nextjs dev
+pnpm --filter @example/nextjs build
+pnpm --filter @example/nextjs ssg:build
+```
