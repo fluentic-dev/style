@@ -1,5 +1,5 @@
 import { base, menu, mountSingleBench, palette, rows } from '@benchmark/main';
-import { style, useCss } from '@fluentic/style';
+import { style, combineStyle } from '@fluentic/style';
 
 const styles = {
   page: style.slot(base.page),
@@ -19,7 +19,7 @@ const styles = {
 };
 
 function AppLayout({ view, tick, liteStyle }) {
-  const css = useCss(styles);
+  const css = combineStyle(styles);
   const activeRow = tick % rows.length;
 
   if (view === 'details') {

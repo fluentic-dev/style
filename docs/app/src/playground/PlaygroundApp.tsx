@@ -720,11 +720,11 @@ export default function PlaygroundApp() {
               <div className={`pg-trace-overlay${selectedOutput === 'trace' ? ' is-active' : ''}`}>
                 {traces.length === 0
                   ? <p className='pg-trace-empty'>No source trace metadata was emitted.</p>
-                  : traces.map((trace, index) => {
+                  : traces.map((trace) => {
                     const fileName = trace.filePath.replace(/^\.?\//, '');
                     return (
                       <button
-                        key={`${trace.key}-${fileName}-${trace.line}-${trace.column}-${index}`}
+                        key={getTraceKey(trace)}
                         type='button'
                         aria-selected={activeTraceKey === getTraceKey(trace)}
                         onClick={() => jumpToTrace(trace)}
@@ -839,9 +839,9 @@ function TraceCss({ css }: { css: string; }) {
       <span className='pg-trcss-p'>{' { '}</span>
       {props.map((prop, i) => {
         const col = prop.indexOf(':');
-        if (col < 0) return <span key={i}>{prop}</span>;
+        if (col < 0) return <span key={prop}>{prop}</span>;
         return (
-          <span key={i}>
+          <span key={prop}>
             {i > 0 && <span className='pg-trcss-p'>{'; '}</span>}
             <span className='pg-trcss-prop'>{prop.slice(0, col).trim()}</span>
             <span className='pg-trcss-p'>{': '}</span>
@@ -1007,9 +1007,9 @@ function fluenticDts() {
 
   /**
    * Resolve a slots object against active scopes.
-   * In React, use useCss() instead. getCss() is the non-hook equivalent.
+   * In React, use combineStyle() instead. combineStyle() is the non-hook equivalent.
    */
-  export function getCss<T extends object>(styles: T, ...scopes: unknown[]): { [K in keyof T]: CssProp };
+  export function combineStyle<T extends object>(styles: T, ...scopes: unknown[]): { [K in keyof T]: CssProp };
 
   /** Convert a CssProp to a class name string for HTML rendering. */
   export function getClassName(css: CssProp, props?: { className?: string }): { className?: string };

@@ -1,4 +1,4 @@
-import { getCss } from '@fluentic/style';
+import { combineStyle } from '@fluentic/style';
 import { Card } from '../../lib/Card';
 import { Chrome } from '../../lib/Chrome';
 import { page } from '../../lib/styles';
@@ -6,7 +6,7 @@ import { page } from '../../lib/styles';
 export const dynamic = 'force-static';
 
 export default function SsgPage() {
-  const css = getCss(page);
+  const css = combineStyle(page);
 
   return (
     <Chrome>

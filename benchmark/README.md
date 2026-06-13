@@ -11,14 +11,14 @@ by default, or to `BENCH_OUT_DIR` when that environment variable is set.
 - `pnpm bench` runs the React app timing matrix across row-count scenarios with app order rotated between repeats. Median is the primary timing metric; mean, p95, raw samples, cold first-run mount, style-tag counts, and CSS rule counts are kept for diagnosis.
 - `pnpm bench:stable` uses more repeats and measured runs for reportable local numbers.
 - `pnpm bench:stress` adds larger row-count scenarios so scaling issues do not hide behind a small dashboard.
-- `pnpm bench:fluentic-cache` runs a browser microbenchmark for warmed runtime style/cache behavior. It compares Fluentic parent/child `useCss` cache shapes with hoisted and inline dynamic Goober, Emotion, and styled-components variants.
+- `pnpm bench:fluentic-cache` runs a browser microbenchmark for warmed runtime style/cache behavior. It compares Fluentic parent/child `combineStyle` cache shapes with hoisted and inline dynamic Goober, Emotion, and styled-components variants.
 - `pnpm bench:dynamic-values` runs a browser microbenchmark for arbitrary values such as color, opacity, transform, and shadow width. It compares the recommended CSS-variable path across libraries against Fluentic inline dynamic style generation as the intentional cliff case.
 - `pnpm bench:ssr-style` runs a Goober-style SSR render-only microbenchmark for runtime styled/object resolution work. It compares Goober, styled-components, Emotion, Fluentic dynamic runtime style creation, and Fluentic hoisted runtime style switching without server stylesheet extraction.
 
 Fluentic is reported in separate build modes:
 
 - `fluentic-style-extract-*` builds with the Babel/unplugin precompile path and emits `dist-extract` with a real CSS asset.
-- `fluentic-runtime-css-prop` runs without the extraction plugin and exercises `useCss`, the custom JSX runtime, runtime rule insertion, and style-tag output.
+- `fluentic-runtime-css-prop` runs without the extraction plugin and exercises `combineStyle`, the custom JSX runtime, runtime rule insertion, and style-tag output.
 - `emotion` uses Emotion's React css-prop path with hoisted object styles.
 
 The main dashboard matrix currently includes Fluentic extracted chain/simple
@@ -29,7 +29,7 @@ excluded unless `INCLUDE_EXPERIMENTAL=1` is set.
 ## Scenario Lanes
 
 - `static-dashboard`: the current admin dashboard/table. This measures class lookup, render, remount, route switch, and known variant update work.
-- `runtime-css-prop`: Fluentic runtime path using `css` props and `useCss`; this is intentionally separated from the extracted/static lane.
+- `runtime-css-prop`: Fluentic runtime path using `css` props and `combineStyle`; this is intentionally separated from the extracted/static lane.
 - `style-cache-browser`: warmed browser cache stress lane. Cross-library variants run in fresh browser contexts, initialize only the selected library family, and rotate variant order across repeats.
 - `dynamic-value-browser`: arbitrary dynamic value lane. Recommended variants keep style rules static and move per-item values through CSS custom properties; inline dynamic style creation is retained as a warning/control variant.
 - `ssr-style-render-only`: `renderToString` microbenchmark inspired by Goober's benchmark shape. This is for runtime CSS-in-JS render/style resolution cost, not for static CSS modules, extraction-first libraries, or server stylesheet collection APIs.

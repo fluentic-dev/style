@@ -1,9 +1,9 @@
 ---
 title: Composition
-description: Compose style chains, slots, scopes, and css props safely.
+description: Compose style chains, scopes, and css props intentionally.
 ---
 
-Composition in Fluentic Style happens in three places.
+Composition in Fluentic Style happens at the layer that owns the decision.
 
 ## Builder composition
 
@@ -19,7 +19,7 @@ const card = style()
   });
 ```
 
-Use this for shared standalone style fragments.
+Use builder composition for shared standalone style fragments.
 
 ## Scope composition
 
@@ -32,13 +32,19 @@ const theme = style.scope([
 
 Scopes can contain other scope items and slot overrides.
 
+Resolve scopes with the component styles they target:
+
+```ts
+const css = combineStyle(buttonStyles, theme(buttonStyles.root));
+```
+
 ## Render composition
 
 ```tsx
 <button css={[css.root, isLoading && css.loading, props.css]} />
 ```
 
-This is the right place for conditionals that depend on render state.
+Use render composition for conditionals that depend on current props or state.
 
 ## Prefer the right layer
 
@@ -47,5 +53,6 @@ This is the right place for conditionals that depend on render state.
 | A reusable component part | `style.slot` |
 | A visual fragment | `style` |
 | A component theme | `style.scope` |
+| Applying a theme to component styles | `combineStyle(styles, ...targets)` |
 | A one-off element override | `css` prop |
 | A render-time conditional class | `css={[condition && item]}` |

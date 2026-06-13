@@ -1,4 +1,4 @@
-import { createToken, getCss, style } from '@fluentic/style';
+import { createToken, combineStyle, style } from '@fluentic/style';
 import { Card } from '../../lib/Card';
 import { Chrome } from '../../lib/Chrome';
 import { page } from '../../lib/styles';
@@ -18,8 +18,8 @@ async function ServerOnlyPanel() {
 }
 
 export default function RscPage() {
-  const css = getCss(page);
-  const pageCss = getCss(styles);
+  const css = combineStyle(page);
+  const pageCss = combineStyle(styles);
 
   return (
     <Chrome>

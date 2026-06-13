@@ -63,7 +63,7 @@ export function resolveNextCompilerOptions(
 ): BasePluginOptions {
   const resolved = resolvePluginSourcemapOptions({
     ...options,
-    devSourcemap: buildMeta.dev ? 'sidecarServer' : 'default',
+    devSourcemap: buildMeta.dev ? 'sidecarServer' : 'sourceUrl',
   }, sidecar);
 
   return {

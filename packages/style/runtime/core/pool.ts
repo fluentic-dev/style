@@ -87,10 +87,14 @@ function collectItems(
   prevTokensData: CssTokenData | null,
 ) {
   const scopes: ScopeTargetData[] = [];
-  let ids: string[] | null = null;
-  let values: unknown[] | null = null;
-  let lookup: Record<string, unknown> | null = null;
-  let indexLookup: Record<string, number> | null = null;
+  let ids: string[] | null = prevTokensData ? prevTokensData.ids.slice() : null;
+  let values: unknown[] | null = prevTokensData ? prevTokensData.values.slice() : null;
+  let lookup: Record<string, unknown> | null = prevTokensData
+    ? { ...prevTokensData.lookup }
+    : null;
+  let indexLookup: Record<string, number> | null = prevTokensData
+    ? createTokenIndexLookup(prevTokensData.ids)
+    : null;
 
   for (let i = 0, len = items.length; i < len; i++) {
     const item = items[i];
@@ -148,6 +152,16 @@ function collectItems(
     tokensData: { ids, values, lookup },
     isTokenDataChanged: true,
   };
+}
+
+function createTokenIndexLookup(ids: readonly string[]) {
+  const lookup: Record<string, number> = Object.create(null);
+
+  for (let i = 0, len = ids.length; i < len; i++) {
+    lookup[ids[i]] = i;
+  }
+
+  return lookup;
 }
 
 function isSameTokenData(

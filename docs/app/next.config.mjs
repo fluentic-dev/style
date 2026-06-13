@@ -1,7 +1,6 @@
 import { createMDX } from 'fumadocs-mdx/next';
 
 const docsBase = normalizeBase(process.env.DOCS_BASE ?? '/style');
-const docsSite = process.env.DOCS_SITE ?? 'https://fluenticstack.com';
 
 function normalizeBase(base) {
   if (!base || base === '/') {

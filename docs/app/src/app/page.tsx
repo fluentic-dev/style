@@ -75,7 +75,7 @@ export default function HomePage() {
             {'\n    '}padding: <span className="tok-str">'8px 12px'</span>,
             {'\n  }'}).<span className="tok-call">hover</span>({'{'} opacity: <span className="tok-num">0.88</span> {'}'}),
             {'\n  '}label: <span className="tok-id">style</span>.<span className="tok-call">slot</span>({'{'} fontWeight: <span className="tok-num">650</span> {'}'}),
-            {'\n};\n\n'}<span className="tok-com">// Compose a scope for variants and themes</span>
+            {'\n};\n\n'}<span className="tok-com">{'// Compose a scope for variants and themes'}</span>
             {'\n'}<span className="tok-key">const</span>{' '}<span className="tok-var">primary</span>{' = '}<span className="tok-id">style</span>.<span className="tok-call">scope</span>([
             {'\n  '}button.root({'{'} backgroundColor: token.accent {'}'}),
             {'\n  '}button.label({'{'} fontWeight: <span className="tok-num">760</span> {'}'}),

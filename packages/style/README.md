@@ -20,8 +20,10 @@ explicit:
 - `style(...)` creates fluent, typed style chains.
 - `style.slot(...)` publishes stable component parts such as `root`, `icon`, or
   `label`.
-- `style.scope(...)` composes themes, variants, state, media, and subtree
-  overrides through those slots.
+- `style.scope(...)` groups themes, variants, state, and media rules around
+  those slots.
+- `combineStyle(...)` resolves a component's styles with the scopes and
+  overrides it receives.
 - `createToken(...)` and `createTheme(...)` keep design values overrideable
   without rewriting component styles.
 - Bundler plugins can extract static styles into predictable atomic CSS while
@@ -46,8 +48,7 @@ dependencies, so you only install the tools your app already uses.
 
 ## Configure JSX
 
-Enable the custom JSX runtime so DOM and SVG elements accept the `css` and
-`scope` props.
+Enable the custom JSX runtime so DOM and SVG elements accept the `css` prop.
 
 ```json
 {
@@ -68,7 +69,7 @@ You can also use a file-level pragma:
 
 ```tsx
 /** @jsxImportSource @fluentic/style */
-import { style, useCss } from '@fluentic/style';
+import { combineStyle, style } from '@fluentic/style';
 
 const styles = {
   root: style.slot({
@@ -89,18 +90,16 @@ const styles = {
 };
 
 export function Button() {
-  const css = useCss(styles);
-
   return (
-    <button css={css.root} scope={css}>
-      <span css={css.label}>Save</span>
+    <button css={styles.root}>
+      <span css={styles.label}>Save</span>
     </button>
   );
 }
 ```
 
-Slots become the supported styling targets for a component. Scopes let you layer
-themes and variants on top of those targets:
+Slots become the supported styling targets for a component. Scopes let themes
+and variants address those targets without relying on generated class names:
 
 ```tsx
 const primary = style.scope([
@@ -114,10 +113,10 @@ const primary = style.scope([
 ]);
 
 export function PrimaryButton() {
-  const css = useCss(styles, primary);
+  const css = combineStyle(styles, primary);
 
   return (
-    <button css={css.root} scope={css}>
+    <button css={css.root}>
       <span css={css.label}>Publish</span>
     </button>
   );
@@ -128,7 +127,7 @@ export function PrimaryButton() {
 
 ```tsx
 /** @jsxImportSource @fluentic/style */
-import { createTheme, createToken, style, useCss, useTheme } from '@fluentic/style';
+import { createTheme, createToken, style, combineStyle, useTheme } from '@fluentic/style';
 
 const color = {
   accent: createToken('#2563eb', 'accent'),
@@ -150,7 +149,7 @@ const styles = {
 };
 
 export function ThemedButton() {
-  const css = useCss(styles);
+  const css = combineStyle(styles);
   const themeCss = useTheme(theme);
 
   return <button css={[themeCss, css.button]}>Themeable</button>;
@@ -181,8 +180,8 @@ export default defineConfig({
 import 'virtual:fluentic-styles';
 ```
 
-The authoring model stays the same: static chains can be collected into CSS,
-and dynamic styles keep the runtime path.
+The authoring model stays the same: static chains are collected into CSS, and
+dynamic styles keep the runtime path.
 
 ## Integrations
 
@@ -208,14 +207,14 @@ compiler, and bundler usage.
 | `@fluentic/style/builder/extract` | Extracted style helpers. |
 | `@fluentic/style/config` | Runtime and compiler configuration helpers. |
 | `@fluentic/style/runtime/rsc` | React Server Component runtime helpers. |
-| `@fluentic/style/runtime/static` | Static runtime helpers for extracted output. |
+| `@fluentic/style/runtime/style` | Style runtime helpers for extracted output. |
 
 See the [integration guide](https://fluenticstack.com/style/docs/integrations/overview/)
 for Vite, Rollup, Rolldown, Webpack, Rspack, esbuild, Babel, and Next.js.
 
 ## Status
 
-Fluentic Style is in beta. The intended model is stable: slots for component
-parts, scopes for themes and state, tokens for overrideable design values,
-runtime fallback for dynamic cases, and compiler extraction for static
-production styles.
+Fluentic Style is in beta. The core model is stable: slots for component parts,
+scopes for themes and state, explicit style composition, tokens for overrideable
+design values, runtime fallback for dynamic cases, and compiler extraction for
+static production styles.

@@ -79,6 +79,17 @@ export function createCssTheme(theme: ThemeData): CssResolvedTheme {
   };
 }
 
+export function createCssResolvedItem<Data extends StyleData | SlotData>(
+  data: Data,
+  scopes: readonly ScopeTargetData[],
+): CssResolvedItem<Data> {
+  return {
+    [TYPE]: TYPE_ITEM,
+    data,
+    items: resolveItems(data, scopes),
+  };
+}
+
 export function getCssInstanceStyles<T>(instance: CssInstance<T>) {
   return instance[STYLES];
 }
@@ -143,13 +154,7 @@ const handlers: ProxyHandler<InstanceData> = {
     const value = (styles as any)?.[prop] ?? null;
 
     if (isStyleData(value) || isSlotData(value)) {
-      const item: CssResolvedItem<unknown> = {
-        [TYPE]: TYPE_ITEM,
-        data: value,
-        items: resolveItems(value, scopes),
-      };
-
-      return (cache[prop] = item);
+      return (cache[prop] = createCssResolvedItem(value, scopes));
     }
 
     if (value && typeof value === 'object') {
@@ -220,15 +225,15 @@ function resolveItems(
   if (!slotId) return items;
 
   for (let i = 0, len = scopes.length; i < len; i++) {
-    const scopeTarget = scopes[i];
+    const boundScope = scopes[i];
 
-    const scope = getScopeTargetScope(scopeTarget);
+    const scope = getScopeTargetScope(boundScope);
     if (!scope) continue;
 
     const scopeItems = scope[BUILDER_STATE]?.items;
     if (!scopeItems) continue;
 
-    const targetSlotId = getScopeTargetSlotId(scopeTarget);
+    const targetSlotId = getScopeTargetSlotId(boundScope);
 
     for (let j = 0, len = scopeItems.length; j < len; j++) {
       const item = scopeItems[j];

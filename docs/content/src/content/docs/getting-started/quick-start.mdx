@@ -1,16 +1,16 @@
 ---
 title: Quick Start
-description: Start with `style()`, `useCss()`, `css` prop composition, and reusable style files.
+description: Start with `style()`, `combineStyle()`, `css` prop composition, and reusable style files.
 ---
 
 Fluentic Style starts small. Write styles with `style()`, resolve them with
-`useCss()`, and pass the resolved result to the `css` prop.
+`combineStyle()`, and pass the resolved result to the `css` prop.
 
 ## 1. Write a style
 
 ```tsx
 /** @jsxImportSource @fluentic/style */
-import { style, useCss } from '@fluentic/style';
+import { style, combineStyle } from '@fluentic/style';
 
 const styles = {
   button: style({
@@ -28,7 +28,7 @@ const styles = {
 };
 
 export function Button() {
-  const css = useCss(styles);
+  const css = combineStyle(styles);
 
   return <button css={css.button}>Save</button>;
 }
@@ -37,7 +37,7 @@ export function Button() {
 That is the core loop:
 
 - `style(...)` creates a typed style builder.
-- `useCss(styles)` resolves the builders for React.
+- `combineStyle(styles)` resolves the builders for React.
 - `css={css.button}` puts the generated class on the element.
 
 ## 2. Combine styles
@@ -67,7 +67,7 @@ const styles = {
 };
 
 export function Button(props: { primary?: boolean; fullWidth?: boolean }) {
-  const css = useCss(styles);
+  const css = combineStyle(styles);
 
   return (
     <button
@@ -94,7 +94,7 @@ one-off adjustments.
 
 ```tsx
 /** @jsxImportSource @fluentic/style */
-import { style, useCss } from '@fluentic/style';
+import { style, combineStyle } from '@fluentic/style';
 import type { CssProp } from '@fluentic/style';
 import type { ReactNode } from 'react';
 
@@ -118,7 +118,7 @@ type ButtonProps = {
 };
 
 export function Button(props: ButtonProps) {
-  const css = useCss(styles);
+  const css = combineStyle(styles);
 
   return <button css={[css.button, props.css]}>{props.children}</button>;
 }
@@ -134,7 +134,7 @@ const pageStyles = {
 };
 
 export function Page() {
-  const css = useCss(pageStyles);
+  const css = combineStyle(pageStyles);
 
   return <Button css={css.wideAction}>Publish</Button>;
 }
@@ -184,7 +184,7 @@ export const buttonStyles = {
 
 ```tsx title="Button.tsx"
 /** @jsxImportSource @fluentic/style */
-import { useCss } from '@fluentic/style';
+import { combineStyle } from '@fluentic/style';
 import type { CssProp } from '@fluentic/style';
 import type { ReactNode } from 'react';
 import { buttonStyles } from './Button.styles';
@@ -196,7 +196,7 @@ type ButtonProps = {
 };
 
 export function Button(props: ButtonProps) {
-  const css = useCss(buttonStyles);
+  const css = combineStyle(buttonStyles);
 
   return (
     <button css={[css.root, props.primary && css.primary, props.css]}>

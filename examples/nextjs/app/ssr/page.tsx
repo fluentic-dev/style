@@ -1,11 +1,11 @@
-import { getCss } from '@fluentic/style';
+import { combineStyle } from '@fluentic/style';
 import { connection } from 'next/server';
 import { Card } from '../../lib/Card';
 import { Chrome } from '../../lib/Chrome';
 import { page } from '../../lib/styles';
 
 export default async function SsrPage() {
-  const css = getCss(page);
+  const css = combineStyle(page);
   const isStaticExport = process.env.MODE === 'ssg';
 
   if (!isStaticExport) {

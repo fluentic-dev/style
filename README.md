@@ -23,11 +23,11 @@ Fluentic Style models those needs directly:
 
 | Concept            | What it solves                                                               |
 | ------------------ | ---------------------------------------------------------------------------- |
-| `style(...)`       | Standalone fluent style chains.                                              |
-| `style.slot(...)`  | Public component parts that can be themed and overridden.                    |
-| `style.scope(...)` | Bundles of slot overrides for themes, state, media queries, and inheritance. |
-| `useCss(...)`      | Runtime resolution from style metadata to rendered class names.              |
-| Bundler plugins    | Optional static extraction into atomic CSS.                                  |
+| `style(...)`        | Standalone fluent style chains.                                             |
+| `style.slot(...)`   | Public component parts that can be themed and overridden.                   |
+| `style.scope(...)`  | Bundles of slot overrides for themes, state, and media queries.             |
+| `combineStyle(...)` | Resolve styles with scopes, slot overrides, and token overrides.            |
+| Bundler plugins     | Optional static extraction into atomic CSS.                                 |
 
 ## Install
 
@@ -50,11 +50,11 @@ Configure the custom JSX runtime:
 }
 ```
 
-Create slots and render them:
+Create styles and render them:
 
 ```tsx
 /** @jsxImportSource @fluentic/style */
-import { style, useCss } from '@fluentic/style';
+import { style } from '@fluentic/style';
 
 const styles = {
   root: style.slot({
@@ -75,11 +75,9 @@ const styles = {
 };
 
 export function Button() {
-  const css = useCss(styles);
-
   return (
-    <button css={css.root} scope={css}>
-      <span css={css.label}>Save</span>
+    <button css={styles.root}>
+      <span css={styles.label}>Save</span>
     </button>
   );
 }
@@ -136,7 +134,7 @@ import 'virtual:fluentic-styles';
 | `@fluentic/style/precompile`      | Precompiled style helpers.                                                       |
 | `@fluentic/style/config`          | Runtime and compiler configuration helpers.                                      |
 | `@fluentic/style/runtime/rsc`     | React Server Component runtime helpers.                                          |
-| `@fluentic/style/runtime/static`  | Static runtime helpers for extracted output.                                     |
+| `@fluentic/style/runtime/style`   | Style runtime helpers for extracted output.                                     |
 | `@fluentic/style/plugin/vite`     | Vite plugin.                                                                     |
 | `@fluentic/style/plugin/rollup`   | Rollup plugin.                                                                   |
 | `@fluentic/style/plugin/webpack`  | Webpack plugin.                                                                  |
@@ -150,8 +148,9 @@ import 'virtual:fluentic-styles';
 
 ## Runtime and extraction
 
-Fluentic Style can run without a compiler. In runtime-only mode, `useCss`
-resolves style metadata and inserts missing atomic rules during render.
+Fluentic Style can run without a compiler. In runtime-only mode, the JSX `css`
+prop and `combineStyle` resolve class names and insert any atomic rules that
+were not extracted ahead of time.
 
 For production applications, use a bundler plugin. Static style chains can be
 transformed and collected into CSS while dynamic cases keep the runtime fallback.
@@ -231,6 +230,6 @@ Framework preset: Astro
 
 ## Status
 
-The package is early and actively evolving. The intended direction is stable:
-slots for component parts, scopes for themes and state, runtime fallback for
-dynamic cases, and compiler extraction for static production styles.
+The package is in active beta. The core model is stable: slots for component
+parts, scopes for themes and state, explicit style composition, runtime fallback
+for dynamic cases, and compiler extraction for static production styles.

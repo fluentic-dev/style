@@ -1,17 +1,15 @@
 ---
 title: JSX Runtime
-description: Configure the css and scope props for React elements.
+description: Configure the css prop for React elements.
 ---
 
-Fluentic Style ships a JSX runtime so DOM elements can receive two special
-props:
+Fluentic Style ships a JSX runtime so DOM elements can receive a `css` prop:
 
 | Prop | Accepts | Purpose |
 | --- | --- | --- |
-| `css` | resolved CSS items from `useCss`, arrays, falsy values | Adds generated class names. |
-| `scope` | a `CssInstance` from `useCss`, arrays, falsy values | Makes resolved slots available to descendants. |
+| `css` | resolved CSS items from `combineStyle`, arrays, falsy values | Adds generated class names. |
 
-These props are stripped before they reach the DOM.
+This prop is stripped before it reaches the DOM.
 
 ## Project-level setup
 
@@ -47,14 +45,3 @@ This is useful when you want to adopt Fluentic Style gradually.
 ```
 
 Falsy values are ignored. Nested arrays are supported.
-
-## `scope` accepts instances
-
-```tsx
-const css = useCss(styles);
-
-return <section scope={css} />;
-```
-
-Do not pass raw `style.scope(...)` builders to `scope`. Resolve your slots with
-`useCss` first, then pass the returned instance.

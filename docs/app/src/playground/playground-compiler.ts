@@ -1,8 +1,8 @@
 import * as Babel from '@babel/standalone';
-import { createBabelPlugin } from '../../../../packages/style/compiler/babel';
-import { createCollector } from '../../../../packages/style/compiler/collector';
-import { evaluateNode, type ImportMap, type ModuleBindings } from '../../../../packages/style/compiler/evaluator';
-import type { CompiledCssRule, CompilerOptions } from '../../../../packages/style/compiler/types';
+import { type CompilerOptions } from '../../../../packages/style/compiler';
+import { createCssCollector, extractCss } from '../../../../packages/style/compiler/extract';
+import { evaluateNode, type EvalModuleBindings, type ImportMap } from '../../../../packages/style/compiler/transform/evaluator';
+import { createExtractPlugin } from '../../../../packages/style/compiler/transform/extract';
 
 export type PlaygroundFile = {
   name: string;
@@ -24,7 +24,7 @@ export type CompileTrace = {
 };
 
 type ModuleInfo = {
-  bindings: ModuleBindings;
+  bindings: EvalModuleBindings;
   imports: ImportMap;
 };
 
@@ -33,10 +33,9 @@ const STYLE_SOURCES = new Set(['@fluentic/style', '@fluentic/style/server']);
 export function compilePlayground(files: PlaygroundFile[], options: CompilerOptions): CompileResult {
   const fileMap = new Map(files.map((file) => [normalizeFileName(file.name), file.code]));
   const moduleCache = new Map<string, ModuleInfo | null>();
-  const cssRules: CompiledCssRule[] = [];
-  const collector = createCollector(options, cssRules);
+  const collector = createCssCollector();
 
-  const resolveImport = (source: string, from: string): ModuleBindings | null => {
+  const resolveImport = (source: string, from: string): EvalModuleBindings | null => {
     if (!source.startsWith('.')) return null;
 
     const fileName = resolveVirtualFile(source, from, fileMap);
@@ -53,7 +52,7 @@ export function compilePlayground(files: PlaygroundFile[], options: CompilerOpti
     const code = fileMap.get(normalized);
     if (code === undefined) return null;
 
-    const bindings = new Map() as ModuleBindings;
+    const bindings = new Map() as EvalModuleBindings;
     const imports = new Map() as ImportMap;
     const styleNames = new Set<string>();
     const rawBindings: Array<{ name: string; node: Babel.types.Node; }> = [];
@@ -119,7 +118,19 @@ export function compilePlayground(files: PlaygroundFile[], options: CompilerOpti
     return { bindings, imports };
   };
 
-  const plugin = createBabelPlugin(cssRules, resolveImport, options);
+  const plugin = createExtractPlugin({
+    options,
+    collector,
+    projectDir: '/',
+    tracer: {
+      resolveImport(_babel: unknown, source: string, fromFile: string) {
+        return resolveImport(source, fromFile);
+      },
+      traceModule(_babel: unknown, source: string, fromFile: string) {
+        return resolveImport(source, fromFile);
+      },
+    },
+  });
   const transformed = files.map((file) => {
     const id = normalizeFileName(file.name);
     const result = Babel.transform(file.code, {
@@ -137,16 +148,8 @@ export function compilePlayground(files: PlaygroundFile[], options: CompilerOpti
 
   return {
     js: transformed.join('\n\n'),
-    css: collector.getCss(),
-    traces: cssRules
-      .filter((rule) => rule.callsite)
-      .map((rule) => ({
-        key: rule.key,
-        css: rule.css,
-        filePath: rule.callsite!.filePath,
-        line: rule.callsite!.line,
-        column: rule.callsite!.column,
-      })),
+    css: extractCss(collector.getItems(), options.css || {}),
+    traces: [],
   };
 }
 

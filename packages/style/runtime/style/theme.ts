@@ -1,12 +1,10 @@
 import { useInsertionEffect, useRef } from 'react';
 import type { ThemeData } from '../../builder/data';
 import { RUNTIME_CONFIG } from '../../config';
-import { useCssRuntimeContext } from '../context/RuntimeContext';
-import { createCssTheme, type CssResolvedTheme } from '../instance';
-import { insertRuntimeTheme } from '../sheet';
+import { getGlobalSheet, insertRuntimeTheme } from '../sheet';
+import { createCssTheme, type CssResolvedTheme } from '../core/data';
 
 export function useTheme(theme: ThemeData): CssResolvedTheme {
-  const context = useCssRuntimeContext();
   const currentRef = useRef<
     {
       theme: ThemeData;
@@ -26,8 +24,10 @@ export function useTheme(theme: ThemeData): CssResolvedTheme {
 
   if (!RUNTIME_CONFIG.isCssExtracted) {
     useInsertionEffect(() => {
-      insertRuntimeTheme(context.sheet, theme);
-      context.sheet.flush();
+      const sheet = getGlobalSheet();
+
+      insertRuntimeTheme(sheet, theme);
+      sheet.flush();
     });
   }
 

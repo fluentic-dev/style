@@ -6,9 +6,9 @@
   "scripts": {
     "clear": "rm -rf dist node_modules/.vite",
     "dev": "vite --port 5174",
-    "dev:runtime": "FLUENTIC_STYLE_MODE=runtime vite",
-    "dev:sourcemap.sidecarServer": "SOURCEMAP=sidecarServer vite",
-    "dev:sourcemap.sourceContent": "SOURCEMAP=sourceContent vite",
+    "dev:runtime": "FLUENTIC_STYLE_MODE=runtime vite --port 5174",
+    "dev:sourcemap.sidecarServer": "SOURCEMAP=sidecarServer vite --port 5174",
+    "dev:sourcemap.sourceContent": "SOURCEMAP=sourceContent vite --port 5174",
     "build": "vite build",
     "build:runtime": "FLUENTIC_STYLE_MODE=runtime vite build",
     "serve": "vite preview --port 5174"

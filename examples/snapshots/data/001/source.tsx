@@ -1,4 +1,4 @@
-import { createToken, scopeTarget, style, useCss } from '@fluentic/style';
+import { createToken, bindScope, style, combineStyle } from '@fluentic/style';
 import bg from './bg.png';
 import { Fonts } from './constants';
 
@@ -70,8 +70,8 @@ const scope = style
   ]);
 
 export default () => {
-  const css = useCss(styles, scopeTarget(styles.container, scope));
-  const extraCss = useCss(extraStyles);
+  const css = combineStyle(styles, bindScope(styles.container, scope));
+  const extraCss = combineStyle(extraStyles);
 
   return (
     <div css={[css.container, extraCss.container]}>

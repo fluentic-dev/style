@@ -1,10 +1,10 @@
-import { useCss } from '@fluentic/style';
+import { combineStyle } from '@fluentic/style';
 
 import { accentCardTheme, pageStyles, parentHoverScope } from './App.styles';
 import { Card } from './components/Card';
 
 export function BundlerSampleApp(props: { bundler: string; }) {
-  const css = useCss(pageStyles);
+  const css = combineStyle(pageStyles);
 
   return (
     <main css={css.page}>
@@ -14,7 +14,7 @@ export function BundlerSampleApp(props: { bundler: string; }) {
           <h1 css={css.title}>Fluentic on {props.bundler}</h1>
           <p css={css.lead}>
             This sample keeps the app intentionally small while exercising <code>style()</code>,{' '}
-            <code>style.slot()</code>, <code>style.scope()</code>, and the <code>useCss</code>{' '}
+            <code>style.slot()</code>, <code>style.scope()</code>, and the <code>combineStyle</code>{' '}
             hook through the bundler plugin and the custom JSX runtime. Resize below 720px to see the media rule
             collapse the cards into one column while this hero switches to a warm border, background, and tighter
             spacing.

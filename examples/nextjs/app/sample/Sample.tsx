@@ -1,4 +1,4 @@
-import { getCss, scopeTarget, style } from '@fluentic/style';
+import { combineStyle, bindScope, style } from '@fluentic/style';
 import type { CssTheme } from '@fluentic/style';
 
 const cardStyles = {
@@ -150,9 +150,9 @@ type CardProps = {
 };
 
 function SampleCard(props: CardProps) {
-  const css = getCss(
+  const css = combineStyle(
     cardStyles,
-    scopeTarget(cardStyles.card, props.theme),
+    bindScope(cardStyles.card, props.theme),
   );
 
   return (
@@ -165,7 +165,7 @@ function SampleCard(props: CardProps) {
 }
 
 export function Sample() {
-  const css = getCss(sampleStyles);
+  const css = combineStyle(sampleStyles);
 
   return (
     <main css={css.page}>
@@ -176,7 +176,7 @@ export function Sample() {
           <p css={css.lead}>
             This page keeps the shared bundler display local to the Next.js app while exercising
             <code>style()</code>, <code>style.slot()</code>, <code>style.scope()</code>, and the
-            <code>useCss</code> hook through the Next plugin and custom JSX runtime.
+            <code>combineStyle</code> hook through the Next plugin and custom JSX runtime.
           </p>
         </section>
 

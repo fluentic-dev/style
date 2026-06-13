@@ -38,10 +38,10 @@ customization.
 ## Resolve internal state first
 
 ```tsx
-const css = useCss(
+const css = combineStyle(
   tabsStyles,
   selectedState(tabsStyles.trigger),
-  ...scopeTarget(tabsStyles.root, props.theme),
+  ...bindScope(tabsStyles.root, props.theme),
 );
 ```
 
@@ -50,7 +50,7 @@ Keep internal state near the component. Let external themes layer on top.
 ## Forward root overrides
 
 ```tsx
-<div css={[css.root, props.css]} scope={css} />
+<div css={[css.root, props.css]} />
 ```
 
 This lets consumers make one-off layout adjustments without defining a theme.
@@ -63,6 +63,6 @@ For every component, document:
 - which element each slot maps to;
 - what `css` affects;
 - what `theme` can override;
-- whether nested components inherit scope.
+- which theme props should be forwarded to nested components.
 
 This makes the styling surface discoverable and stable.

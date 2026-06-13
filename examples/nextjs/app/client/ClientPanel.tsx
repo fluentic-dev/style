@@ -1,6 +1,6 @@
 'use client';
 
-import { style, useCss } from '@fluentic/style';
+import { style, combineStyle } from '@fluentic/style';
 import { useState } from 'react';
 import { page } from '../../lib/styles';
 
@@ -72,16 +72,16 @@ const clientStyles = {
 
 export function ClientPanel() {
   const [clicks, setClicks] = useState(0);
-  const css = useCss(clientStyles);
-  const pageCss = useCss(page);
+  const css = combineStyle(clientStyles);
+  const pageCss = combineStyle(page);
 
   return (
     <section css={pageCss.grid}>
       <article css={css.panel}>
         <div css={css.bar} />
-        <span css={css.code}>useCss</span>
+        <span css={css.code}>combineStyle</span>
         <p css={css.label}>
-          This client component uses useCss. The build still extracts the rules, so the hook does not need to inject CSS
+          This client component uses combineStyle. The build still extracts the rules, so the hook does not need to inject CSS
           at runtime.
         </p>
         <div css={css.actionRow}>

@@ -123,11 +123,11 @@ export const compactTheme = style.scope([
   },
   {
     name: 'app.ts',
-    code: `import { getCss, getClassName } from '@fluentic/style';
+    code: `import { combineStyle, getClassName } from '@fluentic/style';
 import { card, compactTheme, nightTheme } from './card.styles';
 
-// getCss resolves slots against active scopes — same as useCss() in React
-const css = getCss(card, nightTheme, compactTheme);
+// combineStyle resolves slots against active scopes — same as combineStyle() in React
+const css = combineStyle(card, nightTheme, compactTheme);
 
 // getClassName converts a CssProp to a class name string for HTML rendering
 const cn = (cssProp) => getClassName(cssProp).className ?? '';
@@ -220,7 +220,7 @@ export const pillTheme = style.scope([
   },
   {
     name: 'app.ts',
-    code: `import { style, getCss, getClassName } from '@fluentic/style';
+    code: `import { style, combineStyle, getClassName } from '@fluentic/style';
 import { btn, dangerTheme, neutralTheme, pillTheme, primaryTheme } from './button.styles';
 
 // Demo layout slots — all styling through Fluentic
@@ -232,12 +232,12 @@ const demo = {
 const cn = (cssProp) => getClassName(cssProp).className ?? '';
 
 function renderBtn(label, ...themes) {
-  const css = getCss(btn, ...themes);
+  const css = combineStyle(btn, ...themes);
   return \`<button class="\${cn(css.root)}">\${label}</button>\`;
 }
 
 export function renderApp() {
-  const lay = getCss(demo);
+  const lay = combineStyle(demo);
   return \`
     <main class="demo-shell">
       <div class="\${cn(lay.stack)}">
@@ -352,10 +352,10 @@ export const profile = {
   },
   {
     name: 'app.ts',
-    code: `import { getCss, getClassName } from '@fluentic/style';
+    code: `import { combineStyle, getClassName } from '@fluentic/style';
 import { profile } from './profile.styles';
 
-const css = getCss(profile);
+const css = combineStyle(profile);
 const cn = (cssProp) => getClassName(cssProp).className ?? '';
 
 export function renderApp() {

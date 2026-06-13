@@ -1,5 +1,5 @@
 import { css as emotionCss } from '@emotion/css';
-import { createElement as fluenticCreateElement, resolveCssProp, style, useCss } from '@fluentic/style';
+import { createElement as fluenticCreateElement, resolveCssProp, style, combineStyle } from '@fluentic/style';
 import { css as gooberCss, setup as setupGoober } from 'goober';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -240,7 +240,7 @@ function getStyledDynamicVarsBox() {
 const ids = Array.from({ length: ITEMS }, (_, index) => index);
 
 function ParentHoisted({ tick }) {
-  const css = useCss(getFluenticHoistedStyles());
+  const css = combineStyle(getFluenticHoistedStyles());
 
   return (
     <div className='grid'>
@@ -256,7 +256,7 @@ function ParentHoisted({ tick }) {
 }
 
 function ParentHoistedClassName({ tick }) {
-  const css = useCss(getFluenticHoistedStyles());
+  const css = combineStyle(getFluenticHoistedStyles());
   const activeClassName = resolveCssProp([css.box, css.active]).className;
   const dimmedClassName = resolveCssProp([css.box, css.dimmed]).className;
 
@@ -280,7 +280,7 @@ function ChildHoistedSameMap({ tick }) {
 }
 
 function ChildHoistedBox({ id, active: isActive }) {
-  const css = useCss(getFluenticHoistedStyles());
+  const css = combineStyle(getFluenticHoistedStyles());
 
   return renderFluenticBox([css.box, isActive ? css.active : css.dimmed], id);
 }
@@ -295,7 +295,7 @@ function ChildNewMapSameSlots({ tick }) {
 
 function ChildNewMapBox({ id, active: isActive }) {
   const { box, active, dimmed } = getFluenticHoistedStyles();
-  const css = useCss({ box, active, dimmed });
+  const css = combineStyle({ box, active, dimmed });
 
   return renderFluenticBox([css.box, isActive ? css.active : css.dimmed], id);
 }
@@ -312,7 +312,7 @@ function ChildInlineDynamicBox({ id, active: isActive }) {
   const styles = {
     box: createInlineFluenticStyle(isActive),
   };
-  const css = useCss(styles);
+  const css = combineStyle(styles);
 
   return renderFluenticBox(css.box, id);
 }
@@ -346,7 +346,7 @@ function getDynamicVars(id, tick) {
 }
 
 function FluenticDynamicVars({ tick }) {
-  const css = useCss(getFluenticDynamicVarStyles());
+  const css = combineStyle(getFluenticDynamicVarStyles());
 
   return (
     <div className='grid'>
@@ -366,7 +366,7 @@ function FluenticInlineDynamicValues({ tick }) {
 }
 
 function FluenticInlineDynamicValueBox({ id, tick }) {
-  const css = useCss({ box: createInlineFluenticDynamicValueStyle(id, tick) });
+  const css = combineStyle({ box: createInlineFluenticDynamicValueStyle(id, tick) });
 
   return renderFluenticBox(css.box, id);
 }

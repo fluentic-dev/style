@@ -145,9 +145,12 @@ Next writes the exported site to `out`, including the extracted CSS assets.
 
 ## Sourcemap Paths
 
-By default, development CSS sourcemaps point at a source URL served by the
-Fluentic Next dev sidecar. If you want the CSS sourcemap `sources[]` entry to
-match a bundler path, use `getSourcemapFilePath`:
+In development, CSS sourcemaps use Fluentic's Next.js source URLs by default, so
+DevTools can jump from generated CSS back to the original style property. The
+integration serves those sources through its dev sidecar.
+
+Use `getSourcemapFilePath` only when the CSS sourcemap `sources[]` entry should
+match a bundler-specific path:
 
 ```js
 style(nextConfig, {

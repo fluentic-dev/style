@@ -47,7 +47,7 @@ There are two useful starting modes. They use the same component code.
 
 | Mode | Best for | Setup |
 | --- | --- | --- |
-| Runtime-only | Prototyping, tests, component libraries, unsupported bundlers, SSR experiments | JSX import source and `useCss` |
+| Runtime-only | Prototyping, tests, component libraries, unsupported bundlers, SSR experiments | JSX import source and `combineStyle` |
 | Static extraction | Applications and production bundles where a supported bundler is available | Runtime setup plus a bundler plugin and virtual CSS imports |
 
 Runtime-only is not a throwaway mode. It is the fallback that keeps the same
@@ -56,8 +56,7 @@ extraction is an optimization path for chains the compiler can evaluate.
 
 ## TypeScript
 
-Use the custom JSX runtime so `css` and `scope` props are accepted on DOM and SVG
-elements.
+Use the custom JSX runtime so the `css` prop is accepted on DOM and SVG elements.
 
 ```json
 {
@@ -80,7 +79,7 @@ After the JSX runtime is configured, this is enough to verify the runtime path:
 
 ```tsx
 /** @jsxImportSource @fluentic/style */
-import { style, useCss } from '@fluentic/style';
+import { style, combineStyle } from '@fluentic/style';
 
 const styles = {
   root: style.slot({
@@ -91,8 +90,8 @@ const styles = {
 };
 
 export function Button() {
-  const css = useCss(styles);
-  return <button css={css.root} scope={css}>Save</button>;
+  const css = combineStyle(styles);
+  return <button css={css.root}>Save</button>;
 }
 ```
 

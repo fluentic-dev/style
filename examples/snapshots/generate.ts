@@ -1,10 +1,11 @@
 import type { StyleFn } from '@fluentic/style';
-import { type CompilerCssOptions, Constants, createCompiler } from '@fluentic/style/compiler';
+import { type CompilerCssOptions, type CompilerOptions, Constants, createCompiler } from '@fluentic/style/compiler';
 import { constants } from 'node:fs';
 import { access, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import ts from 'typescript';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -16,13 +17,7 @@ const cssOptions: CompilerCssOptions = {
   layer: true,
 };
 
-const compiler = createCompiler({
-  css: { ...cssOptions },
-});
-
-const debugCompiler = createCompiler({
-  css: { ...cssOptions, debugClassName: true },
-});
+const generatedJsHeader = '/* eslint-disable */\n';
 
 async function resolveIds() {
   if (requestedId) {
@@ -76,22 +71,45 @@ async function runForId(itemId: string) {
 
   const styleFn = await getSnapshotStyleFn(snapshotDir);
 
-  let snapshotCompiler = compiler;
-  let snapshotDebugCompiler = debugCompiler;
+  let compilerOptions: CompilerOptions = {
+    css: { ...cssOptions },
+  };
+  let debugCompilerOptions: CompilerOptions = {
+    css: { ...cssOptions, debugClassName: true },
+  };
 
   if (styleFn) {
-    const opts = {
+    compilerOptions = {
       css: { ...cssOptions },
       styleFn,
       importSources: [{ source: './style', name: 'style' }],
     };
-    snapshotCompiler = createCompiler(opts);
-    snapshotDebugCompiler = createCompiler({ ...opts, css: { ...cssOptions, debugClassName: true } });
+    debugCompilerOptions = {
+      ...compilerOptions,
+      css: { ...cssOptions, debugClassName: true },
+    };
   }
 
+  const snapshotCompiler = createCompiler({
+    projectDir: __dirname,
+    cacheDir: path.join(snapshotDir, '.snapshot-cache'),
+  }, compilerOptions);
+  const snapshotDebugCompiler = createCompiler({
+    projectDir: __dirname,
+    cacheDir: path.join(snapshotDir, '.snapshot-cache-debug'),
+  }, debugCompilerOptions);
+
   const source = await readFile(sourcePath, 'utf8');
-  const result = snapshotCompiler.transform(source, sourcePath);
-  const debugResult = snapshotDebugCompiler.transform(source, sourcePath);
+  const result = snapshotCompiler.compileExtract({
+    code: source,
+    filePath: sourcePath,
+    sourcemap: null,
+  });
+  const debugResult = snapshotDebugCompiler.compileExtract({
+    code: source,
+    filePath: sourcePath,
+    sourcemap: null,
+  });
 
   if (!result) {
     throw new Error(`Failed to compile: ${sourcePath}`);
@@ -101,10 +119,10 @@ async function runForId(itemId: string) {
   }
 
   await mkdir(snapshotDir, { recursive: true });
-  await writeFile(compiledPath, result.code ?? '', 'utf8');
-  await writeFile(compiledDebugPath, debugResult.code ?? '', 'utf8');
-  await writeFile(cssPath, result.css?.join('\n') ?? '', 'utf8');
-  await writeFile(cssDebugPath, debugResult.css?.join('\n') ?? '', 'utf8');
+  await writeFile(compiledPath, toSnapshotJs(result.code ?? ''), 'utf8');
+  await writeFile(compiledDebugPath, toSnapshotJs(debugResult.code ?? ''), 'utf8');
+  await writeFile(cssPath, snapshotCompiler.getExtractedCss(), 'utf8');
+  await writeFile(cssDebugPath, snapshotDebugCompiler.getExtractedCss(), 'utf8');
 
   console.log(`Generated snapshot ${itemId}${styleFn ? ' (with transform)' : ''}`);
   console.log(`- source.tsx:          ${sourcePath}`);
@@ -112,6 +130,19 @@ async function runForId(itemId: string) {
   console.log(`- compiled.debug.js:   ${compiledDebugPath}`);
   console.log(`- extracted.css:       ${cssPath}`);
   console.log(`- extracted.debug.css: ${cssDebugPath}`);
+}
+
+function toSnapshotJs(code: string) {
+  const output = ts.transpileModule(code, {
+    compilerOptions: {
+      jsx: ts.JsxEmit.Preserve,
+      module: ts.ModuleKind.ESNext,
+      target: ts.ScriptTarget.ES2020,
+      verbatimModuleSyntax: true,
+    },
+  });
+
+  return `${generatedJsHeader}${output.outputText}`;
 }
 
 const ids = await resolveIds();

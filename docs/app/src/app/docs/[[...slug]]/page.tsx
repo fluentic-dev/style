@@ -16,9 +16,9 @@ type PageProps = {
 };
 
 function renderInlineCode(value: string): ReactNode {
-  return value.split(/(`[^`]+`)/g).map((part, index) => {
+  return value.split(/(`[^`]+`)/g).map((part) => {
     if (part.startsWith('`') && part.endsWith('`')) {
-      return <code key={index}>{part.slice(1, -1)}</code>;
+      return <code key={part}>{part.slice(1, -1)}</code>;
     }
 
     return part;

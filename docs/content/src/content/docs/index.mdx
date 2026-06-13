@@ -29,7 +29,7 @@ const primary = style.scope([
 | --- | --- |
 | Author | Write fluent TypeScript chains close to the component. |
 | Expose | Publish slots as stable styling targets. |
-| Theme | Compose scoped overrides for state, variants, and context. |
+| Theme | Compose scoped overrides for state, variants, and themes. |
 | Deliver | Resolve at runtime or extract static atomic CSS. |
 
 ## The problem
@@ -39,7 +39,7 @@ Styling a component library gets difficult when you need all of these at once:
 - base styles that are local to each component;
 - hover, focus, media, container, and selector variants;
 - consumer overrides that target specific component parts;
-- themes that can be inherited through a subtree;
+- themes that can be passed explicitly through component boundaries;
 - predictable CSS order without hand-managed specificity wars;
 - performance that does not require every style to be recalculated on every render;
 - an escape hatch for dynamic styles;
@@ -64,13 +64,13 @@ Fluentic Style has three main objects:
 | --- | --- |
 | `style(...)` | A standalone style chain for one-off or reusable visual fragments. |
 | `style.slot(...)` | A named component part that becomes a typed override target. |
-| `style.scope(...)` | A bundle of slot overrides for state, theme, media, or context. |
+| `style.scope(...)` | A bundle of slot overrides for state, theme, or media rules. |
 
 Here is a tiny component:
 
 ```tsx
 /** @jsxImportSource @fluentic/style */
-import { style, useCss } from '@fluentic/style';
+import { style, combineStyle } from '@fluentic/style';
 
 const styles = {
   root: style.slot({
@@ -87,31 +87,30 @@ const styles = {
 };
 
 export function Button() {
-  const css = useCss(styles);
+  const css = combineStyle(styles);
 
   return (
-    <button css={css.root} scope={css}>
+    <button css={css.root}>
       <span css={css.label}>Save</span>
     </button>
   );
 }
 ```
 
-The `scope={css}` prop exposes the resolved slots to descendants. That is what
-lets a theme or state override flow through a subtree without asking consumers
-to know the generated classes.
+Themes and state variants meet the component at `combineStyle(...)`, so the
+source of each rendered style stays visible.
 
 ## What this unlocks
 
 - **For library authors:** define `root`, `icon`, `label`, `content`, or any
   supported part as a slot while keeping internal wrappers private.
-- **For app teams:** use scopes to layer local, nested, conditional themes
-  through the slots a component intentionally exposes.
+- **For app teams:** pass local, nested, or conditional themes through the slots
+  a component intentionally exposes.
 - **For production builds:** runtime mode keeps libraries and tests working;
   extraction moves supported static chains into CSS assets.
 
 ## What to read next
 
-Start with [Installation](getting-started/installation), then read the
-[Mental Model](core/mental-model). If you want to use this in an app
-immediately, jump to the [Vite guide](integrations/vite).
+Start with [Installation](getting-started/installation), then read
+[Core Concepts](core/concepts). If you want to use this in an app immediately,
+jump to the [Vite guide](integrations/vite).

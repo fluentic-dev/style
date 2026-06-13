@@ -1,7 +1,7 @@
 import { isScopeData, type ScopeTargetData, type SlotData } from '../../builder/data';
 import type { CssTheme } from '../types';
 
-export function scopeCombine(...scopes: (CssTheme | undefined)[]) {
+export function combineScope(...scopes: (CssTheme | undefined)[]) {
   const shortcut = resolveSingleScopeTarget(scopes);
 
   if (shortcut !== null) {
@@ -11,7 +11,7 @@ export function scopeCombine(...scopes: (CssTheme | undefined)[]) {
   return (target: SlotData) => resolveScopeTargets(target, scopes);
 }
 
-export function scopeTarget(
+export function bindScope(
   target: SlotData,
   ...scopes: (CssTheme | undefined)[]
 ) {

@@ -1,4 +1,4 @@
-import { scopeTarget, useCss } from '@fluentic/style';
+import { bindScope, combineStyle } from '@fluentic/style';
 import type { CssTheme } from '@fluentic/style';
 
 import { cardStyles } from '../App.styles';
@@ -11,9 +11,9 @@ type CardProps = {
 };
 
 export function Card(props: CardProps) {
-  const css = useCss(
+  const css = combineStyle(
     cardStyles,
-    scopeTarget(cardStyles.card, props.theme),
+    bindScope(cardStyles.card, props.theme),
   );
 
   return (

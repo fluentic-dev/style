@@ -1,6 +1,6 @@
 import { createElement as reactCreateElement } from 'react';
 import * as react from 'react/jsx-runtime';
-import { transformElement } from '../runtime/jsx';
+import { transformElement } from '../runtime/core/jsx';
 import { createJsx, wrapCreateElement, wrapFragment } from './utils';
 
 export type { JSX } from 'react/jsx-runtime';

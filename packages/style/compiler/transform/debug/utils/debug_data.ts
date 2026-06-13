@@ -37,7 +37,7 @@ export function buildDebugDataObject(
     ),
     t.objectProperty(
       t.identifier('fields'),
-      buildFields(t, node.arguments[0], fileId),
+      buildFields(t, node.arguments[0]),
     ),
     t.objectProperty(
       t.identifier('vars'),
@@ -90,7 +90,6 @@ function buildLoc(
 function buildFields(
   t: typeof types,
   arg: CallArg,
-  fileId: string,
 ) {
   if (!arg || arg.type !== 'ObjectExpression') return t.objectExpression([]);
 

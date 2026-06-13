@@ -1,6 +1,6 @@
 import { configureRuntime } from '../../../../packages/style/config';
 import { collectDevCssRules } from '../../../../packages/style/runtime/dev';
-import { getClassName, getCss } from '../../../../packages/style/runtime/static';
+import { getClassName, combineStyle } from '../../../../packages/style/runtime/style';
 import type { CssProp } from '../../../../packages/style/runtime/types';
 import { style } from '../../../../packages/style/style';
 import { createTheme } from '../../../../packages/style/style/theme';
@@ -35,9 +35,9 @@ export function runRuntime(request: RuntimeRequest): RuntimeResult {
     return getClassName(css, props as Parameters<typeof getClassName>[1]);
   }
 
-  // Real getCss wrapped to collect CSS for all slots up front
-  function wrappedGetCss<T extends object>(styles: T, ...args: unknown[]): T {
-    const result = getCss(styles, ...(args as any[]));
+  // Real combineStyle wrapped to collect CSS for all slots up front
+  function wrappedCombineStyle<T extends object>(styles: T, ...args: unknown[]): T {
+    const result = combineStyle(styles, ...(args as any[]));
 
     for (const key of Object.keys(result as object)) {
       const cssProp = (result as Record<string, unknown>)[key];
@@ -49,7 +49,7 @@ export function runRuntime(request: RuntimeRequest): RuntimeResult {
 
   const renderApp = new Function(
     'style',
-    'getCss',
+    'combineStyle',
     'getClassName',
     'createToken',
     'createTokens',
@@ -57,7 +57,7 @@ export function runRuntime(request: RuntimeRequest): RuntimeResult {
     source + '\nreturn typeof renderApp === "function" ? renderApp : null;',
   )(
     style,
-    wrappedGetCss,
+    wrappedCombineStyle,
     wrappedGetClassName,
     createToken,
     createTokens,

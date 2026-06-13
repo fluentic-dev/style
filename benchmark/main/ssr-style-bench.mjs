@@ -1,5 +1,5 @@
 import emotionStyled from '@emotion/styled';
-import { createElement as fluenticCreateElement, style, useCss } from '@fluentic/style';
+import { createElement as fluenticCreateElement, style, combineStyle } from '@fluentic/style';
 import Benchmark from 'benchmark';
 import { setup as setupGoober, styled as gooberStyled } from 'goober';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -142,13 +142,13 @@ function FluenticRuntimeDynamic(props) {
       .media('(min-width: 1px)', { minWidth: 52 })
       .hover({ borderColor: '#0ea5e9' }),
   };
-  const css = useCss(styles);
+  const css = combineStyle(styles);
 
   return fluenticCreateElement('div', { css: css.root });
 }
 
 function FluenticRuntimeHoisted(props) {
-  const css = useCss(isActive(props) ? fluenticStyles1 : fluenticStyles0);
+  const css = combineStyle(isActive(props) ? fluenticStyles1 : fluenticStyles0);
 
   return fluenticCreateElement('div', { css: css.root });
 }

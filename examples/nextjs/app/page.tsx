@@ -1,10 +1,10 @@
-import { getCss } from '@fluentic/style';
+import { combineStyle } from '@fluentic/style';
 import { Card } from '../lib/Card';
 import { Chrome } from '../lib/Chrome';
 import { page } from '../lib/styles';
 
 export default function HomePage() {
-  const css = getCss(page);
+  const css = combineStyle(page);
 
   return (
     <Chrome>

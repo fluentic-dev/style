@@ -1,4 +1,4 @@
-import { useCss } from '@fluentic/style';
+import { combineStyle } from '@fluentic/style';
 import { style } from './style';
 
 const styles = {
@@ -64,7 +64,7 @@ const styles = {
 };
 
 export function App() {
-  const css = useCss(styles);
+  const css = combineStyle(styles);
 
   return (
     <main css={css.page}>

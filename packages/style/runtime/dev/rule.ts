@@ -1,5 +1,5 @@
 import type { SheetCallsite, SheetRule } from '../../sheet';
-import { collectCssPropItems } from '../instance';
+import { collectCssPropItems } from '../core';
 import { createRuntimeSheetRule } from '../sheet/rule';
 import type { CssProp } from '../types';
 

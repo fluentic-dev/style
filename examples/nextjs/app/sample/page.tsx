@@ -1,10 +1,10 @@
-import { getCss } from '@fluentic/style';
+import { combineStyle } from '@fluentic/style';
 import { Chrome } from '../../lib/Chrome';
 import { page } from '../../lib/styles';
 import { Sample } from './Sample';
 
 export default function SharedPage() {
-  const css = getCss(page);
+  const css = combineStyle(page);
 
   return (
     <Chrome>

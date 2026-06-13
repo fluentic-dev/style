@@ -1,4 +1,4 @@
-import { style, useCss, useTheme } from '@fluentic/style';
+import { style, combineStyle, useTheme } from '@fluentic/style';
 import type { CssProp } from '@fluentic/style';
 import { Button } from './button';
 import { buttonBaseStyles, pageStyles, pageTheme } from './styles';
@@ -18,7 +18,7 @@ const cancelButtonTheme = style.scope([
 ]);
 
 export function Page(props: PageProps) {
-  const css = useCss(pageStyles, pageTheme(pageStyles.container));
+  const css = combineStyle(pageStyles, pageTheme(pageStyles.container));
   const theme = useTheme(appTheme);
 
   return (

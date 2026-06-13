@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
 import { RUNTIME_CONFIG } from '../../config';
 import type { RecursiveArray } from '../../utils/type';
-import { resolveCssProp } from '../instance';
+import { resolveCssProp } from '../core';
 import { getClassNameRSC } from '../rsc/getClassName';
 import type { CssProp, Falsy } from '../types';
 

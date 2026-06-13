@@ -8,22 +8,25 @@ import {
   BUILDER_TYPE_STYLE,
   getSlotId,
   isScopeData,
+  isScopeTargetData,
   isSlotData,
   isSlotOverrideData,
   isStyleData,
   isThemeData,
   ITEM_VALUE_TYPE_VARIABLE,
-  type ScopeData,
   type SlotData,
-  type SlotOverrideData,
   type StyleData,
   type ThemeData,
 } from '../../builder/data';
 import type { StateItem } from '../../builder/data/state';
 import { RUNTIME_CONFIG } from '../../config';
-import { getStyleTokenId, isStyleTokenData, type StyleTokenData } from '../../style/token';
+import { getStyleTokenId, isStyleTokenData, isStyleTokenOverrideData, type StyleTokenData } from '../../style/token';
+import type { StyleSheet } from '../../sheet/types';
 import type { CssProp, CssRuntimeItem } from '../types';
+import { createRuntimeSheetRule } from '../sheet/rule';
+import { insertRuntimeTheme } from '../sheet/theme_runtime';
 import {
+  createCssResolvedItem,
   type CssResolvedItem,
   type CssResolvedTheme,
   type CssTokenData,
@@ -44,15 +47,10 @@ type CacheNode = {
   result: ResolvedCssProp | null;
 };
 
-type CssPropWalkItem =
-  | CssRuntimeItem
-  | StyleData
-  | SlotData
-  | SlotOverrideData
-  | ScopeData
-  | ThemeData;
+type CssPropWalkItem = CssRuntimeItem;
 
 const root = createNode();
+const directItemCache = new WeakMap<StyleData | SlotData, CssResolvedItem>();
 const emptyResult: ResolvedCssProp = { className: '', style: undefined };
 
 let runId = 0;
@@ -87,6 +85,40 @@ export function collectCssPropItems(css: CssProp | undefined): StateItem[] {
   return items;
 }
 
+export function insertCssPropRuntimeRules(
+  sheet: StyleSheet,
+  css: CssProp | undefined,
+) {
+  if (!css) return;
+
+  sheet.updateLayers(RUNTIME_CONFIG.layers);
+
+  const stack: unknown[] = [css];
+
+  while (stack.length > 0) {
+    const item = stack.pop();
+
+    if (!item) continue;
+
+    if (Array.isArray(item)) {
+      for (let i = item.length - 1; i >= 0; i--) {
+        stack.push(item[i]);
+      }
+
+      continue;
+    }
+
+    if (isThemeData(item)) {
+      insertRuntimeTheme(sheet, item);
+      continue;
+    }
+
+    if (isStyleData(item) || isSlotData(item)) {
+      insertItems(sheet, getDirectCssItem(item).items);
+    }
+  }
+}
+
 function getCacheNode(css: CssProp) {
   let node = root;
   let hasItem = false;
@@ -100,6 +132,10 @@ function getCacheNode(css: CssProp) {
 
     hasItem = true;
     node = getChild(node, item);
+  }, {
+    onUnsupported: () => {
+      canCache = false;
+    },
   });
 
   return hasItem && canCache ? node : null;
@@ -124,6 +160,8 @@ function resolveCssPropData(css: CssProp) {
     for (let i = 0, len = items.length; i < len; i++) {
       style = addItem(classNames, style, items[i], tokensData);
     }
+  }, {
+    warnUnsupported: true,
   });
 
   if (!classNames.length) return emptyResult;
@@ -137,8 +175,12 @@ function resolveCssPropData(css: CssProp) {
 function walkCssProp(
   css: CssProp,
   fn: (item: CssPropWalkItem) => void,
+  options?: {
+    warnUnsupported?: boolean;
+    onUnsupported?: () => void;
+  },
 ) {
-  const stack: CssProp[] = [css];
+  const stack: unknown[] = [css];
 
   while (stack.length > 0) {
     const item = stack.pop();
@@ -153,17 +195,61 @@ function walkCssProp(
       continue;
     }
 
-    if (
-      isCssItem(item) ||
-      isCssTheme(item) ||
-      isThemeData(item) ||
-      isStyleData(item) ||
-      isSlotData(item) ||
-      isSlotOverrideData(item) ||
-      isScopeData(item)
-    ) {
-      fn(item);
+    const cssItem = normalizeCssPropItem(item);
+
+    if (cssItem) {
+      fn(cssItem);
+    } else {
+      options?.onUnsupported?.();
+      if (options?.warnUnsupported) warnUnsupportedCssPropItem(item);
     }
+  }
+}
+
+function normalizeCssPropItem(item: unknown): CssPropWalkItem | null {
+  if (isCssItem(item) || isCssTheme(item) || isThemeData(item)) {
+    return item;
+  }
+
+  if (isStyleData(item) || isSlotData(item)) {
+    return getDirectCssItem(item);
+  }
+
+  return null;
+}
+
+function getDirectCssItem(item: StyleData | SlotData) {
+  let cached = directItemCache.get(item);
+
+  if (!cached) {
+    cached = createCssResolvedItem(item, []);
+    directItemCache.set(item, cached);
+  }
+
+  return cached;
+}
+
+function warnUnsupportedCssPropItem(item: unknown) {
+  if (!RUNTIME_CONFIG.isDev) return;
+
+  if (
+    isSlotOverrideData(item) ||
+    isScopeData(item) ||
+    isScopeTargetData(item) ||
+    isStyleTokenOverrideData(item)
+  ) {
+    console.warn(
+      '[fluentic-style] Unsupported css prop value. Pass themes, scopes, slot overrides, and token overrides to combineStyle before using css.',
+      item,
+    );
+    return;
+  }
+
+  if (item) {
+    console.warn(
+      '[fluentic-style] Unsupported css prop value.',
+      item,
+    );
   }
 }
 
@@ -171,8 +257,8 @@ function collectSlotIds(css: CssProp) {
   const slotIds: Record<string, 1> = Object.create(null);
 
   walkCssProp(css, (item) => {
-    if (isSlotData(item) || isSlotOverrideData(item)) {
-      slotIds[getSlotId(item)] = 1;
+    if (isCssItem(item) && isSlotData(item.data)) {
+      slotIds[getSlotId(item.data)] = 1;
     }
   });
 
@@ -197,6 +283,13 @@ function getCssItems(
   }
 
   return result;
+}
+
+function insertItems(sheet: StyleSheet, items: StateItem[]) {
+  for (let i = 0, len = items.length; i < len; i++) {
+    const rule = createRuntimeSheetRule(items[i]);
+    if (rule) sheet.insert(rule);
+  }
 }
 
 function getScopeItemSlotId(item: StateItem) {

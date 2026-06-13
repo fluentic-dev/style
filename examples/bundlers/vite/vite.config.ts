@@ -20,7 +20,7 @@ export default defineConfig(({ command }) => {
         },
       },
       stylePluginEnabled && stylePlugin({
-        devSourcemap: command === 'serve' ? getDevSourcemap() : 'default',
+        devSourcemap: command === 'serve' ? getDevSourcemap() : 'sourceUrl',
         getSourcemapFilePath,
       }),
       react({

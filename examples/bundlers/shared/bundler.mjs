@@ -18,14 +18,14 @@ export function getDevSourcemap() {
   const value = process.env.SOURCEMAP;
 
   if (
-    value === 'default' ||
+    value === 'sourceUrl' ||
     value === 'sidecarServer' ||
     value === 'sourceContent'
   ) {
     return value;
   }
 
-  return 'default';
+  return 'sidecarServer';
 }
 
 export function getSourcemapFilePath({ sourcePath }) {

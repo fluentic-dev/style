@@ -23,8 +23,8 @@ Core advantages:
   deduped, and cache-friendly.
 - **Build-time path with runtime fallback**: static chains can be precompiled by
   bundler plugins, while dynamic or unsupported cases still work at runtime.
-- **Small runtime mental model**: runtime resolution mainly maps style metadata
-  to `className`, injects missing rules, and strips `css`/`scope` DOM props.
+- **Small runtime surface**: runtime resolution mainly maps style metadata
+  to `className`, injects missing rules, and strips the `css` DOM prop.
 - **Component theming without global naming**: slots and scopes let components
   expose precise override points without inventing BEM names or global CSS
   contracts.
@@ -71,21 +71,18 @@ import {
   DefaultSelectors,
   MinimalPrioritySelectors,
   MinimalSelectors,
-  StyleProvider,
   configureRuntime,
   createStyleFn,
   createStyleSheet,
   createStyleToken,
   combineScope,
-  scopeTarget,
+  bindScope,
   selector,
   selectorPriority,
   setGlobalSheet,
   style,
   type,
-  useCss,
-  useCssProvider,
-  useCssRef,
+  combineStyle,
   type CSSProperties,
   type CssProp,
   type CssTheme,
@@ -100,7 +97,7 @@ Subpath exports:
 | Import | Purpose |
 |---|---|
 | `@fluentic/style` | Runtime API, default `style`, selectors, sheet utilities, React hooks/types |
-| `@fluentic/style/jsx/runtime` | Production JSX runtime for `css`/`scope` props |
+| `@fluentic/style/jsx/runtime` | Production JSX runtime for the `css` prop |
 | `@fluentic/style/jsx/dev-runtime` | Development JSX runtime |
 | `@fluentic/style/babel` | Babel plugin factory |
 | `@fluentic/style/compiler` | `createCompiler()` for custom integrations |
@@ -121,8 +118,8 @@ Important: there is no top-level `select` export. Use the chain method
 
 ## JSX Setup
 
-The custom JSX runtime enables `css` and `scope` props on DOM/SVG elements and
-strips them before they hit the DOM.
+The custom JSX runtime enables the `css` prop on DOM/SVG elements and strips it
+before it hits the DOM.
 
 Vite example:
 
@@ -145,10 +142,10 @@ Per-file pragma:
 /** @jsxImportSource @fluentic/style */
 ```
 
-Use `css` with resolved items from `useCss(...)`:
+Use `css` with resolved items from `combineStyle(...)`:
 
 ```tsx
-import { style, useCss } from '@fluentic/style';
+import { style, combineStyle } from '@fluentic/style';
 
 const styles = {
   root: style({ display: 'grid', gap: 12 }),
@@ -156,7 +153,7 @@ const styles = {
 };
 
 export function Card() {
-  const css = useCss(styles);
+  const css = combineStyle(styles);
 
   return (
     <section css={css.root}>
@@ -172,8 +169,9 @@ export function Card() {
 <button css={[css.root, isPrimary && css.primary, props.css]} />
 ```
 
-`scope` accepts a `CssInstance` (usually the return value of `useCss`) or nested
-arrays of instances. It does not accept raw `style.scope(...)` builders directly.
+Raw style and slot builders may also be passed directly to `css`; use
+`combineStyle(...)` when you need to combine scopes, slot overrides, token
+overrides, or a previously combined instance.
 
 ---
 
@@ -357,7 +355,7 @@ When a component exposes a themed slot, resolve a `CssTheme` into scope targets
 for that slot:
 
 ```tsx
-import { scopeTarget, useCss, type CssTheme } from '@fluentic/style';
+import { bindScope, combineStyle, type CssTheme } from '@fluentic/style';
 
 type ButtonBaseProps = {
   theme?: CssTheme;
@@ -365,14 +363,14 @@ type ButtonBaseProps = {
 
 export function ButtonBase(props: ButtonBaseProps) {
   const target = buttonStyles.root;
-  const css = useCss(
+  const css = combineStyle(
     buttonStyles,
     buttonState(target),
-    ...scopeTarget(target, props.theme),
+    ...bindScope(target, props.theme),
   );
 
   return (
-    <button css={css.root} scope={css}>
+    <button css={css.root}>
       <span css={css.label}>Save</span>
     </button>
   );
@@ -389,34 +387,23 @@ type ButtonProps = {
 };
 ```
 
-Use `scope={css}` on a DOM boundary when children should inherit the resolved
-slot overrides for the same `styles` object.
+Pass theme props explicitly to descendants that should receive the same slot
+overrides.
 
 ---
 
-## Hooks
+## Static Combination
 
-`useCss(styles, ...items)` returns a cached proxy of the same shape as `styles`.
+`combineStyle(styles, ...items)` returns a cached proxy of the same shape as `styles`.
 Style and slot builders become resolved CSS items with class metadata.
 
 ```tsx
-const css = useCss(styles, theme(styles.root));
+const css = combineStyle(styles, theme(styles.root));
 
 <div css={css.root}>
   <span css={css.label} />
 </div>
 ```
-
-`useCssRef(styles, ...items)` is an alias of `useCss`.
-
-`useCssProvider(...items)` flattens nested arrays/falsy values and preserves the
-same array reference when contents are unchanged. Use it when building provider
-or theme props that should stay referentially stable.
-
-`StyleProvider` creates an isolated runtime sheet and CSS instance pool for a
-React subtree. It is optional; the default context works without it.
-
----
 
 ## Tokens
 
@@ -473,7 +460,7 @@ Defaults: `dev`, `trace`, `selectorCheck`, `sourcemap`, `localClassName`, and
 checks, sourcemaps, local class names, and debug class names default to true.
 
 Use `createStyleSheet()` plus `setGlobalSheet()` to replace the global sheet
-used by runtime providers.
+used by runtime style resolution.
 
 ---
 
@@ -556,7 +543,7 @@ type CompilerOptions = {
 ```
 
 Default transform include is `/\.[jt]sx?$/`; files in `node_modules` are skipped.
-The unplugin exposes a virtual CSS module at `virtual:fluentic-style.css`.
+The unplugin exposes a virtual CSS module at `virtual:fluentic-styles.css`.
 Import that virtual CSS from an app entry when the bundler setup needs collected
 CSS to be emitted.
 
@@ -620,25 +607,21 @@ Component APIs:
 
 - Use `CssProp` for a direct visual override of the component root or a documented
   part.
-- Use `CssTheme` for slot-level theming that should flow through a subtree.
+- Use `CssTheme` for explicit slot-level theming props.
 - Use slots for component internals. A slot is the library's clean replacement for
   ad-hoc global class names like `.Button-label`.
 - Expose a small number of intentional slots instead of making every DOM node a
   public override point.
-- In components with slots, call `useCss(styles, ...scopeTargets)` once and pass
-  the returned `css` object through `scope={css}` at the boundary that should
-  provide inherited overrides.
-- Use `scopeTarget(targetSlot, props.theme)` when turning public theme props
+- In components with slots, call `combineStyle(styles, ...targets)` where the
+  styles are rendered, and pass theme props explicitly to descendants.
+- Use `bindScope(targetSlot, props.theme)` when turning public theme props
   into slot-specific scope targets.
 
 Runtime and JSX:
 
-- Configure `jsxImportSource: '@fluentic/style'` whenever you use `css` or
-  `scope` props.
+- Configure `jsxImportSource: '@fluentic/style'` whenever you use `css` props.
 - Keep raw DOM `className` for external or framework classes; the JSX runtime
   appends Fluentic classes after existing `className`.
-- Use `StyleProvider` when a subtree needs an isolated sheet/pool, such as tests,
-  embedded widgets, or SSR boundaries.
 - Call `configureRuntime()` before styles are resolved. Runtime config is global,
   so do not toggle it from inside components.
 - Enable `dev`, `selectorCheck`, and `sourcemap` in development when debugging
@@ -649,7 +632,7 @@ Compiler:
 
 - Add the bundler plugin before relying on build-time extraction, and keep the JSX
   runtime configured separately.
-- Import `virtual:fluentic-style.css` from the app entry when the bundler needs a
+- Import `virtual:fluentic-styles.css` from the app entry when the bundler needs a
   concrete CSS module for collected rules.
 - Prefer simple object literals, constants, tokens, slots, and scopes that can be
   statically evaluated.
@@ -673,8 +656,8 @@ Selector safety:
 - Slots are identified by callsite/debug data when available, otherwise by a
   per-builder counter.
 - A slot override only applies to the slot it was created from.
-- Scope inheritance is keyed by the original `styles` object passed to `useCss`.
-- `css` and `scope` props may be nested arrays and may contain falsy values.
-- Runtime CSS is inserted through `useInsertionEffect` in React.
+- Combined styles are keyed by the original `styles` object passed to `combineStyle`.
+- `css` props may be nested arrays and may contain falsy values.
+- Runtime CSS is inserted when `combineStyle` or the JSX `css` prop resolves styles.
 - Runtime code does not import compiler or bundler adapter code from the root
   export.

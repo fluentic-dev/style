@@ -1,10 +1,10 @@
 @layer reset, css, override;
 @layer css {
-.g--8-11apwtx{gap:8px}
-.g--12-uazf000{gap:12px}
-.padding--16-d9sf8l0{padding:16px}
+.g-11apwtx{gap:8px}
+.g-uazf000{gap:12px}
+.padding-d9sf8l0{padding:16px}
 .display-flex-fruelm0{display:flex}
 .flex-row-s4ciid0{flex-direction:row}
 .flex-column-oez5rp0{flex-direction:column}
-.flex\:hover-column-1lgc668:hover{flex-direction:column}
+.flex-hover-column-1lgc668:hover{flex-direction:column}
 }

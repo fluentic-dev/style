@@ -25,14 +25,13 @@ import { normalizeSidecarRoutePath } from '../plugin/utils/sidecar/utils';
 import { plugin as viteStylePlugin } from '../plugin/vite';
 import { prependWebpackRuntimeEntry } from '../plugin/webpack/utils';
 import { createCssInstancePool, createCssTheme, getCssInstanceScopes, resolveCssProp } from '../runtime';
-import { ScopeProvider } from '../runtime/context';
 import { collectDevCssRules } from '../runtime/dev';
-import { transformElement } from '../runtime/jsx';
+import { transformElement } from '../runtime/core/jsx';
 import { CSS_DEV_ATTR, CSS_DEV_STYLE_SEED_GLOBAL } from '../runtime/rsc/constants';
 import { transformElement as transformRscElement } from '../runtime/rsc/jsx';
 import { getRscDevSeedCss } from '../runtime/rsc/seed';
-import { buildThemeRule } from '../runtime/sheet';
-import { getClassName, getCss, getToken, scopeTarget } from '../runtime/static';
+import { buildThemeRule, getGlobalSheet, setGlobalSheet } from '../runtime/sheet';
+import { combineStyle, getClassName, getCss, getToken, bindScope } from '../runtime/style';
 import { selector } from '../selector/selector';
 import { createDevSheet, createProdSheet } from '../sheet';
 import { getRuleCallsite } from '../sheet/sourcemap';
@@ -122,6 +121,42 @@ test('static getCss reuses equivalent scope paths', () => {
   const second = getCss(styles, [theme(styles.container)]);
 
   equal(first, second);
+});
+
+test('static combineStyle.for reuses equivalent scope paths', () => {
+  const combine = combineStyle.for(styles);
+
+  const first = combine(theme(styles.container));
+  const second = combine([theme(styles.container)]);
+
+  equal(first, second);
+});
+
+test('static combineStyle.for carries combined instance scopes', () => {
+  const combine = combineStyle.for(styles);
+  const parent = combine(theme(styles.container));
+  const child = combine(parent, hoverTheme(styles.container));
+
+  equal((child.label as any).items.length, 3);
+});
+
+test('static combineStyle rejects carried instances from another styles object', () => {
+  const combine = combineStyle.for(styles);
+  const other = combineStyle({
+    container: style.slot({
+      color: 'green',
+    }),
+  });
+  let didThrow = false;
+
+  try {
+    combine(other as any);
+  } catch (error) {
+    didThrow = error instanceof TypeError
+      && /same styles object/.test(error.message);
+  }
+
+  equal(didThrow, true);
 });
 
 test('static getClassName resolves getCss and runtime instances the same way', () => {
@@ -380,7 +415,7 @@ const rule = style({ color: 'red' });
   includes(result.code, `code: _styleDebugSourceContent`);
 });
 
-test('dev debug transform omits source content in default mode', () => {
+test('dev debug transform omits source content in sourceUrl mode', () => {
   const code = `
 import { style } from '@fluentic/style';
 
@@ -391,7 +426,7 @@ const rule = style({ color: 'red' });
     '/repo/src/page.tsx',
     {
       rootDir: '/repo',
-      devSourcemap: 'default',
+      devSourcemap: 'sourceUrl',
     },
     'webpack:///example/src/page.tsx',
   );
@@ -577,7 +612,7 @@ test('nested slot hover inside scope hover does not add child classes to target 
   const scoped = pool.get(
     nestedStyles,
     [],
-    scopeTarget(nestedStyles.card, hoverScope),
+    bindScope(nestedStyles.card, hoverScope),
   ).instance;
 
   const card = resolveCssProp(scoped.card);
@@ -680,7 +715,7 @@ test('debug slot ids keep scoped child hover classes off the target slot', () =>
   const scoped = pool.get(
     debugStyles,
     [],
-    scopeTarget(debugStyles.card, hoverScope),
+    bindScope(debugStyles.card, hoverScope),
   ).instance;
 
   const card = resolveCssProp((scoped as any).card);
@@ -724,7 +759,7 @@ test('scope keeps same-property overrides for different slots', () => {
   const scoped = pool.get(
     themedStyles,
     [],
-    scopeTarget(themedStyles.card, themeScope),
+    bindScope(themedStyles.card, themeScope),
   ).instance;
 
   const card = resolveCssProp(scoped.card);
@@ -1561,8 +1596,8 @@ test('pool prepends inherited scopes before own scopes', () => {
   equal((child.label as any).items.length, 3);
 });
 
-test('scopeTarget keeps recursive scope order', () => {
-  const targets = scopeTarget(styles.container, [
+test('bindScope keeps recursive scope order', () => {
+  const targets = bindScope(styles.container, [
     theme,
     false,
     [hoverTheme],
@@ -1587,7 +1622,7 @@ test('extracted scope parent selector applies target and child classes', () => {
       card: extractedCard,
       button: extractedButton,
     },
-    scopeTarget(extractedCard, extractedScope),
+    bindScope(extractedCard, extractedScope),
   );
 
   equal(
@@ -1606,6 +1641,122 @@ test('css prop resolver dedupes resolved items', () => {
   const result = resolveCssProp([css.container as any, css.container as any]);
 
   equal(result.className.split(' ').length, 1);
+});
+
+test('css prop resolver accepts direct raw style and slot data', () => {
+  const directStyles = {
+    container: style({
+      color: 'red',
+    }),
+    label: style.slot({
+      color: 'black',
+    }),
+  };
+
+  const result = resolveCssProp([directStyles.container, directStyles.label]);
+  const cached = resolveCssProp([directStyles.container, directStyles.label]);
+
+  if (!result.className) throw new Error('expected direct raw css class name');
+  equal(result, cached);
+});
+
+test('static combineStyle inserts runtime rules synchronously', () => {
+  const document = createFakeDocument();
+  const sheet = createDevSheet({
+    document: document as unknown as Document,
+    sourcemap: false,
+  });
+  const previousSheet = getGlobalSheet();
+
+  setGlobalSheet(sheet);
+
+  try {
+    const css = combineStyle(styles);
+    const result = getClassName(css.container);
+
+    if (!result.className) throw new Error('expected combined class name');
+
+    const text = document.head.textContent;
+
+    includes(text, 'color:red');
+    includes(text, 'color:black');
+  } finally {
+    setGlobalSheet(previousSheet);
+  }
+});
+
+test('jsx css prop inserts direct raw style and slot runtime rules', () => {
+  const document = createFakeDocument();
+  const sheet = createDevSheet({
+    document: document as unknown as Document,
+    sourcemap: false,
+  });
+  const directStyles = {
+    container: style({
+      color: 'maroon',
+    }),
+    label: style.slot({
+      color: 'olive',
+    }),
+  };
+  const previousSheet = getGlobalSheet();
+
+  setGlobalSheet(sheet);
+
+  try {
+    const result = transformElement({
+      type: 'div',
+      props: {
+        css: [directStyles.container, directStyles.label],
+      },
+    });
+    const props = result.props as { className?: string; };
+
+    if (!props.className) throw new Error('expected transformed class name');
+
+    const text = document.head.textContent;
+
+    includes(text, 'color:maroon');
+    includes(text, 'color:olive');
+  } finally {
+    setGlobalSheet(previousSheet);
+  }
+});
+
+test('direct raw css prop keeps token defaults theme-overridable', () => {
+  const token = createToken('blue', 'direct-theme-token');
+  const tokenStyles = {
+    container: style.slot({
+      color: token,
+    }),
+  };
+  const theme = createTheme([token('red')], 'direct-runtime-theme');
+  const result = resolveCssProp([theme, tokenStyles.container]);
+
+  includes(result.className, theme.className);
+  equal(result.style, undefined);
+});
+
+test('css prop warns for composition values in dev', () => {
+  configureRuntime({ dev: true });
+
+  const token = createToken('blue', 'unsupported-css-token');
+  const warnings: unknown[][] = [];
+  const warn = console.warn;
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args);
+  };
+
+  try {
+    const result = resolveCssProp([styles.container, token('red') as any]);
+
+    if (!result.className) throw new Error('expected supported css prop item to resolve');
+    equal(warnings.length, 1);
+    includes(String(warnings[0][0]), 'Unsupported css prop value');
+  } finally {
+    console.warn = warn;
+    configureRuntime({ dev: false });
+  }
 });
 
 test('css prop resolver keeps token defaults in css variable fallback', () => {
@@ -1640,6 +1791,48 @@ test('static getCss resolves dynamic token provider values', () => {
   if (!varName) throw new Error('expected token variable name');
 
   equal((result.style as Record<string, unknown>)[varName], 'red');
+});
+
+test('static combineStyle.for carries token provider values', () => {
+  const token = createToken('blue');
+  const tokenStyles = {
+    container: style.slot({
+      backgroundColor: token,
+    }),
+  };
+  const combine = combineStyle.for(tokenStyles);
+  const parent = combine(token('red'));
+  const child = combine(parent);
+  const result = resolveCssProp(child.container as any);
+
+  if (!result.style) throw new Error('expected token variable style');
+
+  const varName = Object.keys(result.style).find((key) => key.startsWith('--token-'));
+
+  if (!varName) throw new Error('expected token variable name');
+
+  equal((result.style as Record<string, unknown>)[varName], 'red');
+});
+
+test('static combineStyle.for lets later token providers override carried values', () => {
+  const token = createToken('blue');
+  const tokenStyles = {
+    container: style.slot({
+      backgroundColor: token,
+    }),
+  };
+  const combine = combineStyle.for(tokenStyles);
+  const parent = combine(token('red'));
+  const child = combine(parent, token('green'));
+  const result = resolveCssProp(child.container as any);
+
+  if (!result.style) throw new Error('expected token variable style');
+
+  const varName = Object.keys(result.style).find((key) => key.startsWith('--token-'));
+
+  if (!varName) throw new Error('expected token variable name');
+
+  equal((result.style as Record<string, unknown>)[varName], 'green');
 });
 
 test('static getToken resolves token values to css variable fallbacks', () => {
@@ -1796,24 +1989,6 @@ test('css prop resolver resolves extracted token variable refs', () => {
   includes(String((result.style as Record<string, unknown>)['--token-value']), 'blue');
 });
 
-test('jsx transform wraps dom scope with ScopeProvider', () => {
-  const pool = createCssInstancePool();
-  const css = pool.get(styles, [], [theme(styles.container)]).instance;
-  const result = transformElement({
-    type: 'div',
-    props: {
-      css: css.container,
-      scope: css,
-      id: 'target',
-    },
-  });
-
-  equal(result.type, ScopeProvider);
-  equal((result.props as any).scope, css);
-  equal((result.props as any).elementType, 'div');
-  equal((result.props as any).elementProps.id, 'target');
-});
-
 test('rsc dev payload is emitted by getClassName', () => {
   delete (globalThis as Record<string, unknown>)[CSS_DEV_STYLE_SEED_GLOBAL];
   setBuildMeta({ dev: true, extract: false, rsc: true, css: null });
@@ -1891,7 +2066,7 @@ test('rsc dev seed wraps parent selector priority rules in layers', () => {
       background: 'blue',
     }),
   ]);
-  const css = getCss(card, scopeTarget(card.root, parentHover));
+  const css = getCss(card, bindScope(card.root, parentHover));
 
   getClassName(css.root);
   getClassName(css.button);
@@ -2115,7 +2290,7 @@ test('dev sheet wraps priority rules in generated priority layers', () => {
   sheet.insert({
     key: 'priority',
     css: '.priority{padding:18px}',
-    priority: [2, 0, 0, 0, 0, 2],
+    priority: [2, 0, 0, 0, 0, 0, 2],
   });
   sheet.flush();
 

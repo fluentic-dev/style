@@ -30,15 +30,15 @@ const danger = style.scope([
 
 ## Theme target
 
-Use `scopeTarget` inside the component to apply incoming theme scopes to a
+Use `bindScope` inside the component to apply incoming theme scopes to a
 specific slot target.
 
 ```tsx
 const target = buttonStyles.root;
 
-const css = useCss(
+const css = combineStyle(
   buttonStyles,
-  ...scopeTarget(target, props.theme),
+  ...bindScope(target, props.theme),
 );
 ```
 

@@ -3,7 +3,8 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "@fluentic/style",
-    "lib": ["ES2020", "DOM"]
+    "lib": ["ES2020", "DOM"],
+    "types": ["node"]
   },
   "include": ["src", "../../shared"]
 }

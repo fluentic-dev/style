@@ -1,6 +1,5 @@
 @layer reset, css, override;
 @layer css {
-.mw8s4v0{border:pink}
 .bnqkewy{font-family:Times}
 .bil4cl0{width:20px}
 .bf72i63{display:none}
@@ -8,18 +7,19 @@
 .es7atr0{opacity:0.5}
 .by40xi9{background-color:coral}
 .blq5wbh{background-image:var(--token-lhc8xf0)}
+.mw8s4v0{border:pink}
 .b3wpxqo{color:pink}
 .ru9zs00{background-color:pink}
+.ifukx00:where(.-ifukx00:hover),:where(.-ifukx00:hover) .ifukx00{width:20px}
+.h11nhl0:where(.-h11nhl0:hover),:where(.-h11nhl0:hover) .h11nhl0{color:blue}
+.b29wp7d:where(.-b29wp7d:hover),:where(.-b29wp7d:hover) .b29wp7d{opacity:0.8}
 @media (max-width: 600px){.bx8q7lo{width:16px}}
 @media (max-width: 600px){.of0pcl0{color:green}}
 @media (max-width: 600px){.bvggra7{opacity:0.3}}
-.ifukx00:hover,.t8x9tp0:hover .ifukx00{width:20px}
-.h11nhl0:hover,.qz48r00:hover .h11nhl0{color:blue}
-.b29wp7d:hover,.x30k300:hover .b29wp7d{opacity:0.8}
 .bkx1zo2:hover{width:20px}
 .culuz30:hover{background-color:var(--token-1waypmo, blue)}
 .bej6r0o:hover{width:22px}
-.bvnz9oa:hover:active,.uxr3xr0:hover .bvnz9oa:active{outline-color:yellow}
+.bvnz9oa:where(.-bvnz9oa:hover):active,:where(.-bvnz9oa:hover) .bvnz9oa:active{outline-color:yellow}
 .bcn0isx{width:18px}
 .gyv9el0{display:flex}
 }

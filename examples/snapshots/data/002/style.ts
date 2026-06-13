@@ -1,5 +1,4 @@
-import { createStyleFn, type CSSProperties, selectorPriority, styleTransform, type } from '@fluentic/style';
-import { Selectors } from '@fluentic/style/server';
+import { createStyleFn, type CSSProperties, selectorPriority, Selectors, styleTransform, type } from '@fluentic/style';
 
 export type FlexShorthand = {
   row?: boolean;

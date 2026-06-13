@@ -9,7 +9,6 @@ import HtmlWebpackPlugin from 'html-webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import webpack from 'webpack';
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
@@ -52,12 +51,8 @@ export default (_, argv) => {
       ],
     },
     plugins: [
-      !stylePluginEnabled &&
-      new webpack.DefinePlugin({
-        __FLUENTIC_RUNTIME_DEV__: JSON.stringify(dev),
-      }),
       stylePluginEnabled && stylePlugin({
-        devSourcemap: dev ? getDevSourcemap() : 'default',
+        devSourcemap: dev ? getDevSourcemap() : 'sourceUrl',
         getSourcemapFilePath,
       }),
       new HtmlWebpackPlugin({

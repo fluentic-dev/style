@@ -1,4 +1,4 @@
-import { getCss } from '@fluentic/style';
+import { combineStyle } from '@fluentic/style';
 import type { ReactNode } from 'react';
 import { emphasis, page } from './styles';
 
@@ -9,7 +9,7 @@ type CardProps = {
 };
 
 export function Card(props: CardProps) {
-  const css = getCss(page, props.important ? emphasis(page.card) : undefined);
+  const css = combineStyle(page, props.important ? emphasis(page.card) : undefined);
 
   return (
     <article css={css.card}>

@@ -1,11 +1,11 @@
 ---
 title: Scopes
-description: Bundle slot overrides for state, themes, media queries, and inheritance.
+description: Bundle slot overrides for state, themes, and media queries.
 ---
 
 A scope is a bundle of slot overrides. Use it when the change belongs to a
 component part instead of one rendered element: themes, variants, state styles,
-responsive adjustments, or inherited styling for a subtree.
+or responsive adjustments.
 
 ## Basic scope
 
@@ -41,7 +41,7 @@ const responsive = style.scope()
 ## Applying a targeted scope
 
 ```ts
-const css = useCss(
+const css = combineStyle(
   card,
   interactive(card.root),
   responsive(card.root),
@@ -54,17 +54,17 @@ the scope affect any slot inside that component.
 
 ## Passing themes from consumers
 
-`CssTheme` accepts nested arrays and falsy values. Use `scopeTarget` to flatten
+`CssTheme` accepts nested arrays and falsy values. Use `bindScope` to flatten
 and target theme scopes.
 
 ```tsx
-import { scopeTarget, useCss } from '@fluentic/style';
+import { bindScope, combineStyle } from '@fluentic/style';
 
 const target = card.root;
 
-const css = useCss(
+const css = combineStyle(
   card,
-  ...scopeTarget(target, props.theme),
+  ...bindScope(target, props.theme),
 );
 ```
 
@@ -74,25 +74,19 @@ This lets component consumers pass:
 <Card theme={[compact, isDanger && dangerTheme]} />
 ```
 
-## Inherited scopes
+## Explicit scopes
 
-When a component renders with `scope={css}`, descendant calls to `useCss` can
-inherit the scope context for the same styles object. That is how theme-like
-overrides can flow through a subtree without global CSS.
+Scopes are applied where styles are resolved. Pass theme props down when
+descendants need the same theme so the source of each override stays visible.
 
 ```tsx
-const inheritedButtonCss = useCss(
-  buttonStyles,
-  ...scopeTarget(buttonStyles.root, toolbarTheme),
-);
-
 return (
-  <div scope={inheritedButtonCss}>
-    <Button>Save</Button>
-    <Button>Publish</Button>
+  <div>
+    <Button theme={toolbarTheme}>Save</Button>
+    <Button theme={toolbarTheme}>Publish</Button>
   </div>
 );
 ```
 
-The nested `Button` components still call `useCss(buttonStyles, ...)` normally.
-They inherit the matching scope because the styles object is the same.
+Each `Button` resolves its own styles with
+`combineStyle(buttonStyles, ...bindScope(...))` and the theme it received.

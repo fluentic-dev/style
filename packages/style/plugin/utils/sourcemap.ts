@@ -8,6 +8,7 @@ import {
 import type { SourcemapSidecar } from './sidecar';
 
 export type BundlerSourceMap = BabelTransformSourceMap | undefined;
+export type DevSourcemapMode = NonNullable<CompilerOptions['devSourcemap']>;
 
 export type DefaultSourcemapUrlInput =
   | string
@@ -26,6 +27,13 @@ export function getDefaultSourcemapUrl(input: DefaultSourcemapUrlInput) {
   const resourcePath = normalizeSourcemapSourcePath(sourcePath);
 
   return `source:///${resourcePath}`;
+}
+
+export function resolveDevSourcemapMode(
+  mode: CompilerOptions['devSourcemap'],
+  dev: boolean,
+): DevSourcemapMode {
+  return mode ?? (dev ? 'sidecarServer' : 'sourceUrl');
 }
 
 export function resolvePluginSourcemapFilePath(

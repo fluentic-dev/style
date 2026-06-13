@@ -13,6 +13,7 @@ import {
 } from '../utils';
 import { formatError } from '../utils/misc';
 import { getSourcemapSidecar } from '../utils/sidecar';
+import { resolveDevSourcemapMode } from '../utils/sourcemap';
 import {
   createWebpackRuntimeModuleSource,
   getStylePackageDistPath,
@@ -58,8 +59,9 @@ class WebpackPlugin implements WebpackPluginInstance {
 
     const buildMeta = getBuildMeta(dev, this.options);
     const cacheDir = getPluginCacheDir(compiler.context, this.options.cacheDir);
+    const devSourcemap = resolveDevSourcemapMode(this.options.devSourcemap, dev);
 
-    const sourcemapSidecar = this.options.devSourcemap === 'sidecarServer'
+    const sourcemapSidecar = devSourcemap === 'sidecarServer'
       ? getSourcemapSidecar({ projectDir: compiler.context, cacheDir })
       : null;
 
@@ -72,7 +74,7 @@ class WebpackPlugin implements WebpackPluginInstance {
       projectDir: compiler.context,
       cacheDir,
       dev,
-      options: { ...this.options, getSourcemapFilePath },
+      options: { ...this.options, devSourcemap, getSourcemapFilePath },
     });
 
     const cssFilePath = buildMeta.extract

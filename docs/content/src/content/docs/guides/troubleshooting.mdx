@@ -35,14 +35,14 @@ import 'virtual:fluentic-styles';
 Inside the component, make sure you target incoming themes:
 
 ```ts
-const css = useCss(
+const css = combineStyle(
   styles,
-  ...scopeTarget(styles.root, props.theme),
+  ...bindScope(styles.root, props.theme),
 );
 ```
 
-Also make sure the component renders `scope={css}` if descendants need to inherit
-the resolved scope.
+Pass the theme prop explicitly to descendants that should receive the same
+override.
 
 ## A selector method is missing
 

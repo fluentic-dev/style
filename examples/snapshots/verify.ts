@@ -67,8 +67,8 @@ async function verify002() {
       pass: (s) => !s.includes('column:true') && !s.includes('column: true'),
     },
     {
-      description: 'uses createPrecompiledStyle (compiled at build time)',
-      pass: (s) => s.includes('createPrecompiledStyle'),
+      description: 'uses createExtractedStyle (compiled at build time)',
+      pass: (s) => s.includes('createExtractedStyle'),
     },
   ];
 
@@ -78,7 +78,49 @@ async function verify002() {
   return cssOk && compiledOk;
 }
 
-const ok = await verify002();
+async function verify003() {
+  console.log('\nVerifying snapshot 003 (explicit scope binding)');
+
+  const css = await readSnapshot('003', 'extracted.css');
+  const compiled = await readSnapshot('003', 'compiled.js');
+
+  const cssChecks: Check[] = [
+    {
+      description: 'contains scoped parent root color',
+      pass: (s) => s.includes('color:purple'),
+    },
+    {
+      description: 'contains scoped child label color',
+      pass: (s) => s.includes('color:teal'),
+    },
+  ];
+
+  const compiledChecks: Check[] = [
+    {
+      description: 'parent passes combined child styles explicitly',
+      pass: (s) => /<Child\s+styles=\{childCss\}\s*\/>/.test(s),
+    },
+    {
+      description: 'child style combiner is local to the child styles object',
+      pass: (s) => s.includes('combineStyle.for(childStyles)'),
+    },
+    {
+      description: 'child extends incoming combined styles',
+      pass: (s) => s.includes('props.styles'),
+    },
+    {
+      description: 'compiled output has no scope prop',
+      pass: (s) => !s.includes('scope='),
+    },
+  ];
+
+  const cssOk = check('003', 'extracted.css', css, cssChecks);
+  const compiledOk = check('003', 'compiled.js', compiled, compiledChecks);
+
+  return cssOk && compiledOk;
+}
+
+const ok = (await verify002()) && (await verify003());
 
 if (!ok) {
   console.error('\nVerification FAILED. Run "npm run generate" first if files are missing.');

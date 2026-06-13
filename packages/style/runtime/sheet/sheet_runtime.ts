@@ -1,7 +1,7 @@
 import type { StateItem } from '../../builder/data/state';
 import { RUNTIME_CONFIG } from '../../config';
 import type { StyleSheet } from '../../sheet';
-import { isCssItem } from '../instance/data';
+import { isCssItem } from '../core/data';
 import { createRuntimeSheetRule } from './rule';
 
 export function insertRuntimeRules(

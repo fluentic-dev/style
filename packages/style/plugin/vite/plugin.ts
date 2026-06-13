@@ -14,6 +14,7 @@ import {
 import { formatError } from '../utils/misc';
 import type { SourcemapSidecar } from '../utils/sidecar';
 import { getSourcemapSidecar } from '../utils/sidecar';
+import { resolveDevSourcemapMode } from '../utils/sourcemap';
 import {
   createRuntimeModuleSource,
   hasVirtualCssMarker,
@@ -57,7 +58,12 @@ export function plugin(options: PluginOptions = {}): Plugin {
 
     const cacheDir = getPluginCacheDir(config.root, options.cacheDir);
 
-    if (!sourcemapSidecar && options.devSourcemap === 'sidecarServer') {
+    const devSourcemap = resolveDevSourcemapMode(
+      options.devSourcemap,
+      config.command === 'serve',
+    );
+
+    if (!sourcemapSidecar && devSourcemap === 'sidecarServer') {
       sourcemapSidecar = getSourcemapSidecar({
         projectDir: config.root,
         cacheDir,
@@ -70,6 +76,7 @@ export function plugin(options: PluginOptions = {}): Plugin {
       cacheDir,
       options: {
         ...options,
+        devSourcemap,
         getSourcemapFilePath: resolvePluginSourcemapFilePath(
           options.getSourcemapFilePath,
           sourcemapSidecar,

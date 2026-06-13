@@ -23,7 +23,7 @@ export type CompilerOptions = {
   importSources?: ImportSource[];
 
   getSourcemapFilePath?: GetSourcemapFilePathFn;
-  devSourcemap?: 'default' | 'sidecarServer' | 'sourceContent';
+  devSourcemap?: 'sourceUrl' | 'sidecarServer' | 'sourceContent';
 };
 
 export type TransformDebugArgs = {

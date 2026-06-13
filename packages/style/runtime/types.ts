@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react';
-import type { ScopeData, ScopeTargetData, ThemeData } from '../builder/data';
+import type { ScopeData, ScopeTargetData, SlotData, StyleData, ThemeData } from '../builder/data';
 import type { StyleTokenData, StyleTokenOverride } from '../style';
-import type { CssInstance, CssResolvedItem, CssResolvedTheme } from './instance';
+import type { CssResolvedItem, CssResolvedTheme } from './core';
 
 export type Falsy = false | null | undefined;
 
@@ -16,19 +16,16 @@ export type StyleItems = (StyleItem | Falsy)[];
 
 export type CssItem = CssResolvedItem | CssResolvedTheme | ThemeData;
 
-export type CssRuntimeItem = CssItem;
+export type CssRuntimeItem = CssItem | StyleData | SlotData;
 
 export type CssProp = RecursiveProp<CssRuntimeItem>;
 
 export type CssToken<T> = T | StyleTokenData<T>;
 
-export type CssScopeProp = RecursiveProp<CssInstance>;
-
 export type CssTheme = RecursiveProp<ScopeData<any>>;
 
 export type RuntimeStyleAttributes = {
   css?: CssProp;
-  scope?: CssScopeProp;
 };
 
 export type DomElementProps = {

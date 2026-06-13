@@ -11,7 +11,7 @@ export default [
       'dev': 'dev/index.ts',
       'runtime/dev': 'runtime/dev/index.ts',
       'runtime/rsc': 'runtime/rsc/index.ts',
-      'runtime/static/index': 'runtime/static/index.ts',
+      'runtime/style/index': 'runtime/style/index.ts',
       'jsx-runtime/index': 'jsx/jsx-runtime.ts',
       'jsx-runtime/server': 'jsx/jsx-runtime.server.ts',
       'jsx-dev-runtime/index': 'jsx/jsx-dev-runtime.ts',

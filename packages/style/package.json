@@ -117,9 +117,13 @@
       "types": "./runtime/dev/index.ts",
       "import": "./dist/runtime/dev.js"
     },
+    "./runtime/style": {
+      "types": "./runtime/style/index.ts",
+      "import": "./dist/runtime/style/index.js"
+    },
     "./runtime/static": {
-      "types": "./runtime/static/index.ts",
-      "import": "./dist/runtime/static/index.js"
+      "types": "./runtime/style/index.ts",
+      "import": "./dist/runtime/style/index.js"
     },
     "./jsx-runtime": {
       "types": "./jsx/jsx-runtime.ts",

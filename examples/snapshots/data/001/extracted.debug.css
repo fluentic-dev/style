@@ -1,25 +1,25 @@
 @layer reset, css, override;
 @layer css {
-.border-pink-mw8s4v0{border:pink}
 .font-family-times-1nqkewy{font-family:Times}
-.width--20-bil4cl0{width:20px}
+.width-bil4cl0{width:20px}
 .display-none-1f72i63{display:none}
 .color-red-g21wjn0{color:red}
-.opacity--0\.5-4s7atr0{opacity:0.5}
+.opacity-4s7atr0{opacity:0.5}
 .bg-coral-1y40xi9{background-color:coral}
 .background-image-1lq5wbh{background-image:var(--token-lhc8xf0)}
+.border-pink-mw8s4v0{border:pink}
 .color-pink-13wpxqo{color:pink}
 .bg-pink-ru9zs00{background-color:pink}
-@media (max-width: 600px){.max-600px\:width--16-1x8q7lo{width:16px}}
-@media (max-width: 600px){.max-600px\:color-green-of0pcl0{color:green}}
-@media (max-width: 600px){.max-600px\:opacity--0\.3-1vggra7{opacity:0.3}}
-.hover\.width--20-8fukx00:hover,.bdu23yj:hover .hover\.width--20-8fukx00{width:20px}
-.hover\.color-blue-711nhl0:hover,.a9ojti0:hover .hover\.color-blue-711nhl0{color:blue}
-.hover\.opacity--0\.8-129wp7d:hover,.hru4l40:hover .hover\.opacity--0\.8-129wp7d{opacity:0.8}
-.width\:hover--20-1kx1zo2:hover{width:20px}
-.bg\:hover-2uluz30:hover{background-color:var(--token-1waypmo, blue)}
-.width\:hover--22-1ej6r0o:hover{width:22px}
-.hover\.outline-color\:active-yellow-1vnz9oa:hover:active,.bllnd3w:hover .hover\.outline-color\:active-yellow-1vnz9oa:active{outline-color:yellow}
-.width--18-1cn0isx{width:18px}
+.hover-width-8fukx00:where(.-hover-width-8fukx00:hover),:where(.-hover-width-8fukx00:hover) .hover-width-8fukx00{width:20px}
+.hover-color-blue-711nhl0:where(.-hover-color-blue-711nhl0:hover),:where(.-hover-color-blue-711nhl0:hover) .hover-color-blue-711nhl0{color:blue}
+.hover-opacity-129wp7d:where(.-hover-opacity-129wp7d:hover),:where(.-hover-opacity-129wp7d:hover) .hover-opacity-129wp7d{opacity:0.8}
+@media (max-width: 600px){.max-600px-width-1x8q7lo{width:16px}}
+@media (max-width: 600px){.max-600px-color-green-of0pcl0{color:green}}
+@media (max-width: 600px){.max-600px-opacity-1vggra7{opacity:0.3}}
+.width-hover-1kx1zo2:hover{width:20px}
+.bg-hover-2uluz30:hover{background-color:var(--token-1waypmo, blue)}
+.width-hover-1ej6r0o:hover{width:22px}
+.hover-outline-color-active-yellow-1vnz9oa:where(.-hover-outline-color-active-yellow-1vnz9oa:hover):active,:where(.-hover-outline-color-active-yellow-1vnz9oa:hover) .hover-outline-color-active-yellow-1vnz9oa:active{outline-color:yellow}
+.width-1cn0isx{width:18px}
 .display-flex-6yv9el0{display:flex}
 }

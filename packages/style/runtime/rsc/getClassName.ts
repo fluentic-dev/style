@@ -1,5 +1,5 @@
 import { collectDevCssRules } from '../dev';
-import type { ClassNameResult } from '../static';
+import type { ClassNameResult } from '../style';
 import type { CssProp } from '../types';
 import { CSS_DEV_ATTR } from './constants';
 import { collectRscDevSeedCss } from './seed';

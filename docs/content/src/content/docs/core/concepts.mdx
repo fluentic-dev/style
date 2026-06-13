@@ -1,14 +1,14 @@
 ---
-title: Mental Model
-description: Understand styles, slots, scopes, themes, and resolution.
+title: Core Concepts
+description: How styles, slots, scopes, themes, and composition fit together.
 ---
 
-Fluentic Style is easiest to understand as a small contract between authoring
+Fluentic Style is built around a small set of primitives that connect authoring
 and rendering:
 
 1. Author style metadata with builders.
 2. Publish component parts as slots.
-3. Resolve the relevant styles, scopes, and inherited themes with `useCss`.
+3. Resolve the relevant styles and scopes with `combineStyle`.
 
 Builders are immutable. Calling `.hover(...)` or `.media(...)` returns a new
 chain. This makes it safe to share base styles and fork variants.
@@ -51,7 +51,8 @@ target instead of asking them to know which class name was generated.
 
 ## Scope
 
-Use `style.scope(...)` to group slot overrides:
+Use `style.scope(...)` to group slot overrides into a theme, variant, state, or
+responsive rule:
 
 ```ts
 const dangerTheme = style.scope([
@@ -81,24 +82,24 @@ A scope is callable. Calling a scope with a slot creates a target:
 interactive(card.root);
 ```
 
-Targets tell `useCss` which scoped rules are relevant for a resolved slots
-object. In practice, most components target their root slot:
+Targets tell `combineStyle` which scoped rules belong to this component render.
+In practice, most components target their root slot:
 
 ## Resolution
 
 ```ts
-const css = useCss(card, interactive(card.root));
+const css = combineStyle(card, interactive(card.root));
 ```
 
-The returned `css` object mirrors the original slots object. You can pass
-`css.root` to a DOM element and pass the whole `css` instance to `scope`.
+The returned `css` object mirrors the original slots object. Pass the resolved
+items directly to DOM elements through the `css` prop.
 
 ```tsx
-<article css={css.root} scope={css}>
+<article css={css.root}>
   <h2 css={css.title}>Title</h2>
 </article>
 ```
 
-This is the central loop: define slots, define scopes that target slots, resolve
-them with `useCss`, render resolved items. Static extraction can move supported
-chains into CSS at build time, but the component code keeps the same shape.
+The core flow is: define slots, define scopes that target slots, resolve them
+with `combineStyle`, then render the resolved items. Static extraction can move
+supported chains into CSS at build time without changing the component code.

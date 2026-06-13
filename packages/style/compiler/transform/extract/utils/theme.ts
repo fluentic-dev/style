@@ -70,7 +70,7 @@ export function compileThemeCall(
   return {
     id,
     className,
-    rule: { dedupe: className, className, css, priority: [0, 0, 0, 0, 0, 0] },
+    rule: { dedupe: className, className, css, priority: [0, 0, 0, 0, 0, 0, 0] },
   };
 }
 

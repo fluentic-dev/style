@@ -42,10 +42,10 @@ shared as themes, variants, or state styles.
 ## Rendering slots
 
 ```tsx
-const css = useCss(dialogStyles);
+const css = combineStyle(dialogStyles);
 
 return (
-  <section css={css.root} scope={css}>
+  <section css={css.root}>
     <div css={css.panel}>
       <h2 css={css.title}>Settings</h2>
     </div>
@@ -86,9 +86,9 @@ export const compactCard = style.scope([
 Then resolve them in the component:
 
 ```tsx
-const css = useCss(
+const css = combineStyle(
   cardStyles,
-  ...scopeTarget(cardStyles.root, props.theme),
+  ...bindScope(cardStyles.root, props.theme),
 );
 ```
 

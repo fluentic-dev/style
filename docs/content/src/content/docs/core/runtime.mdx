@@ -1,46 +1,26 @@
 ---
 title: Runtime
-description: Learn how StyleProvider, useCss, and sheets fit together.
+description: Learn how style resolution and sheets fit together.
 ---
 
-The runtime is intentionally small. Its job is not to parse CSS; it resolves
-builder metadata into CSS instances and inserts rules that are not already
-extracted.
+The runtime is intentionally small. It turns style metadata into class names and
+inserts rules only when they were not extracted ahead of time.
 
-## `useCss`
+## `combineStyle`
 
 ```ts
-const css = useCss(styles, ...scopeTargets);
+const css = combineStyle(styles, ...targets);
 ```
 
-`useCss`:
+`combineStyle`:
 
-1. Reads the current runtime context.
-2. Reads inherited scope context.
-3. Normalizes scope target inputs.
-4. Gets a cached CSS instance from the instance pool.
-5. Inserts runtime rules when CSS has not been extracted.
+1. Normalizes scope target inputs.
+2. Reuses a cached CSS instance for the same styles and scope targets.
+3. Inserts runtime rules into the active sheet when CSS has not been extracted.
 
-## `StyleProvider`
-
-```tsx
-import { StyleProvider } from '@fluentic/style';
-
-export function App() {
-  return (
-    <StyleProvider>
-      <Routes />
-    </StyleProvider>
-  );
-}
-```
-
-`StyleProvider` creates a local runtime context with its own instance pool and
-style sheet. If you do not render one, Fluentic Style uses a default singleton
-context.
-
-Use a provider when you want isolation for tests, embedded apps, or server/client
-boundaries.
+The JSX `css` prop can also accept direct `style(...)` and `style.slot(...)`
+values. Use `combineStyle` when a component needs to carry scopes, slot
+overrides, or token overrides along with its styles.
 
 ## Style sheets
 
@@ -48,7 +28,6 @@ The public sheet utilities include:
 
 ```ts
 createStyleSheet
-createMemoryStyleSheet
 setGlobalSheet
 ```
 

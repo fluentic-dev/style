@@ -7,21 +7,18 @@ description: Public runtime, style, selector, and sheet APIs.
 
 ```ts
 import {
-  StyleProvider,
   combineScope,
   configureRuntime,
   createStyleFn,
   createStyleSheet,
   createStyleToken,
-  scopeTarget,
+  bindScope,
   selector,
   selectorPriority,
   setGlobalSheet,
   style,
   type,
-  useCss,
-  useCssProvider,
-  useCssRef,
+  combineStyle,
 } from '@fluentic/style';
 ```
 
@@ -47,28 +44,20 @@ const { style } = createStyleFn({
 });
 ```
 
-## `useCss`
+## `combineStyle`
 
 Resolve a styles object and optional scope targets.
 
 ```ts
-const css = useCss(styles, ...items);
+const css = combineStyle(styles, ...items);
 ```
 
-## `scopeTarget`
+## `bindScope`
 
 Target incoming themes to a slot.
 
 ```ts
-const targets = scopeTarget(styles.root, props.theme);
-```
-
-## `StyleProvider`
-
-Create an isolated runtime context.
-
-```tsx
-<StyleProvider>{children}</StyleProvider>
+const targets = bindScope(styles.root, props.theme);
 ```
 
 ## `createStyleToken`

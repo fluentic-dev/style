@@ -1,4 +1,4 @@
-import { getCss } from '@fluentic/style';
+import { combineStyle } from '@fluentic/style';
 import { getClassName } from '@fluentic/style';
 import Link from 'next/link';
 import type { ReactNode } from 'react';
@@ -14,7 +14,7 @@ const links = [
 ] as const;
 
 export function Chrome(props: { children: ReactNode; }) {
-  const css = getCss(page);
+  const css = combineStyle(page);
 
   return (
     <main css={css.shell}>
