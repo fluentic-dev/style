@@ -14,7 +14,7 @@ import {
   FN_CREATE_EXTRACTED_STYLE,
   FN_CREATE_EXTRACTED_TOKEN,
 } from '../../../utils/constants';
-import type { CompiledChainData, CompiledChainItem } from '../chain';
+import type { CompiledChainData, CompiledItem, CompiledCssItem } from '../chain';
 import type { ExtractPluginState } from './state';
 
 export function buildReplacement(
@@ -65,6 +65,10 @@ function buildItemsArray(
 
   return t.arrayExpression(
     chain.items.map((item) => {
+      if (isCompiledTokenItem(item)) {
+        return t.cloneNode(item.valueNode);
+      }
+
       const type = getItemType(item);
       const dedupe = getItemDedupe(item);
       const className = getItemClassName(item);
@@ -102,17 +106,23 @@ function buildItemsArray(
   );
 }
 
+function isCompiledTokenItem(
+  item: CompiledItem,
+): item is Extract<CompiledItem, { kind: 'token'; }> {
+  return !Array.isArray(item) && item.kind === 'token';
+}
+
 function isItemVariableValue(
   value: ExtractedItemValue | null | undefined,
 ): value is [typeof ITEM_VALUE_TYPE_VARIABLE, string, unknown] {
   return !!value && value[0] === ITEM_VALUE_TYPE_VARIABLE;
 }
 
-function getItemType(item: CompiledChainItem): BuilderType {
+function getItemType(item: CompiledCssItem): BuilderType {
   return typeof item[0] === 'number' ? item[0] as BuilderType : BUILDER_TYPE_STYLE;
 }
 
-function getItemSlotId(item: CompiledChainItem): string | null {
+function getItemSlotId(item: CompiledCssItem): string | null {
   const type = getItemType(item);
 
   if (type === BUILDER_TYPE_SLOT || type === BUILDER_TYPE_SLOT_OVERRIDE || type === BUILDER_TYPE_SCOPE) {
@@ -122,7 +132,7 @@ function getItemSlotId(item: CompiledChainItem): string | null {
   return null;
 }
 
-function getItemDedupe(item: CompiledChainItem): string {
+function getItemDedupe(item: CompiledCssItem): string {
   const type = getItemType(item);
 
   if (type === BUILDER_TYPE_STYLE) {
@@ -132,7 +142,7 @@ function getItemDedupe(item: CompiledChainItem): string {
   return item[2] as string;
 }
 
-function getItemClassName(item: CompiledChainItem): string {
+function getItemClassName(item: CompiledCssItem): string {
   const type = getItemType(item);
 
   if (type === BUILDER_TYPE_STYLE) {
@@ -142,7 +152,7 @@ function getItemClassName(item: CompiledChainItem): string {
   return item[3] as string;
 }
 
-function getItemValue(item: CompiledChainItem): ExtractedItemValue | undefined {
+function getItemValue(item: CompiledCssItem): ExtractedItemValue | undefined {
   const type = getItemType(item);
 
   if (type === BUILDER_TYPE_SCOPE) return undefined;

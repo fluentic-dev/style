@@ -1,109 +1,51 @@
-import { createLayerPool } from './layer';
-import { compareLayerPriority } from './layer';
-import { LayerDefaultNamespace, LayerPlaceholder, type LayerPriority } from './types';
+import { flattenCssLayers } from './layer';
 
-export type LayeredCssItem = {
-  css: string;
-  priority: LayerPriority;
-};
-
-export function getCssLayerName(
-  layerNamespace: string | null | undefined,
-  fallback = LayerDefaultNamespace,
+export function getLayerOrderCss(
+  layers: readonly string[],
+  layerNames: string | readonly string[],
 ) {
-  return layerNamespace || fallback;
+  const names = flattenCssLayers(layers, layerNames);
+
+  if (!names.length) return '';
+
+  return '@layer ' + names.join(', ') + ';';
 }
 
-export function getCssLayerNames(
-  layers: readonly string[],
+export function getLayerBlockCss(
   layerName: string,
-) {
-  return layers
-    .map((layer) => layer === LayerPlaceholder ? layerName : layer)
-    .filter(Boolean);
-}
-
-export function getCssLayerOrderNames(
-  layers: readonly string[],
-  layerNames: readonly string[],
-) {
-  return layers
-    .flatMap((layer) => layer === LayerPlaceholder ? layerNames : layer)
-    .filter(Boolean);
-}
-
-export function getCssLayerOrderRule(
-  layers: readonly string[],
-  layerName: string | readonly string[],
-) {
-  const layerNames = typeof layerName === 'string'
-    ? getCssLayerNames(layers, layerName)
-    : getCssLayerOrderNames(layers, layerName);
-
-  if (!layerNames.length) return '';
-
-  return '@layer ' + layerNames.join(', ') + ';';
-}
-
-export function wrapCssInLayer(
   css: string,
-  layerName: string,
 ) {
   return '@layer ' + layerName + ' {' + css + '}';
 }
 
-export function formatLayeredCss(
-  css: readonly string[],
+export function getLayerBundleCss(
   layers: readonly string[],
   layerName: string,
+  css: readonly string[],
 ) {
   const output: string[] = [];
-  const layerOrder = getCssLayerOrderRule(layers, layerName);
+  const layerOrder = getLayerOrderCss(layers, layerName);
 
   if (layerOrder) {
     output.push(layerOrder);
   }
 
-  output.push(wrapCssInLayer('\n' + css.join('\n') + '\n', layerName));
+  output.push(getLayerBlockCss(layerName, '\n' + css.join('\n') + '\n'));
 
-  return output;
+  return output.join('\n');
 }
 
-export function formatLayeredCssRules(
-  items: readonly LayeredCssItem[],
-  layers: readonly string[],
-  layerNamespace: string,
+export function joinLayerCss(
+  layerOrderCss: string,
+  css: readonly string[],
 ) {
-  const sorted = items
-    .slice()
-    .sort((a, b) => compareLayerPriority(a.priority, b.priority));
-  const pool = createLayerPool();
-  const layerNames: string[] = [];
-  const layerNameLookup = new Set<string>();
-  const groups: Record<string, string[]> = {};
-
-  for (const item of sorted) {
-    const layerName = pool.getLayerName(layerNamespace, item.priority);
-
-    if (!layerNameLookup.has(layerName)) {
-      layerNameLookup.add(layerName);
-      layerNames.push(layerName);
-      groups[layerName] = [];
-    }
-
-    groups[layerName].push(item.css);
-  }
-
   const output: string[] = [];
-  const layerOrder = getCssLayerOrderRule(layers, layerNames);
 
-  if (layerOrder) {
-    output.push(layerOrder);
+  if (layerOrderCss) {
+    output.push(layerOrderCss);
   }
 
-  for (const layerName of layerNames) {
-    output.push(wrapCssInLayer('\n' + groups[layerName].join('\n') + '\n', layerName));
-  }
+  output.push(...css);
 
-  return output;
+  return output.join('\n') + '\n';
 }

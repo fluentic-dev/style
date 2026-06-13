@@ -3,6 +3,7 @@ import type { RuntimeConfig } from './types';
 
 export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
   buildMeta: null,
+  configVersion: 0,
 
   isDev: false,
   isRSC: false,
@@ -14,7 +15,7 @@ export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
 
   devUtils: 'CssDevUtils',
 
-  cssCacheTTL: getCacheTTL(true),
+  runtimeCacheTTL: getCacheTTL(true),
 
   layers: [LayerPlaceholder],
   layerNamespace: LayerDefaultNamespace,

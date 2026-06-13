@@ -24,14 +24,17 @@ import { createPluginCompiler, createTransformFilter } from '../plugin/utils';
 import { normalizeSidecarRoutePath } from '../plugin/utils/sidecar/utils';
 import { plugin as viteStylePlugin } from '../plugin/vite';
 import { prependWebpackRuntimeEntry } from '../plugin/webpack/utils';
-import { createCssInstancePool, createCssTheme, getCssInstanceScopes, resolveCssProp } from '../runtime';
-import { collectDevCssRules } from '../runtime/dev';
+import { createCombinedStylePool } from '../runtime/core/cache/pool';
+import { resolveCssProp } from '../runtime/core/cache/prop';
+import { getCombinedStyleScopes } from '../runtime/core/combinedStyle';
+import { getClassName } from '../runtime/core/getClassName';
+import { getSheetRules } from '../runtime/core/getSheetRules';
 import { transformElement } from '../runtime/core/jsx';
-import { CSS_DEV_ATTR, CSS_DEV_STYLE_SEED_GLOBAL } from '../runtime/rsc/constants';
+import { ELEMENT_CSS_DATA_ATTR } from '../runtime/rsc/constants';
 import { transformElement as transformRscElement } from '../runtime/rsc/jsx';
-import { getRscDevSeedCss } from '../runtime/rsc/seed';
-import { buildThemeRule, getGlobalSheet, setGlobalSheet } from '../runtime/sheet';
-import { combineStyle, getClassName, getCss, getToken, bindScope } from '../runtime/style';
+import { clearRscStyleStore, getRscStyleCss } from '../runtime/rsc/styleStore';
+import { createThemeRule, getGlobalSheet, setGlobalSheet } from '../runtime/sheet';
+import { bindScope, combineStyle, getToken } from '../runtime/style';
 import { selector } from '../selector/selector';
 import { createDevSheet, createProdSheet } from '../sheet';
 import { getRuleCallsite } from '../sheet/sourcemap';
@@ -94,31 +97,25 @@ const hoverTheme = style.scope().hover([
 ]);
 
 test('pool reuses equivalent scope paths', () => {
-  const pool = createCssInstancePool();
+  const pool = createCombinedStylePool();
 
-  const first = pool.get(styles, [], [theme(styles.container)]).instance;
-  const second = pool.get(styles, [], [theme(styles.container)]).instance;
+  const first = pool.get(styles, [], [theme(styles.container)]).style;
+  const second = pool.get(styles, [], [theme(styles.container)]).style;
 
   equal(first, second);
 });
 
-test('pool ttl zero drops retained instances on cleanup', () => {
-  const pool = createCssInstancePool(0);
-  const first = pool.get(styles, [], [theme(styles.container)]).instance;
-  const second = pool.get(styles, [], [theme(styles.container)]).instance;
+test('pool ttl zero does not retain instances', () => {
+  const pool = createCombinedStylePool(0);
+  const first = pool.get(styles, [], [theme(styles.container)]).style;
+  const second = pool.get(styles, [], [theme(styles.container)]).style;
 
-  equal(first, second);
-
-  pool.cleanup();
-
-  const third = pool.get(styles, [], [theme(styles.container)]).instance;
-
-  notEqual(first, third);
+  notEqual(first, second);
 });
 
-test('static getCss reuses equivalent scope paths', () => {
-  const first = getCss(styles, theme(styles.container));
-  const second = getCss(styles, [theme(styles.container)]);
+test('static combineStyle reuses equivalent scope paths', () => {
+  const first = combineStyle(styles, theme(styles.container));
+  const second = combineStyle(styles, [theme(styles.container)]);
 
   equal(first, second);
 });
@@ -152,17 +149,17 @@ test('static combineStyle rejects carried instances from another styles object',
   try {
     combine(other as any);
   } catch (error) {
-    didThrow = error instanceof TypeError
-      && /same styles object/.test(error.message);
+    didThrow = error instanceof TypeError &&
+      /same styles object/.test(error.message);
   }
 
   equal(didThrow, true);
 });
 
-test('static getClassName resolves getCss and runtime instances the same way', () => {
-  const pool = createCssInstancePool();
-  const staticCss = getCss(styles, theme(styles.container));
-  const runtimeCss = pool.get(styles, [], [theme(styles.container)]).instance;
+test('static getClassName resolves combineStyle and runtime instances the same way', () => {
+  const pool = createCombinedStylePool();
+  const staticCss = combineStyle(styles, theme(styles.container));
+  const runtimeCss = pool.get(styles, [], [theme(styles.container)]).style;
 
   equal(
     getClassName(staticCss.container).className,
@@ -520,7 +517,7 @@ test('runtime config preserves layer placeholder for priority expansion', () => 
   equal(RUNTIME_CONFIG.layers.join(','), '$layer');
 });
 
-test('dev css payload dedupes by declaration identity without callsite', () => {
+test('css prop sheet rules dedupe by declaration identity without callsite', () => {
   configureRuntime({ dev: true });
 
   const first = createDebugStyle({ backgroundColor: 'red' }, {
@@ -538,12 +535,12 @@ test('dev css payload dedupes by declaration identity without callsite', () => {
 
   configureRuntime({ dev: false });
 
-  const css = getCss({ first, second });
-  const rules = collectDevCssRules([css.first, css.second]);
+  const css = combineStyle({ first, second });
+  const rules = getSheetRules([css.first, css.second]);
 
   equal(rules.length, 1);
-  includes(rules[0][1], 'background-color:blue');
-  equal(rules[0][2]?.filePath, '/src/two.ts');
+  includes(rules[0].css, 'background-color:blue');
+  equal(rules[0].callsite?.filePath, '/src/two.ts');
 });
 
 test('scope arg selectors merge items with normalized parent selector', () => {
@@ -562,8 +559,8 @@ test('scope arg selectors merge items with normalized parent selector', () => {
 });
 
 test('scope parent selector classes are anchored on the target slot only', () => {
-  const pool = createCssInstancePool();
-  const scoped = pool.get(styles, [], [hoverTheme(styles.container)]).instance;
+  const pool = createCombinedStylePool();
+  const scoped = pool.get(styles, [], [hoverTheme(styles.container)]).style;
   const container = resolveCssProp(scoped.container);
   const label = resolveCssProp(scoped.label);
   const scopeItem = hoverTheme[BUILDER_STATE].items[0];
@@ -608,12 +605,12 @@ test('nested slot hover inside scope hover does not add child classes to target 
     }),
   ]);
 
-  const pool = createCssInstancePool();
+  const pool = createCombinedStylePool();
   const scoped = pool.get(
     nestedStyles,
     [],
     bindScope(nestedStyles.card, hoverScope),
-  ).instance;
+  ).style;
 
   const card = resolveCssProp(scoped.card);
   const note = resolveCssProp(scoped.note);
@@ -621,23 +618,23 @@ test('nested slot hover inside scope hover does not add child classes to target 
   const scopeItems = hoverScope[BUILDER_STATE].items;
 
   const noteScopeItem = scopeItems.find(
-    (item) => !Array.isArray(item) && item.property === 'color',
+    (item) => isRuntimeScopeItem(item) && item.property === 'color',
   );
   const buttonScopeItems = scopeItems.filter(
-    (item) => !Array.isArray(item) && item.property === 'background',
+    (item) => isRuntimeScopeItem(item) && item.property === 'background',
   );
 
-  if (!noteScopeItem || Array.isArray(noteScopeItem)) {
+  if (!noteScopeItem || !isRuntimeScopeItem(noteScopeItem)) {
     throw new Error('expected note scope item');
   }
 
-  if (buttonScopeItems.some((item) => Array.isArray(item))) {
+  if (buttonScopeItems.some((item) => !isRuntimeScopeItem(item))) {
     throw new Error('expected runtime button scope items');
   }
 
   const noteParentClassName = getScopeParentClassName(noteScopeItem.className);
   const buttonClassNames = buttonScopeItems.map((item) => {
-    if (Array.isArray(item)) throw new Error('expected runtime button scope item');
+    if (!isRuntimeScopeItem(item)) throw new Error('expected runtime button scope item');
     return item.className;
   });
   const buttonParentClassNames = buttonClassNames.map((className) => getScopeParentClassName(className));
@@ -711,24 +708,24 @@ test('debug slot ids keep scoped child hover classes off the target slot', () =>
     sourceUrl: 'debug.ts',
   });
 
-  const pool = createCssInstancePool();
+  const pool = createCombinedStylePool();
   const scoped = pool.get(
     debugStyles,
     [],
     bindScope(debugStyles.card, hoverScope),
-  ).instance;
+  ).style;
 
   const card = resolveCssProp((scoped as any).card);
   const button = resolveCssProp((scoped as any).button);
   const scopeItems = hoverScope[BUILDER_STATE].items.filter(
-    (item: any) => !Array.isArray(item) && item.property === 'background',
+    (item: unknown) => isRuntimeScopeItem(item) && item.property === 'background',
   );
 
   const cardClasses = card.className.split(' ');
   const buttonClasses = button.className.split(' ');
 
   for (const item of scopeItems) {
-    if (Array.isArray(item)) throw new Error('expected runtime scope item');
+    if (!isRuntimeScopeItem(item)) throw new Error('expected runtime scope item');
 
     equal(cardClasses.includes(item.className), false);
     equal(buttonClasses.includes(item.className), true);
@@ -755,12 +752,12 @@ test('scope keeps same-property overrides for different slots', () => {
     }),
   ]);
 
-  const pool = createCssInstancePool();
+  const pool = createCombinedStylePool();
   const scoped = pool.get(
     themedStyles,
     [],
     bindScope(themedStyles.card, themeScope),
-  ).instance;
+  ).style;
 
   const card = resolveCssProp(scoped.card);
   const label = resolveCssProp(scoped.label);
@@ -781,10 +778,10 @@ test('scope keeps same-property overrides for different slots', () => {
       item.property === 'background',
   );
 
-  if (!cardBackground || Array.isArray(cardBackground)) {
+  if (!cardBackground || !isRuntimeScopeItem(cardBackground)) {
     throw new Error('expected card background scope item');
   }
-  if (!labelBackground || Array.isArray(labelBackground)) {
+  if (!labelBackground || !isRuntimeScopeItem(labelBackground)) {
     throw new Error('expected label background scope item');
   }
 
@@ -921,6 +918,19 @@ const two = style({
   notEqual(classNames[0], classNames[1]);
 });
 
+test('runtime builder preserves explicit zero value priority', () => {
+  const prioritized = style({
+    display: [0, 'flex'] as never,
+  });
+
+  const item = prioritized[BUILDER_STATE].items[0];
+  if (Array.isArray(item)) throw new Error('expected runtime style item');
+
+  equal(Array.isArray(item.value), true);
+  equal((item.value as [string, number])[0], 'flex');
+  equal((item.value as [string, number])[1], 0);
+});
+
 test('compiler includes media priority in extracted class hash', () => {
   const compiler = createCompiler({
     css: { layer: false },
@@ -945,6 +955,33 @@ const two = style({ margin: 0 }).media(2, '(max-width: 700px)', {
 
   equal(classNames.length, 2);
   notEqual(classNames[0], classNames[1]);
+});
+
+test('compiler keeps nested StyleData chained methods inside at-rules', () => {
+  const compiler = createCompiler({
+    css: { layer: false, debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const rule = style({ margin: 0 }).media('(max-width: 700px)', style({
+  color: 'red',
+}).hover({
+  color: 'blue',
+}));
+`,
+    '/tmp/compiler-nested-style-data-at-rule.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(css, '@media (max-width: 700px)');
+  includes(css, 'color:red');
+  includes(css, 'color:blue');
+  includes(css, ':hover');
 });
 
 test('compiler extracts token values as css variables', () => {
@@ -975,6 +1012,69 @@ const styles = {
   includes(result.code, 'createExtractedToken(');
   includes(css, 'background-color:var(--token-');
   includes(css, ', blue)');
+});
+
+test('compiler preserves scope token provider values', () => {
+  const compiler = createCompiler({
+    css: { layer: false, debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { createToken, style } from '@fluentic/style';
+
+const token = createToken('blue');
+const styles = {
+  container: style.slot({
+    backgroundColor: token,
+  }),
+};
+const scope = style.scope([
+  token('red'),
+  styles.container({
+    color: 'white',
+  }),
+]);
+`,
+    '/tmp/compiler-scope-token-provider.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  includes(result.code, 'createExtractedScope');
+  includes(result.code, "token('red')");
+});
+
+test('compiler honors configured token variable prefix', () => {
+  const compiler = createCompiler({
+    css: {
+      layer: false,
+      debugClassName: true,
+      localClassName: true,
+      tokenVarPrefix: 'custom-token-',
+    },
+  });
+  const result = compiler.transform(
+    `
+import { createToken, style } from '@fluentic/style';
+
+const token = createToken('blue');
+const styles = {
+  container: style.slot({
+    backgroundColor: token,
+  }),
+};
+`,
+    '/tmp/compiler-custom-token-prefix.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(result.code, '[1, "--custom-token-');
+  includes(css, 'background-color:var(--custom-token-');
+  notIncludes(result.code, '[1, "--token-');
+  notIncludes(css, 'background-color:var(--token-');
 });
 
 test('compiler uses property-local variables for token values', () => {
@@ -1137,6 +1237,16 @@ const scope = style.scope().hover([
 });
 
 test('compiler resolves cross-file constants slots and scoped overrides', () => {
+  const slotsFilePath = testDir + 'compiler-fixtures/slots.ts';
+  const slotsCode = readFileSync(slotsFilePath, 'utf8');
+  const slotsResult = createCompiler({ css: { classNamePrefix: 't', layer: false } }).transform(
+    slotsCode,
+    slotsFilePath,
+  );
+  if (!slotsResult) throw new Error('expected slots compiler transform result');
+
+  const importedSlotIds = getCallStringArgs(slotsResult.code, 'createExtractedSlot');
+
   const filePath = testDir + 'compiler-fixtures/component.ts';
   const code = readFileSync(filePath, 'utf8');
   const compiler = createCompiler({ css: { classNamePrefix: 't' } });
@@ -1149,6 +1259,8 @@ test('compiler resolves cross-file constants slots and scoped overrides', () => 
   includes(result.code, 'createExtractedScope');
   includes(result.code, 'compactScope');
   includes(result.code, 'objectScope');
+  includes(result.code, `[4, "${importedSlotIds[0]}",`);
+  includes(result.code, `[4, "${importedSlotIds[1]}",`);
 
   const css = result.css.join('\n');
 
@@ -1589,9 +1701,9 @@ const rule = style({
 });
 
 test('pool prepends inherited scopes before own scopes', () => {
-  const pool = createCssInstancePool();
-  const parent = pool.get(styles, [], [theme(styles.container)]).instance;
-  const child = pool.get(styles, getCssInstanceScopes(parent), [hoverTheme(styles.container)]).instance;
+  const pool = createCombinedStylePool();
+  const parent = pool.get(styles, [], [theme(styles.container)]).style;
+  const child = pool.get(styles, getCombinedStyleScopes(parent), [hoverTheme(styles.container)]).style;
 
   equal((child.label as any).items.length, 3);
 });
@@ -1617,7 +1729,7 @@ test('extracted scope parent selector applies target and child classes', () => {
   const extractedScope = createExtractedScope([
     [BUILDER_TYPE_SCOPE, 'extracted-button', 'scope-button-bg', 'scope-button-bg-class', true],
   ]);
-  const css = getCss(
+  const css = combineStyle(
     {
       card: extractedCard,
       button: extractedButton,
@@ -1636,8 +1748,8 @@ test('extracted scope parent selector applies target and child classes', () => {
 });
 
 test('css prop resolver dedupes resolved items', () => {
-  const pool = createCssInstancePool();
-  const css = pool.get(styles, [], [theme(styles.container)]).instance;
+  const pool = createCombinedStylePool();
+  const css = pool.get(styles, [], [theme(styles.container)]).style;
   const result = resolveCssProp([css.container as any, css.container as any]);
 
   equal(result.className.split(' ').length, 1);
@@ -1660,7 +1772,27 @@ test('css prop resolver accepts direct raw style and slot data', () => {
   equal(result, cached);
 });
 
-test('static combineStyle inserts runtime rules synchronously', () => {
+test('css prop resolver skips result cache when cache is disabled', () => {
+  const directStyles = {
+    container: style({
+      color: 'crimson',
+    }),
+  };
+
+  try {
+    configureRuntime({ cache: false });
+
+    const first = resolveCssProp(directStyles.container);
+    const second = resolveCssProp(directStyles.container);
+
+    equal(first.className, second.className);
+    notEqual(first, second);
+  } finally {
+    configureRuntime({ dev: false });
+  }
+});
+
+test('getClassName inserts consumed combined style runtime rules', () => {
   const document = createFakeDocument();
   const sheet = createDevSheet({
     document: document as unknown as Document,
@@ -1679,7 +1811,7 @@ test('static combineStyle inserts runtime rules synchronously', () => {
     const text = document.head.textContent;
 
     includes(text, 'color:red');
-    includes(text, 'color:black');
+    notIncludes(text, 'color:black');
   } finally {
     setGlobalSheet(previousSheet);
   }
@@ -1720,6 +1852,24 @@ test('jsx css prop inserts direct raw style and slot runtime rules', () => {
     includes(text, 'color:olive');
   } finally {
     setGlobalSheet(previousSheet);
+  }
+});
+
+test('jsx transform keeps props identity without css prop', () => {
+  const props = { className: 'existing' };
+  const result = transformElement({ type: 'div', props });
+
+  if (result.props !== props) {
+    throw new Error('expected props identity to be preserved');
+  }
+});
+
+test('rsc jsx transform keeps props identity without css prop', () => {
+  const props = { className: 'existing' };
+  const result = transformRscElement({ type: 'div', props });
+
+  if (result.props !== props) {
+    throw new Error('expected props identity to be preserved');
   }
 });
 
@@ -1766,22 +1916,22 @@ test('css prop resolver keeps token defaults in css variable fallback', () => {
       backgroundColor: token,
     }),
   };
-  const pool = createCssInstancePool();
-  const css = pool.get(tokenStyles, [], []).instance;
+  const pool = createCombinedStylePool();
+  const css = pool.get(tokenStyles, [], []).style;
   const result = resolveCssProp(css.container as any);
 
   equal(result.style, undefined);
   if (!result.className) throw new Error('expected token class name');
 });
 
-test('static getCss resolves dynamic token provider values', () => {
+test('static combineStyle resolves dynamic token provider values', () => {
   const token = createToken('blue');
   const tokenStyles = {
     container: style.slot({
       backgroundColor: token,
     }),
   };
-  const css = getCss(tokenStyles, token('red'));
+  const css = combineStyle(tokenStyles, token('red'));
   const result = resolveCssProp(css.container as any);
 
   if (!result.style) throw new Error('expected token variable style');
@@ -1791,6 +1941,88 @@ test('static getCss resolves dynamic token provider values', () => {
   if (!varName) throw new Error('expected token variable name');
 
   equal((result.style as Record<string, unknown>)[varName], 'red');
+});
+
+test('static combineStyle resolves scope token provider values', () => {
+  const token = createToken('blue');
+  const tokenStyles = {
+    container: style.slot({
+      backgroundColor: token,
+    }),
+  };
+  const tokenScope = style.scope([
+    token('red'),
+  ]);
+  const css = combineStyle(tokenStyles, tokenScope(tokenStyles.container));
+  const result = resolveCssProp(css.container as any);
+
+  if (!result.style) throw new Error('expected token variable style');
+
+  const varName = Object.keys(result.style).find((key) => key.startsWith('--token-'));
+
+  if (!varName) throw new Error('expected token variable name');
+
+  equal((result.style as Record<string, unknown>)[varName], 'red');
+});
+
+if (false) {
+  const token = createToken('blue');
+
+  style.scope([token('red')]);
+  // @ts-expect-error scope accepts token overrides, not raw token declarations.
+  style.scope([token]);
+}
+
+test('static combineStyle lets direct token providers override scope token providers', () => {
+  const token = createToken('blue');
+  const tokenStyles = {
+    container: style.slot({
+      backgroundColor: token,
+    }),
+  };
+  const tokenScope = style.scope([
+    token('red'),
+  ]);
+  const css = combineStyle(tokenStyles, tokenScope(tokenStyles.container), token('green'));
+  const result = resolveCssProp(css.container as any);
+
+  if (!result.style) throw new Error('expected token variable style');
+
+  const varName = Object.keys(result.style).find((key) => key.startsWith('--token-'));
+
+  if (!varName) throw new Error('expected token variable name');
+
+  equal((result.style as Record<string, unknown>)[varName], 'green');
+});
+
+test('static combineStyle preserves token provider order across scopes and direct args', () => {
+  const token = createToken('blue');
+  const tokenStyles = {
+    container: style.slot({
+      backgroundColor: token,
+    }),
+  };
+  const firstScope = style.scope([
+    token('red'),
+  ]);
+  const secondScope = style.scope([
+    token('purple'),
+  ]);
+  const css = combineStyle(
+    tokenStyles,
+    firstScope(tokenStyles.container),
+    token('green'),
+    secondScope(tokenStyles.container),
+  );
+  const result = resolveCssProp(css.container as any);
+
+  if (!result.style) throw new Error('expected token variable style');
+
+  const varName = Object.keys(result.style).find((key) => key.startsWith('--token-'));
+
+  if (!varName) throw new Error('expected token variable name');
+
+  equal((result.style as Record<string, unknown>)[varName], 'purple');
 });
 
 test('static combineStyle.for carries token provider values', () => {
@@ -1854,7 +2086,7 @@ test('pool token data compares by token id and primitive value', () => {
       backgroundColor: token,
     }),
   };
-  const pool = createCssInstancePool();
+  const pool = createCombinedStylePool();
   const first = pool.get(tokenStyles, [], [token('red')]);
   const second = pool.get(tokenStyles, [], [token('red')], first.tokensData);
   const third = pool.get(tokenStyles, [], [token('green')], second.tokensData);
@@ -1873,7 +2105,7 @@ test('dynamic token providers use last value for duplicate token ids', () => {
       backgroundColor: token,
     }),
   };
-  const css = getCss(tokenStyles, token('red'), token('green'));
+  const css = combineStyle(tokenStyles, token('red'), token('green'));
   const result = resolveCssProp(css.container as any);
 
   if (!result.style) throw new Error('expected token variable style');
@@ -1892,16 +2124,15 @@ test('theme css prop contributes class and token declarations stay theme-overrid
       color: token,
     }),
   };
-  const themeData = createTheme([token('red')], 'runtime-theme');
-  const theme = createCssTheme(themeData);
-  const css = getCss(tokenStyles);
+  const theme = createTheme([token('red')], 'runtime-theme');
+  const css = combineStyle(tokenStyles);
   const result = resolveCssProp([css.container as any, theme]);
 
-  includes(result.className, themeData.className);
+  includes(result.className, theme.className);
   equal(result.style, undefined);
 
-  const rule = buildThemeRule(themeData);
-  includes(rule, '.' + themeData.className);
+  const rule = createThemeRule(theme);
+  includes(rule, '.' + theme.className);
   includes(rule, '--token-theme-text:red');
 });
 
@@ -1912,8 +2143,8 @@ test('local token overrides beat theme class via inline variable', () => {
       color: token,
     }),
   };
-  const theme = createCssTheme(createTheme([token('red')], 'runtime-theme-local'));
-  const css = getCss(tokenStyles, token('green'));
+  const theme = createTheme([token('red')], 'runtime-theme-local');
+  const css = combineStyle(tokenStyles, token('green'));
   const result = resolveCssProp([theme, css.container as any]);
 
   if (!result.style) throw new Error('expected local token variable style');
@@ -1925,7 +2156,7 @@ test('theme token aliases emit nested css variable fallbacks', () => {
   const base = createToken('blue', 'theme-base');
   const alias = createToken(base, 'theme-alias');
   const theme = createTheme([alias(base)], 'runtime-theme-alias');
-  const rule = buildThemeRule(theme);
+  const rule = createThemeRule(theme);
 
   includes(rule, '--token-theme-alias:var(--token-theme-base, blue)');
 });
@@ -1964,8 +2195,8 @@ test('css prop resolver wires extracted dynamic variables as inline style', () =
       ['dynamic-dedupe', 'dynamic-class', [1, '--dynamic-value', 'purple']],
     ]),
   };
-  const pool = createCssInstancePool();
-  const css = pool.get(styles, [], []).instance;
+  const pool = createCombinedStylePool();
+  const css = pool.get(styles, [], []).style;
   const result = resolveCssProp(css.container as any);
 
   equal(result.className, 'dynamic-class');
@@ -1980,8 +2211,8 @@ test('css prop resolver resolves extracted token variable refs', () => {
       ['token-dedupe', 'token-class', [1, '--token-value', tokenRef]],
     ]),
   };
-  const pool = createCssInstancePool();
-  const css = pool.get(styles, [], []).instance;
+  const pool = createCombinedStylePool();
+  const css = pool.get(styles, [], []).style;
   const result = resolveCssProp(css.container as any);
 
   equal(result.className, 'token-class');
@@ -1989,12 +2220,36 @@ test('css prop resolver resolves extracted token variable refs', () => {
   includes(String((result.style as Record<string, unknown>)['--token-value']), 'blue');
 });
 
+test('css prop cache invalidates on runtime config change', () => {
+  const baseToken = createToken('blue');
+  const tokenRef = createToken(baseToken);
+  const css = createExtractedSlot('config-cache-token-slot', [
+    ['config-cache-token-dedupe', 'config-cache-token-class', [1, '--token-value', tokenRef]],
+  ]);
+
+  try {
+    configureRuntime({ tokenVarPrefix: 'first-token-' });
+
+    const first = resolveCssProp(css as any);
+
+    includes(String((first.style as Record<string, unknown>)['--token-value']), 'var(--first-token-');
+
+    configureRuntime({ tokenVarPrefix: 'next-token-' });
+
+    const next = resolveCssProp(css as any);
+
+    includes(String((next.style as Record<string, unknown>)['--token-value']), 'var(--next-token-');
+  } finally {
+    configureRuntime({ dev: false });
+  }
+});
+
 test('rsc dev payload is emitted by getClassName', () => {
-  delete (globalThis as Record<string, unknown>)[CSS_DEV_STYLE_SEED_GLOBAL];
+  clearRscStyleStore();
   setBuildMeta({ dev: true, extract: false, rsc: true, css: null });
 
-  const pool = createCssInstancePool();
-  const css = pool.get(styles, [], []).instance;
+  const pool = createCombinedStylePool();
+  const css = pool.get(styles, [], []).style;
   const manual = getClassName(css.container);
   const manualProps = manual as Record<string, unknown>;
   const result = transformRscElement({
@@ -2005,23 +2260,23 @@ test('rsc dev payload is emitted by getClassName', () => {
     },
   });
   const props = result.props as Record<string, unknown>;
-  const seedCss = getRscDevSeedCss();
+  const storeCss = getRscStyleCss();
 
   setBuildMeta({ dev: false, extract: false, rsc: false, css: null });
   configureRuntime({ dev: false });
 
   equal(props.id, 'target');
   equal(typeof manual.className, 'string');
-  equal(typeof manualProps[CSS_DEV_ATTR], 'string');
-  includes(seedCss, '@layer css.');
-  includes(seedCss, 'color');
+  equal(typeof manualProps[ELEMENT_CSS_DATA_ATTR], 'string');
+  includes(storeCss, '@layer css.');
+  includes(storeCss, 'color');
   equal(typeof props.className, 'string');
-  equal(typeof props[CSS_DEV_ATTR], 'string');
+  equal(typeof props[ELEMENT_CSS_DATA_ATTR], 'string');
   equal('css' in props, false);
 });
 
 test('rsc getClassName omits dev payload without css rules', () => {
-  delete (globalThis as Record<string, unknown>)[CSS_DEV_STYLE_SEED_GLOBAL];
+  clearRscStyleStore();
   setBuildMeta({ dev: true, extract: false, rsc: true, css: null });
 
   const manual = getClassName(undefined, {
@@ -2034,21 +2289,21 @@ test('rsc getClassName omits dev payload without css rules', () => {
     },
   });
   const props = result.props as Record<string, unknown>;
-  const seedCss = getRscDevSeedCss();
+  const storeCss = getRscStyleCss();
 
   setBuildMeta({ dev: false, extract: false, rsc: false, css: null });
   configureRuntime({ dev: false });
-  delete (globalThis as Record<string, unknown>)[CSS_DEV_STYLE_SEED_GLOBAL];
+  clearRscStyleStore();
 
   equal(manual.className, 'external');
-  equal(CSS_DEV_ATTR in manual, false);
+  equal(ELEMENT_CSS_DATA_ATTR in manual, false);
   equal(props.className, 'external');
-  equal(CSS_DEV_ATTR in props, false);
-  equal(seedCss, '');
+  equal(ELEMENT_CSS_DATA_ATTR in props, false);
+  equal(storeCss, '');
 });
 
-test('rsc dev seed wraps parent selector priority rules in layers', () => {
-  delete (globalThis as Record<string, unknown>)[CSS_DEV_STYLE_SEED_GLOBAL];
+test('rsc dev style store wraps parent selector priority rules in layers', () => {
+  clearRscStyleStore();
   setBuildMeta({ dev: true, extract: false, rsc: true, css: null });
 
   const card = {
@@ -2066,24 +2321,24 @@ test('rsc dev seed wraps parent selector priority rules in layers', () => {
       background: 'blue',
     }),
   ]);
-  const css = getCss(card, bindScope(card.root, parentHover));
+  const css = combineStyle(card, bindScope(card.root, parentHover));
 
   getClassName(css.root);
   getClassName(css.button);
 
-  const seedCss = getRscDevSeedCss();
-  const blueLayer = getLayerNameForRule(seedCss, 'background:blue');
-  const redLayer = getLayerNameForRule(seedCss, 'background:red');
+  const storeCss = getRscStyleCss();
+  const blueLayer = getLayerNameForRule(storeCss, 'background:blue');
+  const redLayer = getLayerNameForRule(storeCss, 'background:red');
 
   setBuildMeta({ dev: false, extract: false, rsc: false, css: null });
   configureRuntime({ dev: false });
-  delete (globalThis as Record<string, unknown>)[CSS_DEV_STYLE_SEED_GLOBAL];
+  clearRscStyleStore();
 
-  includes(seedCss, '@layer css.');
-  includes(seedCss, ':hover');
-  includes(seedCss, 'background:blue');
-  includes(seedCss, 'background:red');
-  before(seedCss.split('\n')[0], blueLayer, redLayer);
+  includes(storeCss, '@layer css.');
+  includes(storeCss, ':hover');
+  includes(storeCss, 'background:blue');
+  includes(storeCss, 'background:red');
+  before(storeCss.split('\n')[0], blueLayer, redLayer);
 });
 
 test('dev sheet keeps layer tag first and chunks rule tags', () => {
@@ -2121,9 +2376,12 @@ test('dev sheet keeps layer tag first and chunks rule tags', () => {
   equal(document.head.childNodes[0].getAttribute('data-css-sheet'), 'layers');
   equal(document.head.childNodes[1].getAttribute('data-css-sheet'), 'rules');
   equal(document.head.childNodes[2].getAttribute('data-css-sheet'), 'rules');
-  equal(document.head.childNodes[0].textContent, '@layer a, css, b;');
-  includes(document.head.childNodes[1].textContent, '@layer css {.one{color:red}}');
-  includes(document.head.childNodes[2].textContent, '@layer css {.two{color:blue}}');
+  includes(document.head.childNodes[0].textContent, '@layer a, css.');
+  includes(document.head.childNodes[0].textContent, ', b;');
+  includes(document.head.childNodes[1].textContent, '@layer css.');
+  includes(document.head.childNodes[1].textContent, '{.one{color:red}}');
+  includes(document.head.childNodes[2].textContent, '@layer css.');
+  includes(document.head.childNodes[2].textContent, '{.two{color:blue}}');
   includes(document.head.childNodes[1].textContent, 'sourceMappingURL=');
   equal(
     getInlineSourceMap(document.head.childNodes[1].textContent).sources[0],
@@ -2273,8 +2531,10 @@ test('dev sheet writes one generated css line per sourcemap rule', () => {
   const tag = document.head.childNodes[1];
   const lines = tag.textContent.split('\n').filter(Boolean);
 
-  equal(lines[0], '@layer css {.one{min-height:100vh}}');
-  equal(lines[1], '@layer css {.two{background-color:red}}');
+  includes(lines[0], '@layer css.');
+  includes(lines[0], '{.one{min-height:100vh}}');
+  includes(lines[1], '@layer css.');
+  includes(lines[1], '{.two{background-color:red}}');
   includes(lines[2], 'sourceMappingURL=');
 });
 
@@ -2661,7 +2921,8 @@ test('dev sheet ignores duplicate keys', () => {
   sheet.insert({ key: 'same', css: '.two{color:blue}' });
   sheet.flush();
 
-  equal(document.head.childNodes[1].textContent, '@layer css {.one{color:red}}\n');
+  includes(document.head.childNodes[1].textContent, '@layer css.');
+  includes(document.head.childNodes[1].textContent, '{.one{color:red}}');
 });
 
 test('prod sheet uses a layer tag and insertRule tag', () => {
@@ -2680,7 +2941,8 @@ test('prod sheet uses a layer tag and insertRule tag', () => {
   equal(document.head.childNodes[1].getAttribute('data-css-sheet'), 'rules');
   equal(document.head.childNodes[0].textContent, '@layer a;');
   equal(document.head.childNodes[1].sheet.cssRules.length, 1);
-  equal(document.head.childNodes[1].sheet.cssRules[0], '@layer css {.one{color:red}}');
+  includes(document.head.childNodes[1].sheet.cssRules[0], '@layer css.');
+  includes(document.head.childNodes[1].sheet.cssRules[0], '{.one{color:red}}');
 });
 
 test('prod sheet creates rule tag lazily', () => {
@@ -2766,6 +3028,13 @@ function getLayerNameForRule(css: string, declaration: string) {
   }
 
   return match[1];
+}
+
+function getCallStringArgs(code: string, fnName: string) {
+  const escapedFnName = fnName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const matches = code.matchAll(new RegExp(`${escapedFnName}\\("([^"]+)"`, 'g'));
+
+  return Array.from(matches, (match) => match[1]);
 }
 
 function assertCompileError(error: unknown, expectedMessage: string) {

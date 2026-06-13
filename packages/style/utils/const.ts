@@ -1,1 +1,3 @@
-export const symbol = <T extends string>(name: T) => Symbol.for(`fluentic-style.${name}`);
+export function symbol<T extends symbol>(name: string): T {
+  return Symbol.for(`@fluentic/style.${name}`) as T;
+}

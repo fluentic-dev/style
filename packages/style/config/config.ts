@@ -1,14 +1,12 @@
-import { LayerPlaceholder } from '../atomic/layer';
+import { ensureLayerPlaceholder } from '../atomic/layer';
 import { DEFAULT_RUNTIME_CONFIG } from './default';
 import type { BuildMeta, RuntimeConfig, RuntimeOptions } from './types';
 
 export const RUNTIME_CONFIG: RuntimeConfig = {
   ...DEFAULT_RUNTIME_CONFIG,
-  layers: normalizeRuntimeLayers(
-    DEFAULT_RUNTIME_CONFIG.layers,
-  ),
 };
 
+let configVersion = 0;
 let runtimeOptions: RuntimeOptions | null = null;
 let buildMeta: BuildMeta | null = null;
 
@@ -30,6 +28,8 @@ function applyRuntimeConfig() {
   const dev = buildMeta ? buildMeta.dev : (options.dev ?? false);
 
   Object.assign(config, DEFAULT_RUNTIME_CONFIG);
+
+  config.configVersion = ++configVersion;
   config.buildMeta = buildMeta;
 
   config.isDev = dev;
@@ -42,10 +42,10 @@ function applyRuntimeConfig() {
 
   config.devUtils = options.devUtils ?? config.devUtils;
 
-  config.cssCacheTTL = getCacheTTL(options.cache ?? config.cssCacheTTL);
+  config.runtimeCacheTTL = getCacheTTL(options.cache ?? config.runtimeCacheTTL);
 
   config.layerNamespace = options.layerNamespace ?? config.layerNamespace;
-  config.layers = normalizeRuntimeLayers(options.layers ?? config.layers);
+  config.layers = ensureLayerPlaceholder(options.layers ?? config.layers);
 
   config.classNamePrefix = options.classNamePrefix ?? config.classNamePrefix;
 
@@ -80,10 +80,4 @@ function applyRuntimeConfig() {
 
 function getCacheTTL(cache: boolean | number) {
   return cache === true ? 300_000 : cache === false ? 0 : Math.max(cache, 0);
-}
-
-function normalizeRuntimeLayers(layers: string[]) {
-  return layers
-    .map((layer) => layer === LayerPlaceholder ? LayerPlaceholder : layer)
-    .filter(Boolean);
 }

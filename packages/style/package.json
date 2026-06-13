@@ -75,6 +75,10 @@
       "types": "./plugin/rolldown/index.ts",
       "import": "./dist/plugin/rolldown/index.mjs"
     },
+    "./plugin/farm": {
+      "types": "./plugin/farm/index.ts",
+      "import": "./dist/plugin/farm/index.mjs"
+    },
     "./plugin/nextjs": {
       "types": "./plugin/nextjs/index.ts",
       "import": "./dist/plugin/nextjs/index.mjs",
@@ -112,10 +116,6 @@
     "./runtime/rsc": {
       "types": "./runtime/rsc/index.ts",
       "import": "./dist/runtime/rsc.js"
-    },
-    "./runtime/dev": {
-      "types": "./runtime/dev/index.ts",
-      "import": "./dist/runtime/dev.js"
     },
     "./runtime/style": {
       "types": "./runtime/style/index.ts",
@@ -196,6 +196,7 @@
   },
   "peerDependencies": {
     "@babel/core": ">=7",
+    "@farmfe/core": ">=1",
     "@rspack/core": ">=1",
     "esbuild": ">=0.20",
     "next": ">=15",
@@ -208,6 +209,9 @@
   },
   "peerDependenciesMeta": {
     "@babel/core": {
+      "optional": true
+    },
+    "@farmfe/core": {
       "optional": true
     },
     "@rspack/core": {

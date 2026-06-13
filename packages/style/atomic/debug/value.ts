@@ -1,50 +1,64 @@
+export type DebugValueName = {
+  value: string | null;
+  arbitraryValue: string | null;
+};
+
 export function getDebugValueName(
+  property: string,
   value: string,
   maxLength: number,
-): string | null {
-  if (!value) return null;
+  valueMaxLength: number,
+): DebugValueName {
+  if (!value) {
+    return { value: null, arbitraryValue: null };
+  }
 
   const normalized = value.trim().toLowerCase();
 
-  // 1. PERFORMANCE FAST-PASS: Pure alphanumeric strings require zero string processing
-  if (/^[a-z0-9]+$/.test(normalized)) {
-    return normalized.slice(0, maxLength);
+  if (!normalized || normalized.length > valueMaxLength) {
+    return { value: null, arbitraryValue: null };
   }
 
-  // 2. NOISE FILTER: Instantly dump massive string patterns or visual assets
   if (
-    normalized.length > 64 ||
-    normalized.charCodeAt(0) === 117 || // Fast 'u' check for url()
     normalized.startsWith('url') ||
     normalized.includes('gradient') ||
     normalized.startsWith('image') ||
-    normalized.startsWith('cubic-bezier')
+    normalized.startsWith('calc(') ||
+    normalized.startsWith('var(') ||
+    normalized.startsWith('env(') ||
+    normalized.startsWith('rgb') ||
+    normalized.startsWith('hsl')
   ) {
-    return null;
+    return { value: null, arbitraryValue: null };
   }
 
-  // 3. AGGRESSIVE COMPRESSION Pipeline
+  if (/^[a-z][a-z0-9-]*$/.test(normalized)) {
+    if (property.length + 1 + normalized.length > maxLength) {
+      return { value: null, arbitraryValue: null };
+    }
+
+    return { value: normalized, arbitraryValue: null };
+  }
+
   const name = normalized
-    // Compress units to single characters to preserve string limits
-    .replace(/px/g, 'p') // 15px -> 15p
-    .replace(/rem/g, 'r') // 1.5rem -> 1-5r
-    .replace(/em/g, 'e') // 2em -> 2e
-    .replace(/%/g, 'pct') // 100% -> 100pct
-    .replace(/fr/g, 'f') // 1fr -> 1f
-    // Wipe out CSS utility function names completely
-    .replace(/(calc|rgba?|hsla?|var|env|fit-content)\(/g, '')
-    // Turn structural delimiters, dots, and hash symbols into clean dashes
-    .replace(/[.#,()"'#]/g, '-')
+    .replace(/px/g, '')
+    .replace(/rem/g, 'rem')
+    .replace(/em/g, 'em')
+    .replace(/%/g, 'pct')
+    .replace(/fr/g, 'fr')
+    .replace(/[,()"'#]/g, '-')
     .replace(/\s+/g, '-')
-    // Purge unexpected illegal chars and collapse overlapping dashes
-    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/[^a-z0-9._%-]+/g, '-')
     .replace(/[-_]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-  // 4. Final Fallback
-  if (!name || name.length < 1) {
-    return null;
+  if (
+    !name ||
+    name.length > valueMaxLength ||
+    property.length + name.length + 2 > maxLength
+  ) {
+    return { value: null, arbitraryValue: null };
   }
 
-  return name.slice(0, maxLength);
+  return { value: null, arbitraryValue: name };
 }

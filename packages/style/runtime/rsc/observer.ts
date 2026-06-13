@@ -1,7 +1,7 @@
 import { RUNTIME_CONFIG } from '../../config';
-import type { DevCssRulePayload } from '../dev';
+import type { SheetRule } from '../../sheet';
 import { getGlobalSheet } from '../sheet';
-import { CSS_DEV_ATTR, CSS_DEV_LINK_ATTR, CSS_DEV_STYLE_ATTR } from './constants';
+import { ELEMENT_CSS_DATA_ATTR, PRECOLLECT_LINK_TAG_ATTR, SEED_STYLE_TAG_ATTR } from './constants';
 
 let observer: MutationObserver | null = null;
 let scheduled = false;
@@ -25,7 +25,7 @@ export function startRscDevObserver(root?: ParentNode) {
 
         if (
           target instanceof Element &&
-          target.hasAttribute(CSS_DEV_ATTR)
+          target.hasAttribute(ELEMENT_CSS_DATA_ATTR)
         ) {
           pending.add(target);
           changed = true;
@@ -50,7 +50,7 @@ export function startRscDevObserver(root?: ParentNode) {
     childList: true,
     attributes: true,
     subtree: true,
-    attributeFilter: [CSS_DEV_ATTR],
+    attributeFilter: [ELEMENT_CSS_DATA_ATTR],
   });
 
   collectPending(targetRoot);
@@ -69,7 +69,7 @@ function collectPending(root: ParentNode | Element): boolean {
   const before = pending.size;
 
   const collectElement = (element: Element) => {
-    if (!element.hasAttribute(CSS_DEV_ATTR)) return;
+    if (!element.hasAttribute(ELEMENT_CSS_DATA_ATTR)) return;
 
     pending.add(element);
   };
@@ -78,7 +78,7 @@ function collectPending(root: ParentNode | Element): boolean {
     collectElement(root);
   }
 
-  root.querySelectorAll?.(`[${CSS_DEV_ATTR}]`).forEach((element) => {
+  root.querySelectorAll?.(`[${ELEMENT_CSS_DATA_ATTR}]`).forEach((element) => {
     collectElement(element);
   });
 
@@ -106,16 +106,16 @@ function flush() {
   pending.clear();
 
   for (const element of elements) {
-    const payload = parsePayload(element.getAttribute(CSS_DEV_ATTR));
+    const payload = parsePayload(element.getAttribute(ELEMENT_CSS_DATA_ATTR));
 
-    for (const [key, css, callsite, priority] of payload) {
-      if (!key || !css || inserted.has(key)) continue;
+    for (const rule of payload) {
+      if (!rule.key || !rule.css || inserted.has(rule.key)) continue;
 
-      inserted.add(key);
-      sheet.insert({ key, css, callsite, priority });
+      inserted.add(rule.key);
+      sheet.insert(rule);
     }
 
-    element.removeAttribute(CSS_DEV_ATTR);
+    element.removeAttribute(ELEMENT_CSS_DATA_ATTR);
   }
 
   sheet.flush();
@@ -126,14 +126,16 @@ function flush() {
 
 function cleanupInitialStyle() {
   if (typeof document === 'undefined') return;
-  if (document.querySelector(`[${CSS_DEV_ATTR}]`)) return;
+  if (document.querySelector(`[${ELEMENT_CSS_DATA_ATTR}]`)) return;
 
-  document.querySelectorAll(`[${CSS_DEV_LINK_ATTR}], [${CSS_DEV_STYLE_ATTR}]`).forEach((element) => {
-    element.remove();
-  });
+  document.querySelectorAll(`[${PRECOLLECT_LINK_TAG_ATTR}], [${SEED_STYLE_TAG_ATTR}]`).forEach(
+    (element) => {
+      element.remove();
+    },
+  );
 }
 
-function parsePayload(value: string | null): DevCssRulePayload[] {
+function parsePayload(value: string | null): SheetRule[] {
   if (!value) return [];
 
   try {
@@ -147,22 +149,23 @@ function parsePayload(value: string | null): DevCssRulePayload[] {
   }
 }
 
-function isPayloadItem(value: unknown): value is DevCssRulePayload {
-  if (!Array.isArray(value)) return false;
+function isPayloadItem(value: unknown): value is SheetRule {
+  if (!value || typeof value !== 'object') return false;
 
-  if (typeof value[0] !== 'string' || typeof value[1] !== 'string') return false;
+  const rule = value as SheetRule;
 
-  if (!value[2]) return true;
+  if (typeof rule.key !== 'string' || typeof rule.css !== 'string') return false;
+
+  if (!rule.callsite) return true;
 
   return (
-    typeof value[2] === 'object' &&
-    value[2] !== null &&
-    typeof value[2].filePath === 'string' &&
+    typeof rule.callsite === 'object' &&
+    typeof rule.callsite.filePath === 'string' &&
     (
-      value[2].sourceUrl === undefined ||
-      typeof value[2].sourceUrl === 'string'
+      rule.callsite.sourceUrl === undefined ||
+      typeof rule.callsite.sourceUrl === 'string'
     ) &&
-    typeof value[2].line === 'number' &&
-    typeof value[2].column === 'number'
+    typeof rule.callsite.line === 'number' &&
+    typeof rule.callsite.column === 'number'
   );
 }

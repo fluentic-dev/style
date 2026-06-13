@@ -1,4 +1,4 @@
-import { createToken, combineStyle, style } from '@fluentic/style';
+import { combineStyle, createToken, style } from '@fluentic/style';
 import { Card } from '../../lib/Card';
 import { Chrome } from '../../lib/Chrome';
 import { page } from '../../lib/styles';

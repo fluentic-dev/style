@@ -55,14 +55,27 @@ export function get(
   return (target as any)[field] ?? null;
 }
 
-export function toArray<T>(value: T | T[] | null | undefined): T[] {
+export function hasOwn(
+  target: object,
+  field: PropertyKey,
+) {
+  return Object.prototype.hasOwnProperty.call(target, field);
+}
+
+export function toArray<T>(
+  value: T | T[] | null | undefined,
+): T[] {
   return Array.isArray(value) ? value : (value ? [value] : []);
 }
 
-export function isFunction(value: unknown): value is Function {
+export function isFunction(
+  value: unknown,
+): value is Function {
   return typeof value === 'function';
 }
 
-export function isPromiseLike<T>(value: T | Promise<T>): value is Promise<T> {
+export function isPromiseLike<T>(
+  value: T | Promise<T>,
+): value is Promise<T> {
   return typeof value === 'object' && value !== null && 'then' in value;
 }

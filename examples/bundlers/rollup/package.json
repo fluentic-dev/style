@@ -1,0 +1,29 @@
+{
+  "name": "@example/bundler-rollup",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "clear": "rm -rf dist",
+    "build": "rollup -c",
+    "build:runtime": "FLUENTIC_STYLE_MODE=runtime rollup -c",
+    "dev": "rollup -c -w",
+    "dev:runtime": "FLUENTIC_STYLE_MODE=runtime rollup -c -w",
+    "serve": "npx serve dist -l 4175"
+  },
+  "dependencies": {
+    "@example/bundler-shared": "workspace:*",
+    "@fluentic/style": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.9",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "esbuild": "^0.28.0",
+    "rollup": "^4.61.0",
+    "typescript": "^5.9.3"
+  }
+}

@@ -3,32 +3,25 @@ import type { Plugin, ResolvedConfig } from 'vite';
 import type { BuildMeta } from '../../config';
 import {
   createPluginCompiler,
-  getExtractedCssMarker,
+  CSS_MARKER,
+  CSS_MODULE_ID,
   getPluginCacheDir,
   invalidateFiles,
   PLUGIN_NAME,
   type PluginCompiler,
   type PluginOptions,
+  RESOLVED_CSS_MODULE_ID,
+  RESOLVED_RUNTIME_MODULE_ID,
   resolvePluginSourcemapFilePath,
+  RUNTIME_MODULE_ID,
 } from '../utils';
+import { createRuntimeModuleSource, hasCssMarker, isVirtualModuleRequest, replaceCssMarker } from '../utils/bundler';
 import { formatError } from '../utils/misc';
 import type { SourcemapSidecar } from '../utils/sidecar';
 import { getSourcemapSidecar } from '../utils/sidecar';
 import { resolveDevSourcemapMode } from '../utils/sourcemap';
-import {
-  createRuntimeModuleSource,
-  hasVirtualCssMarker,
-  isVirtualModuleRequest,
-  replaceVirtualCssMarker,
-} from './utils';
 
 export type { PluginOptions };
-
-const RUNTIME_MODULE_ID = 'virtual:fluentic-style';
-
-const CSS_MODULE_ID = `${RUNTIME_MODULE_ID}.css`;
-
-const VIRTUAL_CSS_MARKER = getExtractedCssMarker();
 
 function getBuildMeta(dev: boolean, options: PluginOptions): BuildMeta {
   return {
@@ -45,9 +38,6 @@ export function plugin(options: PluginOptions = {}): Plugin {
   let config: ResolvedConfig | null = null;
   let state: PluginCompiler | null = null;
   let sourcemapSidecar: SourcemapSidecar | null = null;
-
-  const resolvedRuntimeModuleId = `\0${RUNTIME_MODULE_ID}`;
-  const resolvedCssModuleId = `\0${CSS_MODULE_ID}`;
 
   const getState = () => {
     if (!config) {
@@ -102,11 +92,11 @@ export function plugin(options: PluginOptions = {}): Plugin {
 
     resolveId(id) {
       if (isVirtualModuleRequest(id, RUNTIME_MODULE_ID)) {
-        return resolvedRuntimeModuleId;
+        return RESOLVED_RUNTIME_MODULE_ID;
       }
 
       if (isVirtualModuleRequest(id, CSS_MODULE_ID)) {
-        return resolvedCssModuleId;
+        return RESOLVED_CSS_MODULE_ID;
       }
     },
 
@@ -119,7 +109,7 @@ export function plugin(options: PluginOptions = {}): Plugin {
       }
 
       if (isVirtualModuleRequest(id, CSS_MODULE_ID)) {
-        return VIRTUAL_CSS_MARKER;
+        return CSS_MARKER;
       }
     },
 
@@ -175,8 +165,8 @@ export function plugin(options: PluginOptions = {}): Plugin {
 
         if (!cssAsset && item.source) cssAsset = item;
 
-        if (hasVirtualCssMarker(item.source, VIRTUAL_CSS_MARKER)) {
-          item.source = replaceVirtualCssMarker(item.source, VIRTUAL_CSS_MARKER, css);
+        if (hasCssMarker(item.source)) {
+          item.source = replaceCssMarker(item.source, css);
           return;
         }
       }

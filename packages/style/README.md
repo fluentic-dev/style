@@ -127,7 +127,7 @@ export function PrimaryButton() {
 
 ```tsx
 /** @jsxImportSource @fluentic/style */
-import { createTheme, createToken, style, combineStyle, useTheme } from '@fluentic/style';
+import { createTheme, createToken, style, combineStyle } from '@fluentic/style';
 
 const color = {
   accent: createToken('#2563eb', 'accent'),
@@ -150,9 +150,8 @@ const styles = {
 
 export function ThemedButton() {
   const css = combineStyle(styles);
-  const themeCss = useTheme(theme);
 
-  return <button css={[themeCss, css.button]}>Themeable</button>;
+  return <button css={[theme, css.button]}>Themeable</button>;
 }
 ```
 

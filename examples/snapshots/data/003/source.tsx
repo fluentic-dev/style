@@ -1,4 +1,4 @@
-import { bindScope, style, combineStyle, type CombinedStyle, type CssTheme } from '@fluentic/style';
+import { bindScope, combineStyle, type CombineStyleArg, type CssTheme, style } from '@fluentic/style';
 
 const parentStyles = {
   shell: style({
@@ -29,12 +29,12 @@ const childTheme = style.scope([
 
 const combineChildStyle = combineStyle.for(childStyles);
 
-type ChildStyle = CombinedStyle<typeof combineChildStyle>;
+type ChildStyle = CombineStyleArg<typeof childStyles>;
 
-function Child(props: { styles?: ChildStyle; theme?: CssTheme }) {
+function Child(props: { styles?: ChildStyle; theme?: CssTheme; }) {
   const css = combineChildStyle(
     props.styles,
-    ...bindScope(childStyles.root, props.theme),
+    bindScope(childStyles.root, props.theme),
   );
 
   return (
@@ -46,7 +46,10 @@ function Child(props: { styles?: ChildStyle; theme?: CssTheme }) {
 
 export default function Parent() {
   const parentCss = combineStyle(parentStyles);
-  const childCss = combineChildStyle(...bindScope(childStyles.root, childTheme));
+
+  const childCss = combineChildStyle(
+    bindScope(childStyles.root, childTheme),
+  );
 
   return (
     <section css={parentCss.shell}>

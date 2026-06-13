@@ -1,6 +1,6 @@
 import { getStyleTokenId, type StyleTokenData, type StyleTokenOverride } from '../style/token';
 import { hashString } from '../utils/hash';
-import { getCssVar } from './utils';
+import { getCssVar } from './utils/css';
 
 export function getTokenVarName(
   token: StyleTokenData | StyleTokenOverride,

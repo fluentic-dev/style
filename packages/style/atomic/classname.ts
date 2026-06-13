@@ -2,6 +2,8 @@ import type { BuilderCallsite, ItemSelector } from '../builder/data';
 import { hashString } from '../utils/hash';
 import { getDebugPropertyName } from './debug/classname';
 import { getDebugAtRuleName, getDebugSelectorName } from './debug/selector';
+import { getIdentifierSafeHash } from './utils/css';
+import { getSelectorHash, getSelectorText } from './utils/selector';
 
 export function getAtomicClassName(
   property: string,
@@ -103,19 +105,4 @@ function getCallsiteHash(
   if (!localClassName || !callsite) return '';
 
   return callsite.filePath + '\n' + callsite.line + ':' + callsite.column;
-}
-
-function getSelectorHash(selector: ItemSelector) {
-  return Array.isArray(selector) ? selector.join('|') : selector;
-}
-
-function getSelectorText(selector: ItemSelector) {
-  return Array.isArray(selector) ? selector[0] : selector;
-}
-
-function getIdentifierSafeHash(hash: string) {
-  const first = hash.charCodeAt(0);
-  if (first < 48 || first > 57) return hash;
-
-  return String.fromCharCode(97 + first - 48) + hash.slice(1);
 }

@@ -1,7 +1,7 @@
 import type * as BabelCore from '@babel/core';
 import type { NodePath, types as BabelTypes } from '@babel/core';
 import type { CompilerOptions } from '../../compiler/types';
-import { DEBUG_SOURCE_CONTENT_VAR, DEBUG_SOURCE_URL_VAR } from '../../utils/constants';
+import { DEBUG_SOURCE_CONTENT_VAR, DEBUG_SOURCE_URL_VAR, DEFAULT_CONFIG } from '../../utils/constants';
 import { createImportSourceMatcher, type ImportSourceMatcher } from '../../utils/import_source';
 import {
   annotateThemeCall,
@@ -114,7 +114,14 @@ export function createDebugPlugin(args: PluginArgs) {
             : null;
 
           path.node.arguments.push(
-            buildDebugDataObject(t, path.node, state.fileId, sourceUrlRef, sourceContentRef),
+            buildDebugDataObject(
+              t,
+              path.node,
+              state.fileId,
+              sourceUrlRef,
+              sourceContentRef,
+              options.css?.tokenVarPrefix ?? DEFAULT_CONFIG.tokenVarPrefix,
+            ),
           );
         },
       },

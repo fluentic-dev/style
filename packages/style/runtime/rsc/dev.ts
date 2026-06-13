@@ -1,20 +1,20 @@
 import { createElement } from 'react';
 import { useEffect } from 'react';
-import { CSS_DEV_STYLE_ATTR, CSS_DEV_STYLE_HREF } from './constants';
+import { SEED_STYLE_TAG_ATTR, SEED_STYLE_TAG_HREF } from './constants';
 import { startRscDevObserver } from './observer';
-import { getRscDevSeedCss } from './seed';
+import { getRscStyleCss } from './styleStore';
 
 export function StyleDev() {
   useEffect(() => {
     startRscDevObserver();
   }, []);
 
-  const css = getRscDevSeedCss();
+  const css = getRscStyleCss();
   if (!css) return null;
 
   return createElement('style', {
-    [CSS_DEV_STYLE_ATTR]: '',
-    href: CSS_DEV_STYLE_HREF,
+    [SEED_STYLE_TAG_ATTR]: '',
+    href: SEED_STYLE_TAG_HREF,
     precedence: 'default',
     dangerouslySetInnerHTML: { __html: css },
     suppressHydrationWarning: true,

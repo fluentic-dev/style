@@ -1,5 +1,9 @@
-export * from './dev';
-export * from './prod';
-export * from './sheet';
-export * from './sourcemap';
-export * from './types';
+export { createDevSheet } from './dev';
+export { createProdSheet } from './prod';
+export { createStyleSheet } from './sheet';
+export type {
+  SheetCallsite,
+  SheetOptions,
+  SheetRule,
+  StyleSheet,
+} from './types';

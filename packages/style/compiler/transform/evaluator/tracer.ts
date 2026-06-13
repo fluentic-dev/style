@@ -4,6 +4,7 @@ import type { CompilerInternal } from '../../compiler';
 import { FN_STYLE, IMPORT_PATHS } from '../../utils/constants';
 import { resolveFile } from '../../utils/file_resolver';
 import { computeSlotId, extractStyleChain } from '../extract/chain';
+import { getProjectFileId } from '../utils/path';
 import type { EvalScope } from './evaluator';
 import { evalFail, evalOk, evaluateNode } from './evaluator';
 import type { EvalModuleBindings, EvalResult, EvalSlotRef, ImportMap, ResolveImportFn } from './types';
@@ -60,6 +61,7 @@ export function createTracer(internal: CompilerInternal) {
 
     try {
       const bindings = parseAndExtractModule(
+        internal.projectDir,
         resolved.filePath,
         resolved.content,
         babel,
@@ -90,6 +92,7 @@ export function createTracer(internal: CompilerInternal) {
 }
 
 function parseAndExtractModule(
+  projectDir: string,
   filePath: string,
   content: string,
   babel: typeof BabelCore,
@@ -113,6 +116,7 @@ function parseAndExtractModule(
   const rawBindings: Map<string, BabelCore.types.Node> = new Map();
   const bindings: EvalModuleBindings = new Map();
   const styleNames = new Set<string>();
+  const fileId = getProjectFileId(projectDir, filePath);
 
   for (const stmt of ast.program.body) {
     if (stmt.type === 'ImportDeclaration') {
@@ -187,7 +191,7 @@ function parseAndExtractModule(
   };
 
   rawBindings.forEach((node, name) => {
-    bindings.set(name, evaluateResolvedNode(node, scope, styleNames, filePath));
+    bindings.set(name, evaluateResolvedNode(node, scope, styleNames, fileId));
   });
 
   return bindings;
@@ -208,18 +212,18 @@ function evaluateResolvedNode(
   node: BabelCore.types.Node,
   scope: EvalScope,
   styleNames: Set<string>,
-  filePath: string,
+  fileId: string,
 ): EvalResult {
   if (node.type === 'CallExpression') {
     const chain = extractStyleChain(node, styleNames);
 
     if (chain?.kind === 'slot') {
-      return createSlotRef(filePath, node.loc?.start);
+      return createSlotRef(fileId, node.loc?.start);
     }
   }
 
   if (node.type === 'ObjectExpression') {
-    return evaluateResolvedObject(node, scope, styleNames, filePath);
+    return evaluateResolvedObject(node, scope, styleNames, fileId);
   }
 
   return evaluateNode(node, scope);
@@ -229,13 +233,13 @@ function evaluateResolvedObject(
   node: BabelCore.types.ObjectExpression,
   scope: EvalScope,
   styleNames: Set<string>,
-  filePath: string,
+  fileId: string,
 ): EvalResult {
   const result: Record<string, unknown> = {};
 
   for (const prop of node.properties) {
     if (prop.type === 'SpreadElement') {
-      const value = evaluateResolvedNode(prop.argument, scope, styleNames, filePath);
+      const value = evaluateResolvedNode(prop.argument, scope, styleNames, fileId);
       if (!value.ok) return value;
       if (value.value && typeof value.value === 'object') {
         Object.assign(result, value.value);
@@ -250,7 +254,7 @@ function evaluateResolvedObject(
     const key = getObjectPropertyKey(prop, scope);
     if (!key.ok) return key;
 
-    const value = evaluateResolvedNode(prop.value as BabelCore.types.Node, scope, styleNames, filePath);
+    const value = evaluateResolvedNode(prop.value as BabelCore.types.Node, scope, styleNames, fileId);
     if (!value.ok && value.reason !== 'slot-ref') return value;
 
     result[String(key.value)] = value.ok ? value.value : value;
@@ -271,14 +275,14 @@ function getObjectPropertyKey(
 }
 
 function createSlotRef(
-  filePath: string,
+  fileId: string,
   loc: { line: number; column: number; } | null | undefined,
 ): EvalSlotRef {
   return {
     ok: false,
     reason: 'slot-ref',
-    filePath,
-    slotId: computeSlotId(filePath, loc),
+    filePath: fileId,
+    slotId: computeSlotId(fileId, loc),
   };
 }
 

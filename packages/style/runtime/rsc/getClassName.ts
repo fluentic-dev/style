@@ -1,25 +1,25 @@
-import { collectDevCssRules } from '../dev';
-import type { ClassNameResult } from '../style';
-import type { CssProp } from '../types';
-import { CSS_DEV_ATTR } from './constants';
-import { collectRscDevSeedCss } from './seed';
+import type { ClassNameResult } from '../core/getClassName';
+import type { CssPropItem } from '../core/cache/prop';
+import { collectCssPropItemsSheetRules } from '../sheet/rules';
+import { ELEMENT_CSS_DATA_ATTR } from './constants';
+import { addRscStyleRules } from './styleStore';
 
 export type ClassNameResultRSC = ClassNameResult & {
-  [CSS_DEV_ATTR]?: string;
+  [ELEMENT_CSS_DATA_ATTR]?: string;
 };
 
 export function getClassNameRSC(
   result: ClassNameResult,
-  css: CssProp,
+  items: readonly CssPropItem[],
 ): ClassNameResultRSC {
-  const rules = collectDevCssRules(css);
+  const rules = collectCssPropItemsSheetRules(items);
 
   if (!rules.length) return result;
 
-  collectRscDevSeedCss(rules);
+  addRscStyleRules(rules);
 
   return {
     ...result,
-    [CSS_DEV_ATTR]: JSON.stringify(rules),
+    [ELEMENT_CSS_DATA_ATTR]: JSON.stringify(rules),
   };
 }

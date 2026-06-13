@@ -17,6 +17,7 @@
     "dev:example:rspack": "pnpm --filter @fluentic/style build && pnpm --filter @example/bundler-rspack dev",
     "dev:example:rolldown": "pnpm --filter @fluentic/style build && pnpm --filter @example/bundler-rolldown dev",
     "dev:example:esbuild": "pnpm --filter @fluentic/style build && pnpm --filter @example/bundler-esbuild dev",
+    "dev:example:farm": "pnpm --filter @fluentic/style build && pnpm --filter @example/bundler-farm dev",
     "dev:bench:style": "pnpm --filter @fluentic/style build && pnpm --filter @benchmark/app-fluentic-style dev:plugin",
     "dev:bench:style:plugin": "pnpm --filter @fluentic/style build && pnpm --filter @benchmark/app-fluentic-style dev:plugin",
     "dev:bench:style:runtime": "pnpm --filter @fluentic/style build && pnpm --filter @benchmark/app-fluentic-runtime dev",

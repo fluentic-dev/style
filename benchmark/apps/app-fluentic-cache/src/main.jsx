@@ -1,5 +1,5 @@
 import { css as emotionCss } from '@emotion/css';
-import { createElement as fluenticCreateElement, resolveCssProp, style, combineStyle } from '@fluentic/style';
+import { createElement as fluenticCreateElement, getClassName, style, combineStyle } from '@fluentic/style';
 import { css as gooberCss, setup as setupGoober } from 'goober';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -257,8 +257,8 @@ function ParentHoisted({ tick }) {
 
 function ParentHoistedClassName({ tick }) {
   const css = combineStyle(getFluenticHoistedStyles());
-  const activeClassName = resolveCssProp([css.box, css.active]).className;
-  const dimmedClassName = resolveCssProp([css.box, css.dimmed]).className;
+  const activeClassName = getClassName([css.box, css.active]).className;
+  const dimmedClassName = getClassName([css.box, css.dimmed]).className;
 
   return (
     <div className='grid'>
@@ -268,6 +268,40 @@ function ParentHoistedClassName({ tick }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function FluenticNoCssCreateElement({ tick }) {
+  return (
+    <div className='grid'>
+      {ids.map((id) => (
+        fluenticCreateElement(
+          'div',
+          {
+            key: id,
+            className: id === tick % ITEMS ? 'bench-box active' : 'bench-box dimmed',
+          },
+          id,
+        )
+      ))}
+    </div>
+  );
+}
+
+function ReactNoCssCreateElement({ tick }) {
+  return React.createElement(
+    'div',
+    { className: 'grid' },
+    ids.map((id) =>
+      React.createElement(
+        'div',
+        {
+          key: id,
+          className: id === tick % ITEMS ? 'bench-box active' : 'bench-box dimmed',
+        },
+        id,
+      )
+    ),
   );
 }
 
@@ -479,6 +513,8 @@ const variants = {
   childHoistedSameMap: ChildHoistedSameMap,
   childNewMapSameSlots: ChildNewMapSameSlots,
   childInlineDynamic: ChildInlineDynamic,
+  fluenticNoCssCreateElement: FluenticNoCssCreateElement,
+  reactNoCssCreateElement: ReactNoCssCreateElement,
   gooberHoistedClass: GooberHoistedClass,
   gooberInlineDynamic: GooberInlineDynamic,
   emotionHoistedClass: EmotionHoistedClass,
@@ -514,7 +550,7 @@ function readStyleTelemetry() {
 
   return {
     styleTagCount: document.querySelectorAll('style').length,
-    fluenticStyleTagCount: document.querySelectorAll('style[data-fluentic-style]').length,
+    fluenticStyleTagCount: document.querySelectorAll('style[data-css-sheet]').length,
     ruleCount,
     cssTextBytes,
   };
@@ -637,6 +673,25 @@ function App() {
             display: grid;
             gap: 4px;
             grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+          }
+          .bench-box {
+            align-items: center;
+            background: #f8fafc;
+            border: 1px solid #d4d4d8;
+            border-radius: 6px;
+            color: #18181b;
+            display: flex;
+            font-family: system-ui, sans-serif;
+            font-size: 12px;
+            height: 28px;
+            justify-content: center;
+          }
+          .bench-box.active {
+            background: #dcfce7;
+            border-color: #16a34a;
+          }
+          .bench-box.dimmed {
+            opacity: 0.68;
           }
         `}
       </style>

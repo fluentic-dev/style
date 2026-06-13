@@ -1,24 +1,9 @@
 import type { Server } from 'node:http';
 import path from 'node:path';
-import { formatError, globalSymbol } from '../misc';
-import {
-  createSidecarServer,
-  SIDECAR_HOST,
-  startSidecarServer,
-  type SidecarRouteHandler,
-} from './server';
-import {
-  createSourceUrl,
-  getPortFilePath,
-  getRoutePath,
-  normalizeSidecarRoutePath,
-} from './utils';
-
-const SIDECAR_SERVERS_KEY = globalSymbol('plugin.sidecar.servers');
-
-type SidecarGlobal = typeof globalThis & {
-  [SIDECAR_SERVERS_KEY]?: Map<string, SidecarServer>;
-};
+import { globalData } from '../../../utils/global';
+import { formatError } from '../misc';
+import { createSidecarServer, SIDECAR_HOST, type SidecarRouteHandler, startSidecarServer } from './server';
+import { createSourceUrl, getPortFilePath, getRoutePath, normalizeSidecarRoutePath } from './utils';
 
 type SidecarServer = {
   cacheDir: string;
@@ -47,6 +32,11 @@ export type SourcemapSidecarArgs = {
   projectDir: string;
   routes?: Record<string, SidecarRouteHandler>;
 };
+
+const sidecarServers = globalData(
+  'plugin.sidecar.servers',
+  () => new Map<string, SidecarServer>(),
+);
 
 export function getSourcemapSidecar(args: SourcemapSidecarArgs): SourcemapSidecar {
   const normalizedProjectDir = path.resolve(args.projectDir);
@@ -119,7 +109,7 @@ function createSidecarSourceUrl(state: SidecarServer, routePath: string) {
 }
 
 function getOrCreateServer(projectDir: string, cacheDir: string) {
-  const servers = getSidecarServers();
+  const servers = sidecarServers;
 
   const existing = servers.get(cacheDir);
   if (existing) return existing;
@@ -157,13 +147,4 @@ async function startServer(state: SidecarServer) {
     portFilePath: state.portFilePath,
     server: state.server,
   });
-}
-
-function getSidecarServers() {
-  const global = globalThis as SidecarGlobal;
-  const key = SIDECAR_SERVERS_KEY;
-
-  if (!global[key]) global[key] = new Map();
-
-  return global[key];
 }

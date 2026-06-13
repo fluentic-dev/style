@@ -22,6 +22,7 @@ export type RuntimeSharedConfig = CssConfig & {
 };
 
 export type RuntimeConfig = RuntimeSharedConfig & {
+  configVersion: number;
   buildMeta: BuildMeta | null;
 
   isDev: boolean;
@@ -34,7 +35,7 @@ export type RuntimeConfig = RuntimeSharedConfig & {
 
   devUtils: string;
 
-  cssCacheTTL: number;
+  runtimeCacheTTL: number;
 };
 
 export type RuntimeOptions = Partial<RuntimeSharedConfig> & {

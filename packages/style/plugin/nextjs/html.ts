@@ -1,10 +1,10 @@
 import type * as BabelCore from '@babel/core';
 import type { NodePath, types as BabelTypes } from '@babel/core';
 import { babelPlugin, babelTransform } from '../../compiler/transform/utils/babel';
-import { CSS_DEV_LINK_ATTR } from '../../runtime/rsc/constants';
+import { PRECOLLECT_LINK_TAG_ATTR } from '../../runtime/rsc/constants';
 
 export function injectDevCssLink(source: string, cssUrl: string | null) {
-  if (!cssUrl || source.includes(CSS_DEV_LINK_ATTR)) return source;
+  if (!cssUrl || source.includes(PRECOLLECT_LINK_TAG_ATTR)) return source;
 
   let inserted = false;
 
@@ -50,7 +50,7 @@ function createDevCssLinkElement(t: typeof BabelCore.types, cssUrl: string) {
         t.jsxAttribute(t.jsxIdentifier('rel'), t.stringLiteral('stylesheet')),
         t.jsxAttribute(t.jsxIdentifier('href'), t.stringLiteral(cssUrl)),
         t.jsxAttribute(t.jsxIdentifier('precedence'), t.stringLiteral('default')),
-        t.jsxAttribute(t.jsxIdentifier(CSS_DEV_LINK_ATTR), t.stringLiteral('')),
+        t.jsxAttribute(t.jsxIdentifier(PRECOLLECT_LINK_TAG_ATTR), t.stringLiteral('')),
       ],
       true,
     ),

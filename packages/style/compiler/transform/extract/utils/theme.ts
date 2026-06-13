@@ -1,6 +1,5 @@
 import type { NodePath, types as BabelTypes } from '@babel/core';
-import { getTokenOverrideValue, getTokenVarName } from '../../../../atomic/token';
-import { escapeCssIdent, escapeCssValue } from '../../../../atomic/utils';
+import { getThemeRuleCss } from '../../../../atomic/theme';
 import { isStyleTokenOverrideData, type StyleTokenOverride } from '../../../../style/token';
 import type { CompilerOptions } from '../../../compiler/types';
 import type { CssExtractRule } from '../../../extract/types';
@@ -65,32 +64,15 @@ export function compileThemeCall(
     themeNamePrefix: opts.css?.themeNamePrefix ?? DEFAULT_CONFIG.themeNamePrefix,
   });
 
-  const css = buildCompiledThemeRule(className, tokens, opts);
+  const css = getThemeRuleCss(
+    className,
+    tokens,
+    opts.css?.tokenVarPrefix ?? DEFAULT_CONFIG.tokenVarPrefix,
+  );
 
   return {
     id,
     className,
     rule: { dedupe: className, className, css, priority: [0, 0, 0, 0, 0, 0, 0] },
   };
-}
-
-function buildCompiledThemeRule(
-  className: string,
-  tokens: readonly StyleTokenOverride[],
-  opts: CompilerOptions,
-) {
-  const declarations: string[] = [];
-  const tokenVarPrefix = opts.css?.tokenVarPrefix ?? DEFAULT_CONFIG.tokenVarPrefix;
-
-  for (let i = 0, len = tokens.length; i < len; i++) {
-    const token = tokens[i];
-    const name = getTokenVarName(token, tokenVarPrefix);
-    const value = token.ref
-      ? getTokenOverrideValue(token, tokenVarPrefix)
-      : escapeCssValue(String(token.value ?? ''));
-
-    declarations.push(name + ':' + value);
-  }
-
-  return '.' + escapeCssIdent(className) + '{' + declarations.join(';') + '}';
 }

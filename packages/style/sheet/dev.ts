@@ -1,3 +1,4 @@
+import { getLayerBlockCss, getLayerOrderCss } from '../atomic/layer';
 import { RUNTIME_CONFIG } from '../config';
 import { createSourceMapComment, getRuleCallsite, type SourcemapRule } from './sourcemap';
 import type { SheetOptions, SheetRule, StyleSheet } from './types';
@@ -5,11 +6,10 @@ import {
   createNoopSheet,
   createStyleTag,
   createSheetLayerState,
-  getLayerTextForNames,
-  getSheetDocument,
+  getSheetRulePriority,
   insertStyleTagAfter,
   normalizeRule,
-  wrapRuleWithLayer,
+  resolveDocument,
 } from './utils';
 
 type SourcemapTag = {
@@ -31,7 +31,7 @@ export function getDevSourcemapTags() {
 }
 
 export function createDevSheet(options: SheetOptions = {}): StyleSheet {
-  const document = getSheetDocument(options.document);
+  const document = resolveDocument(options.document);
 
   if (!document) return createNoopSheet();
 
@@ -52,7 +52,7 @@ export function createDevSheet(options: SheetOptions = {}): StyleSheet {
   return {
     updateLayers(layers) {
       activeLayers = layers;
-      const next = getLayerTextForNames(layers, layerState.getNames());
+      const next = getLayerOrderCss(layers, layerState.getNames());
 
       if (next === layerText) return;
 
@@ -66,17 +66,16 @@ export function createDevSheet(options: SheetOptions = {}): StyleSheet {
 
       if (ruleKey && inserted.has(ruleKey)) return;
 
-      const layerName = typeof rule === 'string'
-        ? layerState.getName(null)
-        : layerState.getName(rule.priority);
-      const nextLayerText = getLayerTextForNames(activeLayers, layerState.getNames());
+      const priority = typeof rule === 'string' ? null : rule.priority;
+      const layerName = layerState.getName(getSheetRulePriority(priority));
+      const nextLayerText = getLayerOrderCss(activeLayers, layerState.getNames());
 
       if (nextLayerText !== layerText) {
         layerText = nextLayerText;
         layerTag.textContent = nextLayerText;
       }
 
-      const css = wrapRuleWithLayer(rawCss, layerName);
+      const css = getLayerBlockCss(layerName, rawCss);
       const key = typeof rule === 'string' ? css : ruleKey;
 
       if (key && inserted.has(key)) return;

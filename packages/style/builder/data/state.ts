@@ -1,4 +1,4 @@
-import type { StyleTokenData } from '../../style/token';
+import type { StyleTokenData, StyleTokenOverride } from '../../style/token';
 import type { UniqueSymbol } from '../../utils/type';
 import type {
   BUILDER_TYPE_SCOPE,
@@ -112,7 +112,7 @@ export type ItemSelector = string | [selector: string, priority: number];
 
 export type ItemValue = string | [value: string, priority: number];
 
-export type StateItem = ExtractedItem | RuntimeItem;
+export type StateItem = ExtractedItem | RuntimeItem | StyleTokenOverride;
 
 export type StateLookup = Record<string, /* key */ number /* index */>;
 
@@ -121,5 +121,4 @@ export type BuilderState<Style> = {
   //
   items: StateItem[];
   lookup?: StateLookup;
-  cache?: unknown;
 };

@@ -1,4 +1,4 @@
-import type { RuntimeStyleAttributes } from '../runtime';
+import type { RuntimeStyleAttributes } from '../runtime/types';
 
 export interface RuntimeAttributes extends RuntimeStyleAttributes {}
 

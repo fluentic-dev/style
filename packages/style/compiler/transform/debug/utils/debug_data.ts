@@ -11,6 +11,7 @@ export function buildDebugDataObject(
   fileId: string,
   sourceUrlRef: types.Expression,
   sourceContentRef: types.Expression | null,
+  tokenVarPrefix: string = DEFAULT_CONFIG.tokenVarPrefix,
 ) {
   const loc = node.loc?.start;
   const line = loc?.line ?? 1;
@@ -41,7 +42,7 @@ export function buildDebugDataObject(
     ),
     t.objectProperty(
       t.identifier('vars'),
-      buildVars(t, node.arguments[0], fileId),
+      buildVars(t, node.arguments[0], fileId, tokenVarPrefix),
     ),
   ];
 
@@ -114,6 +115,7 @@ function buildVars(
   t: typeof types,
   arg: CallArg | undefined,
   fileId: string,
+  tokenVarPrefix: string,
 ) {
   if (!arg || arg.type !== 'ObjectExpression') return t.objectExpression([]);
 
@@ -133,7 +135,7 @@ function buildVars(
         fileId,
         loc.line,
         loc.column + 1,
-        DEFAULT_CONFIG.tokenVarPrefix,
+        tokenVarPrefix,
       )),
     ));
   }

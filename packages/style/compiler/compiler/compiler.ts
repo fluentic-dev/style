@@ -1,6 +1,7 @@
 import { createCssCollector, extractCss } from '../extract';
 import { createTracer, transformDebug, transformExtract } from '../transform';
 import { getDebugSourceUrl } from '../transform/debug/utils/source_url';
+import { clearResolverCache } from '../utils/file_resolver';
 import { createCompilerCache } from './cache';
 import type {
   CompilerInvalidateFileInfo,
@@ -80,8 +81,9 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
     return extractCss(collector.getItems(), options.css || {});
   };
 
-  const invalidateFile = (info: CompilerInvalidateFileInfo) => {
-    console.log('invalidateFile:', info);
+  const invalidateFile = (_info: CompilerInvalidateFileInfo) => {
+    internal.cache.clear();
+    clearResolverCache();
   };
 
   return {

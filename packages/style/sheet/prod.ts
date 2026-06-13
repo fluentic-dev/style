@@ -1,18 +1,18 @@
+import { getLayerBlockCss, getLayerOrderCss } from '../atomic/layer';
 import { RUNTIME_CONFIG } from '../config';
 import type { SheetOptions, StyleSheet } from './types';
 import {
   createNoopSheet,
   createSheetLayerState,
   createStyleTag,
-  getLayerTextForNames,
-  getSheetDocument,
+  getSheetRulePriority,
   insertStyleTagAfter,
   normalizeRule,
-  wrapRuleWithLayer,
+  resolveDocument,
 } from './utils';
 
 export function createProdSheet(options: SheetOptions = {}): StyleSheet {
-  const document = getSheetDocument(options.document);
+  const document = resolveDocument(options.document);
 
   if (!document) return createNoopSheet();
 
@@ -29,7 +29,7 @@ export function createProdSheet(options: SheetOptions = {}): StyleSheet {
     updateLayers(layers) {
       activeLayers = layers;
 
-      const next = getLayerTextForNames(layers, layerState.getNames());
+      const next = getLayerOrderCss(layers, layerState.getNames());
       if (next === layerText) return;
 
       layerText = next;
@@ -43,11 +43,10 @@ export function createProdSheet(options: SheetOptions = {}): StyleSheet {
 
       if (ruleKey && inserted.has(ruleKey)) return;
 
-      const layerName = typeof rule === 'string'
-        ? layerState.getName(null)
-        : layerState.getName(rule.priority);
+      const priority = typeof rule === 'string' ? null : rule.priority;
+      const layerName = layerState.getName(getSheetRulePriority(priority));
 
-      const nextLayerText = getLayerTextForNames(
+      const nextLayerText = getLayerOrderCss(
         activeLayers,
         layerState.getNames(),
       );
@@ -58,7 +57,7 @@ export function createProdSheet(options: SheetOptions = {}): StyleSheet {
         layerTag.textContent = nextLayerText;
       }
 
-      const css = wrapRuleWithLayer(rawCss, layerName);
+      const css = getLayerBlockCss(layerName, rawCss);
       const key = typeof rule === 'string' ? css : ruleKey;
 
       if (key && inserted.has(key)) return;

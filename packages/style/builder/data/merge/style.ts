@@ -1,8 +1,8 @@
 import { getAtomicClassName, getClassNameDedupe } from '../../../atomic/classname';
 import { getTokenVar } from '../../../atomic/token';
-import { getCssVar } from '../../../atomic/utils';
+import { getCssVar } from '../../../atomic/utils/css';
 import { RUNTIME_CONFIG } from '../../../config';
-import { isStyleTokenData, type StyleTokenData } from '../../../style/token';
+import { isStyleTokenData, isStyleTokenOverrideData, type StyleTokenData } from '../../../style/token';
 import type { StyleObject, StyleValueTuple } from '../../../style/types';
 import { traceError } from '../../../utils/trace';
 import {
@@ -67,7 +67,7 @@ export function mergeBuilderData<Data extends BuilderData>(
     for (let i = 0, len = stylesItems.length; i < len; i++) {
       item = stylesItems[i];
 
-      if (Array.isArray(item) || item.type !== BUILDER_TYPE_STYLE) {
+      if (Array.isArray(item) || isStyleTokenOverrideData(item) || item.type !== BUILDER_TYPE_STYLE) {
         console.log(traceError('invalid style data'), 'data:', { item, style });
         continue;
       }
@@ -94,7 +94,7 @@ export function mergeBuilderData<Data extends BuilderData>(
       valueRaw = style[property as keyof typeof style];
       priority = null;
 
-      if (Array.isArray(valueRaw)) {
+      if (Array.isArray(valueRaw) && valueRaw.length === 2 && typeof valueRaw[0] === 'number') {
         priority = (valueRaw as StyleValueTuple)[0];
         valueRaw = (valueRaw as StyleValueTuple)[1];
       }
@@ -108,7 +108,7 @@ export function mergeBuilderData<Data extends BuilderData>(
         ? getTokenVar(token, RUNTIME_CONFIG.tokenVarPrefix)
         : String(valueRaw ?? '');
 
-      value = priority ? [value, priority] : value;
+      value = priority !== null ? [value, priority] : value;
       itemCallsite = getDebugFieldCallsite(debug, property) ?? callsite;
 
       itemData = {
@@ -155,7 +155,7 @@ export function mergeBuilderData<Data extends BuilderData>(
   for (let i = 0, len = items.length; i < len; i++) {
     item = items[i];
 
-    if (Array.isArray(item)) {
+    if (Array.isArray(item) || isStyleTokenOverrideData(item)) {
       console.log(traceError('invalid style data'), 'data:', { item, style });
       continue;
     }

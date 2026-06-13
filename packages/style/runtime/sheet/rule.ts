@@ -2,6 +2,7 @@ import { buildAtomicRule, getAtomicRuleLayerPriority } from '../../atomic/rule';
 import { BUILDER_TYPE_SCOPE } from '../../builder/data';
 import type { RuntimeItem, StateItem } from '../../builder/data/state';
 import type { SheetRule } from '../../sheet';
+import { isStyleTokenOverrideData } from '../../style/token';
 
 export type RuntimeSheetRule = SheetRule & {
   dedupe: string;
@@ -9,6 +10,7 @@ export type RuntimeSheetRule = SheetRule & {
 
 export function createRuntimeSheetRule(item: StateItem): RuntimeSheetRule | null {
   if (Array.isArray(item)) return null;
+  if (isStyleTokenOverrideData(item)) return null;
 
   const runtimeItem = item as RuntimeItem;
 

@@ -1,20 +1,8 @@
-import { globalSymbol } from '../misc';
-
-type GlobalWithRegistry = typeof globalThis & {
-  [key: symbol]: Map<string, unknown> | undefined;
-};
+import { globalData } from '../../../utils/global';
 
 export function createWebpackRegistry(name: string) {
-  const registryKey = globalSymbol(name);
-
   function getRegistry() {
-    const global = globalThis as GlobalWithRegistry;
-
-    if (!global[registryKey]) {
-      global[registryKey] = new Map();
-    }
-
-    return global[registryKey];
+    return globalData(name, () => new Map<string, unknown>());
   }
 
   return {

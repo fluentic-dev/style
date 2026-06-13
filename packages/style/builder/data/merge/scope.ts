@@ -1,17 +1,17 @@
 import { getAtomicClassName, getClassNameDedupe } from '../../../atomic/classname';
 import { RUNTIME_CONFIG } from '../../../config';
-import { isStyleTokenData, type StyleTokenData } from '../../../style/token';
+import { isStyleTokenOverrideData, type StyleTokenOverride } from '../../../style/token';
 import { traceError } from '../../../utils/trace';
 import { BUILDER_SLOT_ID, BUILDER_STATE, BUILDER_TYPE_SCOPE, BUILDER_TYPE_SLOT_OVERRIDE } from '../const';
 import type { BuilderCallsite, ScopeData, SlotOverrideData } from '../data';
 import type { DebugData } from '../debug';
 import { isSlotOverrideData } from '../is';
-import type { ItemSelector, ItemValue, StateItem } from '../state';
+import type { ItemSelector, ItemValue, RuntimeScopeItem, RuntimeSlotOverrideItem, StateItem } from '../state';
 import { cloneData } from './utils';
 
 export type ScopeItem<Style = unknown> =
   | SlotOverrideData<Style>
-  | StyleTokenData
+  | StyleTokenOverride
   | false
   | null
   | undefined;
@@ -50,10 +50,8 @@ export function mergeScopeData<Style>(
     source = sourceItems[i];
     if (!source) continue;
 
-    if (isStyleTokenData(source)) {
-      // Token provider data is intentionally accepted by scope. Runtime token
-      // resolution is still prototype-level; keep the token object in cache for
-      // the resolver path instead of trying to turn it into CSS here.
+    if (isStyleTokenOverrideData(source)) {
+      styles.push(source);
       continue;
     }
 
@@ -68,29 +66,33 @@ export function mergeScopeData<Style>(
     for (let j = 0, len = overrideItems.length; j < len; j++) {
       item = overrideItems[j];
 
-      if (Array.isArray(item) || item.type !== BUILDER_TYPE_SLOT_OVERRIDE) {
+      if (Array.isArray(item) || isStyleTokenOverrideData(item) || item.type !== BUILDER_TYPE_SLOT_OVERRIDE) {
         console.log(traceError('invalid scope data'), 'data:', { source, item });
         continue;
       }
 
-      atRule = scopeAtRule ? (item.atRule ? [scopeAtRule].concat(item.atRule) : [scopeAtRule]) : item.atRule;
+      const overrideItem = item as RuntimeSlotOverrideItem;
 
-      item = {
+      atRule = scopeAtRule
+        ? (overrideItem.atRule ? [scopeAtRule].concat(overrideItem.atRule) : [scopeAtRule])
+        : overrideItem.atRule;
+
+      const scopeItem: RuntimeScopeItem = {
         type: BUILDER_TYPE_SCOPE,
         slotId,
         runtime: runtimeType,
         dedupe: '',
         className: '',
-        property: item.property,
-        value: item.value,
-        token: item.token,
-        selector: item.selector,
+        property: overrideItem.property,
+        value: overrideItem.value,
+        token: overrideItem.token,
+        selector: overrideItem.selector,
         atRule,
-        callsite: item.callsite ?? callsite,
+        callsite: overrideItem.callsite ?? callsite,
         parentSelector,
       };
 
-      value = item.value;
+      value = scopeItem.value;
       priority = null;
 
       if (Array.isArray(value)) {
@@ -99,21 +101,21 @@ export function mergeScopeData<Style>(
       }
 
       dedupe = getClassNameDedupe(
-        item.property,
+        scopeItem.property,
         priority,
-        item.selector,
+        scopeItem.selector,
         parentSelector,
-        item.atRule,
+        scopeItem.atRule,
       );
 
       className = getAtomicClassName(
-        item.property,
+        scopeItem.property,
         priority,
         value,
-        item.selector,
+        scopeItem.selector,
         parentSelector,
-        item.atRule,
-        item.callsite,
+        scopeItem.atRule,
+        scopeItem.callsite,
         RUNTIME_CONFIG.classNamePrefix,
         RUNTIME_CONFIG.localClassName,
         RUNTIME_CONFIG.debugClassName,
@@ -124,16 +126,16 @@ export function mergeScopeData<Style>(
         RUNTIME_CONFIG.debugAtRuleLength,
       );
 
-      item.dedupe = dedupe;
-      item.className = className;
+      scopeItem.dedupe = dedupe;
+      scopeItem.className = className;
 
       const lookupKey = getScopeLookupKey(slotId, dedupe);
       lookupIndex = lookup[lookupKey];
 
       if (typeof lookupIndex === 'number') {
-        styles[lookupIndex] = item;
+        styles[lookupIndex] = scopeItem;
       } else {
-        lookup[lookupKey] = styles.push(item) - 1;
+        lookup[lookupKey] = styles.push(scopeItem) - 1;
       }
     }
   }

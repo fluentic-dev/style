@@ -1,0 +1,28 @@
+{
+  "name": "@example/bundler-farm",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "clear": "rm -rf dist node_modules/.farm",
+    "dev": "farm start",
+    "dev:runtime": "FLUENTIC_STYLE_MODE=runtime farm start",
+    "build": "farm build",
+    "build:runtime": "FLUENTIC_STYLE_MODE=runtime farm build",
+    "serve": "farm preview --port 4179"
+  },
+  "dependencies": {
+    "@example/bundler-shared": "workspace:*",
+    "@fluentic/style": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@farmfe/cli": "^1.0.5",
+    "@farmfe/core": "^1.7.11",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "^5.9.3"
+  }
+}

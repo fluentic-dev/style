@@ -1,4 +1,4 @@
-import { compareLayerPriority, formatLayeredCss, getCssLayerName } from '../../atomic/layer';
+import { compareLayerPriority, getLayerBundleCss } from '../../atomic/layer';
 import { type CssConfig } from '../../config';
 import { DEFAULT_CONFIG } from '../utils/constants';
 import type { CssExtractRule } from './types';
@@ -13,13 +13,13 @@ export function extractCss(
   items: CssExtractRule[],
   args: CompilerExtractCssArgs,
 ) {
-  return getExtractedCssItems(items, args).join('\n');
+  return getExtractedCssItems(items, args);
 }
 
 function getExtractedCssItems(
   items: CssExtractRule[],
   args: CompilerExtractCssArgs,
-) {
+): string {
   const sortedItems = items
     .slice()
     .sort((a, b) => compareLayerPriority(a.priority, b.priority));
@@ -35,7 +35,7 @@ function getExtractedCssItems(
   }
 
   if (args.layer === false || !css.length) {
-    return css.map((item) => item.css);
+    return css.map((item) => item.css).join('\n');
   }
 
   const defaults = DEFAULT_CONFIG;
@@ -43,9 +43,9 @@ function getExtractedCssItems(
   const layerNamespace = args.layerNamespace ?? defaults.layerNamespace;
   const layers = args.layers ?? defaults.layers;
 
-  return formatLayeredCss(
-    css.map((item) => item.css),
+  return getLayerBundleCss(
     layers,
-    getCssLayerName(layerNamespace, defaults.layerNamespace),
+    layerNamespace || defaults.layerNamespace,
+    css.map((item) => item.css),
   );
 }

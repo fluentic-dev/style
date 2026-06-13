@@ -159,7 +159,7 @@ export function createExtractPlugin(args: PluginArgs) {
           const scope = getEvalScope(state);
           const loc = path.node.loc?.start;
 
-          const result = compileChain(chain, state.fileId, loc, scope, options);
+          const result = compileChain(chain, state.fileId, loc, scope, options, state.styleNames);
           if (!result) return;
 
           result.rules.forEach((rule) => {

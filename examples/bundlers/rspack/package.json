@@ -1,0 +1,30 @@
+{
+  "name": "@example/bundler-rspack",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "clear": "rm -rf dist node_modules/.cache",
+    "dev": "rspack serve --mode development",
+    "dev:runtime": "FLUENTIC_STYLE_MODE=runtime rspack serve --mode development",
+    "dev:sourcemap.sidecarServer": "SOURCEMAP=sidecarServer rspack serve --mode development",
+    "dev:sourcemap.sourceContent": "SOURCEMAP=sourceContent rspack serve --mode development",
+    "build": "rspack --mode production",
+    "build:runtime": "FLUENTIC_STYLE_MODE=runtime rspack --mode production",
+    "serve": "npx serve dist -l 4178"
+  },
+  "dependencies": {
+    "@example/bundler-shared": "workspace:*",
+    "@fluentic/style": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@rspack/cli": "^1.7.11",
+    "@rspack/core": "^1.7.11",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "tslib": "^2.8.1",
+    "typescript": "^5.9.3"
+  }
+}

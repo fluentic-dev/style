@@ -1,5 +1,5 @@
 import { hashString } from '../../utils/hash';
-import type { LayerPriority } from './types';
+import { LayerPlaceholder, type LayerPriority } from './types';
 
 export function compareLayerPriority(
   p1: LayerPriority,
@@ -16,7 +16,7 @@ export function compareLayerPriority(
   );
 }
 
-export function createLayerPool() {
+export function createLayerNamePool() {
   const lookup: Map<string, string> = new Map();
 
   const getLayerId = (priority: LayerPriority) => {
@@ -27,6 +27,7 @@ export function createLayerPool() {
 
     name = 'p' + hashString(key);
     lookup.set(key, name);
+
     return name;
   };
 
@@ -37,4 +38,48 @@ export function createLayerPool() {
   };
 
   return { getLayerName, getLayerId };
+}
+
+export function createLayerPool(layerNamespace: string) {
+  const namePool = createLayerNamePool();
+  const priorities = new Map<string, LayerPriority>();
+
+  const getName = (priority: LayerPriority) => {
+    const key = priority.join('|');
+
+    if (!priorities.has(key)) priorities.set(key, priority);
+
+    return namePool.getLayerName(layerNamespace, priority);
+  };
+
+  const getNames = () => {
+    const names = Array.from(priorities.values())
+      .sort(compareLayerPriority)
+      .map((priority) => namePool.getLayerName(layerNamespace, priority));
+
+    return names;
+  };
+
+  return { getName, getNames };
+}
+
+export function ensureLayerPlaceholder(layers: string[]) {
+  layers = layers.filter(Boolean);
+
+  return layers.includes(LayerPlaceholder)
+    ? layers
+    : layers.concat(LayerPlaceholder);
+}
+
+export function flattenCssLayers(
+  layers: readonly string[],
+  layerNames: string | readonly string[],
+) {
+  const names = typeof layerNames === 'string'
+    ? [layerNames]
+    : layerNames;
+
+  return layers
+    .flatMap((layer) => layer === LayerPlaceholder ? names : layer)
+    .filter(Boolean);
 }

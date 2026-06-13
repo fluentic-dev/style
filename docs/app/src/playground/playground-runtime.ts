@@ -1,6 +1,7 @@
 import { configureRuntime } from '../../../../packages/style/config';
-import { collectDevCssRules } from '../../../../packages/style/runtime/dev';
-import { getClassName, combineStyle } from '../../../../packages/style/runtime/style';
+import { getClassName } from '../../../../packages/style/runtime/core';
+import { collectCssPropSheetRules } from '../../../../packages/style/runtime/sheet';
+import { combineStyle } from '../../../../packages/style/runtime/style';
 import type { CssProp } from '../../../../packages/style/runtime/types';
 import { style } from '../../../../packages/style/style';
 import { createTheme } from '../../../../packages/style/style/theme';
@@ -22,7 +23,7 @@ export function runRuntime(request: RuntimeRequest): RuntimeResult {
   const seen = new Set<string>();
 
   function collectFromCss(css: CssProp) {
-    for (const [, ruleCss] of collectDevCssRules(css)) {
+    for (const { css: ruleCss } of collectCssPropSheetRules(css)) {
       if (seen.has(ruleCss)) continue;
       seen.add(ruleCss);
       cssRules.push(ruleCss);

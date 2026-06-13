@@ -1,5 +1,8 @@
 export const LayerPlaceholder = '$layer';
+
 export const LayerDefaultNamespace = 'css';
+
+export const LayerDefaultPriority: LayerPriority = [0, 0, 0, 0, 0, 0, 0];
 
 export const LayerGroups = {
   base: 0,

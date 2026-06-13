@@ -1,75 +1,11 @@
 import type { ItemSelector } from '../builder/data/state';
 import { RUNTIME_CONFIG } from '../config';
-import { LayerGroups, type LayerPriority, LayerPropertyPriorities } from './layer';
-import { DefaultPropertyTypes } from './property/presets';
+import { LayerGroups, type LayerPriority } from './layer';
+import { getCssPropertyName, getPropertyPriority } from './property';
 import { getScopeParentClassName } from './scope';
-import { escapeCssIdent } from './utils';
-
-const UNITLESS: ReadonlySet<string> = new Set([
-  'animationIterationCount',
-  'aspectRatio',
-  'borderImageOutset',
-  'borderImageSlice',
-  'borderImageWidth',
-  'boxFlex',
-  'boxFlexGroup',
-  'boxOrdinalGroup',
-  'columnCount',
-  'columns',
-  'fillOpacity',
-  'flex',
-  'flexGrow',
-  'flexNegative',
-  'flexOrder',
-  'flexPositive',
-  'flexShrink',
-  'floodOpacity',
-  'fontWeight',
-  'gridArea',
-  'gridColumn',
-  'gridColumnEnd',
-  'gridColumnSpan',
-  'gridColumnStart',
-  'gridRow',
-  'gridRowEnd',
-  'gridRowSpan',
-  'gridRowStart',
-  'imageOrientation',
-  'lineClamp',
-  'lineHeight',
-  'opacity',
-  'order',
-  'orphans',
-  'scale',
-  'stopOpacity',
-  'strokeDasharray',
-  'strokeDashoffset',
-  'strokeMiterlimit',
-  'strokeOpacity',
-  'strokeWidth',
-  'tabSize',
-  'widows',
-  'zIndex',
-  'zoom',
-]);
-
-export function camelToKebab(s: string): string {
-  // Handle vendor prefixes: WebkitFoo -> -webkit-foo, MozFoo -> -moz-foo
-  return s
-    .replace(/^(webkit|moz|ms|o)([A-Z])/g, (_, prefix, c) => `-${prefix}-${c.toLowerCase()}`)
-    .replace(/[A-Z]/g, (c) => '-' + c.toLowerCase());
-}
-
-export function formatCssValue(property: string, value: string): string {
-  if (!value || UNITLESS.has(property)) return value;
-  // Add px to unitless integer/decimal values for length properties
-  if (/^-?(\d+\.?\d*|\.\d+)$/.test(value)) return value + 'px';
-  return value;
-}
-
-export function getSelectorText(selector: ItemSelector): string {
-  return Array.isArray(selector) ? selector[0] : selector;
-}
+import { escapeCssIdent } from './utils/css';
+import { getSelectorPriority, getSelectorText } from './utils/selector';
+import { getCssPropertyValue } from './value';
 
 /** Build a single atomic CSS rule text. */
 export function buildAtomicRule(
@@ -81,8 +17,8 @@ export function buildAtomicRule(
   atRules: ItemSelector[] | null,
   scopeTargetPrefix: string = RUNTIME_CONFIG.scopeTargetPrefix,
 ): string {
-  const cssProp = camelToKebab(property);
-  const cssValue = formatCssValue(property, value);
+  const cssProp = getCssPropertyName(property);
+  const cssValue = getCssPropertyValue(property, value);
   const escapedClass = escapeCssIdent(className);
 
   const classSelector = '.' + escapedClass;
@@ -141,11 +77,6 @@ export function getAtomicRuleLayerPriority(
     getSelectorPriority(parentSelector),
     hasAtRules ? atRules.length : 0,
     isScopeRule && !parentSelector ? 1 : 0,
-    DefaultPropertyTypes[property] ?? LayerPropertyPriorities.longhand,
+    getPropertyPriority(property),
   ];
-}
-
-function getSelectorPriority(selector: ItemSelector | null): number {
-  if (!selector) return 0;
-  return Array.isArray(selector) ? selector[1] : 0;
 }

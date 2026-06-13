@@ -7,7 +7,7 @@ import type { Type } from '../utils/type';
 import type { StyleTransform } from './transform';
 import type { CSSProperties } from './types';
 
-const META = symbol('style.fn:meta');
+const META: unique symbol = symbol('style.fn:meta');
 
 type StyleFnMeta = {
   selectors: SelectorsRecord;
