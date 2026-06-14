@@ -12,8 +12,8 @@ stylePlugin({
   hoist: true,
   include: /\.[jt]sx?$/,
   exclude: /node_modules/,
-  runtimeModuleId: 'virtual:fluentic-styles',
-  cssModuleId: 'virtual:fluentic-styles.css',
+  runtimeModuleId: 'virtual:fluentic-style',
+  cssModuleId: 'virtual:fluentic-style.css',
   importSources: [
     {
       source: '@my/design-system',
@@ -63,7 +63,7 @@ The default include is JavaScript and TypeScript files. The default exclude is
 Virtual runtime module ID. Default:
 
 ```txt
-virtual:fluentic-styles
+virtual:fluentic-style
 ```
 
 ## `cssModuleId`
@@ -71,7 +71,7 @@ virtual:fluentic-styles
 Virtual CSS module ID. Default:
 
 ```txt
-virtual:fluentic-styles.css
+virtual:fluentic-style.css
 ```
 
 Vite, Rollup, and Rolldown import this CSS module automatically from the runtime

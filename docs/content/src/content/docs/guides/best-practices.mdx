@@ -30,6 +30,13 @@ Use `css` for one element. Use `theme` for component parts.
 <Card theme={compactCard} />
 ```
 
+Do not call `combineStyle` just to pass one style builder to `css`. Pass the
+builder directly:
+
+```tsx
+<Button css={pageStyles.wideAction} />
+```
+
 ## Keep selectors local
 
 Prefer slot overrides over deep custom selectors. If a consumer needs a selector
@@ -50,7 +57,7 @@ Style intentionally keeps runtime fallback available.
 In plugin mode, import:
 
 ```ts
-import 'virtual:fluentic-styles';
+import 'virtual:fluentic-style';
 ```
 
 Do it once near the application entry.

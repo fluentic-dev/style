@@ -1,0 +1,148 @@
+---
+title: TypeScript First
+description: Write normal TypeScript, then opt into Fluentic where styles need tokens, themes, or extraction.
+---
+
+Fluentic Style is designed to stay close to the TypeScript you already write.
+Objects, arrays, functions, modules, conditions, inference, and local constants
+keep their normal meaning. The styling API is the part Fluentic understands.
+
+```ts
+const density = compact ? 8 : 12;
+
+const card = style.slot({
+  display: 'grid',
+  gap: density,
+  padding: density * 2,
+});
+```
+
+There is no separate styling contract to fill out before you can start. Write
+the values you need, keep regular constants as regular constants, and use
+tokens only when a value should participate in theme and runtime override
+behavior.
+
+## Regular values stay regular
+
+Use TypeScript for values that do not need theme behavior.
+
+```ts
+const layers = {
+  dropdown: 10,
+  modal: 50,
+};
+
+const breakpoints = {
+  narrow: 720,
+};
+
+const popover = style.slot({
+  position: 'absolute',
+  zIndex: layers.dropdown,
+}).media(`(max-width: ${breakpoints.narrow}px)`, {
+  position: 'fixed',
+});
+```
+
+These values are just TypeScript. They can live beside a component, in a shared
+module, or inside a design-system package. Fluentic does not need to own them.
+
+## Themeable values become tokens
+
+Use `createTokens` when a value should have identity across styles, themes, and
+runtime overrides.
+
+```ts
+const tokens = createTokens({
+  color: {
+    canvas: '#f8fafc',
+    surface: '#ffffff',
+    text: '#0f172a',
+    muted: '#64748b',
+    accent: '#2563eb',
+  },
+  radius: {
+    panel: 8,
+    control: 6,
+  },
+});
+
+const panel = style.slot({
+  backgroundColor: tokens.color.surface,
+  borderRadius: tokens.radius.panel,
+  color: tokens.color.text,
+});
+```
+
+The token tree can be as formal or as small as the project needs. A design
+system can model semantic groups. A feature can keep a tiny local token set.
+Both use the same primitive.
+
+## Themes override tokens directly
+
+A theme does not need to duplicate the full shape of the token tree. Override
+the tokens that matter.
+
+```ts
+const dark = createTheme([
+  tokens.color.canvas('#0f172a'),
+  tokens.color.surface('#111827'),
+  tokens.color.text('#f8fafc'),
+  tokens.color.muted('#94a3b8'),
+  tokens.color.accent('#60a5fa'),
+]);
+```
+
+Each override points at a token identity. That keeps themes partial,
+composable, and easy to split across packages or features.
+
+```tsx
+const css = combineStyle(styles);
+
+return (
+  <main css={[dark, css.root]}>
+    <section css={css.panel} />
+  </main>
+);
+```
+
+You can also pass token overrides locally when a value is dynamic for one
+render:
+
+```tsx
+const css = combineStyle(
+  styles,
+  tokens.color.accent(isActive ? '#16a34a' : '#2563eb'),
+);
+```
+
+## The compiler follows the API
+
+Static extraction is built around Fluentic style chains:
+
+```ts
+const button = style.slot({
+  alignItems: 'center',
+  display: 'inline-flex',
+})
+  .hover({
+    transform: 'translateY(-1px)',
+  })
+  .media('(max-width: 700px)', {
+    minHeight: 36,
+  });
+```
+
+The convention is the API itself: `style(...)`, `style.slot(...)`,
+`style.scope(...)`, token creation, and theme creation. Around those calls, use
+normal TypeScript. The compiler works from the Fluentic parts without asking
+the rest of your code to become a styling language.
+
+## A small rule of thumb
+
+- Use plain TypeScript for values that are only values.
+- Use tokens for values that need identity, theming, or runtime overrides.
+- Use style chains for CSS rules Fluentic should resolve or extract.
+
+That keeps simple code simple, while still giving design-system code a solid
+path when it needs one.

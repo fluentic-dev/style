@@ -1,10 +1,5 @@
+import { DocsBody, DocsDescription, DocsPage, DocsTitle } from 'fumadocs-ui/layouts/docs/page';
 import { notFound } from 'next/navigation';
-import {
-  DocsBody,
-  DocsDescription,
-  DocsPage,
-  DocsTitle,
-} from 'fumadocs-ui/layouts/docs/page';
 import type { ReactNode } from 'react';
 import { getMDXComponents } from '../../../components/mdx';
 import { source } from '../../../lib/source';

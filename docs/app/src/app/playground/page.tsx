@@ -8,9 +8,8 @@ export const metadata = {
 
 export default function PlaygroundPage() {
   return (
-    <main className="playground-page">
+    <main className='playground-page'>
       <PlaygroundApp />
     </main>
   );
 }
-

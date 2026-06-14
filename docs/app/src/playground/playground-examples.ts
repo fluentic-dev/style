@@ -10,18 +10,21 @@ export type PlaygroundExample = {
   files: PlaygroundFile[];
 };
 
-// User-visible config — dev options (localClassName, debugClassName) are forced
-// internally by the playground runtime and not shown here.
-export const runtimeConfig = {
-  dev: true,
-  cache: true,
-};
-
 export const compilerConfig = {
   css: {
-    layer: true,
     layerNamespace: 'fluentic',
     layers: ['reset', 'fluentic', 'override'],
+    classNamePrefix: '',
+    scopeTargetPrefix: '-',
+    themeNamePrefix: 'theme-',
+    tokenVarPrefix: 'token-',
+    localClassName: true,
+    debugClassName: true,
+    debugPropertyLength: 24,
+    debugValueLength: 8,
+    debugSelectorLength: 8,
+    debugParentSelectorLength: 8,
+    debugAtRuleLength: 10,
   },
 };
 
@@ -30,122 +33,200 @@ export const compilerConfig = {
 const cardFiles: PlaygroundFile[] = [
   {
     name: 'tokens.ts',
-    code: `import { createToken } from '@fluentic/style';
+    code: `import { createTokens } from '@fluentic/style';
 
-// Design tokens — reactive references to values
-export const color = {
-  page: createToken('#f5f7fb'),
-  panel: createToken('#ffffff'),
-  ink: createToken('#111827'),
-  muted: createToken('#64748b'),
-  border: createToken('#d8e1ef'),
-  accent: createToken('#4f46e5'),
-  accentText: createToken('#ffffff'),
+const brand = {
+  blue: '#2563eb',
+  violet: '#7c3aed',
+  mint: '#0f766e',
 };
 
-export const space = { 3: '12px', 4: '16px', 5: '20px', 6: '24px' };
-export const radius = { md: '8px', lg: '12px' };
-export const shadow = { card: '0 18px 45px rgba(15, 23, 42, 0.14)' };`,
+export const tokens = createTokens({
+  color: {
+    canvas: '#eef4fb',
+    surface: '#ffffff',
+    surfaceRaised: '#f8fbff',
+    text: '#172033',
+    muted: '#64748b',
+    border: '#d7e2f0',
+    accent: brand.blue,
+    accentSoft: '#dbeafe',
+    accentText: '#ffffff',
   },
-  {
-    name: 'card.styles.ts',
-    code: `import { style } from '@fluentic/style';
-import { color, radius, shadow, space } from './tokens';
+  radius: {
+    card: '18px',
+    control: '12px',
+    pill: '999px',
+  },
+  shadow: {
+    card: '0 24px 70px rgba(37, 99, 235, 0.16)',
+  },
+});
 
-const text = {
+export const space = {
+  row: '12px',
+  panel: '22px',
+  page: '42px',
+};
+
+export const textBase = {
   fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
   letterSpacing: 0,
 };
 
+export const themeNames = ['spring', 'night', 'ember'];`,
+  },
+  {
+    name: 'card.styles.ts',
+    code: `import { style } from '@fluentic/style';
+import { space, textBase, tokens } from './tokens';
+
+const panelBase = {
+  ...textBase,
+  backgroundColor: tokens.color.surface,
+  border: '1px solid',
+  borderColor: tokens.color.border,
+  borderRadius: tokens.radius.card,
+  boxShadow: tokens.shadow.card,
+  color: tokens.color.text,
+};
+
+const labelText = {
+  ...textBase,
+  fontSize: '12px',
+  fontWeight: 820,
+  letterSpacing: '0.08em',
+  textTransform: 'uppercase',
+};
+
 export const card = {
   root: style.slot({
-    ...text,
-    backgroundColor: color.panel,
-    border: '1px solid',
-    borderColor: color.border,
-    borderRadius: radius.lg,
-    boxShadow: shadow.card,
-    color: color.ink,
+    ...panelBase,
     display: 'grid',
-    gap: space[4],
-    maxWidth: '460px',
-    padding: space[6],
+    gap: space.panel,
+    maxWidth: '520px',
+    padding: space.page,
   }),
   eyebrow: style.slot({
-    ...text,
-    color: color.accent,
-    fontSize: '12px',
-    fontWeight: 800,
+    ...labelText,
+    color: tokens.color.accent,
     margin: 0,
-    textTransform: 'uppercase',
   }),
   title: style.slot({
-    ...text,
-    color: color.ink,
-    fontSize: '28px',
-    fontWeight: 760,
-    lineHeight: 1.1,
+    ...textBase,
+    color: tokens.color.text,
+    fontSize: '30px',
+    fontWeight: 840,
+    lineHeight: 1.05,
     margin: 0,
   }),
   body: style.slot({
-    ...text,
-    color: color.muted,
-    fontSize: '15px',
+    ...textBase,
+    color: tokens.color.muted,
+    fontSize: '16px',
     lineHeight: 1.7,
     margin: 0,
   }),
+  meta: style.slot({
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: space.row,
+  }),
+  chip: style.slot({
+    ...labelText,
+    backgroundColor: tokens.color.accentSoft,
+    borderRadius: tokens.radius.pill,
+    color: tokens.color.accent,
+    padding: '7px 11px',
+  }),
   action: style.slot({
-    ...text,
+    ...textBase,
     alignItems: 'center',
-    backgroundColor: color.accent,
+    backgroundColor: tokens.color.accent,
     border: 0,
-    borderRadius: radius.md,
-    color: color.accentText,
+    borderRadius: tokens.radius.control,
+    color: tokens.color.accentText,
     cursor: 'pointer',
     display: 'inline-flex',
-    fontWeight: 700,
+    fontWeight: 780,
     justifyContent: 'center',
-    padding: space[3] + ' ' + space[5],
-    transition: 'opacity 120ms, transform 100ms',
+    minHeight: '44px',
+    padding: '0 16px',
+    transition: 'filter 140ms, transform 140ms',
   }).hover({ opacity: 0.88 }).active({ transform: 'translateY(1px)' }),
 };
 
-export const nightTheme = style.scope([
-  card.root({ backgroundColor: '#111827', borderColor: '#25324a', color: '#e5ecf8' }),
-  card.body({ color: '#aab8cf' }),
-  card.action({ backgroundColor: '#60a5fa', color: '#0f172a' }),
-]);
-
-export const compactTheme = style.scope([
-  card.root({ maxWidth: '380px', padding: space[5] }),
-  card.title({ fontSize: '22px' }),
-]);`,
+export const themes = {
+  spring: style.scope([
+    card.root({
+      backgroundColor: tokens.color.surface,
+      borderColor: tokens.color.border,
+    }),
+  ]),
+  night: style.scope([
+    card.root({
+      backgroundColor: tokens.color.surface('#101827'),
+      borderColor: tokens.color.border('#25324a'),
+      boxShadow: tokens.shadow.card('0 26px 80px rgba(15, 23, 42, 0.34)'),
+    }),
+    card.title({ color: tokens.color.text('#eef5ff') }),
+    card.body({ color: tokens.color.muted('#aebbd0') }),
+    card.chip({
+      backgroundColor: tokens.color.accentSoft('#1e2c52'),
+      color: tokens.color.accent('#93c5fd'),
+    }),
+    card.action({
+      backgroundColor: tokens.color.accent('#60a5fa'),
+      color: tokens.color.accentText('#0f172a'),
+    }),
+  ]),
+  ember: style.scope([
+    card.root({
+      backgroundColor: tokens.color.surface('#fff7ed'),
+      borderColor: tokens.color.border('#fed7aa'),
+      boxShadow: tokens.shadow.card('0 24px 70px rgba(194, 65, 12, 0.18)'),
+    }),
+    card.eyebrow({ color: tokens.color.accent('#c2410c') }),
+    card.chip({
+      backgroundColor: tokens.color.accentSoft('#ffedd5'),
+      color: tokens.color.accent('#c2410c'),
+    }),
+    card.action({ backgroundColor: tokens.color.accent('#c2410c') }),
+  ]),
+};`,
   },
   {
-    name: 'app.ts',
-    code: `import { combineStyle, getClassName } from '@fluentic/style';
-import { card, compactTheme, nightTheme } from './card.styles';
+    name: 'app.tsx',
+    code: `import { combineStyle } from '@fluentic/style';
+import { card, themes } from './card.styles';
+import { themeNames } from './tokens';
 
-// combineStyle resolves slots against active scopes — same as combineStyle() in React
-const css = combineStyle(card, nightTheme, compactTheme);
+const activeTheme = themeNames[0];
 
-// getClassName converts a CssProp to a class name string for HTML rendering
-const cn = (cssProp) => getClassName(cssProp).className ?? '';
+export function App() {
+  const css = combineStyle(
+    card,
+    themes[activeTheme](card.root),
+  );
 
-export function renderApp() {
-  return \`
-    <main class="demo-shell">
-      <article class="\${cn(css.root)}">
-        <p class="\${cn(css.eyebrow)}">Interactive Playground</p>
-        <h2 class="\${cn(css.title)}">Edit tokens, slots, and themes.</h2>
-        <p class="\${cn(css.body)}">
-          This sample uses real Fluentic runtime mode. Scopes let you restyle
-          any slot without touching the base definitions.
+  return (
+    <main className="demo-shell">
+      <article css={css.root}>
+        <p css={css.eyebrow}>Interactive Playground</p>
+        <h2 css={css.title}>Nested tokens, regular TypeScript.</h2>
+        <p css={css.body}>
+          Change <code>activeTheme</code>, reuse constants across files, and
+          let Fluentic carry slots, tokens, scopes, and runtime CSS.
         </p>
-        <button class="\${cn(css.action)}">Try Fluentic Style</button>
+        <div css={css.meta}>
+          <span css={css.chip}>createTokens</span>
+          <span css={css.chip}>spread reuse</span>
+          <span css={css.chip}>cross-file constants</span>
+        </div>
+        <button css={css.action}>Try Fluentic Style</button>
       </article>
     </main>
-  \`;
+  );
 }`,
   },
 ];
@@ -219,40 +300,43 @@ export const pillTheme = style.scope([
 ]);`,
   },
   {
-    name: 'app.ts',
-    code: `import { style, combineStyle, getClassName } from '@fluentic/style';
+    name: 'app.tsx',
+    code: `import { bindScope, style, combineStyle, type StyleTheme } from '@fluentic/style';
+import type { ReactNode } from 'react';
 import { btn, dangerTheme, neutralTheme, pillTheme, primaryTheme } from './button.styles';
 
-// Demo layout slots — all styling through Fluentic
 const demo = {
   stack: style.slot({ alignItems: 'flex-start', display: 'flex', flexDirection: 'column', gap: '20px' }),
   row: style.slot({ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: '10px' }),
 };
 
-const cn = (cssProp) => getClassName(cssProp).className ?? '';
+type DemoButtonProps = {
+  children: ReactNode;
+  theme: StyleTheme | StyleTheme[];
+};
 
-function renderBtn(label, ...themes) {
-  const css = combineStyle(btn, ...themes);
-  return \`<button class="\${cn(css.root)}">\${label}</button>\`;
+function DemoButton(props: DemoButtonProps) {
+  const css = combineStyle(btn, bindScope(btn.root, props.theme));
+
+  return <button css={css.root}>{props.children}</button>;
 }
 
-export function renderApp() {
-  const lay = combineStyle(demo);
-  return \`
-    <main class="demo-shell">
-      <div class="\${cn(lay.stack)}">
-        <div class="\${cn(lay.row)}">
-          \${renderBtn('Primary', primaryTheme)}
-          \${renderBtn('Neutral', neutralTheme)}
-          \${renderBtn('Danger', dangerTheme)}
+export function App() {
+  return (
+    <main className="demo-shell">
+      <div css={demo.stack}>
+        <div css={demo.row}>
+          <DemoButton theme={primaryTheme}>Primary</DemoButton>
+          <DemoButton theme={neutralTheme}>Neutral</DemoButton>
+          <DemoButton theme={dangerTheme}>Danger</DemoButton>
         </div>
-        <div class="\${cn(lay.row)}">
-          \${renderBtn('Pill Primary', primaryTheme, pillTheme)}
-          \${renderBtn('Pill Neutral', neutralTheme, pillTheme)}
+        <div css={demo.row}>
+          <DemoButton theme={[primaryTheme, pillTheme]}>Pill Primary</DemoButton>
+          <DemoButton theme={[neutralTheme, pillTheme]}>Pill Neutral</DemoButton>
         </div>
       </div>
     </main>
-  \`;
+  );
 }`,
   },
 ];
@@ -351,53 +435,52 @@ export const profile = {
 };`,
   },
   {
-    name: 'app.ts',
-    code: `import { combineStyle, getClassName } from '@fluentic/style';
+    name: 'app.tsx',
+    code: `import { combineStyle } from '@fluentic/style';
 import { profile } from './profile.styles';
 
-const css = combineStyle(profile);
-const cn = (cssProp) => getClassName(cssProp).className ?? '';
+export function App() {
+  const css = combineStyle(profile);
 
-export function renderApp() {
-  return \`
-    <main class="demo-shell">
-      <div class="\${cn(css.card)}">
-        <div class="\${cn(css.header)}">
-          <div class="\${cn(css.avatarWrap)}">
-            <div class="\${cn(css.avatar)}">SL</div>
-            <div class="\${cn(css.badge)}"></div>
+  return (
+    <main className="demo-shell">
+      <div css={css.card}>
+        <div css={css.header}>
+          <div css={css.avatarWrap}>
+            <div css={css.avatar}>SL</div>
+            <div css={css.badge} />
           </div>
           <div>
-            <p class="\${cn(css.name)}">Sophie Laurent</p>
-            <p class="\${cn(css.role)}">Design Systems Engineer</p>
+            <p css={css.name}>Sophie Laurent</p>
+            <p css={css.role}>Design Systems Engineer</p>
           </div>
         </div>
-        <p class="\${cn(css.bio)}">
+        <p css={css.bio}>
           Building component libraries with Fluentic Style. Passionate about
           type-safe, atomic CSS and runtime-first styling.
         </p>
-        <div class="\${cn(css.tags)}">
-          <span class="\${cn(css.tag)}">React</span>
-          <span class="\${cn(css.tag)}">TypeScript</span>
-          <span class="\${cn(css.tag)}">Fluentic</span>
+        <div css={css.tags}>
+          <span css={css.tag}>React</span>
+          <span css={css.tag}>TypeScript</span>
+          <span css={css.tag}>Fluentic</span>
         </div>
-        <div class="\${cn(css.footer)}">
-          <div class="\${cn(css.stat)}">
-            <span class="\${cn(css.statValue)}">42</span>
-            <span class="\${cn(css.statLabel)}">Components</span>
+        <div css={css.footer}>
+          <div css={css.stat}>
+            <span css={css.statValue}>42</span>
+            <span css={css.statLabel}>Components</span>
           </div>
-          <div class="\${cn(css.stat)}">
-            <span class="\${cn(css.statValue)}">1.2k</span>
-            <span class="\${cn(css.statLabel)}">Followers</span>
+          <div css={css.stat}>
+            <span css={css.statValue}>1.2k</span>
+            <span css={css.statLabel}>Followers</span>
           </div>
-          <div class="\${cn(css.stat)}">
-            <span class="\${cn(css.statValue)}">98%</span>
-            <span class="\${cn(css.statLabel)}">Satisfaction</span>
+          <div css={css.stat}>
+            <span css={css.statValue}>98%</span>
+            <span css={css.statLabel}>Satisfaction</span>
           </div>
         </div>
       </div>
     </main>
-  \`;
+  );
 }`,
   },
 ];

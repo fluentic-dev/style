@@ -27,7 +27,7 @@ extraction, and static export.
 The default entry import is:
 
 ```ts
-import 'virtual:fluentic-styles';
+import 'virtual:fluentic-style';
 ```
 
 Vite, Rollup, and Rolldown import the paired CSS virtual module automatically
@@ -43,8 +43,8 @@ stylePlugin({
   extract: true,
   include: /\.[jt]sx?$/,
   exclude: /node_modules/,
-  runtimeModuleId: 'virtual:fluentic-styles',
-  cssModuleId: 'virtual:fluentic-styles.css',
+  runtimeModuleId: 'virtual:fluentic-style',
+  cssModuleId: 'virtual:fluentic-style.css',
 });
 ```
 

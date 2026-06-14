@@ -25,7 +25,6 @@
   color: #111827;
   display: inline-flex;
   font-size: 1.45rem;
-  font-weight: 840;
   gap: 0.9rem;
   text-decoration: none;
 }
@@ -39,8 +38,23 @@
 }
 
 .home-brand span {
-  background: linear-gradient(90deg, #7c3aed 0%, #ec4899 62%, #f97316 100%);
+  animation: brand-rainbow-flash 3.2s ease-in-out infinite;
+  background: linear-gradient(90deg,
+      #f43f5e 0%,
+      #f97316 12%,
+      #eab308 24%,
+      #22c55e 36%,
+      #06b6d4 48%,
+      #6366f1 60%,
+      #a855f7 72%,
+      #ec4899 84%,
+      #f43f5e 100%);
   background-clip: text;
+  background-size: 300% auto;
+  font-size: calc(1.5rem - 1px);
+  font-weight: 650;
+  text-shadow: 0 10px 30px rgba(124, 58, 237, 0.18);
+  font-family: var(--font-display);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -94,39 +108,30 @@
 }
 
 .home-kicker {
-  background: #f6f2ff;
-  border: 1px solid #e2d6ff;
+  background: #f8f5ff;
+  border: 1px solid #ddd0ff;
   border-radius: 999px;
-  color: #7c3aed;
+  color: #6d28d9;
   display: inline-flex;
-  font-size: 0.76rem;
-  font-weight: 780;
+  font-size: 0.82rem;
+  font-weight: 600;
   letter-spacing: 0;
+  line-height: 1.25;
   margin: 0 0 1.25rem;
-  padding: 0.35rem 0.72rem;
-  text-transform: uppercase;
+  padding: 0.4rem 0.78rem;
 }
 
 .home-copy h1 {
-  background: linear-gradient(90deg,
-    #f43f5e 0%,
-    #f97316 12%,
-    #eab308 24%,
-    #22c55e 36%,
-    #06b6d4 48%,
-    #6366f1 60%,
-    #a855f7 72%,
-    #ec4899 84%,
-    #f43f5e 100%
-  );
+  background: linear-gradient(92deg, #7c3aed 0%, #ec4899 46%, #8b5cf6 72%, #0ea5e9 100%);
   background-clip: text;
   background-size: 100% auto;
-  font-size: 3.05rem;
-  font-weight: 840;
+  font-family: var(--font-display);
+  font-size: calc(1.55rem + 3px);
+  font-weight: 680;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: 0;
-  line-height: 1.03;
+  line-height: 1.28;
   margin: 0;
 }
 
@@ -136,6 +141,15 @@
   line-height: 1.7;
   margin: 1rem 0 0;
   max-width: 540px;
+}
+
+.home-tagline {
+  color: #111827;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.55;
+  margin: 0.9rem 0 0;
+  max-width: 520px;
 }
 
 .home-install {
@@ -197,23 +211,25 @@
 }
 
 .home-stage {
-  background: #ffffff;
-  border: 1px solid #d8dee8;
+  background:
+    linear-gradient(180deg, rgba(124, 58, 237, 0.045), rgba(15, 118, 110, 0.025)),
+    #f8fbff;
+  border: 1px solid #cfdaea;
   border-radius: 8px;
-  box-shadow: 0 24px 60px rgba(17, 24, 39, 0.12);
+  box-shadow: 0 24px 64px rgba(28, 40, 66, 0.14);
   overflow: hidden;
 }
 
 .home-stage-bar {
   align-items: center;
-  background: #f6f8fa;
-  border-bottom: 1px solid #d8dee8;
-  color: #57606a;
+  background: #f1f5fb;
+  border-bottom: 1px solid #cfdaea;
+  color: #4b586b;
   display: flex;
-  font-size: 0.78rem;
-  font-weight: 700;
+  font-size: 0.82rem;
+  font-weight: 740;
   gap: 0.5rem;
-  padding: 0.7rem 0.9rem;
+  padding: 0.78rem 0.95rem;
 }
 
 .home-window-dots {
@@ -241,27 +257,30 @@
 }
 
 .home-code {
-  background: #ffffff;
-  color: #24292f;
+  background:
+    linear-gradient(90deg, rgba(124, 58, 237, 0.035), transparent 18rem),
+    #fbfdff;
+  color: #222936;
   font-family: var(--font-mono);
-  font-size: 0.78rem;
-  line-height: 1.72;
+  font-size: 0.8rem;
+  height: 468px;
+  line-height: 1.68;
   margin: 0;
-  min-height: 390px;
   overflow: auto;
-  padding: 1.2rem 1.35rem;
+  padding: 1.15rem 1.3rem;
+  scrollbar-color: #b8c4d6 transparent;
 }
 
 .tok-key {
-  color: #cf222e;
+  color: #d12a45;
 }
 
 .tok-id {
-  color: #24292f;
+  color: #222936;
 }
 
 .tok-call {
-  color: #8250df;
+  color: #7c3aed;
 }
 
 .tok-var {
@@ -269,7 +288,7 @@
 }
 
 .tok-str {
-  color: #0a3069;
+  color: #075985;
 }
 
 .tok-num {
@@ -320,7 +339,7 @@
   transform: translateY(-2px);
 }
 
-.home-features article > span {
+.home-features article>span {
   background: #efe7ff;
   border: 1px solid #dac8ff;
   border-radius: 8px;
@@ -416,7 +435,7 @@
   transform: translateY(-2px);
 }
 
-.home-reason-grid article > span {
+.home-reason-grid article>span {
   align-items: center;
   background: #ffffff;
   border: 1px solid #dbe3ef;
@@ -510,6 +529,7 @@
 }
 
 @media (max-width: 880px) {
+
   .home-hero,
   .home-features,
   .home-reason-grid,
@@ -522,11 +542,16 @@
   }
 
   .home-copy h1 {
-    font-size: 2.55rem;
+    font-size: calc(1.45rem + 3px);
   }
 
   .home-code {
     min-height: 0;
+  }
+
+  .home-features article {
+    min-height: 0;
+    padding: 1rem;
   }
 
   .home-footer nav {
@@ -549,6 +574,14 @@
   }
 
   .home-copy h1 {
-    font-size: 2.05rem;
+    font-size: calc(1.34rem + 3px);
+  }
+
+  .home-features {
+    gap: 0.75rem;
+  }
+
+  .home-features article {
+    padding: 0.9rem;
   }
 }

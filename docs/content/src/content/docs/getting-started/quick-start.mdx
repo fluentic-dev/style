@@ -1,49 +1,45 @@
 ---
 title: Quick Start
-description: Start with `style()`, `combineStyle()`, `css` prop composition, and reusable style files.
+description: Start with `style()`, direct `css` prop composition, reusable style files, and scoped component styling.
 ---
 
-Fluentic Style starts small. Write styles with `style()`, resolve them with
-`combineStyle()`, and pass the resolved result to the `css` prop.
+Fluentic Style starts small. Write styles with `style()` and pass them directly
+to the `css` prop. Use `combineStyle()` when a component needs scoped themes,
+slot targets, or token overrides.
 
 ## 1. Write a style
 
 ```tsx
 /** @jsxImportSource @fluentic/style */
-import { style, combineStyle } from '@fluentic/style';
+import { style } from '@fluentic/style';
 
-const styles = {
-  button: style({
-    display: 'inline-flex',
-    alignItems: 'center',
-    border: 0,
-    borderRadius: 6,
-    padding: '8px 12px',
-    backgroundColor: '#2563eb',
-    color: 'white',
-    cursor: 'pointer',
-  }).hover({
-    backgroundColor: '#1d4ed8',
-  }),
-};
+const button = style({
+  display: 'inline-flex',
+  alignItems: 'center',
+  border: 0,
+  borderRadius: 6,
+  padding: '8px 12px',
+  backgroundColor: '#2563eb',
+  color: 'white',
+  cursor: 'pointer',
+}).hover({
+  backgroundColor: '#1d4ed8',
+});
 
 export function Button() {
-  const css = combineStyle(styles);
-
-  return <button css={css.button}>Save</button>;
+  return <button css={button}>Save</button>;
 }
 ```
 
 That is the core loop:
 
 - `style(...)` creates a typed style builder.
-- `combineStyle(styles)` resolves the builders for React.
-- `css={css.button}` puts the generated class on the element.
+- selector methods like `.hover(...)` keep state styles near the base style.
+- `css={button}` puts the generated class on the element.
 
 ## 2. Combine styles
 
-Keep related styles in one object, resolve that object once, and combine
-resolved items with arrays.
+Keep related styles in one object and combine them with arrays.
 
 ```tsx
 const styles = {
@@ -67,14 +63,12 @@ const styles = {
 };
 
 export function Button(props: { primary?: boolean; fullWidth?: boolean }) {
-  const css = combineStyle(styles);
-
   return (
     <button
       css={[
-        css.button,
-        props.primary && css.primary,
-        props.fullWidth && css.fullWidth,
+        styles.button,
+        props.primary && styles.primary,
+        props.fullWidth && styles.fullWidth,
       ]}
     >
       Save
@@ -89,13 +83,13 @@ conditional styling feel like ordinary React composition.
 ## 3. Forward the `css` prop
 
 Reusable components should let callers add element-level styles. Accept
-`CssProp`, then place it last in the `css` array so the caller can add layout or
+`StyleProp`, then place it last in the `css` array so the caller can add layout or
 one-off adjustments.
 
 ```tsx
 /** @jsxImportSource @fluentic/style */
-import { style, combineStyle } from '@fluentic/style';
-import type { CssProp } from '@fluentic/style';
+import { style } from '@fluentic/style';
+import type { StyleProp } from '@fluentic/style';
 import type { ReactNode } from 'react';
 
 const styles = {
@@ -114,17 +108,15 @@ const styles = {
 
 type ButtonProps = {
   children: ReactNode;
-  css?: CssProp;
+  css?: StyleProp;
 };
 
 export function Button(props: ButtonProps) {
-  const css = combineStyle(styles);
-
-  return <button css={[css.button, props.css]}>{props.children}</button>;
+  return <button css={[styles.button, props.css]}>{props.children}</button>;
 }
 ```
 
-Callers can pass another resolved style:
+Callers can pass another style builder directly:
 
 ```tsx
 const pageStyles = {
@@ -134,16 +126,14 @@ const pageStyles = {
 };
 
 export function Page() {
-  const css = combineStyle(pageStyles);
-
-  return <Button css={css.wideAction}>Publish</Button>;
+  return <Button css={pageStyles.wideAction}>Publish</Button>;
 }
 ```
 
 ## 4. Reuse styles across files
 
 Style builders are normal values. Define common styles once, export them, and
-combine them wherever you resolve CSS.
+compose them wherever you render.
 
 ```ts title="styles/common.ts"
 import { style } from '@fluentic/style';
@@ -184,22 +174,21 @@ export const buttonStyles = {
 
 ```tsx title="Button.tsx"
 /** @jsxImportSource @fluentic/style */
-import { combineStyle } from '@fluentic/style';
-import type { CssProp } from '@fluentic/style';
+import type { StyleProp } from '@fluentic/style';
 import type { ReactNode } from 'react';
 import { buttonStyles } from './Button.styles';
 
 type ButtonProps = {
   children: ReactNode;
-  css?: CssProp;
+  css?: StyleProp;
   primary?: boolean;
 };
 
 export function Button(props: ButtonProps) {
-  const css = combineStyle(buttonStyles);
-
   return (
-    <button css={[css.root, props.primary && css.primary, props.css]}>
+    <button
+      css={[buttonStyles.root, props.primary && buttonStyles.primary, props.css]}
+    >
       {props.children}
     </button>
   );
@@ -207,7 +196,7 @@ export function Button(props: ButtonProps) {
 ```
 
 This is enough for many app components: define styles, reuse style builders,
-resolve once per component, and compose through `css`.
+and compose them through `css`.
 
 ## 5. Add tokens when values become shared
 
@@ -246,6 +235,12 @@ target, such as `root`, `icon`, `label`, or `panel`.
 
 Use `style.scope(...)` when you want to encapsulate a group of overrides for a
 theme, variant, state, media query, or subtree.
+
+Use `combineStyle(...)` when those scopes need to target component slots:
+
+```tsx
+const css = combineStyle(buttonStyles, primary(buttonStyles.root));
+```
 
 Continue with [Slots](../../core/slots/) and [Scopes](../../core/scopes/) when you are
 ready to design a public component styling API.

@@ -1,8 +1,14 @@
 import * as Babel from '@babel/standalone';
-import { type CompilerOptions } from '../../../../packages/style/compiler';
-import { createCssCollector, extractCss } from '../../../../packages/style/compiler/extract';
-import { evaluateNode, type EvalModuleBindings, type ImportMap } from '../../../../packages/style/compiler/transform/evaluator';
-import { createExtractPlugin } from '../../../../packages/style/compiler/transform/extract';
+import { type CompilerOptions } from '../../../../packages/style/compiler/compiler/types';
+import { createCssCollector } from '../../../../packages/style/compiler/extract/collector';
+import { extractCss } from '../../../../packages/style/compiler/extract/extract';
+import type { CssExtractRule } from '../../../../packages/style/compiler/extract/types';
+import { evaluateNode } from '../../../../packages/style/compiler/transform/evaluator/evaluator';
+import {
+  type EvalModuleBindings,
+  type ImportMap,
+} from '../../../../packages/style/compiler/transform/evaluator/types';
+import { createExtractPlugin } from '../../../../packages/style/compiler/transform/extract/plugin';
 
 export type PlaygroundFile = {
   name: string;
@@ -126,9 +132,6 @@ export function compilePlayground(files: PlaygroundFile[], options: CompilerOpti
       resolveImport(_babel: unknown, source: string, fromFile: string) {
         return resolveImport(source, fromFile);
       },
-      traceModule(_babel: unknown, source: string, fromFile: string) {
-        return resolveImport(source, fromFile);
-      },
     },
   });
   const transformed = files.map((file) => {
@@ -146,11 +149,43 @@ export function compilePlayground(files: PlaygroundFile[], options: CompilerOpti
     return `// ${file.name}\n${result.code ?? ''}`;
   });
 
+  const items = collector.getItems();
+
   return {
     js: transformed.join('\n\n'),
-    css: extractCss(collector.getItems(), options.css || {}),
-    traces: [],
+    css: extractCss(items, options.css || {}),
+    traces: getCompileTraces(items),
   };
+}
+
+function getCompileTraces(items: CssExtractRule[]): CompileTrace[] {
+  const traces: CompileTrace[] = [];
+  const seen = new Set<string>();
+
+  for (const item of items) {
+    if (!item.trace) continue;
+
+    const key = [
+      item.className,
+      item.trace.filePath,
+      item.trace.line,
+      item.trace.column,
+      item.css,
+    ].join('|');
+
+    if (seen.has(key)) continue;
+    seen.add(key);
+
+    traces.push({
+      key: item.className,
+      css: item.css,
+      filePath: item.trace.filePath,
+      line: item.trace.line,
+      column: item.trace.column,
+    });
+  }
+
+  return traces;
 }
 
 function normalizeFileName(fileName: string) {

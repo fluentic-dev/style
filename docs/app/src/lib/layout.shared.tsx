@@ -7,7 +7,7 @@ export function baseOptions(): BaseLayoutProps {
     nav: {
       title: (
         <>
-          <img src={`${basePath}/logo.png`} alt="" width={34} height={34} />
+          <img src={`${basePath}/logo.png`} alt='' width={34} height={34} />
           <span>Fluentic Style</span>
         </>
       ),

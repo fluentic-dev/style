@@ -2,10 +2,10 @@
   "title": "Guides",
   "pages": [
     "component-library",
+    "styling-tradeoffs",
     "theming",
     "composition",
     "best-practices",
     "troubleshooting"
   ]
 }
-

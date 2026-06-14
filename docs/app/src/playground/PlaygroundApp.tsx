@@ -7,15 +7,29 @@ import { compilePlayground, type CompileTrace, type PlaygroundFile } from './pla
 import {
   compilerConfig as defaultCompilerConfig,
   examples,
-  runtimeConfig as defaultRuntimeConfig,
 } from './playground-examples';
 import './playground.css';
 
 type RuntimeWorkerResult = { kind: 'result'; id: number; html?: string; css?: string; error?: string; };
-type OutputPanel = 'runtimeCss' | 'buildJs' | 'buildCss' | 'trace';
+type OutputPanel = 'runtimeCss' | 'buildJs' | 'buildCss' | 'trace' | 'errors';
+type CodeOutputPanel = Exclude<OutputPanel, 'trace' | 'errors'>;
 type PreviewTab = 'preview' | 'config';
-type Mode = 'runtime' | 'build';
 type MonacoModule = typeof import('monaco-editor');
+type CssOptionsState = {
+  layers: string[];
+  layerNamespace: string;
+  classNamePrefix: string;
+  scopeTargetPrefix: string;
+  themeNamePrefix: string;
+  tokenVarPrefix: string;
+  localClassName: boolean;
+  debugClassName: boolean;
+  debugPropertyLength: number;
+  debugValueLength: number;
+  debugSelectorLength: number;
+  debugParentSelectorLength: number;
+  debugAtRuleLength: number;
+};
 type MonacoWorkerGlobal = typeof globalThis & {
   MonacoEnvironment?: { getWorker: (_id: string, label: string) => Worker; };
 };
@@ -38,15 +52,17 @@ const BASE_URL = `${basePath}/`;
 
 const outputTabs: Array<{ id: OutputPanel; label: string; }> = [
   { id: 'buildJs', label: 'JS Output' },
-  { id: 'buildCss', label: 'CSS Output' },
-  { id: 'runtimeCss', label: 'Runtime CSS' },
+  { id: 'buildCss', label: 'Prod CSS' },
+  { id: 'runtimeCss', label: 'Debug CSS' },
   { id: 'trace', label: 'Trace' },
+  { id: 'errors', label: 'Errors' },
 ];
 
 const readonlyEditorOptions = {
   automaticLayout: true,
   contextmenu: false,
   cursorStyle: 'line-thin',
+  fixedOverflowWidgets: true,
   folding: false,
   fontFamily: FONT_FAMILY,
   fontSize: 13,
@@ -79,14 +95,13 @@ export default function PlaygroundApp() {
   const [exampleId, setExampleId] = useState(firstExample.id);
   const [files, setFiles] = useState<PlaygroundFile[]>(firstExample.files);
   const [activeFile, setActiveFile] = useState(firstExample.files[0].name);
-  const [mode, setMode] = useState<Mode>('runtime');
   const [selectedOutput, setSelectedOutput] = useState<OutputPanel>('trace');
   const [previewTab, setPreviewTab] = useState<PreviewTab>('preview');
   const [previewWidth, setPreviewWidth] = useState(34);
   const [dockHeight, setDockHeight] = useState(260);
   const [isDockCollapsed, setDockCollapsed] = useState(false);
-  const [runtimeConfigText, setRuntimeConfigText] = useState(() => JSON.stringify(defaultRuntimeConfig, null, 2));
-  const [compilerConfigText, setCompilerConfigText] = useState(() => JSON.stringify(defaultCompilerConfig, null, 2));
+  const [isPreviewCollapsed, setPreviewCollapsed] = useState(false);
+  const [cssOptions, setCssOptions] = useState<CssOptionsState>(() => ({ ...defaultCompilerConfig.css }));
   const [runtimeCss, setRuntimeCss] = useState('/* Waiting for runtime output. */');
   const [buildJs, setBuildJs] = useState('// Waiting for build output.');
   const [buildCss, setBuildCss] = useState('/* Waiting for build output. */');
@@ -104,20 +119,17 @@ export default function PlaygroundApp() {
   const editorPaneRef = useRef<HTMLElement>(null);
   const monacoHostRef = useRef<HTMLDivElement>(null);
   const outputHostRef = useRef<HTMLDivElement>(null);
-  const runtimeConfigHostRef = useRef<HTMLDivElement>(null);
-  const compilerConfigHostRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const filesRef = useRef<PlaygroundFile[]>(files);
 
   // Monaco refs
   const monacoRef = useRef<MonacoModule | null>(null);
   const editorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
   const outputEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
-  const runtimeConfigEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
-  const compilerConfigEditorRef = useRef<MonacoEditor.IStandaloneCodeEditor | null>(null);
   const sourceDecorRef = useRef<MonacoEditor.IEditorDecorationsCollection | null>(null);
   const completionRef = useRef<IDisposable | null>(null);
+  const definitionRef = useRef<IDisposable | null>(null);
   const modelUpdateRef = useRef(false);
-  const configMountedRef = useRef(false);
   const runtimeWorker = useRef<Worker | null>(null);
   const runId = useRef(0);
 
@@ -130,6 +142,10 @@ export default function PlaygroundApp() {
 
   const isLoading = status.includes('Updating') || status === 'Ready';
   const isError = status.includes('error') || status.includes('Error');
+
+  useEffect(() => {
+    filesRef.current = files;
+  }, [files]);
 
   function switchExample(id: string) {
     const example = examples.find((e) => e.id === id);
@@ -150,7 +166,7 @@ export default function PlaygroundApp() {
   }
 
   const runRuntime = useCallback(
-    (config: Record<string, unknown>) => {
+    (config: CssOptionsState) => {
       const worker = runtimeWorker.current;
       if (!worker) return;
       const id = ++runId.current;
@@ -161,17 +177,13 @@ export default function PlaygroundApp() {
   );
 
   const runBuild = useCallback(
-    (config: Record<string, unknown>) => {
-      // Force debug class names for the playground build output
-      const forcedConfig = {
-        ...config,
-        css: { ...(config.css as Record<string, unknown>), localClassName: true, debugClassName: true },
-      };
+    (prodConfig: { css: Partial<CssOptionsState>; }, debugConfig: { css: Partial<CssOptionsState>; }) => {
       try {
-        const result = compilePlayground(files, forcedConfig);
-        setBuildJs(result.js || '// No JavaScript output.');
-        setBuildCss(prettifyCss(result.css || '/* No static CSS extracted. */'));
-        setTraces(result.traces);
+        const prodResult = compilePlayground(files, prodConfig);
+        const debugResult = compilePlayground(files, debugConfig);
+        setBuildJs(prodResult.js || '// No JavaScript output.');
+        setBuildCss(formatOutputCss(prodResult.css || '/* No static CSS extracted. */'));
+        setTraces(debugResult.traces);
         setDiagnostics('');
         setStatus('Build ready');
       } catch (error) {
@@ -179,31 +191,23 @@ export default function PlaygroundApp() {
         setBuildCss('/* Build failed. */');
         setStatus('Build error');
         setDiagnostics(error instanceof Error && error.stack ? error.stack : String(error));
+        setSelectedOutput('errors');
       }
     },
     [files],
   );
 
   const runPlayground = useCallback(() => {
-    let runtimeCfg: Record<string, unknown>;
-    let compilerCfg: Record<string, unknown>;
-    try {
-      runtimeCfg = JSON.parse(runtimeConfigText) as Record<string, unknown>;
-    } catch (e) {
-      setStatus('Config error');
-      setDiagnostics(`Runtime config: ${e}`);
-      return;
-    }
-    try {
-      compilerCfg = JSON.parse(compilerConfigText) as Record<string, unknown>;
-    } catch (e) {
-      setStatus('Config error');
-      setDiagnostics(`Compiler config: ${e}`);
-      return;
-    }
-    runRuntime(runtimeCfg);
-    runBuild(compilerCfg);
-  }, [runtimeConfigText, compilerConfigText, runRuntime, runBuild]);
+    runRuntime(cssOptions);
+    runBuild(
+      { css: getProdCssOptions(cssOptions) },
+      { css: getDebugCssOptions(cssOptions) },
+    );
+  }, [cssOptions, runRuntime, runBuild]);
+
+  function updateCssOption<K extends keyof CssOptionsState>(key: K, value: CssOptionsState[K]) {
+    setCssOptions((current) => ({ ...current, [key]: value }));
+  }
 
   useEffect(() => {
     runtimeWorker.current = new Worker(
@@ -217,12 +221,13 @@ export default function PlaygroundApp() {
       if (data.error) {
         setStatus('Runtime error');
         setDiagnostics(data.error);
+        setSelectedOutput('errors');
         setRuntimeCss('/* Runtime failed before CSS could be collected. */');
         return;
       }
       setDiagnostics('');
       setStatus('Runtime ready');
-      setRuntimeCss(prettifyCss(data.css || '/* No runtime rules collected. */'));
+      setRuntimeCss(formatDebugCss(data.css || '/* No runtime rules collected. */'));
       setPreviewDoc(createPreviewDoc(data.html ?? '', data.css ?? ''));
     });
     return () => {
@@ -237,17 +242,8 @@ export default function PlaygroundApp() {
     return () => window.clearTimeout(timer);
   }, [runPlayground]);
 
-  function selectMode(nextMode: Mode) {
-    setMode(nextMode);
-    if (nextMode === 'runtime' && (selectedOutput === 'buildJs' || selectedOutput === 'buildCss')) {
-      setSelectedOutput('runtimeCss');
-    } else if (nextMode === 'build' && selectedOutput === 'runtimeCss') {
-      setSelectedOutput('buildJs');
-    }
-  }
-
   function jumpToTrace(trace: CompileTrace) {
-    const fileName = trace.filePath.replace(/^\.?\//, '');
+    const fileName = resolvePlaygroundFileName(trace.filePath, files);
     setActiveTraceKey(getTraceKey(trace));
     setSourceFocus({ file: fileName, line: trace.line, column: trace.column });
     setActiveFile(fileName);
@@ -321,6 +317,17 @@ export default function PlaygroundApp() {
         'editorSuggestWidget.border': '#d8e2f3',
         'editorSuggestWidget.selectedBackground': '#f1edff',
         'editorSuggestWidget.highlightForeground': '#7c3aed',
+        'peekView.border': '#8b5cf6',
+        'peekViewEditor.background': '#ffffff',
+        'peekViewEditor.matchHighlightBackground': '#fff3bf',
+        'peekViewEditorGutter.background': '#ffffff',
+        'peekViewResult.background': '#f8fafc',
+        'peekViewResult.fileForeground': '#111827',
+        'peekViewResult.lineForeground': '#64748b',
+        'peekViewResult.matchHighlightBackground': '#fed7aa',
+        'peekViewTitle.background': '#ffffff',
+        'peekViewTitleDescription.foreground': '#64748b',
+        'peekViewTitleLabel.foreground': '#111827',
         'scrollbarSlider.background': '#cbd5e180',
         'scrollbarSlider.hoverBackground': '#aebbd280',
       },
@@ -331,7 +338,7 @@ export default function PlaygroundApp() {
       allowJs: true,
       checkJs: false,
       esModuleInterop: true,
-      jsx: monaco.typescript.JsxEmit.React,
+      jsx: monaco.typescript.JsxEmit.Preserve,
       module: monaco.typescript.ModuleKind.ESNext,
       moduleResolution: monaco.typescript.ModuleResolutionKind.NodeJs,
       noEmit: true,
@@ -371,16 +378,25 @@ export default function PlaygroundApp() {
       configureMonaco(monaco);
       completionRef.current?.dispose();
       completionRef.current = registerCompletions(monaco);
+      definitionRef.current?.dispose();
+      definitionRef.current = registerPlaygroundDefinitions(monaco, filesRef);
 
       const editor = monaco.editor.create(monacoHostRef.current, {
         automaticLayout: true,
         bracketPairColorization: { enabled: true },
         cursorSmoothCaretAnimation: 'on',
         fontFamily: FONT_FAMILY,
+        fixedOverflowWidgets: true,
         fontLigatures: false,
         fontSize: 14,
         formatOnPaste: true,
         formatOnType: true,
+        gotoLocation: {
+          multipleDeclarations: 'goto',
+          multipleDefinitions: 'goto',
+          multipleImplementations: 'goto',
+          multipleReferences: 'goto',
+        },
         lineHeight: 24,
         minimap: { enabled: false },
         occurrencesHighlight: 'off',
@@ -406,6 +422,50 @@ export default function PlaygroundApp() {
         setFiles((prev) => prev.map((f) => (f.name === fileName ? { ...f, code: model.getValue() } : f)));
       });
 
+      editor.onDidChangeModel(() => {
+        const model = editor.getModel();
+        if (!model) return;
+
+        const fileName = resolvePlaygroundFileName(
+          model.uri.path.replace(/^\/+/, ''),
+          filesRef.current,
+        );
+
+        if (filesRef.current.some((file) => file.name === fileName)) {
+          setActiveFile(fileName);
+        }
+      });
+
+      editor.onMouseDown((event) => {
+        const browserEvent = event.event.browserEvent as MouseEvent;
+        const position = event.target.position;
+        if (!position || (!browserEvent.metaKey && !browserEvent.ctrlKey)) return;
+
+        const model = editor.getModel();
+        if (!model) return;
+
+        const location = getPlaygroundDefinitionLocation(monaco, model, position, filesRef.current);
+        if (!location) return;
+
+        event.event.preventDefault();
+        event.event.stopPropagation();
+
+        const targetModel = monaco.editor.getModel(location.uri);
+        if (!targetModel) return;
+
+        const fileName = resolvePlaygroundFileName(location.uri.path.replace(/^\/+/, ''), filesRef.current);
+        setActiveFile(fileName);
+        editor.setModel(targetModel);
+        editor.setPosition({
+          column: location.range.startColumn,
+          lineNumber: location.range.startLineNumber,
+        });
+        editor.revealPositionInCenter({
+          column: location.range.startColumn,
+          lineNumber: location.range.startLineNumber,
+        }, monaco.editor.ScrollType.Smooth);
+      });
+
       const outputEditor = monaco.editor.create(outputHostRef.current, readonlyEditorOptions);
       outputEditorRef.current = outputEditor;
 
@@ -421,17 +481,14 @@ export default function PlaygroundApp() {
       disposed = true;
       completionRef.current?.dispose();
       completionRef.current = null;
+      definitionRef.current?.dispose();
+      definitionRef.current = null;
       sourceDecorRef.current?.clear();
       sourceDecorRef.current = null;
       editorRef.current?.dispose();
       editorRef.current = null;
       outputEditorRef.current?.dispose();
       outputEditorRef.current = null;
-      runtimeConfigEditorRef.current?.dispose();
-      runtimeConfigEditorRef.current = null;
-      compilerConfigEditorRef.current?.dispose();
-      compilerConfigEditorRef.current = null;
-      configMountedRef.current = false;
       monacoConfigured = false;
     };
   }, [configureMonaco]);
@@ -467,12 +524,12 @@ export default function PlaygroundApp() {
     const editor = outputEditorRef.current;
     if (!monaco || !editor || !CODE_OUTPUT_IDS.has(selectedOutput)) return;
 
-    const outputMap = {
+    const outputMap: Record<CodeOutputPanel, { code: string; language: string; }> = {
       runtimeCss: { code: runtimeCss, language: 'css' },
       buildJs: { code: buildJs, language: 'javascript' },
       buildCss: { code: buildCss, language: 'css' },
-    } as const;
-    const current = outputMap[selectedOutput as keyof typeof outputMap];
+    };
+    const current = outputMap[selectedOutput as CodeOutputPanel];
     if (!current) return;
 
     const uri = monaco.Uri.parse(`inmemory://output/${selectedOutput}`);
@@ -486,75 +543,12 @@ export default function PlaygroundApp() {
     if (editor.getModel() !== model) editor.setModel(model);
   }, [selectedOutput, runtimeCss, buildJs, buildCss]);
 
-  // Lazy-mount config editors (now in preview pane, not dock)
-  useEffect(() => {
-    if (previewTab !== 'config') return;
-    if (configMountedRef.current) {
-      window.setTimeout(() => {
-        runtimeConfigEditorRef.current?.layout();
-        compilerConfigEditorRef.current?.layout();
-      }, 20);
-      return;
-    }
-    const monaco = monacoRef.current;
-    if (!monaco || !runtimeConfigHostRef.current || !compilerConfigHostRef.current) return;
-    configMountedRef.current = true;
-
-    const configOpts = {
-      automaticLayout: true,
-      fontFamily: FONT_FAMILY,
-      fontSize: 13,
-      language: 'json',
-      lineHeight: 22,
-      lineNumbers: 'off',
-      minimap: { enabled: false },
-      occurrencesHighlight: 'off',
-      overviewRulerBorder: false,
-      overviewRulerLanes: 0,
-      padding: { bottom: 14, top: 14 },
-      readOnlyMessage: { value: '' },
-      scrollBeyondLastLine: false,
-      scrollbar: {
-        useShadows: false,
-        vertical: 'visible',
-        horizontal: 'visible',
-        verticalScrollbarSize: 8,
-        horizontalScrollbarSize: 8,
-      },
-      selectionHighlight: false,
-      smoothScrolling: true,
-      tabSize: 2,
-      theme: THEME_NAME,
-    } as Parameters<MonacoModule['editor']['create']>[1];
-
-    const runtimeEditor = monaco.editor.create(runtimeConfigHostRef.current, configOpts);
-    runtimeEditor.setValue(runtimeConfigText);
-    runtimeEditor.onDidChangeModelContent(() => setRuntimeConfigText(runtimeEditor.getValue()));
-    runtimeConfigEditorRef.current = runtimeEditor;
-
-    const compilerEditor = monaco.editor.create(compilerConfigHostRef.current, configOpts);
-    compilerEditor.setValue(compilerConfigText);
-    compilerEditor.onDidChangeModelContent(() => setCompilerConfigText(compilerEditor.getValue()));
-    compilerConfigEditorRef.current = compilerEditor;
-  }, [previewTab, runtimeConfigText, compilerConfigText]);
-
   useEffect(() => {
     if (isDockCollapsed) return;
     window.setTimeout(() => {
       outputEditorRef.current?.layout();
     }, 20);
   }, [isDockCollapsed]);
-
-  useEffect(() => {
-    if (previewTab !== 'config') return;
-    window.setTimeout(() => {
-      if (mode === 'runtime') {
-        runtimeConfigEditorRef.current?.layout();
-      } else {
-        compilerConfigEditorRef.current?.layout();
-      }
-    }, 20);
-  }, [previewTab, mode]);
 
   useEffect(() => {
     if (!sourceFocus || sourceFocus.file !== activeFile) return;
@@ -579,6 +573,7 @@ export default function PlaygroundApp() {
 
   useEffect(() => () => {
     completionRef.current?.dispose();
+    definitionRef.current?.dispose();
   }, []);
 
   const isCodeOutput = CODE_OUTPUT_IDS.has(selectedOutput);
@@ -625,7 +620,7 @@ export default function PlaygroundApp() {
 
       {/* ── Main workspace ───────────────────────────────────── */}
       <div
-        className='pg-workspace'
+        className={`pg-workspace${isPreviewCollapsed ? ' is-preview-collapsed' : ''}`}
         ref={workspaceRef}
         style={{ '--pg-preview-width': `${previewWidth}%` } as React.CSSProperties}
       >
@@ -690,18 +685,14 @@ export default function PlaygroundApp() {
                 <button
                   key={tab.id}
                   type='button'
+                  className={tab.id === 'errors' && diagnostics ? 'has-error' : undefined}
                   aria-selected={selectedOutput === tab.id}
                   onClick={() => setSelectedOutput(tab.id)}
                 >
                   {tab.label}
+                  {tab.id === 'errors' && diagnostics ? <span className='pg-tab-dot' aria-hidden='true' /> : null}
                 </button>
               ))}
-              <div className='pg-mode-toggle' role='group' aria-label='Render mode'>
-                <button type='button' aria-pressed={mode === 'runtime'} onClick={() => selectMode('runtime')}>
-                  Runtime
-                </button>
-                <button type='button' aria-pressed={mode === 'build'} onClick={() => selectMode('build')}>Build</button>
-              </div>
               <button
                 type='button'
                 className='pg-collapse-btn'
@@ -721,7 +712,7 @@ export default function PlaygroundApp() {
                 {traces.length === 0
                   ? <p className='pg-trace-empty'>No source trace metadata was emitted.</p>
                   : traces.map((trace) => {
-                    const fileName = trace.filePath.replace(/^\.?\//, '');
+                    const fileName = resolvePlaygroundFileName(trace.filePath, files);
                     return (
                       <button
                         key={getTraceKey(trace)}
@@ -740,6 +731,12 @@ export default function PlaygroundApp() {
                     );
                   })}
               </div>
+
+              <div className={`pg-errors-overlay${selectedOutput === 'errors' ? ' is-active' : ''}`}>
+                {diagnostics
+                  ? <pre>{diagnostics}</pre>
+                  : <p className='pg-trace-empty'>No build or runtime errors.</p>}
+              </div>
             </div>
           </section>
         </section>
@@ -748,12 +745,29 @@ export default function PlaygroundApp() {
         <button
           type='button'
           className='pg-workspace-resizer'
+          aria-hidden={isPreviewCollapsed}
           aria-label='Resize preview panel'
+          disabled={isPreviewCollapsed}
           onPointerDown={startWorkspaceResize}
         />
 
         {/* ── Right: preview pane ─────────────────────────────── */}
-        <section className='pg-preview-pane' aria-label='Preview'>
+        <section className={`pg-preview-pane${isPreviewCollapsed ? ' is-collapsed' : ''}`} aria-label='Preview'>
+          {isPreviewCollapsed
+            ? (
+              <button
+                type='button'
+                className='pg-preview-restore'
+                aria-label='Show preview panel'
+                onClick={() => setPreviewCollapsed(false)}
+              >
+                <span className='pg-side-chevron is-left' aria-hidden='true' />
+                <span>Preview</span>
+              </button>
+            )
+            : null}
+          {!isPreviewCollapsed && (
+            <>
           <div className='pg-pane-head'>
             <div className='pg-pane-tabs'>
               <button
@@ -771,22 +785,23 @@ export default function PlaygroundApp() {
                 Config
               </button>
             </div>
-            {previewTab === 'config'
-              ? (
-                <div className='pg-pane-mode-toggle' role='group'>
-                  <button type='button' aria-pressed={mode === 'runtime'} onClick={() => selectMode('runtime')}>
-                    Runtime
-                  </button>
-                  <button type='button' aria-pressed={mode === 'build'} onClick={() => selectMode('build')}>
-                    Build
-                  </button>
-                </div>
-              )
-              : (
+            <div className='pg-pane-actions'>
+              {previewTab === 'preview'
+                ? (
                 <span className={`pg-pane-status${isError ? ' is-error' : isLoading ? ' is-loading' : ''}`}>
                   {isError ? (diagnostics ? '⚠ Error' : 'Error') : isLoading ? 'Loading…' : ''}
                 </span>
-              )}
+                  )
+                : null}
+              <button
+                type='button'
+                className='pg-pane-collapse-btn'
+                aria-label='Hide preview panel'
+                onClick={() => setPreviewCollapsed(true)}
+              >
+                <span className='pg-side-chevron is-right' aria-hidden='true' />
+              </button>
+            </div>
           </div>
 
           <div className='pg-pane-content'>
@@ -795,30 +810,79 @@ export default function PlaygroundApp() {
               <iframe title='Fluentic Style playground preview' sandbox='' srcDoc={previewDoc} />
             </div>
 
-            {/* Config editors (in preview pane) */}
+            {/* Config controls */}
             <div className={`pg-config-overlay${previewTab === 'config' ? ' is-active' : ''}`}>
               <div className='pg-config-grid'>
-                <div className={`pg-config-item${mode === 'runtime' ? ' is-active' : ''}`} aria-hidden={mode !== 'runtime'}>
+                <div className='pg-config-item is-active'>
                   <div className='pg-config-head'>
-                    <strong>Runtime</strong>
-                    <small>configureRuntime()</small>
+                    <strong>CSS output</strong>
+                    <small>Production CSS uses stable names. Debug CSS adds readable class-name hints for inspection.</small>
                   </div>
-                  <div ref={runtimeConfigHostRef} className='pg-config-editor-host' />
-                </div>
-                <div className={`pg-config-item${mode === 'build' ? ' is-active' : ''}`} aria-hidden={mode !== 'build'}>
-                  <div className='pg-config-head'>
-                    <strong>Build</strong>
-                    <small>compiler options</small>
+                  <div className='pg-config-controls'>
+                    <label className='pg-config-field'>
+                      <span>
+                        <strong>Layer namespace</strong>
+                        <small>Layer name used for emitted rules.</small>
+                      </span>
+                      <input
+                        type='text'
+                        value={cssOptions.layerNamespace}
+                        onChange={(event) => updateCssOption('layerNamespace', event.currentTarget.value)}
+                      />
+                    </label>
+                    <label className='pg-config-field'>
+                      <span>
+                        <strong>Class prefix</strong>
+                        <small>Prefix applied to generated atomic class names.</small>
+                      </span>
+                      <input
+                        type='text'
+                        value={cssOptions.classNamePrefix}
+                        onChange={(event) => updateCssOption('classNamePrefix', event.currentTarget.value)}
+                      />
+                    </label>
+                    <label className='pg-config-field'>
+                      <span>
+                        <strong>Scope target prefix</strong>
+                        <small>Prefix for generated scope target classes.</small>
+                      </span>
+                      <input
+                        type='text'
+                        value={cssOptions.scopeTargetPrefix}
+                        onChange={(event) => updateCssOption('scopeTargetPrefix', event.currentTarget.value)}
+                      />
+                    </label>
+                    <label className='pg-config-field'>
+                      <span>
+                        <strong>Theme prefix</strong>
+                        <small>Prefix for generated theme class names.</small>
+                      </span>
+                      <input
+                        type='text'
+                        value={cssOptions.themeNamePrefix}
+                        onChange={(event) => updateCssOption('themeNamePrefix', event.currentTarget.value)}
+                      />
+                    </label>
+                    <label className='pg-config-field'>
+                      <span>
+                        <strong>Token prefix</strong>
+                        <small>Prefix for generated CSS variable names.</small>
+                      </span>
+                      <input
+                        type='text'
+                        value={cssOptions.tokenVarPrefix}
+                        onChange={(event) => updateCssOption('tokenVarPrefix', event.currentTarget.value)}
+                      />
+                    </label>
                   </div>
-                  <div ref={compilerConfigHostRef} className='pg-config-editor-host' />
                 </div>
               </div>
             </div>
           </div>
+            </>
+          )}
         </section>
       </div>
-
-      {diagnostics && <div className='pg-diagnostics'>{diagnostics}</div>}
     </div>
   );
 }
@@ -865,6 +929,40 @@ function getLanguage(fileName: string) {
   if (fileName.endsWith('.css')) return 'css';
   if (fileName.endsWith('.js') || fileName.endsWith('.jsx')) return 'javascript';
   return 'typescript';
+}
+
+function getProdCssOptions(options: CssOptionsState): Partial<CssOptionsState> {
+  return {
+    layers: options.layers,
+    layerNamespace: options.layerNamespace,
+    classNamePrefix: options.classNamePrefix,
+    scopeTargetPrefix: options.scopeTargetPrefix,
+    themeNamePrefix: options.themeNamePrefix,
+    tokenVarPrefix: options.tokenVarPrefix,
+  };
+}
+
+function getDebugCssOptions(options: CssOptionsState): Partial<CssOptionsState> {
+  return {
+    ...options,
+    debugClassName: true,
+    localClassName: true,
+  };
+}
+
+function resolvePlaygroundFileName(filePath: string, files: PlaygroundFile[]) {
+  const normalized = filePath.replace(/^\.?\//, '').replace(/\\/g, '/');
+  const exact = files.find((file) => file.name === normalized);
+  if (exact) return exact.name;
+
+  const withoutExtension = normalized.replace(/\.[^.]+$/, '');
+  const byStem = files.find((file) => file.name.replace(/\.[^.]+$/, '') === withoutExtension);
+  if (byStem) return byStem.name;
+
+  const bySuffix = files.find((file) => normalized.endsWith(file.name));
+  if (bySuffix) return bySuffix.name;
+
+  return normalized;
 }
 
 function getTraceKey(trace: CompileTrace) {
@@ -917,6 +1015,54 @@ function prettifyCss(raw: string): string {
   return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
+function formatOutputCss(raw: string): string {
+  return prettifyCss(stripLayerOrderPrelude(raw));
+}
+
+function formatDebugCss(raw: string): string {
+  const css = stripLayerOrderPrelude(raw);
+  if (!css.trim() || css.startsWith('//') || css.startsWith('/*')) return css;
+
+  return css
+    .split('\n')
+    .map((line) => formatDebugCssLine(line.trim()))
+    .filter(Boolean)
+    .join('\n\n');
+}
+
+function formatDebugCssLine(line: string): string {
+  const layerMatch = line.match(/^@layer\s+([^{}]+)\s*\{\s*([^{}]+)\s*\{\s*([^{}]*)\s*\}\s*\}$/);
+  if (layerMatch) {
+    return `@layer ${layerMatch[1].trim()} {\n  ${formatInlineRule(layerMatch[2], layerMatch[3])}\n}`;
+  }
+
+  const ruleMatch = line.match(/^([^{}]+)\s*\{\s*([^{}]*)\s*\}$/);
+  if (ruleMatch) return formatInlineRule(ruleMatch[1], ruleMatch[2]);
+
+  return line;
+}
+
+function formatInlineRule(selector: string, body: string): string {
+  const decls = body.split(';').map(formatInlineDeclaration).filter(Boolean);
+  const formattedBody = decls.length ? ` ${decls.join('; ')}; ` : ' ';
+  return `${selector.trim()} {${formattedBody}}`;
+}
+
+function formatInlineDeclaration(decl: string): string {
+  const trimmed = decl.trim();
+  const colon = trimmed.indexOf(':');
+  if (colon < 0) return trimmed;
+  return `${trimmed.slice(0, colon).trim()}: ${trimmed.slice(colon + 1).trim()}`;
+}
+
+function stripLayerOrderPrelude(raw: string): string {
+  return raw
+    .split('\n')
+    .filter((line) => !/^@layer\s+[^{}]+;\s*$/.test(line.trim()))
+    .join('\n')
+    .trim();
+}
+
 function createPreviewDoc(html: string, css: string) {
   return `<!doctype html>
 <html>
@@ -963,11 +1109,11 @@ function registerCompletions(monaco: MonacoModule) {
             range,
           },
           {
-            label: 'className(css.root)',
+            label: 'combineStyle',
             kind: monaco.languages.CompletionItemKind.Function,
-            insertText: "getClassName(css.${1:root}).className ?? ''",
+            insertText: "combineStyle(${1:styles}, ${2:theme}(${1:styles}.root))",
             insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
-            detail: 'Get a class name string from a CssProp',
+            detail: 'Resolve slots with a targeted scope',
             range,
           },
         ],
@@ -976,11 +1122,174 @@ function registerCompletions(monaco: MonacoModule) {
   });
 }
 
+function registerPlaygroundDefinitions(
+  monaco: MonacoModule,
+  filesRef: React.RefObject<PlaygroundFile[]>,
+) {
+  return monaco.languages.registerDefinitionProvider('typescript', {
+    provideDefinition(model, position) {
+      return getPlaygroundDefinitionLocation(monaco, model, position, filesRef.current ?? []);
+    },
+  });
+}
+
+function getPlaygroundDefinitionLocation(
+  monaco: MonacoModule,
+  model: MonacoEditor.ITextModel,
+  position: { lineNumber: number; column: number; },
+  files: PlaygroundFile[],
+) {
+  const word = model.getWordAtPosition(position);
+  if (!word) return null;
+
+  const fileName = resolvePlaygroundFileName(model.uri.path.replace(/^\/+/, ''), files);
+  const code = model.getValue();
+  const propertyTarget = getPropertyDefinitionTarget(code, position, word.startColumn, word.word);
+  const combinedTarget = propertyTarget
+    ? getCombinedStyleDefinitionTarget(propertyTarget.qualifier, propertyTarget.property, code)
+    : null;
+  if (combinedTarget) {
+    const importTarget = getImportedDefinitionTarget(combinedTarget.qualifier, code, fileName, files);
+    const targetModel = importTarget ? getPlaygroundModel(monaco, importTarget.file) : model;
+    const range = targetModel ? findDefinitionRange(monaco, targetModel, combinedTarget.property) : null;
+    if (range && targetModel) return { range, uri: targetModel.uri };
+  }
+
+  const importTarget = getImportedDefinitionTarget(
+    propertyTarget?.qualifier ?? word.word,
+    code,
+    fileName,
+    files,
+  );
+
+  if (importTarget) {
+    const targetModel = getPlaygroundModel(monaco, importTarget.file);
+    const targetWord = propertyTarget?.property ?? importTarget.exportName;
+    const range = targetModel ? findDefinitionRange(monaco, targetModel, targetWord) : null;
+    if (range && targetModel) return { range, uri: targetModel.uri };
+  }
+
+  const localRange = findDefinitionRange(monaco, model, word.word);
+  return localRange ? { range: localRange, uri: model.uri } : null;
+}
+
+function getCombinedStyleDefinitionTarget(
+  localName: string,
+  property: string,
+  code: string,
+) {
+  const escapedLocal = escapeRegExp(localName);
+  const match = new RegExp(
+    `(?:const|let|var)\\s+${escapedLocal}\\s*=\\s*combineStyle\\s*\\(\\s*([A-Za-z_$][\\w$]*)`,
+  ).exec(code);
+
+  return match ? { property, qualifier: match[1] } : null;
+}
+
+function getImportedDefinitionTarget(
+  localName: string,
+  code: string,
+  fromFile: string,
+  files: PlaygroundFile[],
+) {
+  const imports = code.matchAll(/import\s*\{([^}]+)\}\s*from\s*['"]([^'"]+)['"]/g);
+
+  for (const match of imports) {
+    const source = match[2];
+    if (!source.startsWith('.')) continue;
+
+    for (const specifier of match[1].split(',')) {
+      const parts = specifier.trim().split(/\s+as\s+/);
+      const exportName = parts[0]?.trim();
+      const alias = (parts[1] ?? parts[0])?.trim();
+      if (!exportName || alias !== localName) continue;
+
+      const file = resolveRelativePlaygroundImport(source, fromFile, files);
+      if (file) return { exportName, file };
+    }
+  }
+
+  return null;
+}
+
+function getPropertyDefinitionTarget(
+  code: string,
+  position: { lineNumber: number; column: number; },
+  wordStartColumn: number,
+  property: string,
+) {
+  const line = code.split(/\r?\n/)[position.lineNumber - 1] ?? '';
+  const beforeWord = line.slice(0, wordStartColumn - 1);
+  const match = beforeWord.match(/([A-Za-z_$][\w$]*)\.\s*$/);
+  return match ? { property, qualifier: match[1] } : null;
+}
+
+function resolveRelativePlaygroundImport(source: string, fromFile: string, files: PlaygroundFile[]) {
+  const fromDir = fromFile.includes('/') ? fromFile.slice(0, fromFile.lastIndexOf('/') + 1) : '';
+  const normalized = `${fromDir}${source}`.replace(/^\.\//, '').replace(/\/\.\//g, '/');
+  const candidates = [
+    normalized,
+    `${normalized}.ts`,
+    `${normalized}.tsx`,
+    `${normalized}.js`,
+    `${normalized}.jsx`,
+    `${normalized}/index.ts`,
+    `${normalized}/index.tsx`,
+  ];
+
+  return candidates.find((candidate) => files.some((file) => file.name === candidate)) ?? null;
+}
+
+function getPlaygroundModel(monaco: MonacoModule, fileName: string) {
+  return monaco.editor.getModel(monaco.Uri.parse(`file:///${fileName}`));
+}
+
+function findDefinitionRange(
+  monaco: MonacoModule,
+  model: MonacoEditor.ITextModel,
+  name: string,
+) {
+  const code = model.getValue();
+  const escaped = escapeRegExp(name);
+  const patterns = [
+    new RegExp(`(^|\\n)\\s*export\\s+(?:const|let|var|function|class|interface|type)\\s+${escaped}\\b`),
+    new RegExp(`(^|\\n)\\s*(?:const|let|var|function|class|interface|type)\\s+${escaped}\\b`),
+    new RegExp(`(^|\\n)\\s*${escaped}\\s*:`),
+  ];
+
+  for (const pattern of patterns) {
+    const match = pattern.exec(code);
+    if (!match) continue;
+
+    const index = match.index + match[0].lastIndexOf(name);
+    const start = model.getPositionAt(index);
+    const end = model.getPositionAt(index + name.length);
+    return new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column);
+  }
+
+  return null;
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function fluenticDts() {
   return `declare module '@fluentic/style' {
   export type CssValue = string | number;
-  export type StyleObject = Record<string, CssValue | StyleObject | undefined>;
-  export type CssProp = unknown;
+  export type StyleObject = Record<string, CssValue | StyleObject | readonly unknown[] | undefined>;
+  export type StyleProp = {
+    readonly __fluenticStyleProp?: unique symbol;
+  };
+  export type StyleTheme = Scope | StyleTheme[];
+  export type TokenTree<T> = {
+    [K in keyof T]: T[K] extends object ? TokenTree<T[K]> : StyleToken<T[K]>;
+  };
+  export type CombinedStyle<T> = {
+    [K in keyof T]: T[K] extends Slot | Style ? StyleProp
+      : T[K] extends object ? CombinedStyle<T[K]>
+      : T[K];
+  };
 
   export type Slot = {
     (overrides?: StyleObject): Slot;
@@ -990,29 +1299,51 @@ function fluenticDts() {
     focusVisible(overrides: StyleObject): Slot;
     media(query: string, overrides: StyleObject): Slot;
   };
+  export type Style = Slot;
+
+  export type Scope = {
+    (target?: Slot | StyleProp): ScopeTarget;
+    hover(styles: readonly ScopeItem[]): Scope;
+    active(styles: readonly ScopeItem[]): Scope;
+    media(query: string, styles: readonly ScopeItem[]): Scope;
+  };
+  export type ScopeTarget = {
+    readonly __fluenticScopeTarget?: unique symbol;
+  };
+  export type ScopeItem = Slot | ScopeTarget | StyleProp | false | null | undefined;
 
   export type StyleToken<T = unknown> = { value: T; (value: T): unknown };
 
   export const style: {
     slot(styles: StyleObject): Slot;
-    scope(styles: unknown[]): { media(query: string, styles: unknown[]): unknown };
+    scope(styles?: unknown[]): Scope;
   };
 
   /** Create a reactive design token. */
   export function createToken<T>(value: T): StyleToken<T>;
   /** Create multiple tokens from an object. */
-  export function createTokens<T extends object>(values: T): { [K in keyof T]: StyleToken<T[K]> };
+  export function createTokens<T extends object>(values: T): TokenTree<T>;
   /** Create a theme scope that overrides token values. */
-  export function createTheme(overrides: unknown[], debugId?: string): unknown;
+  export function createTheme(overrides: readonly unknown[], debugId?: string): Scope;
 
-  /**
-   * Resolve a slots object against active scopes.
-   * In React, use combineStyle() instead. combineStyle() is the non-hook equivalent.
-   */
-  export function combineStyle<T extends object>(styles: T, ...scopes: unknown[]): { [K in keyof T]: CssProp };
+  export function combineStyle<T extends object>(styles: T, ...scopes: readonly ScopeItem[]): CombinedStyle<T>;
+  export function bindScope(target: Slot | StyleProp, ...scopes: readonly ScopeItem[]): ScopeTarget;
 
-  /** Convert a CssProp to a class name string for HTML rendering. */
-  export function getClassName(css: CssProp, props?: { className?: string }): { className?: string };
+  export function getClassName(styleProp: StyleProp, props?: { className?: string }): { className?: string };
 }
-declare module '@fluentic/style/server' { export * from '@fluentic/style'; }`;
+declare module '@fluentic/style/server' { export * from '@fluentic/style'; }
+declare module 'react' {
+  export type ReactNode = unknown;
+}
+declare namespace JSX {
+  type Element = unknown;
+  interface IntrinsicElements {
+    [name: string]: {
+      css?: import('@fluentic/style').StyleProp;
+      className?: string;
+      children?: unknown;
+      [prop: string]: unknown;
+    };
+  }
+}`;
 }

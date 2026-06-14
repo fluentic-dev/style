@@ -2,6 +2,7 @@
   "title": "Core Concepts",
   "pages": [
     "concepts",
+    "typescript-first",
     "style-builder",
     "slots",
     "scopes",
