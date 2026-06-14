@@ -270,7 +270,7 @@
 }
 
 .pg-editor-pane.is-dock-collapsed {
-  grid-template-rows: 48px 36px minmax(0, 1fr) 0 56px;
+  grid-template-rows: 48px 36px minmax(0, 1fr) 0 50px;
 }
 
 .pg-preview-pane {
@@ -643,14 +643,18 @@
 .pg-dock {
   background: var(--pg-surface);
   border-top: 1px solid var(--pg-border);
-  display: grid;
-  grid-template-rows: 52px minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   overflow: hidden;
 }
 
 .pg-editor-pane.is-dock-collapsed .pg-dock {
-  grid-template-rows: 56px 0;
+  min-height: 50px;
+}
+
+.pg-editor-pane.is-dock-collapsed .pg-dock-tabs {
+  padding-top: 5px;
 }
 
 .pg-dock-tabs {
@@ -658,11 +662,12 @@
   background: var(--pg-surface);
   border-bottom: 1px solid var(--pg-border);
   display: flex;
-  min-height: 52px;
+  height: 46px;
+  min-height: 46px;
   overflow-x: auto;
   overflow-y: hidden;
   padding-left: 0.18rem;
-  padding-right: 0;
+  padding-right: 0.64rem;
   scrollbar-width: none;
 }
 
@@ -670,37 +675,37 @@
   display: none;
 }
 
-.pg-dock-tabs>button {
+.pg-dock-tabs>button:not(.pg-collapse-btn) {
   align-items: center;
   background: transparent;
   border: 0;
-  border-bottom: 2px solid transparent;
   color: var(--pg-muted);
   cursor: pointer;
-  display: inline-flex;
+  display: flex;
   flex: 0 0 auto;
   font: inherit;
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-weight: 600;
+  height: 46px;
   letter-spacing: 0;
-  min-height: 52px;
-  padding: 0 0.9rem;
-  transition: color 100ms;
+  min-height: 46px;
+  padding: 0 0.82rem;
+  transition: background 100ms, box-shadow 100ms, color 100ms;
   white-space: nowrap;
 }
 
-.pg-dock-tabs>button:hover {
+.pg-dock-tabs>button:not(.pg-collapse-btn):hover {
   background: #faf8ff;
   color: var(--pg-ink);
 }
 
-.pg-dock-tabs>button[aria-selected='true'] {
-  border-bottom-color: var(--pg-accent);
+.pg-dock-tabs>button:not(.pg-collapse-btn)[aria-selected='true'] {
+  box-shadow: inset 0 -2px 0 var(--pg-accent);
   color: var(--pg-ink);
   font-weight: 700;
 }
 
-.pg-dock-tabs>button.has-error {
+.pg-dock-tabs>button:not(.pg-collapse-btn).has-error {
   color: #b91c1c;
 }
 
@@ -716,34 +721,36 @@
 /* Collapse button */
 .pg-collapse-btn {
   align-items: center;
-  background: #f8fafc;
-  border: 1px solid var(--pg-border);
+  appearance: none;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #d8e2f3;
   border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(17, 24, 39, 0.05);
   color: var(--pg-muted);
   cursor: pointer;
-  display: inline-flex;
+  display: flex;
+  align-self: center;
   flex: 0 0 auto;
   height: 34px;
   justify-content: center;
-  margin: 0 0 0 auto;
-  min-width: 40px;
-  padding: 0 0.76rem;
-  position: sticky;
-  right: 0;
-  transition: color 100ms, background 100ms, border-color 100ms;
-  z-index: 2;
+  margin: 0 0.28rem 0 auto;
+  padding: 0;
+  transition: color 100ms, background 100ms, border-color 100ms, box-shadow 100ms;
+  width: 34px;
 }
 
 .pg-collapse-btn:hover {
   background: var(--pg-accent-soft);
   border-color: #c4b5fd;
+  box-shadow: 0 6px 16px rgba(124, 58, 237, 0.1);
   color: var(--pg-accent-strong);
 }
 
 .pg-dock-tabs>.pg-collapse-btn {
-  border-bottom: 1px solid var(--pg-border);
+  border: 1px solid #d8e2f3;
+  height: 34px;
   min-height: 34px;
-  padding: 0 0.76rem;
+  padding: 0;
 }
 
 /* ─── Chevron ──────────────────────────────────────────────────────────────── */
@@ -753,19 +760,21 @@
   border-right: 2px solid currentColor;
   display: inline-block;
   flex: 0 0 auto;
-  height: 6px;
+  height: 8px;
+  width: 8px;
   transform: rotate(45deg);
   transition: transform 150ms ease;
-  width: 6px;
 }
 
 .pg-chevron.is-up {
   transform: rotate(-135deg);
+  margin-top: 2px;
 }
 
 /* ─── Dock body ───────────────────────────────────────────────────────────── */
 
 .pg-dock-body {
+  flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
   position: relative;
@@ -834,6 +843,10 @@
   padding: 0;
 }
 
+.pg-trace-overlay.is-empty {
+  padding: 0;
+}
+
 .pg-errors-overlay pre {
   font-family: var(--pg-code-font);
   font-size: 0.78rem;
@@ -843,6 +856,15 @@
   overflow: auto;
   padding: 0.9rem 1rem;
   white-space: pre-wrap;
+}
+
+.pg-errors-empty {
+  color: #687386;
+  font-family: var(--pg-ui-font);
+  font-size: 0.85rem;
+  font-weight: 400;
+  margin: 0;
+  padding: 0.9rem 1rem;
 }
 
 /* ─── Trace items ─────────────────────────────────────────────────────────── */
@@ -948,10 +970,13 @@
 }
 
 .pg-trace-empty {
-  color: var(--pg-muted);
+  color: #687386;
   font-family: var(--pg-ui-font);
+  font-size: 0.85rem;
+  font-weight: 400;
+  line-height: 1.5;
   margin: 0;
-  padding: 1rem;
+  padding: 0.9rem 1rem;
 }
 
 /* ─── Preview pane ────────────────────────────────────────────────────────── */
@@ -1100,6 +1125,7 @@
 
 .pg-side-chevron.is-right {
   transform: rotate(-45deg);
+  margin-right: 2px;
 }
 
 .pg-side-chevron.is-left {
@@ -1343,7 +1369,7 @@
   }
 
   .pg-editor-pane.is-dock-collapsed {
-    grid-template-rows: auto 36px 400px 0 56px;
+    grid-template-rows: auto 36px 400px 0 50px;
   }
 
   .pg-preview-pane {

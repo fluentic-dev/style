@@ -94,8 +94,8 @@
 .home-hero {
   align-items: center;
   display: grid;
-  gap: 5rem;
-  grid-template-columns: minmax(0, 0.82fr) minmax(420px, 1fr);
+  gap: 3rem;
+  grid-template-columns: minmax(0, 1.05fr) minmax(420px, 1fr);
   margin: 0 auto;
   max-width: 1180px;
   min-height: auto;
@@ -104,7 +104,7 @@
 }
 
 .home-copy {
-  max-width: 560px;
+  max-width: 600px;
 }
 
 .home-kicker {
@@ -133,6 +133,7 @@
   letter-spacing: 0;
   line-height: 1.28;
   margin: 0;
+  white-space: nowrap;
 }
 
 .home-lede {
@@ -528,6 +529,12 @@
   color: #7c3aed;
 }
 
+@media (max-width: 1100px) {
+  .home-copy h1 {
+    white-space: normal;
+  }
+}
+
 @media (max-width: 880px) {
 
   .home-hero,
@@ -543,6 +550,7 @@
 
   .home-copy h1 {
     font-size: calc(1.45rem + 3px);
+    white-space: normal;
   }
 
   .home-code {

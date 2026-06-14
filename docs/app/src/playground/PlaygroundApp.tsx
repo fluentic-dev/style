@@ -191,7 +191,6 @@ export default function PlaygroundApp() {
         setBuildCss('/* Build failed. */');
         setStatus('Build error');
         setDiagnostics(error instanceof Error && error.stack ? error.stack : String(error));
-        setSelectedOutput('errors');
       }
     },
     [files],
@@ -221,7 +220,6 @@ export default function PlaygroundApp() {
       if (data.error) {
         setStatus('Runtime error');
         setDiagnostics(data.error);
-        setSelectedOutput('errors');
         setRuntimeCss('/* Runtime failed before CSS could be collected. */');
         return;
       }
@@ -687,7 +685,10 @@ export default function PlaygroundApp() {
                   type='button'
                   className={tab.id === 'errors' && diagnostics ? 'has-error' : undefined}
                   aria-selected={selectedOutput === tab.id}
-                  onClick={() => setSelectedOutput(tab.id)}
+                  onClick={() => {
+                    setSelectedOutput(tab.id);
+                    setDockCollapsed(false);
+                  }}
                 >
                   {tab.label}
                   {tab.id === 'errors' && diagnostics ? <span className='pg-tab-dot' aria-hidden='true' /> : null}
@@ -708,7 +709,7 @@ export default function PlaygroundApp() {
               <div ref={outputHostRef} className={`pg-output-host${isCodeOutput ? '' : ' is-hidden'}`} />
 
               {/* Trace overlay */}
-              <div className={`pg-trace-overlay${selectedOutput === 'trace' ? ' is-active' : ''}`}>
+              <div className={`pg-trace-overlay${selectedOutput === 'trace' ? ' is-active' : ''}${traces.length === 0 ? ' is-empty' : ''}`}>
                 {traces.length === 0
                   ? <p className='pg-trace-empty'>No source trace metadata was emitted.</p>
                   : traces.map((trace) => {
@@ -735,7 +736,7 @@ export default function PlaygroundApp() {
               <div className={`pg-errors-overlay${selectedOutput === 'errors' ? ' is-active' : ''}`}>
                 {diagnostics
                   ? <pre>{diagnostics}</pre>
-                  : <p className='pg-trace-empty'>No build or runtime errors.</p>}
+                  : <p className='pg-errors-empty'>Build and runtime diagnostics will appear here.</p>}
               </div>
             </div>
           </section>
@@ -814,10 +815,6 @@ export default function PlaygroundApp() {
             <div className={`pg-config-overlay${previewTab === 'config' ? ' is-active' : ''}`}>
               <div className='pg-config-grid'>
                 <div className='pg-config-item is-active'>
-                  <div className='pg-config-head'>
-                    <strong>CSS output</strong>
-                    <small>Production CSS uses stable names. Debug CSS adds readable class-name hints for inspection.</small>
-                  </div>
                   <div className='pg-config-controls'>
                     <label className='pg-config-field'>
                       <span>
