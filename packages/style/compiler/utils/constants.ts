@@ -21,6 +21,7 @@ export const FN_CREATE_EXTRACTED_SLOT = 'createExtractedSlot';
 export const FN_CREATE_EXTRACTED_SCOPE = 'createExtractedScope';
 export const FN_CREATE_EXTRACTED_TOKEN = 'createExtractedToken';
 export const FN_CREATE_EXTRACTED_THEME = 'createExtractedTheme';
+export const FN_WITH_TOKENS = 'withTokens';
 
 export const DEBUG_SOURCE_URL_VAR = '_styleDebugSourceUrl';
 export const DEBUG_SOURCE_CONTENT_VAR = '_styleDebugSourceContent';

@@ -1,7 +1,14 @@
 import * as BabelCore from '@babel/core';
+import type { types } from '@babel/core';
+import { hashString } from '../../../utils/hash';
 import type { CompilerOptions } from '../../compiler/types';
 import type { CompilerCssCollector } from '../../extract/collector';
-import { FN_CREATE_EXTRACTED_THEME, IMPORT_EXTRACT } from '../../utils/constants';
+import {
+  FN_CREATE_EXTRACTED_THEME,
+  FN_CREATE_EXTRACTED_TOKEN,
+  FN_WITH_TOKENS,
+  IMPORT_EXTRACT,
+} from '../../utils/constants';
 import { createImportSourceMatcher } from '../../utils/import_source';
 import { evaluateNode } from '../evaluator';
 import type { Tracer } from '../evaluator';
@@ -41,6 +48,8 @@ export function createExtractPlugin(args: PluginArgs) {
         this.imports = new Map();
         this.needsExtractImport = false;
         this.usedHelpers = new Set<string>();
+        this.hoistedDeclarations = [];
+        this.runtimeTokenIndex = 0;
         this.importSourceMatcher = createImportSourceMatcher(options.importSources ?? null);
         this.resolveImport = (source, fromFile) => args.tracer.resolveImport(babel, source, fromFile);
         this.collector = args.collector;
@@ -170,12 +179,25 @@ export function createExtractPlugin(args: PluginArgs) {
             return;
           }
 
-          const replacement = buildReplacement(t, result, state);
+          const replacement = createChainReplacement({
+            t,
+            path,
+            state,
+            result,
+            hoist: options.hoist !== false,
+          });
           if (!replacement) return;
 
           recordCompiledSlotBinding(path, state, result);
 
-          path.replaceWith(replacement);
+          if (!replacement.hoist) {
+            path.replaceWith(replacement.expression);
+            path.skip();
+            state.needsExtractImport = true;
+            return;
+          }
+
+          path.replaceWith(replacement.expression);
           path.skip();
 
           state.needsExtractImport = true;
@@ -198,9 +220,124 @@ export function createExtractPlugin(args: PluginArgs) {
             );
 
             path.unshiftContainer('body', importDecl);
+            insertHoistedDeclarations(path, state.hoistedDeclarations);
           },
         },
       },
     };
   });
+}
+
+type ChainReplacementArgs = {
+  t: typeof types;
+  path: BabelCore.NodePath<types.CallExpression>;
+  state: ExtractPluginState;
+  result: Parameters<typeof buildReplacement>[1];
+  hoist: boolean;
+};
+
+type ChainReplacement = {
+  expression: types.Expression;
+  hoist: boolean;
+};
+
+function createChainReplacement(
+  args: ChainReplacementArgs,
+): ChainReplacement | null {
+  if (!args.hoist) {
+    const expression = buildReplacement(args.t, args.result, args.state);
+    return expression ? { expression, hoist: false } : null;
+  }
+
+  const runtimeTokens = createRuntimeTokenCollector(args);
+  const hoistedExpression = buildReplacement(args.t, args.result, args.state, {
+    getRuntimeToken: runtimeTokens.add,
+  });
+
+  if (!hoistedExpression) return null;
+
+  const hoisted = args.path.scope.generateUidIdentifier('fluenticStyle');
+  args.state.hoistedDeclarations.push(args.t.variableDeclaration('const', [
+    args.t.variableDeclarator(hoisted, hoistedExpression),
+  ]));
+
+  if (!runtimeTokens.overrides.length) {
+    return {
+      expression: args.t.cloneNode(hoisted),
+      hoist: true,
+    };
+  }
+
+  args.state.usedHelpers.add(FN_WITH_TOKENS);
+
+  return {
+    expression: args.t.callExpression(args.t.identifier(FN_WITH_TOKENS), [
+      args.t.cloneNode(hoisted),
+      args.t.arrayExpression(runtimeTokens.overrides),
+    ]),
+    hoist: true,
+  };
+}
+
+function createRuntimeTokenCollector(
+  args: ChainReplacementArgs,
+) {
+  const tokensByItem = new WeakMap<object, types.Identifier>();
+  const overrides: types.Expression[] = [];
+
+  return {
+    overrides,
+    add(item: object, valueNode: types.Expression) {
+      const token = getRuntimeTokenIdentifier(args, tokensByItem, item);
+
+      overrides.push(
+        args.t.callExpression(args.t.cloneNode(token), [args.t.cloneNode(valueNode)]),
+      );
+
+      return args.t.cloneNode(token);
+    },
+  };
+}
+
+function getRuntimeTokenIdentifier(
+  args: ChainReplacementArgs,
+  tokensByItem: WeakMap<object, types.Identifier>,
+  item: object,
+) {
+  const existing = tokensByItem.get(item);
+  if (existing) return existing;
+
+  const token = args.path.scope.generateUidIdentifier('fluenticToken');
+  const tokenIndex = args.state.runtimeTokenIndex++;
+  const tokenId = hashString(`${args.state.fileId}\nruntime:${tokenIndex}`);
+
+  tokensByItem.set(item, token);
+  args.state.usedHelpers.add(FN_CREATE_EXTRACTED_TOKEN);
+  args.state.hoistedDeclarations.push(args.t.variableDeclaration('const', [
+    args.t.variableDeclarator(
+      token,
+      args.t.callExpression(args.t.identifier(FN_CREATE_EXTRACTED_TOKEN), [
+        args.t.stringLiteral(tokenId),
+        args.t.nullLiteral(),
+      ]),
+    ),
+  ]));
+
+  return token;
+}
+
+function insertHoistedDeclarations(
+  path: BabelCore.NodePath<types.Program>,
+  declarations: types.Statement[],
+) {
+  if (!declarations.length) return;
+
+  const body = path.node.body;
+  let index = 0;
+
+  while (index < body.length && body[index].type === 'ImportDeclaration') {
+    index++;
+  }
+
+  body.splice(index, 0, ...declarations);
 }

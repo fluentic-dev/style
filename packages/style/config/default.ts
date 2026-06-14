@@ -8,6 +8,7 @@ export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
   isDev: false,
   isRSC: false,
   isCssExtracted: false,
+  isHoistEnabled: false,
 
   isTraceEnabled: false,
   isCheckSelectorEnabled: false,

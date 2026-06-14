@@ -53,11 +53,22 @@ export function isResolvedStyleItem<T>(value: unknown): value is ResolvedStyleIt
 export function createResolvedStyleItem<Data extends StyleData | SlotData>(
   data: Data,
   scopes: readonly ScopeTargetData[],
+  tokens: StyleTokenValues | null = null,
 ): ResolvedStyleItem<Data> {
   return createStyleItem({
     data,
     items: resolveItems(data, scopes),
-  });
+  }, tokens);
+}
+
+export function createResolvedStyleItemFromItems<Data>(
+  item: ResolvedStyleItem<Data>,
+  tokens: StyleTokenValues | null,
+): ResolvedStyleItem<Data> {
+  return createStyleItem({
+    data: item.data,
+    items: item.items,
+  }, tokens);
 }
 
 export function getDirectStyleItem(item: StyleData | SlotData) {

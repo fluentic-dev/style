@@ -19,6 +19,7 @@ export type CompilerCssOptions = BuildCssConfig & {
 export type CompilerOptions = {
   styleFn?: StyleFn;
   css?: CompilerCssOptions;
+  hoist?: boolean;
 
   importSources?: ImportSource[];
 

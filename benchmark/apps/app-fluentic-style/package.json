@@ -9,6 +9,7 @@
     "dev:plugin": "vite",
     "build": "vite build",
     "build:extract": "vite build",
+    "build:extract:no-hoist": "FLUENTIC_STYLE_HOIST=0 vite build",
     "build:plugin": "vite build",
     "preview": "vite preview",
     "prod:extract": "pnpm build:extract --outDir dist-extract && vite preview --outDir dist-extract",

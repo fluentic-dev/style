@@ -16,6 +16,7 @@ export function getBuildMeta(dev: boolean, options: PluginOptions): BuildMeta {
   return {
     dev,
     extract: !dev,
+    hoist: options.hoist !== false,
     rsc: false,
     css: options.css ?? null,
   };

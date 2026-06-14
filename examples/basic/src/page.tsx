@@ -1,4 +1,4 @@
-import { style, combineStyle } from '@fluentic/style';
+import { combineStyle, style } from '@fluentic/style';
 import type { CssProp } from '@fluentic/style';
 import { Button } from './button';
 import { buttonBaseStyles, pageStyles, pageTheme } from './styles';

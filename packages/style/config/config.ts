@@ -35,6 +35,7 @@ function applyRuntimeConfig() {
   config.isDev = dev;
   config.isRSC = buildMeta?.rsc || false;
   config.isCssExtracted = buildMeta?.extract || false;
+  config.isHoistEnabled = buildMeta?.hoist || false;
 
   config.isTraceEnabled = options.trace ?? dev;
   config.isCheckSelectorEnabled = options.checkSelector ?? dev;

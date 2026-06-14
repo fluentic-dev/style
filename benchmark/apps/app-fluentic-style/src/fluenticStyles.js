@@ -1,8 +1,7 @@
 import { base, palette } from '@benchmark/main';
-import { style } from '@fluentic/style';
-import { cx } from '@fluentic/style/precompile';
+import { getClassName, style } from '@fluentic/style';
 
-const resolveClassName = cx;
+const resolveClassName = (css) => getClassName(css).className ?? '';
 
 export const fluenticStyles = {
   page: style(base.page),

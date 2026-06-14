@@ -14,20 +14,23 @@ import {
   FN_CREATE_EXTRACTED_STYLE,
   FN_CREATE_EXTRACTED_TOKEN,
 } from '../../../utils/constants';
-import type { CompiledChainData, CompiledItem, CompiledCssItem } from '../chain';
+import type { CompiledChainData, CompiledCssItem, CompiledItem } from '../chain';
 import type { ExtractPluginState } from './state';
 
 export function buildReplacement(
   t: typeof types,
   chain: CompiledChainData,
   state: ExtractPluginState,
+  options: {
+    getRuntimeToken?: (item: CompiledCssItem, valueNode: types.Expression) => types.Expression | null;
+  } = {},
 ): types.Expression | null {
   if (chain.type === 'style') {
     state.usedHelpers.add(FN_CREATE_EXTRACTED_STYLE);
 
     return t.callExpression(
       t.identifier(FN_CREATE_EXTRACTED_STYLE),
-      [buildItemsArray(t, chain, BUILDER_TYPE_STYLE, state)],
+      [buildItemsArray(t, chain, BUILDER_TYPE_STYLE, state, options)],
     );
   }
 
@@ -38,7 +41,7 @@ export function buildReplacement(
       t.identifier(FN_CREATE_EXTRACTED_SLOT),
       [
         t.stringLiteral(chain.slotId!),
-        buildItemsArray(t, chain, BUILDER_TYPE_SLOT, state),
+        buildItemsArray(t, chain, BUILDER_TYPE_SLOT, state, options),
       ],
     );
   }
@@ -48,7 +51,7 @@ export function buildReplacement(
 
     return t.callExpression(
       t.identifier(FN_CREATE_EXTRACTED_SCOPE),
-      [buildItemsArray(t, chain, BUILDER_TYPE_SCOPE, state)],
+      [buildItemsArray(t, chain, BUILDER_TYPE_SCOPE, state, options)],
     );
   }
 
@@ -60,6 +63,9 @@ function buildItemsArray(
   chain: CompiledChainData,
   defaultType: number,
   state: ExtractPluginState,
+  options: {
+    getRuntimeToken?: (item: CompiledCssItem, valueNode: types.Expression) => types.Expression | null;
+  },
 ): types.ArrayExpression {
   const emitLegacyShape = defaultType === BUILDER_TYPE_SCOPE;
 
@@ -84,7 +90,7 @@ function buildItemsArray(
         elements.push(t.stringLiteral(className));
 
         if (isItemVariableValue(value)) {
-          elements.push(buildItemValue(t, value, state, item.valueNode));
+          elements.push(buildItemValue(t, value, state, item, options));
         }
 
         return t.arrayExpression(elements);
@@ -94,7 +100,7 @@ function buildItemsArray(
       elements.push(t.stringLiteral(className));
 
       if (!emitLegacyShape && isItemVariableValue(value)) {
-        elements.push(buildItemValue(t, value, state, item.valueNode));
+        elements.push(buildItemValue(t, value, state, item, options));
       }
 
       if (emitLegacyShape && item.hasParentSelector) {
@@ -168,12 +174,15 @@ function buildItemValue(
   t: typeof types,
   value: [typeof ITEM_VALUE_TYPE_VARIABLE, string, unknown],
   state: ExtractPluginState,
-  valueNode: types.Expression | undefined,
+  item: CompiledCssItem,
+  options: {
+    getRuntimeToken?: (item: CompiledCssItem, valueNode: types.Expression) => types.Expression | null;
+  },
 ): types.ArrayExpression {
   return t.arrayExpression([
     t.numericLiteral(value[0]),
     t.stringLiteral(value[1]),
-    buildVariableValueExpression(t, value[2], state, valueNode),
+    buildVariableValueExpression(t, value[2], state, item, options),
   ]);
 }
 
@@ -181,12 +190,19 @@ function buildVariableValueExpression(
   t: typeof types,
   value: unknown,
   state: ExtractPluginState,
-  valueNode: types.Expression | undefined,
+  item: CompiledCssItem,
+  options: {
+    getRuntimeToken?: (item: CompiledCssItem, valueNode: types.Expression) => types.Expression | null;
+  },
 ): types.Expression {
   if (isStyleTokenData(value)) {
     state.usedHelpers.add(FN_CREATE_EXTRACTED_TOKEN);
     return buildExtractedTokenExpression(t, value, state);
   }
+
+  const valueNode = item.valueNode;
+  const runtimeToken = valueNode ? options.getRuntimeToken?.(item, valueNode) : null;
+  if (runtimeToken) return runtimeToken;
 
   return valueNode ? t.cloneNode(valueNode) : literalExpression(t, value);
 }

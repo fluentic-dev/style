@@ -1,6 +1,6 @@
 import { getTokenOverrideValue } from '../../../atomic/token';
 import { RUNTIME_CONFIG } from '../../../config';
-import { getStyleTokenId, isStyleTokenOverrideData } from '../../../style/token';
+import { getStyleTokenId, isStyleTokenOverrideData, type StyleTokenOverride } from '../../../style/token';
 
 export type StyleTokenValues = {
   ids: readonly string[];
@@ -98,6 +98,21 @@ export function mergeTokenValues(
     }
 
     lookup[id] = value;
+  }
+
+  return finishTokenValues(base, values);
+}
+
+export function mergeTokenOverrides(
+  base: StyleTokenValues | null,
+  overrides: readonly StyleTokenOverride[],
+): StyleTokenValues | null {
+  if (!overrides.length) return base;
+
+  const values = createMutableTokenValues(base);
+
+  for (let i = 0, len = overrides.length; i < len; i++) {
+    addTokenOverride(values, overrides[i]);
   }
 
   return finishTokenValues(base, values);

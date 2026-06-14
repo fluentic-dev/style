@@ -1,4 +1,6 @@
 import { BUILDER_STATE, getScopeTargetScope, isScopeTargetData, type ScopeTargetData } from '../../../builder/data';
+import { getExtractedTokenBoundData, isExtractedTokenBoundData } from '../../../builder/extract/withTokens';
+import { RUNTIME_CONFIG } from '../../../config';
 import type { Falsy, StyleItem } from '../../types';
 import { type CombinedStyle, getCombinedStyleScopes, getCombinedStyleStyles, isCombinedStyle } from '../combinedStyle';
 import { createCombinedStyleTokenWrapper, getStyleTokenValues } from './item';
@@ -7,6 +9,7 @@ import {
   addTokenOverride,
   createMutableTokenValues,
   finishTokenValues,
+  mergeTokenOverrides,
   mergeTokenValues,
   type StyleTokenValues,
 } from './tokenValues';
@@ -69,6 +72,13 @@ function collectStyleArg<T extends object>(
       collectStyleArg(styles, arg[i], result);
     }
 
+    return;
+  }
+
+  if (RUNTIME_CONFIG.isHoistEnabled && isExtractedTokenBoundData(arg)) {
+    const bound = getExtractedTokenBoundData(arg);
+    result.tokens = mergeTokenOverrides(result.tokens, bound.tokens);
+    collectStyleArg(styles, bound.data as CombinedStyleArg<T>, result);
     return;
   }
 

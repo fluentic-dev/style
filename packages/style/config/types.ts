@@ -28,6 +28,7 @@ export type RuntimeConfig = RuntimeSharedConfig & {
   isDev: boolean;
   isRSC: boolean;
   isCssExtracted: boolean;
+  isHoistEnabled: boolean;
 
   isTraceEnabled: boolean;
   isCheckSelectorEnabled: boolean;
@@ -55,6 +56,7 @@ export type BuildCssConfig = Partial<CssConfig>;
 export type BuildMeta = {
   dev: boolean;
   extract: boolean;
+  hoist: boolean;
   rsc: boolean;
   css: BuildCssConfig | null;
 };

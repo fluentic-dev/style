@@ -9,6 +9,7 @@ module options.
 ```ts
 stylePlugin({
   extract: true,
+  hoist: true,
   include: /\.[jt]sx?$/,
   exclude: /node_modules/,
   runtimeModuleId: 'virtual:fluentic-styles',
@@ -32,6 +33,18 @@ Controls whether supported static chains are extracted.
 ```ts
 extract?: boolean
 ```
+
+## `hoist`
+
+Controls whether extracted style, slot, and scope builders are hoisted to module
+scope. Dynamic inline values are carried through generated token bindings.
+
+```ts
+hoist?: boolean
+```
+
+The default is `true`. Set `hoist: false` to keep extracted helper creation at
+the original call site.
 
 ## `include` and `exclude`
 

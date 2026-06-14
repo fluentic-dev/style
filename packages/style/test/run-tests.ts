@@ -14,7 +14,13 @@ import {
   type StyleData,
 } from '../builder/data';
 import type { RuntimeItem, RuntimeScopeItem } from '../builder/data/state';
-import { createExtractedScope, createExtractedSlot } from '../builder/extract';
+import {
+  createExtractedScope,
+  createExtractedSlot,
+  createExtractedStyle,
+  createExtractedToken,
+  withTokens,
+} from '../builder/extract';
 import type { CompilerOptions } from '../compiler';
 import { configureRuntime, RUNTIME_CONFIG } from '../config';
 import { setBuildMeta } from '../config/build';
@@ -1135,6 +1141,63 @@ const rule = style({
   includes(css, 'background-image:var(--token-');
 });
 
+test('compiler hoists inline dynamic extracted style with token binding', () => {
+  const compiler = createCompiler({
+    css: { layer: false, debugClassName: true, localClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+export function Card({ color }) {
+  return style({
+    color,
+    backgroundColor: 'white',
+  });
+}
+`,
+    '/tmp/compiler-inline-dynamic-style.tsx',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(result.code, 'withTokens');
+  includes(result.code, 'const _fluenticToken = createExtractedToken(');
+  includes(result.code, 'const _fluenticStyle = createExtractedStyle(');
+  includes(result.code, 'return withTokens(_fluenticStyle, [_fluenticToken(color)]);');
+  notIncludes(result.code, '/tmp/compiler-inline-dynamic-style.tsx:runtime');
+  includes(css, 'color:var(--token-');
+  includes(css, 'background-color:white');
+});
+
+test('compiler can disable extracted style hoisting', () => {
+  const compiler = createCompiler({
+    hoist: false,
+    css: { layer: false, debugClassName: true, localClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+export function Card({ color }) {
+  return style({
+    color,
+    backgroundColor: 'white',
+  });
+}
+`,
+    '/tmp/compiler-inline-dynamic-style-no-hoist.tsx',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  includes(result.code, 'return createExtractedStyle(');
+  notIncludes(result.code, 'withTokens');
+  notIncludes(result.code, 'const _fluenticStyle');
+});
+
 test('compiler extracts spread style.raw and style.plain objects', () => {
   const compiler = createCompiler({ css: { layer: false } });
   const result = compiler.transform(
@@ -2203,6 +2266,72 @@ test('css prop resolver wires extracted dynamic variables as inline style', () =
   equal((result.style as Record<string, unknown>)['--dynamic-value'], 'purple');
 });
 
+test('css prop resolver wires token-bound extracted style variables', () => {
+  const token = createExtractedToken('bound-style-token', 'blue');
+  const css = withTokens(
+    createExtractedStyle([
+      ['bound-style-dedupe', 'bound-style-class', [1, '--bound-style-value', token]],
+    ]),
+    [token('red')],
+  );
+
+  try {
+    setBuildMeta({ dev: false, extract: true, hoist: true, rsc: false, css: null });
+
+    const result = resolveCssProp(css as any);
+
+    equal(result.className, 'bound-style-class');
+    equal((result.style as Record<string, unknown>)['--bound-style-value'], 'red');
+  } finally {
+    setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
+  }
+});
+
+test('css prop cache keeps token-bound extracted style values dynamic', () => {
+  const token = createExtractedToken('bound-style-cache-token', 'blue');
+  const css = createExtractedStyle([
+    ['bound-style-cache-dedupe', 'bound-style-cache-class', [1, '--bound-style-cache-value', token]],
+  ]);
+
+  try {
+    setBuildMeta({ dev: false, extract: true, hoist: true, rsc: false, css: null });
+
+    const first = resolveCssProp(withTokens(css, [token('red')]) as any);
+    const second = resolveCssProp(withTokens(css, [token('green')]) as any);
+
+    equal(first.className, 'bound-style-cache-class');
+    equal(second.className, 'bound-style-cache-class');
+    equal((first.style as Record<string, unknown>)['--bound-style-cache-value'], 'red');
+    equal((second.style as Record<string, unknown>)['--bound-style-cache-value'], 'green');
+  } finally {
+    setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
+  }
+});
+
+test('combineStyle carries token-bound extracted scope target values', () => {
+  const token = createExtractedToken('bound-scope-token', 'blue');
+  const styles = {
+    container: createExtractedSlot('bound-scope-slot', [
+      ['bound-scope-dedupe', 'bound-scope-class', [1, '--bound-scope-value', token]],
+    ]),
+  };
+  const scope = createExtractedScope([
+    [BUILDER_TYPE_SCOPE, 'bound-scope-slot', 'bound-scope-extra-dedupe', 'bound-scope-extra-class'],
+  ]);
+
+  try {
+    setBuildMeta({ dev: false, extract: true, hoist: true, rsc: false, css: null });
+
+    const css = combineStyle(styles, withTokens(scope(styles.container), [token('red')]));
+    const result = resolveCssProp(css.container as any);
+
+    equal(result.className, 'bound-scope-class bound-scope-extra-class');
+    equal((result.style as Record<string, unknown>)['--bound-scope-value'], 'red');
+  } finally {
+    setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
+  }
+});
+
 test('css prop resolver resolves extracted token variable refs', () => {
   const baseToken = createToken('blue');
   const tokenRef = createToken(baseToken);
@@ -2246,7 +2375,7 @@ test('css prop cache invalidates on runtime config change', () => {
 
 test('rsc dev payload is emitted by getClassName', () => {
   clearRscStyleStore();
-  setBuildMeta({ dev: true, extract: false, rsc: true, css: null });
+  setBuildMeta({ dev: true, extract: false, hoist: false, rsc: true, css: null });
 
   const pool = createCombinedStylePool();
   const css = pool.get(styles, [], []).style;
@@ -2262,7 +2391,7 @@ test('rsc dev payload is emitted by getClassName', () => {
   const props = result.props as Record<string, unknown>;
   const storeCss = getRscStyleCss();
 
-  setBuildMeta({ dev: false, extract: false, rsc: false, css: null });
+  setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
   configureRuntime({ dev: false });
 
   equal(props.id, 'target');
@@ -2277,7 +2406,7 @@ test('rsc dev payload is emitted by getClassName', () => {
 
 test('rsc getClassName omits dev payload without css rules', () => {
   clearRscStyleStore();
-  setBuildMeta({ dev: true, extract: false, rsc: true, css: null });
+  setBuildMeta({ dev: true, extract: false, hoist: false, rsc: true, css: null });
 
   const manual = getClassName(undefined, {
     className: 'external',
@@ -2291,7 +2420,7 @@ test('rsc getClassName omits dev payload without css rules', () => {
   const props = result.props as Record<string, unknown>;
   const storeCss = getRscStyleCss();
 
-  setBuildMeta({ dev: false, extract: false, rsc: false, css: null });
+  setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
   configureRuntime({ dev: false });
   clearRscStyleStore();
 
@@ -2304,7 +2433,7 @@ test('rsc getClassName omits dev payload without css rules', () => {
 
 test('rsc dev style store wraps parent selector priority rules in layers', () => {
   clearRscStyleStore();
-  setBuildMeta({ dev: true, extract: false, rsc: true, css: null });
+  setBuildMeta({ dev: true, extract: false, hoist: false, rsc: true, css: null });
 
   const card = {
     root: style.slot({
@@ -2330,7 +2459,7 @@ test('rsc dev style store wraps parent selector priority rules in layers', () =>
   const blueLayer = getLayerNameForRule(storeCss, 'background:blue');
   const redLayer = getLayerNameForRule(storeCss, 'background:red');
 
-  setBuildMeta({ dev: false, extract: false, rsc: false, css: null });
+  setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
   configureRuntime({ dev: false });
   clearRscStyleStore();
 

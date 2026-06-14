@@ -43,10 +43,11 @@ export function getNextCacheDir(rootDir: string, cacheDir?: string) {
   return cacheDir ?? path.join(rootDir, '.next/cache/fluentic-style');
 }
 
-export function createNextBuildMeta(dev: boolean, options: { css?: BuildMeta['css']; }): BuildMeta {
+export function createNextBuildMeta(dev: boolean, options: { css?: BuildMeta['css']; hoist?: boolean; }): BuildMeta {
   return {
     dev,
     extract: !dev,
+    hoist: options.hoist !== false,
     rsc: true,
     css: {
       ...options.css,
