@@ -1,5 +1,5 @@
 import emotionStyled from '@emotion/styled';
-import { createElement as fluenticCreateElement, style, combineStyle } from '@fluentic/style';
+import { combineStyle, createElement as fluenticCreateElement, style } from '@fluentic/style';
 import Benchmark from 'benchmark';
 import { setup as setupGoober, styled as gooberStyled } from 'goober';
 import { mkdirSync, writeFileSync } from 'node:fs';

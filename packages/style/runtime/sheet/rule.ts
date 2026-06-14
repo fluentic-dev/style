@@ -1,5 +1,5 @@
 import { buildAtomicRule, getAtomicRuleLayerPriority } from '../../atomic/rule';
-import { BUILDER_TYPE_SCOPE } from '../../builder/data';
+import { BUILDER_TYPE_SCOPE } from '../../builder/data/const';
 import type { RuntimeItem, StateItem } from '../../builder/data/state';
 import type { SheetRule } from '../../sheet';
 import { isStyleTokenOverrideData } from '../../style/token';

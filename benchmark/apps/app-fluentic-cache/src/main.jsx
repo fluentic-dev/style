@@ -1,5 +1,5 @@
 import { css as emotionCss } from '@emotion/css';
-import { createElement as fluenticCreateElement, getClassName, style, combineStyle } from '@fluentic/style';
+import { combineStyle, createElement as fluenticCreateElement, getClassName, style } from '@fluentic/style';
 import { css as gooberCss, setup as setupGoober } from 'goober';
 import React from 'react';
 import { createRoot } from 'react-dom/client';

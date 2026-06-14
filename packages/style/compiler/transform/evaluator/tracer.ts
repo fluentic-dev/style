@@ -4,6 +4,7 @@ import type { CompilerInternal } from '../../compiler';
 import { FN_STYLE, IMPORT_PATHS } from '../../utils/constants';
 import { resolveFile } from '../../utils/file_resolver';
 import { computeSlotId, extractStyleChain } from '../extract/chain';
+import { babelTransformOptions } from '../utils/babel';
 import { getProjectFileId } from '../utils/path';
 import type { EvalScope } from './evaluator';
 import { evalFail, evalOk, evaluateNode } from './evaluator';
@@ -16,15 +17,6 @@ type TraceCacheContent = {
 };
 
 const CACHE_TYPE = 'transform-trace';
-const TRACE_PARSE_OPTIONS: BabelCore.TransformOptions = {
-  configFile: false,
-  babelrc: false,
-  parserOpts: {
-    plugins: ['typescript', 'jsx'],
-    strictMode: false,
-    allowImportExportEverywhere: true,
-  },
-};
 
 export function createTracer(internal: CompilerInternal) {
   const active = new Set<string>();
@@ -46,11 +38,12 @@ export function createTracer(internal: CompilerInternal) {
     if (!resolved) return null;
 
     const contentHash = hashContent(resolved.content);
-    const cached = internal.cache.getItem({
+
+    const cached = internal.cache.getItem<TraceCacheContent>({
       filePath: resolved.filePath,
       contentHash,
       cacheType: CACHE_TYPE,
-    }) as TraceCacheContent | null;
+    });
 
     if (cached) {
       return new Map(cached.bindings);
@@ -102,7 +95,7 @@ function parseAndExtractModule(
 
   try {
     const parsed = babel.parseSync(content, {
-      ...TRACE_PARSE_OPTIONS,
+      ...babelTransformOptions(),
       filename: filePath,
     });
     ast = parsed as BabelCore.types.File;

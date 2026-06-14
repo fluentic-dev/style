@@ -1,61 +1,69 @@
-import { getDebugValueName, type DebugValueName } from './value';
+import { normalizeDebugKeywordValue, normalizePropertyName, sanitizeDebugPropertyName } from '../utils/debug';
+import { type DebugValueName, getDebugValueName } from './value';
 
-const PROPERTY_MAP: Record<string, string> = {
-  'margin': 'margin',
-  'margin-top': 'margin-top',
-  'margin-right': 'margin-right',
-  'margin-bottom': 'margin-bottom',
-  'margin-left': 'margin-left',
-  'margin-inline': 'margin-inline',
-  'margin-inline-start': 'margin-inline-start',
-  'margin-inline-end': 'margin-inline-end',
-  'margin-block': 'margin-block',
-  'margin-block-start': 'margin-block-start',
-  'margin-block-end': 'margin-block-end',
-  'padding': 'padding',
-  'padding-top': 'padding-top',
-  'padding-right': 'padding-right',
-  'padding-bottom': 'padding-bottom',
-  'padding-left': 'padding-left',
-  'padding-inline': 'padding-inline',
-  'padding-inline-start': 'padding-inline-start',
-  'padding-inline-end': 'padding-inline-end',
-  'padding-block': 'padding-block',
-  'padding-block-start': 'padding-block-start',
-  'padding-block-end': 'padding-block-end',
-  'width': 'width',
-  'height': 'height',
-  'min-width': 'min-w',
-  'max-width': 'max-w',
-  'min-height': 'min-h',
-  'max-height': 'max-h',
-  'background': 'bg',
-  'background-color': 'bg',
-  'background-image': 'background-image',
-  'color': 'color',
-  'font-size': 'font-size',
+const PROPERTY_ALIASES: Record<string, string> = {
+  'border-radius': 'radius',
+  'flex-direction': 'flex',
+  'font-style': 'font',
   'font-weight': 'font',
-  'display': 'display',
-  'position': 'pos',
-  'top': 't',
-  'right': 'r',
-  'bottom': 'b',
-  'left': 'l',
-  'z-index': 'z',
-  'gap': 'g',
   'grid-template-columns': 'grid-cols',
   'grid-template-rows': 'grid-rows',
-  'flex-direction': 'flex',
-  'justify-content': 'justify',
   'align-items': 'items',
-  'border': 'border',
-  'border-radius': 'radius',
-  'opacity': 'opacity',
+  'justify-content': 'justify',
+  'z-index': 'zindex',
+  'pointer-events': 'pointer',
 };
 
-export type DebugPropertyName = {
+const KEYWORD_VALUE_PROPERTIES = new Set([
+  'align-content',
+  'align-items',
+  'align-self',
+  'background-repeat',
+  'background-size',
+  'border-collapse',
+  'border-style',
+  'box-sizing',
+  'clear',
+  'cursor',
+  'display',
+  'flex-direction',
+  'flex-wrap',
+  'float',
+  'font-weight',
+  'font-style',
+  'justify-content',
+  'justify-items',
+  'justify-self',
+  'list-style-position',
+  'list-style-type',
+  'object-fit',
+  'object-position',
+  'overflow',
+  'overflow-x',
+  'overflow-y',
+  'pointer-events',
+  'place-content',
+  'place-items',
+  'place-self',
+  'position',
+  'resize',
+  'table-layout',
+  'text-align',
+  'text-decoration-line',
+  'text-transform',
+  'user-select',
+  'vertical-align',
+  'visibility',
+  'white-space',
+]);
+
+const ARBITRARY_VALUE_PROPERTIES = new Set([
+  'font-weight',
+]);
+
+export type DebugPropertyName = DebugValueName & {
   property: string;
-} & DebugValueName;
+};
 
 export function getDebugPropertyName(
   property: string,
@@ -66,42 +74,49 @@ export function getDebugPropertyName(
   if (!property) return null;
 
   const normalized = normalizePropertyName(property);
-
-  // 1. FAST PATH: Check the map first (O(1) lookup, incredibly fast)
-  const mapped = PROPERTY_MAP[normalized];
-  if (mapped !== undefined) {
-    return {
-      property: mapped,
-      ...getDebugValueName(mapped, value, maxLength, valueMaxLength),
-    };
-  }
-
-  // 2. FALLBACK PATH: For uncommon properties or CSS variables
-  let name = normalized;
-
-  // Clean up CSS variables (--my-prop -> my-prop)
-  if (name.charCodeAt(0) === 45 && name.charCodeAt(1) === 45) {
-    name = name.slice(2);
-  }
-
-  name = name
-    // Clean up structural dividers
-    .replace(/[^a-z0-9_-]+/g, '-')
-    .replace(/[-_]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+  const name = PROPERTY_ALIASES[normalized] || sanitizeDebugPropertyName(normalized);
 
   if (!name) return null;
 
+  const valueName = getDebugValueName(name, value, maxLength, valueMaxLength);
+
   return {
     property: name,
-    ...getDebugValueName(name, value, maxLength, valueMaxLength),
+    ...withKeywordValueFallback(
+      normalized,
+      value,
+      valueMaxLength,
+      withArbitraryValueFallback(normalized, valueName),
+    ),
   };
 }
 
-function normalizePropertyName(property: string) {
-  return property
-    .trim()
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-    .replace(/_/g, '-')
-    .toLowerCase();
+function withArbitraryValueFallback(
+  property: string,
+  valueName: DebugValueName,
+): DebugValueName {
+  if (!valueName.arbitraryValue || ARBITRARY_VALUE_PROPERTIES.has(property)) return valueName;
+
+  return {
+    value: valueName.value,
+    arbitraryValue: null,
+  };
+}
+
+function withKeywordValueFallback(
+  property: string,
+  value: string,
+  valueMaxLength: number,
+  valueName: DebugValueName,
+): DebugValueName {
+  if (valueName.value || valueName.arbitraryValue || !valueMaxLength) return valueName;
+  if (!KEYWORD_VALUE_PROPERTIES.has(property)) return valueName;
+
+  const normalized = normalizeDebugKeywordValue(value);
+  if (!normalized || normalized.length > valueMaxLength) return valueName;
+
+  return {
+    value: normalized,
+    arbitraryValue: null,
+  };
 }

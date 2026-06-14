@@ -127,7 +127,7 @@ export function PrimaryButton() {
 
 ```tsx
 /** @jsxImportSource @fluentic/style */
-import { createTheme, createToken, style, combineStyle } from '@fluentic/style';
+import { combineStyle, createTheme, createToken, style } from '@fluentic/style';
 
 const color = {
   accent: createToken('#2563eb', 'accent'),
@@ -176,7 +176,7 @@ export default defineConfig({
 ```
 
 ```ts
-import 'virtual:fluentic-styles';
+import 'virtual:fluentic-style';
 ```
 
 The authoring model stays the same: static chains are collected into CSS, and
@@ -187,26 +187,26 @@ dynamic styles keep the runtime path.
 `@fluentic/style` ships one package with isolated subpath exports for runtime,
 compiler, and bundler usage.
 
-| Import | Purpose |
-| --- | --- |
-| `@fluentic/style` | Runtime API, style builders, selectors, hooks, tokens, themes, and types. |
-| `@fluentic/style/server` | Server-safe runtime entry. |
-| `@fluentic/style/jsx-runtime` | Production JSX runtime. |
-| `@fluentic/style/jsx-dev-runtime` | Development JSX runtime. |
-| `@fluentic/style/plugin/nextjs` | Next.js App Router integration. |
-| `@fluentic/style/plugin/vite` | Vite plugin. |
-| `@fluentic/style/plugin/rollup` | Rollup plugin. |
-| `@fluentic/style/plugin/webpack` | Webpack plugin. |
-| `@fluentic/style/plugin/rspack` | Rspack plugin. |
-| `@fluentic/style/plugin/rolldown` | Rolldown plugin. |
-| `@fluentic/style/plugin/esbuild` | esbuild plugin. |
-| `@fluentic/style/plugin/unplugin` | Shared unplugin adapter. |
-| `@fluentic/style/babel` | Babel plugin factory. |
-| `@fluentic/style/compiler` | Low-level compiler API. |
-| `@fluentic/style/builder/extract` | Extracted style helpers. |
-| `@fluentic/style/config` | Runtime and compiler configuration helpers. |
-| `@fluentic/style/runtime/rsc` | React Server Component runtime helpers. |
-| `@fluentic/style/runtime/style` | Style runtime helpers for extracted output. |
+| Import                            | Purpose                                                                   |
+| --------------------------------- | ------------------------------------------------------------------------- |
+| `@fluentic/style`                 | Runtime API, style builders, selectors, hooks, tokens, themes, and types. |
+| `@fluentic/style/server`          | Server-safe runtime entry.                                                |
+| `@fluentic/style/jsx-runtime`     | Production JSX runtime.                                                   |
+| `@fluentic/style/jsx-dev-runtime` | Development JSX runtime.                                                  |
+| `@fluentic/style/plugin/nextjs`   | Next.js App Router integration.                                           |
+| `@fluentic/style/plugin/vite`     | Vite plugin.                                                              |
+| `@fluentic/style/plugin/rollup`   | Rollup plugin.                                                            |
+| `@fluentic/style/plugin/webpack`  | Webpack plugin.                                                           |
+| `@fluentic/style/plugin/rspack`   | Rspack plugin.                                                            |
+| `@fluentic/style/plugin/rolldown` | Rolldown plugin.                                                          |
+| `@fluentic/style/plugin/esbuild`  | esbuild plugin.                                                           |
+| `@fluentic/style/plugin/unplugin` | Shared unplugin adapter.                                                  |
+| `@fluentic/style/babel`           | Babel plugin factory.                                                     |
+| `@fluentic/style/compiler`        | Low-level compiler API.                                                   |
+| `@fluentic/style/builder/extract` | Extracted style helpers.                                                  |
+| `@fluentic/style/config`          | Runtime and compiler configuration helpers.                               |
+| `@fluentic/style/runtime/rsc`     | React Server Component runtime helpers.                                   |
+| `@fluentic/style/runtime/style`   | Style runtime helpers for extracted output.                               |
 
 See the [integration guide](https://fluenticstack.com/style/docs/integrations/overview/)
 for Vite, Rollup, Rolldown, Webpack, Rspack, esbuild, Babel, and Next.js.

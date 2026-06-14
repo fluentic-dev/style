@@ -460,6 +460,8 @@ function createCompiledTokens(
   runtimeValue: BabelTypes.Expression,
   debugId?: string,
 ) {
+  const tokenGroupId = debugId ?? createCompiledTokenGroupId(scope, loc);
+
   if (Array.isArray(value)) {
     const result: Record<PropertyKey, unknown> = {};
 
@@ -471,7 +473,7 @@ function createCompiledTokens(
         scope,
         loc,
         runtimeValue,
-        getChildDebugId(debugId, String(i)),
+        getChildDebugId(tokenGroupId, String(i)),
       );
     }
 
@@ -490,10 +492,20 @@ function createCompiledTokens(
     scope,
     loc,
     runtimeValue,
-    debugId,
+    tokenGroupId,
   );
 
   return result;
+}
+
+function createCompiledTokenGroupId(
+  scope: EvalScope,
+  loc: { line: number; column: number; } | null | undefined,
+) {
+  const hash = (scope.styleFilePath ?? scope.filePath) + '\n' +
+    (loc ? loc.line + ':' + loc.column : 'createTokens');
+
+  return hashString(hash);
 }
 
 function assignCompiledTokenRecord(

@@ -36,12 +36,12 @@ async function verify002() {
 
   const cssChecks: Check[] = [
     {
-      description: 'contains flex-direction:row (from row:true)',
-      pass: (s) => s.includes('flex-direction:row'),
+      description: 'contains flex-direction: row (from row:true)',
+      pass: (s) => s.includes('flex-direction: row'),
     },
     {
-      description: 'contains flex-direction:column (from column:true)',
-      pass: (s) => s.includes('flex-direction:column'),
+      description: 'contains flex-direction: column (from column:true)',
+      pass: (s) => s.includes('flex-direction: column'),
     },
     {
       description: 'does not contain raw "row:" CSS property',
@@ -52,8 +52,8 @@ async function verify002() {
       pass: (s) => !/\bcolumn:[^/]/.test(s),
     },
     {
-      description: 'hover selector with flex-direction:column',
-      pass: (s) => /flex-direction:column/.test(s) && /:hover/.test(s),
+      description: 'hover selector with flex-direction: column',
+      pass: (s) => /flex-direction: column/.test(s) && /:hover/.test(s),
     },
   ];
 
@@ -87,11 +87,11 @@ async function verify003() {
   const cssChecks: Check[] = [
     {
       description: 'contains scoped parent root color',
-      pass: (s) => s.includes('color:purple'),
+      pass: (s) => s.includes('color: purple'),
     },
     {
       description: 'contains scoped child label color',
-      pass: (s) => s.includes('color:teal'),
+      pass: (s) => s.includes('color: teal'),
     },
   ];
 
@@ -120,7 +120,53 @@ async function verify003() {
   return cssOk && compiledOk;
 }
 
-const ok = (await verify002()) && (await verify003());
+async function verify004() {
+  console.log('\nVerifying snapshot 004 (nested tokens and themes)');
+
+  const css = await readSnapshot('004', 'extracted.css');
+  const compiled = await readSnapshot('004', 'compiled.js');
+
+  const cssChecks: Check[] = [
+    {
+      description: 'contains light theme token values',
+      pass: (s) => s.includes(':#ffffff') && s.includes(':#17201b') && s.includes(':#0f766e'),
+    },
+    {
+      description: 'contains dark theme token values',
+      pass: (s) => s.includes(':#101715') && s.includes(':#eef8f4') && s.includes(':#5eead4'),
+    },
+    {
+      description: 'component styles read token variables',
+      pass: (s) => s.includes('background-color: var(--token-') && s.includes('box-shadow: var(--token-'),
+    },
+  ];
+
+  const compiledChecks: Check[] = [
+    {
+      description: 'nested token tree is compiled',
+      pass: (s) =>
+        /createExtractedToken\(['"]tokens-/.test(s) &&
+        s.includes('--color--bg') &&
+        s.includes('--color--accentText') &&
+        s.includes('--shadow--card'),
+    },
+    {
+      description: 'themes are extracted',
+      pass: (s) => s.includes('createExtractedTheme'),
+    },
+    {
+      description: 'runtime createTheme import is removed',
+      pass: (s) => !s.includes('createTheme,'),
+    },
+  ];
+
+  const cssOk = check('004', 'extracted.css', css, cssChecks);
+  const compiledOk = check('004', 'compiled.js', compiled, compiledChecks);
+
+  return cssOk && compiledOk;
+}
+
+const ok = (await verify002()) && (await verify003()) && (await verify004());
 
 if (!ok) {
   console.error('\nVerification FAILED. Run "npm run generate" first if files are missing.');

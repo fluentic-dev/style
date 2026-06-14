@@ -68,7 +68,7 @@ export function getAtomicClassName(
     }
 
     if (value && debugValueLength && propertyName) {
-      text = propertyName.value;
+      text = propertyName.value || propertyName.arbitraryValue;
 
       if (text) className = className + '-' + text;
     }

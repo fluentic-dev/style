@@ -10,11 +10,10 @@ import {
   IMPORT_EXTRACT,
 } from '../../utils/constants';
 import { createImportSourceMatcher } from '../../utils/import_source';
-import { evaluateNode } from '../evaluator';
-import type { Tracer } from '../evaluator';
+import { evaluateNode } from '../evaluator/evaluator';
 import { getImportedName } from '../syntax';
 import { babelPlugin } from '../utils/babel';
-import { getProjectFileId } from '../utils/path';
+import { normalizePath } from '../../utils/path';
 import { compileChain, extractStyleChain } from './chain';
 import { pruneUnusedStyleImports } from './utils/imports';
 import { buildReplacement } from './utils/replacement';
@@ -31,7 +30,15 @@ type PluginArgs = {
   mode?: 'extract' | 'collect';
   projectDir: string;
   styleFilePath?: string;
-  tracer: Tracer;
+  tracer: ExtractTracer;
+};
+
+export type ExtractTracer = {
+  resolveImport(
+    babel: typeof BabelCore,
+    source: string,
+    fromFile: string,
+  ): ReturnType<ExtractPluginState['resolveImport']>;
 };
 
 export function createExtractPlugin(args: PluginArgs) {
@@ -226,6 +233,20 @@ export function createExtractPlugin(args: PluginArgs) {
       },
     };
   });
+}
+
+function getProjectFileId(projectDir: string, filePath: string | null | undefined) {
+  if (!filePath) return 'unknown';
+
+  const normalizedProjectDir = normalizePath(projectDir).replace(/\/+$/, '');
+  const normalizedFilePath = normalizePath(filePath);
+  const prefix = normalizedProjectDir + '/';
+
+  if (normalizedProjectDir && normalizedFilePath.startsWith(prefix)) {
+    return normalizedFilePath.slice(prefix.length);
+  }
+
+  return normalizedFilePath;
 }
 
 type ChainReplacementArgs = {

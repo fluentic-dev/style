@@ -1,5 +1,5 @@
-import type { DebugData } from '../builder/data/debug';
 import type { LayerPriority } from '../atomic/layer';
+import type { DebugData } from '../builder/data/debug';
 import type { TraceCallsite } from '../utils/trace';
 
 export type SheetCallsite = Pick<TraceCallsite, 'filePath' | 'sourceUrl' | 'sourceContent' | 'line' | 'column'>;

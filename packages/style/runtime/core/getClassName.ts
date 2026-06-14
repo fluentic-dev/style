@@ -1,117 +1,64 @@
-import type { CSSProperties } from 'react';
 import { RUNTIME_CONFIG } from '../../config';
-import type { RecursiveArray } from '../../utils/type';
-import { getGlobalSheet } from '../sheet';
+import type { StyleRuntimeMode } from '../../utils/imports';
 import { getClassNameRSC } from '../rsc/getClassName';
-import type { CssProp, Falsy } from '../types';
-import { insertCssPropRuntimeItems } from '../sheet/insert';
-import { resolveCssPropRuntime } from './cache/prop';
+import { getGlobalSheet } from '../sheet';
+import { insertStylePropRuntimeItems } from '../sheet/insert';
+import type { StyleProp } from '../types';
+import { resolveStylePropRuntime } from './cache/prop';
+import {
+  type ClassNameProps,
+  type ClassNameResult,
+  createClassNameResult,
+  finishClassNameResult,
+  mergeResolvedClassName,
+  mergeResolvedStyle,
+} from './className';
 
-type Items<T = string> = T | Falsy | RecursiveArray<T | Falsy>;
+declare const __FLUENTIC_RUNTIME_MODE__: StyleRuntimeMode | undefined;
 
-export type ClassNameProps = {
-  className?: Items<string>;
-  style?: Items<CSSProperties>;
-};
-
-export type ClassNameResult = {
-  className?: string | undefined;
-  style?: CSSProperties | undefined;
-};
+const RUNTIME_MODE: StyleRuntimeMode = typeof __FLUENTIC_RUNTIME_MODE__ === 'string'
+  ? __FLUENTIC_RUNTIME_MODE__
+  : 'full';
 
 export function getClassName(
-  css: CssProp,
+  styleProp: StyleProp,
   props: ClassNameProps = {},
 ): ClassNameResult {
-  const propClassName = props.className;
-  const propStyle = props.style;
-
-  let className = propClassName ? mergeClassName(propClassName) : undefined;
-  let style = propStyle ? mergeStyle(propStyle) : undefined;
-
-  const resolved = resolveCssPropRuntime(css);
+  const result = createClassNameResult(props);
+  const resolved = resolveStylePropRuntime(styleProp);
 
   if (resolved) {
-    if (!RUNTIME_CONFIG.isCssExtracted && !RUNTIME_CONFIG.isRSC) {
+    if (
+      RUNTIME_MODE === 'prod' ||
+      (
+        RUNTIME_MODE === 'full' &&
+        !RUNTIME_CONFIG.isCssExtracted &&
+        !RUNTIME_CONFIG.isRSC
+      )
+    ) {
       const sheet = getGlobalSheet();
-      insertCssPropRuntimeItems(sheet, resolved.items);
+      insertStylePropRuntimeItems(sheet, resolved.items);
       sheet.flush();
     }
 
-    const resolvedClassName = resolved.result.className;
-    const resolvedStyle = resolved.result.style;
-
-    if (resolvedClassName) {
-      className = className ? className + ' ' + resolvedClassName : resolvedClassName;
-    }
-
-    if (resolvedStyle) {
-      style = style ? Object.assign({}, resolvedStyle, style) : resolvedStyle;
-    }
+    mergeResolvedClassName(result, resolved.result.className);
+    mergeResolvedStyle(result, resolved.result.style);
   }
 
-  if (!className && !style) return {};
+  const finished = finishClassNameResult(result);
 
-  const result: ClassNameResult = {
-    className,
-    style,
-  };
-
-  if (RUNTIME_CONFIG.isDev && RUNTIME_CONFIG.isRSC) {
-    return getClassNameRSC(result, resolved?.items ?? []);
+  if (
+    RUNTIME_MODE === 'rsc' ||
+    (
+      RUNTIME_MODE === 'full' &&
+      RUNTIME_CONFIG.isDev &&
+      RUNTIME_CONFIG.isRSC
+    )
+  ) {
+    return getClassNameRSC(finished, resolved?.items ?? []);
   }
 
-  return result;
+  return finished;
 }
 
-export function mergeClassName(className: Items<string>) {
-  if (!className) return undefined;
-  if (!Array.isArray(className)) return className as string;
-
-  let nextClassName = '';
-
-  const stack: unknown[] = [className];
-
-  while (stack.length) {
-    const item = stack.pop();
-
-    if (!item) continue;
-
-    if (Array.isArray(item)) {
-      for (let index = item.length - 1; index >= 0; index--) {
-        stack.push(item[index]);
-      }
-    } else {
-      nextClassName = nextClassName
-        ? `${nextClassName} ${item}`
-        : item as string;
-    }
-  }
-
-  return nextClassName || undefined;
-}
-
-export function mergeStyle(style: Items<CSSProperties>) {
-  if (!style) return undefined;
-  if (!Array.isArray(style)) return style as CSSProperties;
-
-  const nextStyle = {};
-
-  const stack: unknown[] = [style];
-
-  while (stack.length) {
-    const item = stack.pop();
-
-    if (!item) continue;
-
-    if (Array.isArray(item)) {
-      for (let index = item.length - 1; index >= 0; index--) {
-        stack.push(item[index]);
-      }
-    } else {
-      Object.assign(nextStyle, item);
-    }
-  }
-
-  return nextStyle;
-}
+export { type ClassNameProps, type ClassNameResult, mergeClassName, mergeStyle } from './className';

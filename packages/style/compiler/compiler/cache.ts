@@ -37,7 +37,7 @@ export function createCompilerCache(args: CompilerCacheArgs) {
 
   const cache = new Map<string, CacheItem>();
 
-  const getItem = <T>(args: CompilerCacheGetItemArgs) => {
+  const getItem = <T>(args: CompilerCacheGetItemArgs): T | null => {
     const key = getCacheKey(args);
 
     const cached = cache.get(key);
@@ -47,7 +47,7 @@ export function createCompilerCache(args: CompilerCacheArgs) {
       cached.contentHash === args.contentHash &&
       cached.cacheType === args.cacheType
     ) {
-      return cached.cacheContent;
+      return cached.cacheContent as T;
     }
 
     const file = getCacheFile<T>(cacheDir, args);
@@ -59,7 +59,7 @@ export function createCompilerCache(args: CompilerCacheArgs) {
       cacheType: file.cacheType,
     });
 
-    return file.cacheContent as unknown as T;
+    return file.cacheContent as T;
   };
 
   const setItem = <T>(args: CompilerCacheSetItemArgs<T>) => {

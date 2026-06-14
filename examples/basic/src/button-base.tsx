@@ -1,12 +1,12 @@
 import { bindScope, combineStyle } from '@fluentic/style';
-import type { CssProp, CssTheme } from '@fluentic/style';
+import type { StyleProp, StyleTheme } from '@fluentic/style';
 import type { ReactNode } from 'react';
 import { buttonBaseState, buttonBaseStyles } from './styles';
 
 type ButtonBaseProps = {
   children: ReactNode;
-  css?: CssProp;
-  theme?: CssTheme;
+  css?: StyleProp;
+  theme?: StyleTheme;
 };
 
 export function ButtonBase(props: ButtonBaseProps) {

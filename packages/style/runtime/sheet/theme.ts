@@ -1,5 +1,6 @@
 import { getThemeRuleCss } from '../../atomic/theme';
-import { BUILDER_CALLSITE, type ThemeData } from '../../builder/data';
+import { BUILDER_CALLSITE } from '../../builder/data/const';
+import type { ThemeData } from '../../builder/data/data';
 import { RUNTIME_CONFIG } from '../../config';
 import type { StyleSheet } from '../../sheet';
 

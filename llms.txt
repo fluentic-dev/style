@@ -84,8 +84,8 @@ import {
   type,
   combineStyle,
   type CSSProperties,
-  type CssProp,
-  type CssTheme,
+  type StyleProp,
+  type StyleTheme,
   type RuntimeOptions,
   type StyleObject,
   type StyleToken,
@@ -351,14 +351,14 @@ const buttonState = style.scope()
   ]);
 ```
 
-When a component exposes a themed slot, resolve a `CssTheme` into scope targets
+When a component exposes a themed slot, resolve a `StyleTheme` into scope targets
 for that slot:
 
 ```tsx
-import { bindScope, combineStyle, type CssTheme } from '@fluentic/style';
+import { bindScope, combineStyle, type StyleTheme } from '@fluentic/style';
 
 type ButtonBaseProps = {
-  theme?: CssTheme;
+  theme?: StyleTheme;
 };
 
 export function ButtonBase(props: ButtonBaseProps) {
@@ -377,13 +377,13 @@ export function ButtonBase(props: ButtonBaseProps) {
 }
 ```
 
-`CssTheme` accepts a scope, nested arrays of scopes, and falsy values. Use this
+`StyleTheme` accepts a scope, nested arrays of scopes, and falsy values. Use this
 shape for component `theme` props:
 
 ```ts
 type ButtonProps = {
-  theme?: CssTheme;
-  css?: CssProp;
+  theme?: StyleTheme;
+  css?: StyleProp;
 };
 ```
 
@@ -543,7 +543,7 @@ type CompilerOptions = {
 ```
 
 Default transform include is `/\.[jt]sx?$/`; files in `node_modules` are skipped.
-The unplugin exposes a virtual CSS module at `virtual:fluentic-styles.css`.
+The unplugin exposes a virtual CSS module at `virtual:fluentic-style.css`.
 Import that virtual CSS from an app entry when the bundler setup needs collected
 CSS to be emitted.
 
@@ -605,9 +605,9 @@ Authoring:
 
 Component APIs:
 
-- Use `CssProp` for a direct visual override of the component root or a documented
+- Use `StyleProp` for a direct visual override of the component root or a documented
   part.
-- Use `CssTheme` for explicit slot-level theming props.
+- Use `StyleTheme` for explicit slot-level theming props.
 - Use slots for component internals. A slot is the library's clean replacement for
   ad-hoc global class names like `.Button-label`.
 - Expose a small number of intentional slots instead of making every DOM node a
@@ -632,7 +632,7 @@ Compiler:
 
 - Add the bundler plugin before relying on build-time extraction, and keep the JSX
   runtime configured separately.
-- Import `virtual:fluentic-styles.css` from the app entry when the bundler needs a
+- Import `virtual:fluentic-style.css` from the app entry when the bundler needs a
   concrete CSS module for collected rules.
 - Prefer simple object literals, constants, tokens, slots, and scopes that can be
   statically evaluated.

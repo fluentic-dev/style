@@ -1,5 +1,5 @@
-import type { BabelTransformSourceMap } from '../../compiler/transform';
 import type { CompilerOptions } from '../../compiler';
+import type { BabelTransformSourceMap } from '../../compiler/transform';
 import {
   type GetSourcemapFilePathFn,
   normalizeSourcemapSourcePath,

@@ -1,5 +1,6 @@
 import { createThemeClassName } from '../atomic/theme';
-import { createThemeData, type ThemeData } from '../builder/data';
+import { createThemeData } from '../builder/data/create';
+import type { ThemeData } from '../builder/data/data';
 import { RUNTIME_CONFIG } from '../config';
 import type { StyleTokenOverride } from './token';
 

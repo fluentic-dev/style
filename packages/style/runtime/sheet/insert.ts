@@ -1,34 +1,34 @@
 import { RUNTIME_CONFIG } from '../../config';
 import type { StyleSheet } from '../../sheet/types';
-import type { CssPropItem } from '../core/cache/prop';
-import type { CssProp } from '../types';
+import type { StylePropItem } from '../core/cache/prop';
+import type { StyleProp } from '../types';
+import { walkStylePropItemsSheetRules, walkStylePropSheetRules } from './rules';
 import { insertRuntimeThemeRule } from './theme';
-import { walkCssPropItemsSheetRules, walkCssPropSheetRules } from './rules';
 
-export function insertCssPropRuntimeRules(
+export function insertStylePropRuntimeRules(
   sheet: StyleSheet,
-  css: CssProp | undefined,
+  styleProp: StyleProp | undefined,
 ) {
-  if (!css) return;
+  if (!styleProp) return;
 
   sheet.updateLayers(RUNTIME_CONFIG.layers);
 
-  walkCssPropSheetRules(
-    css,
+  walkStylePropSheetRules(
+    styleProp,
     (rule) => sheet.insert(rule),
     (theme) => insertRuntimeThemeRule(sheet, theme),
   );
 }
 
-export function insertCssPropRuntimeItems(
+export function insertStylePropRuntimeItems(
   sheet: StyleSheet,
-  items: readonly CssPropItem[],
+  items: readonly StylePropItem[],
 ) {
   if (!items.length) return;
 
   sheet.updateLayers(RUNTIME_CONFIG.layers);
 
-  walkCssPropItemsSheetRules(
+  walkStylePropItemsSheetRules(
     items,
     (rule) => sheet.insert(rule),
     (theme) => insertRuntimeThemeRule(sheet, theme),

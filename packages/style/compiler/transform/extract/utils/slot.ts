@@ -1,6 +1,6 @@
 import type { NodePath, types as BabelTypes } from '@babel/core';
-import { evalOk } from '../../evaluator';
-import type { EvalSlotRef } from '../../evaluator';
+import { evalOk } from '../../evaluator/evaluator';
+import type { EvalSlotRef } from '../../evaluator/types';
 import { getObjectPropertyKey } from '../../syntax';
 import type { CompiledChainData } from '../chain';
 import type { ExtractPluginState } from './state';

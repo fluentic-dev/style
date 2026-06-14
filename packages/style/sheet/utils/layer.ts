@@ -1,9 +1,4 @@
-import {
-  createLayerPool,
-  LayerDefaultNamespace,
-  LayerDefaultPriority,
-  type LayerPriority,
-} from '../../atomic/layer';
+import { createLayerPool, LayerDefaultNamespace, LayerDefaultPriority, type LayerPriority } from '../../atomic/layer';
 import { RUNTIME_CONFIG } from '../../config';
 
 export function createSheetLayerState() {

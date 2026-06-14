@@ -14,18 +14,18 @@ export type StyleItem = ScopeTargetData<any> | StyleTokenOverride<any>;
 
 export type StyleItems = (StyleItem | Falsy)[];
 
-export type CssItem = ResolvedStyleItem | ThemeData;
+export type RuntimeStyleItem = ResolvedStyleItem | ThemeData;
 
-export type CssRuntimeItem = CssItem | StyleData | SlotData;
+export type RuntimeStylePropItem = RuntimeStyleItem | StyleData | SlotData;
 
-export type CssProp = RecursiveProp<CssRuntimeItem>;
+export type StyleProp = RecursiveProp<RuntimeStylePropItem>;
 
-export type CssToken<T> = T | StyleTokenData<T>;
+export type StyleTokenInput<T> = T | StyleTokenData<T>;
 
-export type CssTheme = RecursiveProp<ScopeData<any>>;
+export type StyleTheme = RecursiveProp<ScopeData<any>>;
 
 export type RuntimeStyleAttributes = {
-  css?: CssProp;
+  css?: StyleProp;
 };
 
 export type DomElementProps = {

@@ -1,13 +1,14 @@
 import { DEFAULT_RUNTIME_CONFIG as DEFAULT_CONFIG } from '../../config/default';
+import { STYLE_EXTRACT_IMPORT_PATH, STYLE_IMPORT_PATH, STYLE_SERVER_IMPORT_PATH } from '../../utils/imports';
 
 export { DEFAULT_CONFIG };
 
 export const IMPORT_PATHS = [
-  '@fluentic/style',
-  '@fluentic/style/server',
+  STYLE_IMPORT_PATH,
+  STYLE_SERVER_IMPORT_PATH,
 ];
 
-export const IMPORT_EXTRACT = '@fluentic/style/builder/extract';
+export const IMPORT_EXTRACT = STYLE_EXTRACT_IMPORT_PATH;
 
 export const FN_STYLE = 'style';
 

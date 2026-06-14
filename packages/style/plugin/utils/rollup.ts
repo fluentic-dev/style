@@ -7,6 +7,7 @@ import {
   getVirtualModuleId,
   loadVirtualModule,
   prependRuntimeImport,
+  resolveRuntimeImportAlias,
 } from './bundler';
 import {
   createPluginCompiler,
@@ -91,7 +92,7 @@ export function createRollupStylePlugin(
     },
 
     resolveId(id) {
-      return getVirtualModuleId(id);
+      return getVirtualModuleId(id) ?? resolveRuntimeImportAlias(id, buildMeta);
     },
 
     load(id) {

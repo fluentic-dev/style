@@ -8,7 +8,7 @@
     "cssgen": "panda cssgen --minimal --minify",
     "dev": "pnpm run codegen && pnpm run cssgen && vite",
     "build": "pnpm run codegen && pnpm run cssgen && vite build",
-    "preview": "vite preview"
+    "serve": "vite preview"
   },
   "dependencies": {
     "@benchmark/main": "workspace:*",

@@ -21,13 +21,13 @@ Component libraries need more than a way to assign class names. They need:
 
 Fluentic Style models those needs directly:
 
-| Concept            | What it solves                                                               |
-| ------------------ | ---------------------------------------------------------------------------- |
-| `style(...)`        | Standalone fluent style chains.                                             |
-| `style.slot(...)`   | Public component parts that can be themed and overridden.                   |
-| `style.scope(...)`  | Bundles of slot overrides for themes, state, and media queries.             |
-| `combineStyle(...)` | Resolve styles with scopes, slot overrides, and token overrides.            |
-| Bundler plugins     | Optional static extraction into atomic CSS.                                 |
+| Concept             | What it solves                                                   |
+| ------------------- | ---------------------------------------------------------------- |
+| `style(...)`        | Standalone fluent style chains.                                  |
+| `style.slot(...)`   | Public component parts that can be themed and overridden.        |
+| `style.scope(...)`  | Bundles of slot overrides for themes, state, and media queries.  |
+| `combineStyle(...)` | Resolve styles with scopes, slot overrides, and token overrides. |
+| Bundler plugins     | Optional static extraction into atomic CSS.                      |
 
 ## Install
 
@@ -120,7 +120,7 @@ export default defineConfig({
 Import the virtual runtime module once in your app entry:
 
 ```ts
-import 'virtual:fluentic-styles';
+import 'virtual:fluentic-style';
 ```
 
 ## Package exports
@@ -134,7 +134,7 @@ import 'virtual:fluentic-styles';
 | `@fluentic/style/precompile`      | Precompiled style helpers.                                                       |
 | `@fluentic/style/config`          | Runtime and compiler configuration helpers.                                      |
 | `@fluentic/style/runtime/rsc`     | React Server Component runtime helpers.                                          |
-| `@fluentic/style/runtime/style`   | Style runtime helpers for extracted output.                                     |
+| `@fluentic/style/runtime/style`   | Style runtime helpers for extracted output.                                      |
 | `@fluentic/style/plugin/vite`     | Vite plugin.                                                                     |
 | `@fluentic/style/plugin/rollup`   | Rollup plugin.                                                                   |
 | `@fluentic/style/plugin/webpack`  | Webpack plugin.                                                                  |

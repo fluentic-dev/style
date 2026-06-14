@@ -1,17 +1,13 @@
 import { getScopeParentClassName } from '../../../atomic/scope';
+import { BUILDER_STATE, BUILDER_TYPE_SCOPE, BUILDER_TYPE_SLOT } from '../../../builder/data/const';
+import type { ScopeTargetData, SlotData, StyleData } from '../../../builder/data/data';
 import {
-  BUILDER_STATE,
-  BUILDER_TYPE_SCOPE,
-  BUILDER_TYPE_SLOT,
   getScopeTargetScope,
   getScopeTargetSlotId,
   getSlotId,
   isSlotData,
   isStyleData,
-  type ScopeTargetData,
-  type SlotData,
-  type StyleData,
-} from '../../../builder/data';
+} from '../../../builder/data/is';
 import type { StateItem } from '../../../builder/data/state';
 import { isStyleTokenOverrideData } from '../../../style/token';
 import { globalData } from '../../../utils/global';

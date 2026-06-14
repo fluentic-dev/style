@@ -1,9 +1,11 @@
 import path from 'node:path';
 import { createCompiler } from '../../compiler';
-import type { Compiler, CompilerOptions } from '../../compiler';
+import type { Compiler, CompilerCssOptions, CompilerOptions } from '../../compiler';
 import { PLUGIN_CACHE_DIR } from './constants';
 import { createTransformFilter, normalizeModuleId, type TransformFilterOptions } from './filter';
 import type { BundlerSourceMap } from './sourcemap';
+
+export type PluginCssOptions = CompilerCssOptions;
 
 export type PluginOptions = CompilerOptions & TransformFilterOptions & {
   cacheDir?: string;

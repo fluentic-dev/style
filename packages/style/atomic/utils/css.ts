@@ -2,6 +2,10 @@ export function getCssVar(varName: string, value: string) {
   return 'var(' + varName + ', ' + escapeCssValue(value) + ')';
 }
 
+export function getCssVarRawFallback(varName: string, fallbackCss: string) {
+  return 'var(' + varName + ', ' + fallbackCss + ')';
+}
+
 export function escapeCssValue(value: string): string {
   if (!value) return '';
 
@@ -11,9 +15,7 @@ export function escapeCssValue(value: string): string {
     .replace(/\\/g, '\\\\')
     .replace(/"/g, '\\"')
     .replace(/'/g, "\\'")
-    .replace(/;/g, '\\;')
-    .replace(/\(/g, '\\(')
-    .replace(/\)/g, '\\)');
+    .replace(/;/g, '\\;');
 }
 
 export function escapeCssIdent(ident: string): string {

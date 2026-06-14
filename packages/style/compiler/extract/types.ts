@@ -31,4 +31,9 @@ export type CssExtractRule = {
   className: string;
   css: string;
   priority: LayerPriority;
+  trace?: {
+    filePath: string;
+    line: number;
+    column: number;
+  };
 };

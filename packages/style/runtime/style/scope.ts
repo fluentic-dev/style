@@ -1,7 +1,8 @@
-import { isScopeData, type ScopeTargetData, type SlotData } from '../../builder/data';
-import type { CssTheme } from '../types';
+import type { ScopeTargetData, SlotData } from '../../builder/data/data';
+import { isScopeData } from '../../builder/data/is';
+import type { StyleTheme } from '../types';
 
-export function combineScope(...scopes: (CssTheme | undefined)[]) {
+export function combineScope(...scopes: (StyleTheme | undefined)[]) {
   const shortcut = resolveSingleScopeTarget(scopes);
 
   if (shortcut !== null) {
@@ -13,7 +14,7 @@ export function combineScope(...scopes: (CssTheme | undefined)[]) {
 
 export function bindScope(
   target: SlotData,
-  ...scopes: (CssTheme | undefined)[]
+  ...scopes: (StyleTheme | undefined)[]
 ) {
   const shortcut = resolveSingleScopeTarget(scopes);
 
@@ -25,7 +26,7 @@ export function bindScope(
 }
 
 function resolveSingleScopeTarget(
-  scopes: (CssTheme | undefined)[],
+  scopes: (StyleTheme | undefined)[],
 ): ((target: SlotData) => ScopeTargetData[]) | null {
   if (scopes.length !== 1) return null;
 
@@ -38,10 +39,10 @@ function resolveSingleScopeTarget(
 
 function resolveScopeTargets(
   target: SlotData,
-  scopes: (CssTheme | undefined)[],
+  scopes: (StyleTheme | undefined)[],
 ): ScopeTargetData[] {
   const targets: ScopeTargetData[] = [];
-  const stack: CssTheme[] = scopes.slice();
+  const stack: StyleTheme[] = scopes.slice();
 
   while (stack.length > 0) {
     const item = stack.pop();

@@ -1,7 +1,8 @@
 import type { types } from '@babel/core';
 import type { CompilerCssCollector } from '../../../extract';
 import type { ImportSourceMatcher } from '../../../utils/import_source';
-import type { EvalModuleBindings, EvalScope, ImportMap, ResolveImportFn } from '../../evaluator';
+import type { EvalScope } from '../../evaluator/evaluator';
+import type { EvalModuleBindings, ImportMap, ResolveImportFn } from '../../evaluator/types';
 
 export type ExtractPluginState = {
   fileId: string;

@@ -18,7 +18,7 @@ export default function HomePage() {
         <div css={css.metaRow}>
           <span css={css.metaPill}>Dev extract enabled</span>
           <span css={css.metaPill}>Prod extract enabled</span>
-          <span css={css.metaPill}>CSS prop on DOM</span>
+          <span css={css.metaPill}>Style prop on DOM</span>
         </div>
       </section>
       <section css={css.grid} data-testid='home-grid'>

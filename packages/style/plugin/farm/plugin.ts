@@ -15,7 +15,10 @@ import {
   getExtractedCss,
   isVirtualModuleRequest,
   loadVirtualModule,
+  resolveRuntimeImportAlias,
+  RUNTIME_IMPORT_ALIAS_PATTERN,
   RUNTIME_MODULE_ID,
+  VIRTUAL_MODULE_REQUEST_PATTERN,
 } from '../utils/bundler';
 import { getSourcemapSidecar, type SourcemapSidecar } from '../utils/sidecar';
 import { parseBundlerSourceMap, resolveDevSourcemapMode } from '../utils/sourcemap';
@@ -77,7 +80,7 @@ export function plugin(options: FarmPluginOptions = {}) {
     priority: 101,
 
     buildStart: {
-      async executor(_: unknown, context: FarmContext) {
+      async executor(_: unknown, _context: FarmContext) {
         getState();
         await sourcemapSidecar?.ensureStarted();
       },
@@ -85,10 +88,23 @@ export function plugin(options: FarmPluginOptions = {}) {
 
     resolve: {
       filters: {
-        sources: ['^virtual:fluentic-style(?:\\.css)?$'],
+        sources: [
+          VIRTUAL_MODULE_REQUEST_PATTERN,
+          RUNTIME_IMPORT_ALIAS_PATTERN,
+        ],
         importers: ['.*'],
       },
       executor(params: { source: string; }) {
+        const alias = resolveRuntimeImportAlias(params.source, buildMeta);
+        if (alias) {
+          return {
+            resolvedPath: alias,
+            sideEffects: true,
+            external: false,
+            meta: {},
+          };
+        }
+
         if (
           !isVirtualModuleRequest(params.source, RUNTIME_MODULE_ID) &&
           !isVirtualModuleRequest(params.source, CSS_MODULE_ID)
@@ -104,7 +120,7 @@ export function plugin(options: FarmPluginOptions = {}) {
     },
 
     load: {
-      filters: { resolvedPaths: ['^virtual:fluentic-style(?:\\.css)?$'] },
+      filters: { resolvedPaths: [VIRTUAL_MODULE_REQUEST_PATTERN] },
       executor(params: { resolvedPath: string; }) {
         const content = loadVirtualModule(
           params.resolvedPath,

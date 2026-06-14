@@ -14,6 +14,7 @@ import {
   PLUGIN_CACHE_DIR,
   PLUGIN_NAME,
 } from '../utils';
+import { getRuntimeImportAliases } from '../utils/bundler';
 import { writeCacheFile, writePluginCacheFile } from '../utils/cache';
 import { formatError } from '../utils/misc';
 import { getSourcemapSidecar, type SourcemapSidecar } from '../utils/sidecar';
@@ -153,6 +154,7 @@ function createFluenticNextConfigResolved(
   const turbopackCssAliases = createCssAliases({
     writeFile: (fileName, content) => writeCacheFile(getImportableCssCacheDir(projectDir), fileName, content),
   });
+  const turbopackRuntimeAliases = getRuntimeImportAliases(phaseBuildMeta);
 
   nextRegistry.setEntry<NextLoaderState>(turbopackCompilerId, {
     compiler: turbopackState.compiler,
@@ -191,6 +193,7 @@ function createFluenticNextConfigResolved(
       compilerId: turbopackCompilerId,
       configHash: phaseConfigHash,
       cssAliases: turbopackCssAliases,
+      runtimeAliases: turbopackRuntimeAliases,
       dev,
       devCssHref,
       projectDir,
@@ -228,7 +231,10 @@ function createFluenticNextConfigResolved(
         isServer: context.isServer,
       });
 
-      addAliases(config, cssAliases);
+      addAliases(config, {
+        ...cssAliases,
+        ...(context.isServer ? {} : getRuntimeImportAliases(buildMeta)),
+      });
 
       addTransformLoader(config, options, compilerId);
 
@@ -269,6 +275,7 @@ function createTurbopackConfig(
     compilerId: string;
     configHash: string;
     cssAliases: Record<string, string>;
+    runtimeAliases: Record<string, string>;
     dev: boolean;
     devCssHref: string | null;
     projectDir: string;
@@ -277,6 +284,7 @@ function createTurbopackConfig(
   const resolveAlias: TurbopackResolveAlias = {
     ...originalTurbopack.resolveAlias,
     ...args.cssAliases,
+    ...args.runtimeAliases,
   };
 
   return {
@@ -297,6 +305,7 @@ function mergeTurbopackRules(
     compilerId: string;
     configHash: string;
     cssAliases: Record<string, string>;
+    runtimeAliases: Record<string, string>;
     dev: boolean;
     devCssHref: string | null;
     projectDir: string;

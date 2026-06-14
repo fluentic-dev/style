@@ -1,14 +1,13 @@
 import type { CompilerInternal, TransformExtractArgs, TransformExtractResult } from '../../compiler';
 import type { CompilerCssCollector } from '../../extract';
-import { type Tracer } from '../evaluator';
 import { babelTransform } from '../utils/babel';
-import { createExtractPlugin } from './plugin';
+import { createExtractPlugin, type ExtractTracer } from './plugin';
 
 export type TransformExtractDeps = {
   collector: CompilerCssCollector;
   mode?: 'extract' | 'collect';
   styleFilePath?: string;
-  tracer: Tracer;
+  tracer: ExtractTracer;
 };
 
 export function transformExtract(

@@ -7,8 +7,9 @@
     "generate": "tsx generate.ts",
     "generate:002": "tsx generate.ts 002",
     "generate:003": "tsx generate.ts 003",
+    "generate:004": "tsx generate.ts 004",
     "verify": "tsx verify.ts",
-    "generate-and-verify": "tsx generate.ts 002 && tsx generate.ts 003 && tsx verify.ts"
+    "generate-and-verify": "tsx generate.ts 002 && tsx generate.ts 003 && tsx generate.ts 004 && tsx verify.ts"
   },
   "dependencies": {
     "@fluentic/style": "workspace:*"

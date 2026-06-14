@@ -1,4 +1,6 @@
-import { BUILDER_STATE, getScopeTargetScope, isScopeTargetData, type ScopeTargetData } from '../../../builder/data';
+import { BUILDER_STATE } from '../../../builder/data/const';
+import type { ScopeTargetData } from '../../../builder/data/data';
+import { getScopeTargetScope, isScopeTargetData } from '../../../builder/data/is';
 import { getExtractedTokenBoundData, isExtractedTokenBoundData } from '../../../builder/extract/withTokens';
 import { RUNTIME_CONFIG } from '../../../config';
 import type { Falsy, StyleItem } from '../../types';

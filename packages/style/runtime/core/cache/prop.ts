@@ -1,3 +1,4 @@
+import type { ThemeData } from '../../../builder/data/data';
 import {
   isScopeData,
   isScopeTargetData,
@@ -5,13 +6,12 @@ import {
   isSlotOverrideData,
   isStyleData,
   isThemeData,
-  type ThemeData,
-} from '../../../builder/data';
+} from '../../../builder/data/is';
 import type { StateItem } from '../../../builder/data/state';
 import { getExtractedTokenBoundData, isExtractedTokenBoundData } from '../../../builder/extract/withTokens';
 import { RUNTIME_CONFIG } from '../../../config';
 import { isStyleTokenOverrideData } from '../../../style/token';
-import type { CssProp } from '../../types';
+import type { StyleProp } from '../../types';
 import {
   createResolvedStyleItem,
   createResolvedStyleItemFromItems,
@@ -20,50 +20,50 @@ import {
   isResolvedStyleItem,
   type ResolvedStyleItem,
 } from './item';
-import { getCssPropCacheValue } from './propCache';
-import { createCssPropResult, emptyCssPropResult, type ResolvedCssProp } from './result';
+import { getStylePropCacheValue } from './propCache';
+import { createStylePropResult, emptyStylePropResult, type ResolvedStyleProp } from './result';
 import { mergeTokenOverrides, mergeTokenValues, type StyleTokenValues } from './tokenValues';
 import { walkRecursiveItems } from './utils/walk';
 
-export type CssPropItem = ResolvedStyleItem | ThemeData;
+export type StylePropItem = ResolvedStyleItem | ThemeData;
 
-type CssPropWalkOptions = {
+type StylePropWalkOptions = {
   onUnsupported?: (item: unknown) => void;
   stableTokenBound?: boolean;
 };
 
-export type ResolvedCssPropRuntime = {
-  items: CssPropItem[];
-  result: ResolvedCssProp;
+export type ResolvedStylePropRuntime = {
+  items: StylePropItem[];
+  result: ResolvedStyleProp;
 };
 
-type CssPropTokenBinding = {
+type StylePropTokenBinding = {
   data: object;
   tokens: StyleTokenValues;
 };
 
-export function resolveCssProp(css: CssProp | undefined): ResolvedCssProp {
-  return resolveCssPropRuntime(css)?.result ?? emptyCssPropResult;
+export function resolveStyleProp(styleProp: StyleProp | undefined): ResolvedStyleProp {
+  return resolveStylePropRuntime(styleProp)?.result ?? emptyStylePropResult;
 }
 
-export function resolveCssPropRuntime(css: CssProp | undefined): ResolvedCssPropRuntime | null {
-  if (!css) return null;
+export function resolveStylePropRuntime(styleProp: StyleProp | undefined): ResolvedStylePropRuntime | null {
+  if (!styleProp) return null;
 
   if (RUNTIME_CONFIG.runtimeCacheTTL === 0) {
-    const items = collectCssPropItems(css);
+    const items = collectStylePropItems(styleProp);
 
     return {
       items,
-      result: createCssPropResult(items, getThemeClassName),
+      result: createStylePropResult(items, getThemeClassName),
     };
   }
 
   let unsupportedItem: unknown;
-  const tokenBindings: CssPropTokenBinding[] = [];
-  const cache = getCssPropCacheValue<CssPropItem>(
-    css,
-    walkCssPropCachePath,
-    () => warnUnsupportedCssPropItem(unsupportedItem),
+  const tokenBindings: StylePropTokenBinding[] = [];
+  const cache = getStylePropCacheValue<StylePropItem>(
+    styleProp,
+    walkStylePropCachePath,
+    () => warnUnsupportedStylePropItem(unsupportedItem),
   );
 
   const configVersion = RUNTIME_CONFIG.configVersion;
@@ -73,15 +73,15 @@ export function resolveCssPropRuntime(css: CssProp | undefined): ResolvedCssProp
 
     return {
       items: cache.data.items,
-      result: createCssPropResult(
+      result: createStylePropResult(
         applyTokenBindings(cache.data.items, tokenBindings),
         getThemeClassName,
       ),
     };
   }
 
-  const items = collectCssPropItems(css, tokenBindings.length > 0);
-  const result = createCssPropResult(items, getThemeClassName);
+  const items = collectStylePropItems(styleProp, tokenBindings.length > 0);
+  const result = createStylePropResult(items, getThemeClassName);
   const data = { configVersion, items, result };
 
   if (cache) cache.data = data;
@@ -90,19 +90,19 @@ export function resolveCssPropRuntime(css: CssProp | undefined): ResolvedCssProp
 
   return {
     items,
-    result: createCssPropResult(
+    result: createStylePropResult(
       applyTokenBindings(items, tokenBindings),
       getThemeClassName,
     ),
   };
 
-  function walkCssPropCachePath(
-    css: CssProp,
+  function walkStylePropCachePath(
+    styleProp: StyleProp,
     fn: (item: object) => void,
     onUnsupported: () => void,
   ) {
-    walkRecursiveItems(css, (item) => {
-      const key = getCssPropCacheKey(item, tokenBindings);
+    walkRecursiveItems(styleProp, (item) => {
+      const key = getStylePropCacheKey(item, tokenBindings);
 
       if (key) {
         fn(key);
@@ -114,43 +114,43 @@ export function resolveCssPropRuntime(css: CssProp | undefined): ResolvedCssProp
   }
 }
 
-export function walkCssProp(
-  css: CssProp,
-  fn: (item: CssPropItem) => void,
-  options?: CssPropWalkOptions,
+export function walkStyleProp(
+  styleProp: StyleProp,
+  fn: (item: StylePropItem) => void,
+  options?: StylePropWalkOptions,
 ) {
-  walkRecursiveItems(css, (item) => {
-    const cssItem = normalizeCssPropItem(item, options?.stableTokenBound ?? false);
+  walkRecursiveItems(styleProp, (item) => {
+    const styleItem = normalizeStylePropItem(item, options?.stableTokenBound ?? false);
 
-    if (cssItem) {
-      fn(cssItem);
+    if (styleItem) {
+      fn(styleItem);
     } else {
       options?.onUnsupported?.(item);
     }
   });
 }
 
-export function getCssPropItems(
-  item: CssPropItem,
+export function getStylePropItems(
+  item: StylePropItem,
 ): StateItem[] {
   if (isResolvedStyleItem(item)) return item.items;
   return [];
 }
 
-function collectCssPropItems(
-  css: CssProp,
+function collectStylePropItems(
+  styleProp: StyleProp,
   stableTokenBound = false,
 ) {
-  const items: CssPropItem[] = [];
+  const items: StylePropItem[] = [];
 
-  walkCssProp(css, (item) => {
+  walkStyleProp(styleProp, (item) => {
     items.push(item);
   }, { stableTokenBound });
 
   return items;
 }
 
-function warnUnsupportedCssPropItem(item: unknown) {
+function warnUnsupportedStylePropItem(item: unknown) {
   if (!RUNTIME_CONFIG.isDev) return;
 
   if (
@@ -160,7 +160,7 @@ function warnUnsupportedCssPropItem(item: unknown) {
     isStyleTokenOverrideData(item)
   ) {
     console.warn(
-      '[fluentic-style] Unsupported css prop value. Pass themes, scopes, slot overrides, and token overrides to combineStyle before using css.',
+      '[fluentic-style] Unsupported style prop value. Pass themes, scopes, slot overrides, and token overrides to combineStyle before using style prop.',
       item,
     );
     return;
@@ -168,19 +168,19 @@ function warnUnsupportedCssPropItem(item: unknown) {
 
   if (item) {
     console.warn(
-      '[fluentic-style] Unsupported css prop value.',
+      '[fluentic-style] Unsupported style prop value.',
       item,
     );
   }
 }
 
-function normalizeCssPropItem(
+function normalizeStylePropItem(
   item: unknown,
   stableTokenBound: boolean,
-): CssPropItem | null {
+): StylePropItem | null {
   if (RUNTIME_CONFIG.isHoistEnabled && isExtractedTokenBoundData(item)) {
     const bound = getExtractedTokenBoundData(item);
-    if (stableTokenBound) return normalizeCssPropItem(bound.data, true);
+    if (stableTokenBound) return normalizeStylePropItem(bound.data, true);
 
     const tokens = mergeTokenOverrides(null, bound.tokens);
 
@@ -188,7 +188,7 @@ function normalizeCssPropItem(
       return createResolvedStyleItem(bound.data, [], tokens);
     }
 
-    return normalizeCssPropItem(bound.data, false);
+    return normalizeStylePropItem(bound.data, false);
   }
 
   if (isResolvedStyleItem(item) || isThemeData(item)) {
@@ -202,13 +202,13 @@ function normalizeCssPropItem(
   return null;
 }
 
-function getCssPropCacheKey(
+function getStylePropCacheKey(
   item: unknown,
-  tokenBindings: CssPropTokenBinding[],
+  tokenBindings: StylePropTokenBinding[],
 ): object | null {
   if (RUNTIME_CONFIG.isHoistEnabled && isExtractedTokenBoundData(item)) {
     const bound = getExtractedTokenBoundData(item);
-    const key = getCssPropCacheKey(bound.data, tokenBindings);
+    const key = getStylePropCacheKey(bound.data, tokenBindings);
     const tokens = mergeTokenOverrides(null, bound.tokens);
 
     if (key && tokens) {
@@ -235,9 +235,9 @@ function getThemeClassName(item: object) {
 }
 
 function applyTokenBindings(
-  items: readonly CssPropItem[],
-  bindings: readonly CssPropTokenBinding[],
-): CssPropItem[] {
+  items: readonly StylePropItem[],
+  bindings: readonly StylePropTokenBinding[],
+): StylePropItem[] {
   if (!bindings.length) return items.slice();
 
   return items.map((item) => {
@@ -252,7 +252,7 @@ function applyTokenBindings(
 
 function getBoundTokens(
   item: ResolvedStyleItem,
-  bindings: readonly CssPropTokenBinding[],
+  bindings: readonly StylePropTokenBinding[],
 ) {
   let tokens = getStyleTokenValues(item);
 

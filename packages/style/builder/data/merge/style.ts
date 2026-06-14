@@ -1,6 +1,6 @@
 import { getAtomicClassName, getClassNameDedupe } from '../../../atomic/classname';
 import { getTokenVar } from '../../../atomic/token';
-import { getCssVar } from '../../../atomic/utils/css';
+import { getCssVar, getCssVarRawFallback } from '../../../atomic/utils/css';
 import { RUNTIME_CONFIG } from '../../../config';
 import { isStyleTokenData, isStyleTokenOverrideData, type StyleTokenData } from '../../../style/token';
 import type { StyleObject, StyleValueTuple } from '../../../style/types';
@@ -103,7 +103,9 @@ export function mergeBuilderData<Data extends BuilderData>(
       variableName = getDebugFieldVarName(debug, property);
 
       value = variableName
-        ? getCssVar(variableName, String(token ? token.value : valueRaw ?? ''))
+        ? token
+          ? getCssVarRawFallback(variableName, getTokenVar(token, RUNTIME_CONFIG.tokenVarPrefix))
+          : getCssVar(variableName, String(valueRaw ?? ''))
         : token
         ? getTokenVar(token, RUNTIME_CONFIG.tokenVarPrefix)
         : String(valueRaw ?? '');

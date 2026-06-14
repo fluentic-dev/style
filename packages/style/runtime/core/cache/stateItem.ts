@@ -5,7 +5,7 @@ import {
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
   ITEM_VALUE_TYPE_VARIABLE,
-} from '../../../builder/data';
+} from '../../../builder/data/const';
 import type { StateItem } from '../../../builder/data/state';
 import { RUNTIME_CONFIG } from '../../../config';
 import { getStyleTokenId, isStyleTokenData, isStyleTokenOverrideData, type StyleTokenData } from '../../../style/token';

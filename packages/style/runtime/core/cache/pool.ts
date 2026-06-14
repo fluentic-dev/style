@@ -1,9 +1,5 @@
-import {
-  getScopeTargetScope,
-  getScopeTargetSlotId,
-  isScopeTargetData,
-  type ScopeTargetData,
-} from '../../../builder/data';
+import type { ScopeTargetData } from '../../../builder/data/data';
+import { getScopeTargetScope, getScopeTargetSlotId, isScopeTargetData } from '../../../builder/data/is';
 import { RUNTIME_CONFIG } from '../../../config';
 import type { Falsy, StyleItem } from '../../types';
 import type { CombinedStyle } from '../combinedStyle';

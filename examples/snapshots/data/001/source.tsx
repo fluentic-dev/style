@@ -1,4 +1,4 @@
-import { createToken, bindScope, style, combineStyle } from '@fluentic/style';
+import { bindScope, combineStyle, createToken, style } from '@fluentic/style';
 import bg from './bg.png';
 import { Fonts } from './constants';
 

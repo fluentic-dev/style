@@ -1,6 +1,6 @@
 import { getStyleTokenId, type StyleTokenData, type StyleTokenOverride } from '../style/token';
 import { hashString } from '../utils/hash';
-import { getCssVar } from './utils/css';
+import { getCssVar, getCssVarRawFallback } from './utils/css';
 
 export function getTokenVarName(
   token: StyleTokenData | StyleTokenOverride,
@@ -41,7 +41,7 @@ function getTokenVarFallback(
   const varName = getTokenVarName(token, tokenVarPrefix);
 
   if (token.ref) {
-    return 'var(' + varName + ', ' + getTokenVarFallback(token.ref, tokenVarPrefix) + ')';
+    return getCssVarRawFallback(varName, getTokenVarFallback(token.ref, tokenVarPrefix));
   }
 
   return getCssVar(varName, String(token.value ?? ''));

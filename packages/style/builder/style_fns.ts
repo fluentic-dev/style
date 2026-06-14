@@ -6,7 +6,6 @@ import { traceMarker } from '../utils/trace';
 import {
   type BuilderCallsite,
   type BuilderData,
-  checkSelector,
   type DebugData,
   isStyleData,
   type ItemSelector,
@@ -21,6 +20,7 @@ import {
   SELECTOR_MEDIA,
   SELECTOR_MERGE,
 } from './data';
+import { checkSelector } from './data/check_selector';
 import type { MergeData } from './style_data';
 import type { AtRuleStyleData, MergeRuleStyleData, SelectorsRecord } from './types';
 import { resolveCallsite, transformStyle } from './utils';

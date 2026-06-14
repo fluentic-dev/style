@@ -1,7 +1,8 @@
+import { createRequire } from 'node:module';
 import type { OutputAsset } from 'rolldown';
 import type { Plugin, ResolvedConfig } from 'vite';
-import type { BuildMeta } from '../../config';
 import {
+  BUILD_META_IMPORT_PATH,
   createPluginCompiler,
   CSS_MARKER,
   CSS_MODULE_ID,
@@ -9,31 +10,32 @@ import {
   invalidateFiles,
   PLUGIN_NAME,
   type PluginCompiler,
+  type PluginCssOptions,
   type PluginOptions,
   RESOLVED_CSS_MODULE_ID,
   RESOLVED_RUNTIME_MODULE_ID,
   resolvePluginSourcemapFilePath,
   RUNTIME_MODULE_ID,
 } from '../utils';
-import { createRuntimeModuleSource, hasCssMarker, isVirtualModuleRequest, replaceCssMarker } from '../utils/bundler';
+import {
+  createRuntimeModuleSource,
+  getBuildMeta,
+  getRuntimeImportAliases,
+  hasCssMarker,
+  isVirtualModuleRequest,
+  replaceCssMarker,
+} from '../utils/bundler';
 import { formatError } from '../utils/misc';
 import type { SourcemapSidecar } from '../utils/sidecar';
 import { getSourcemapSidecar } from '../utils/sidecar';
 import { resolveDevSourcemapMode } from '../utils/sourcemap';
 
-export type { PluginOptions };
-
-function getBuildMeta(dev: boolean, options: PluginOptions): BuildMeta {
-  return {
-    dev,
-    extract: !dev,
-    hoist: options.hoist !== false,
-    rsc: false,
-    css: options.css ?? null,
-  };
-}
+export type { PluginCssOptions, PluginOptions };
 
 export default plugin;
+
+const require = createRequire(import.meta.url);
+const BUILD_META_RESOLVED_ID = require.resolve(BUILD_META_IMPORT_PATH);
 
 export function plugin(options: PluginOptions = {}): Plugin {
   let config: ResolvedConfig | null = null;
@@ -82,6 +84,16 @@ export function plugin(options: PluginOptions = {}): Plugin {
     name: PLUGIN_NAME,
     enforce: 'pre',
 
+    config(_config, env) {
+      return {
+        resolve: {
+          alias: getRuntimeImportAliases(
+            getBuildMeta(env.command === 'serve', options),
+          ),
+        },
+      };
+    },
+
     configResolved(resolvedConfig) {
       config = resolvedConfig;
     },
@@ -92,6 +104,10 @@ export function plugin(options: PluginOptions = {}): Plugin {
     },
 
     resolveId(id) {
+      if (id === BUILD_META_IMPORT_PATH) {
+        return BUILD_META_RESOLVED_ID;
+      }
+
       if (isVirtualModuleRequest(id, RUNTIME_MODULE_ID)) {
         return RESOLVED_RUNTIME_MODULE_ID;
       }

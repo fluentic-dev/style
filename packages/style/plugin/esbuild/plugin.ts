@@ -16,7 +16,10 @@ import {
   loadVirtualModule,
   prependRuntimeImport,
   replaceCssMarker,
+  resolveRuntimeImportAlias,
+  RUNTIME_IMPORT_ALIAS_RE,
   RUNTIME_MODULE_ID,
+  VIRTUAL_MODULE_REQUEST_RE,
 } from '../utils/bundler';
 import { getSourcemapSidecar, type SourcemapSidecar } from '../utils/sidecar';
 import { resolveDevSourcemapMode } from '../utils/sourcemap';
@@ -76,10 +79,15 @@ export function plugin(options: EsbuildPluginOptions = {}): EsbuildPlugin {
         await sourcemapSidecar?.ensureStarted();
       });
 
-      build.onResolve({ filter: /^virtual:fluentic-style(?:\.css)?$/ }, (args) => ({
+      build.onResolve({ filter: VIRTUAL_MODULE_REQUEST_RE }, (args) => ({
         path: args.path,
         namespace: VIRTUAL_NAMESPACE,
       }));
+
+      build.onResolve({ filter: RUNTIME_IMPORT_ALIAS_RE }, (args) => {
+        const alias = resolveRuntimeImportAlias(args.path, buildMeta);
+        return alias ? { path: alias, external: false } : null;
+      });
 
       build.onLoad({ filter: /.*/, namespace: VIRTUAL_NAMESPACE }, (args) => {
         const contents = loadVirtualModule(

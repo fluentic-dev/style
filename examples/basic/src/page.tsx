@@ -1,11 +1,11 @@
 import { combineStyle, style } from '@fluentic/style';
-import type { CssProp } from '@fluentic/style';
+import type { StyleProp } from '@fluentic/style';
 import { Button } from './button';
 import { buttonBaseStyles, pageStyles, pageTheme } from './styles';
 import { appTheme } from './tokens';
 
 type PageProps = {
-  css?: CssProp;
+  css?: StyleProp;
 };
 
 const cancelButtonTheme = style.scope([

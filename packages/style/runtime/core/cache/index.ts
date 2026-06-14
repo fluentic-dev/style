@@ -1,5 +1,5 @@
-export { getCombinedStyle, type CombinedStyleArg } from './combine';
-export { createCombinedStylePool, type CombinedStylePool } from './pool';
-export { resolveCssProp, type ResolvedCssPropRuntime } from './prop';
+export { type CombinedStyleArg, getCombinedStyle } from './combine';
 export type { ResolvedStyleItem } from './item';
+export { type CombinedStylePool, createCombinedStylePool } from './pool';
+export { type ResolvedStylePropRuntime, resolveStyleProp } from './prop';
 export type { StyleTokenValues } from './tokenValues';

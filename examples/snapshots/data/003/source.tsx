@@ -1,4 +1,4 @@
-import { bindScope, combineStyle, type CombineStyleArg, type CssTheme, style } from '@fluentic/style';
+import { bindScope, type CombinedStyleFor, combineStyle, style, type StyleTheme } from '@fluentic/style';
 
 const parentStyles = {
   shell: style({
@@ -29,9 +29,9 @@ const childTheme = style.scope([
 
 const combineChildStyle = combineStyle.for(childStyles);
 
-type ChildStyle = CombineStyleArg<typeof childStyles>;
+type ChildStyle = CombinedStyleFor<typeof combineChildStyle>;
 
-function Child(props: { styles?: ChildStyle; theme?: CssTheme; }) {
+function Child(props: { styles?: ChildStyle; theme?: StyleTheme; }) {
   const css = combineChildStyle(
     props.styles,
     bindScope(childStyles.root, props.theme),

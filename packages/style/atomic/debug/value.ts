@@ -55,7 +55,7 @@ export function getDebugValueName(
   if (
     !name ||
     name.length > valueMaxLength ||
-    property.length + name.length + 2 > maxLength
+    property.length + 1 + name.length > maxLength
   ) {
     return { value: null, arbitraryValue: null };
   }

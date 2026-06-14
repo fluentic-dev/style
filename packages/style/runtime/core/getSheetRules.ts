@@ -1,7 +1,7 @@
 import type { SheetRule } from '../../sheet';
-import type { CssProp } from '../types';
-import { collectCssPropSheetRules } from '../sheet/rules';
+import { collectStylePropSheetRules } from '../sheet/rules';
+import type { StyleProp } from '../types';
 
-export function getSheetRules(css: CssProp): SheetRule[] {
-  return collectCssPropSheetRules(css);
+export function getSheetRules(styleProp: StyleProp): SheetRule[] {
+  return collectStylePropSheetRules(styleProp);
 }

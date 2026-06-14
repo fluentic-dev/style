@@ -5,14 +5,14 @@ import { getStyleTokenValues, isResolvedStyleItem } from './item';
 import { getStateItemClassName, getStateItemDedupe, getStateItemVariableValue } from './stateItem';
 import type { StyleTokenValues } from './tokenValues';
 
-export type ResolvedCssProp = {
+export type ResolvedStyleProp = {
   className: string;
   style: CSSProperties | undefined;
 };
 
-export type CssPropResolveItem = ResolvedStyleItem | object;
+export type StylePropResolveItem = ResolvedStyleItem | object;
 
-export const emptyCssPropResult: ResolvedCssProp = {
+export const emptyStylePropResult: ResolvedStyleProp = {
   className: '',
   style: undefined,
 };
@@ -22,10 +22,10 @@ let runId = 0;
 const dedupeRun: Record<string, number> = Object.create(null);
 const dedupeIndex: Record<string, number> = Object.create(null);
 
-export function createCssPropResult(
-  items: readonly CssPropResolveItem[],
+export function createStylePropResult(
+  items: readonly StylePropResolveItem[],
   getThemeClassName: (item: object) => string | null,
-): ResolvedCssProp {
+): ResolvedStyleProp {
   runId++;
 
   const classNames: string[] = [];
@@ -48,7 +48,7 @@ export function createCssPropResult(
     }
   }
 
-  if (!classNames.length) return emptyCssPropResult;
+  if (!classNames.length) return emptyStylePropResult;
 
   return {
     className: classNames.join(' '),

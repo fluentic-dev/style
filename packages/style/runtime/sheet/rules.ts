@@ -1,31 +1,32 @@
-import { isThemeData, type ThemeData } from '../../builder/data';
+import type { ThemeData } from '../../builder/data/data';
+import { isThemeData } from '../../builder/data/is';
 import type { SheetRule } from '../../sheet';
-import { getCssPropItems, type CssPropItem, walkCssProp } from '../core/cache/prop';
-import type { CssProp } from '../types';
+import { getStylePropItems, type StylePropItem, walkStyleProp } from '../core/cache/prop';
+import type { StyleProp } from '../types';
 import { createRuntimeSheetRule, type RuntimeSheetRule } from './rule';
 
-export function walkCssPropSheetRules(
-  css: CssProp,
+export function walkStylePropSheetRules(
+  styleProp: StyleProp,
   onRule: (rule: RuntimeSheetRule) => void,
   onTheme?: (theme: ThemeData) => void,
 ) {
-  walkCssProp(css, (item) => {
-    walkCssPropItemSheetRules(item, onRule, onTheme);
+  walkStyleProp(styleProp, (item) => {
+    walkStylePropItemSheetRules(item, onRule, onTheme);
   });
 }
 
-export function walkCssPropItemsSheetRules(
-  items: readonly CssPropItem[],
+export function walkStylePropItemsSheetRules(
+  items: readonly StylePropItem[],
   onRule: (rule: RuntimeSheetRule) => void,
   onTheme?: (theme: ThemeData) => void,
 ) {
   for (let i = 0, len = items.length; i < len; i++) {
-    walkCssPropItemSheetRules(items[i], onRule, onTheme);
+    walkStylePropItemSheetRules(items[i], onRule, onTheme);
   }
 }
 
-function walkCssPropItemSheetRules(
-  item: CssPropItem,
+function walkStylePropItemSheetRules(
+  item: StylePropItem,
   onRule: (rule: RuntimeSheetRule) => void,
   onTheme?: (theme: ThemeData) => void,
 ) {
@@ -34,7 +35,7 @@ function walkCssPropItemSheetRules(
     return;
   }
 
-  const items = getCssPropItems(item);
+  const items = getStylePropItems(item);
 
   for (let i = 0, len = items.length; i < len; i++) {
     const rule = createRuntimeSheetRule(items[i]);
@@ -42,21 +43,21 @@ function walkCssPropItemSheetRules(
   }
 }
 
-export function collectCssPropSheetRules(css: CssProp): SheetRule[] {
-  return collectCssPropRules((onRule) => {
-    walkCssPropSheetRules(css, onRule);
+export function collectStylePropSheetRules(styleProp: StyleProp): SheetRule[] {
+  return collectStylePropRules((onRule) => {
+    walkStylePropSheetRules(styleProp, onRule);
   });
 }
 
-export function collectCssPropItemsSheetRules(
-  items: readonly CssPropItem[],
+export function collectStylePropItemsSheetRules(
+  items: readonly StylePropItem[],
 ): SheetRule[] {
-  return collectCssPropRules((onRule) => {
-    walkCssPropItemsSheetRules(items, onRule);
+  return collectStylePropRules((onRule) => {
+    walkStylePropItemsSheetRules(items, onRule);
   });
 }
 
-function collectCssPropRules(
+function collectStylePropRules(
   walk: (onRule: (rule: RuntimeSheetRule) => void) => void,
 ) {
   const rules: SheetRule[] = [];

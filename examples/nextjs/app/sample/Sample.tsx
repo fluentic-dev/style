@@ -1,5 +1,5 @@
-import { combineStyle, bindScope, style } from '@fluentic/style';
-import type { CssTheme } from '@fluentic/style';
+import { bindScope, combineStyle, style } from '@fluentic/style';
+import type { StyleTheme } from '@fluentic/style';
 
 const cardStyles = {
   card: style.slot({
@@ -146,7 +146,7 @@ type CardProps = {
   label: string;
   note: string;
   buttonLabel: string;
-  theme?: CssTheme;
+  theme?: StyleTheme;
 };
 
 function SampleCard(props: CardProps) {

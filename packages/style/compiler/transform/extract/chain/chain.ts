@@ -3,7 +3,7 @@ import { getAtomicClassName, getClassNameDedupe } from '../../../../atomic/class
 import { buildAtomicRule, getAtomicRuleLayerPriority } from '../../../../atomic/rule';
 import { getLocalVarName } from '../../../../atomic/token';
 import { getTokenVar, getTokenVarName } from '../../../../atomic/token';
-import { getCssVar } from '../../../../atomic/utils/css';
+import { getCssVarRawFallback } from '../../../../atomic/utils/css';
 import {
   normalizeSelectorArg,
   SELECTOR_ARG,
@@ -33,12 +33,14 @@ import {
   COMPILED_STYLE_OBJECT_LOCATIONS,
   type CompiledRuntimeValue,
   type CompiledStyleObject,
-  type EvalResult,
   type EvalScope,
   evaluateNode,
-} from '../../evaluator';
+} from '../../evaluator/evaluator';
+import type {
+  EvalResult,
+} from '../../evaluator/types';
 import { extractStyleChain, type StyleChainParseResult } from './extract_chain';
-import type { CompiledChainData, CompiledItem, CompiledCssItem, CssExtractRule } from './types';
+import type { CompiledChainData, CompiledCssItem, CompiledItem, CssExtractRule } from './types';
 
 type SelectorsMap = Record<string, Selector>;
 
@@ -1048,7 +1050,7 @@ function addStyleItems(
 
     const valueStr = variableName
       ? token
-        ? getCssVar(variableName, String(token.value ?? ''))
+        ? getCssVarRawFallback(variableName, getTokenVar(token, cssConfig.tokenVarPrefix))
         : `var(${variableName})`
       : token
       ? getTokenVar(token, cssConfig.tokenVarPrefix)
@@ -1124,6 +1126,13 @@ function addStyleItems(
       className,
       css,
       priority: layerPriority,
+      trace: propertyLoc
+        ? {
+          filePath: propertyLoc.filePath ?? fileId,
+          line: propertyLoc.line,
+          column: propertyLoc.column,
+        }
+        : undefined,
     });
 
     i++;

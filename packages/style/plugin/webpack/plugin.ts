@@ -1,5 +1,4 @@
 import type { Compiler, RuleSetRule, WebpackPluginInstance } from 'webpack';
-import type { BuildMeta } from '../../config';
 import {
   createPluginCompiler,
   DEFAULT_TRANSFORM_EXCLUDE,
@@ -11,6 +10,7 @@ import {
   resolvePluginSourcemapFilePath,
   writePluginCacheFile,
 } from '../utils';
+import { getBuildMeta, getRuntimeImportAliases } from '../utils/bundler';
 import { formatError } from '../utils/misc';
 import { getSourcemapSidecar } from '../utils/sidecar';
 import { resolveDevSourcemapMode } from '../utils/sourcemap';
@@ -31,16 +31,6 @@ const WEBPACK_CSS_FILE = 'webpack.css';
 const WEBPACK_RUNTIME_FILE = 'webpack-runtime.js';
 
 const WEBPACK_CSS_MARKER = getExtractedCssMarker();
-
-function getBuildMeta(dev: boolean, options: PluginOptions): BuildMeta {
-  return {
-    dev,
-    extract: !dev,
-    hoist: options.hoist !== false,
-    rsc: false,
-    css: options.css ?? null,
-  };
-}
 
 export default plugin;
 
@@ -98,6 +88,14 @@ class WebpackPlugin implements WebpackPluginInstance {
     compiler.options.entry = prependWebpackRuntimeEntry(
       compiler.options.entry,
       runtimeFilePath,
+    );
+
+    compiler.options.resolve ??= {};
+    compiler.options.resolve.alias ??= {};
+
+    Object.assign(
+      compiler.options.resolve.alias,
+      getRuntimeImportAliases(buildMeta),
     );
 
     addTransformLoader(compiler, this.options, compilerId);

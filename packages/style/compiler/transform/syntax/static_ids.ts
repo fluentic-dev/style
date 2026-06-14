@@ -44,13 +44,16 @@ export function annotateThemeCall(
     return;
   }
 
-  if (node.arguments[1]) return;
-
   const loc = node.loc?.start;
-  node.arguments.push(t.stringLiteral(getStableThemeId(
+  const locId = loc ? loc.line + ':' + loc.column : 'createTheme';
+  setStringArgWithStableId(
+    node,
+    1,
+    getStableThemeId(state.fileId, locId),
     state.fileId,
-    loc ? loc.line + ':' + loc.column : 'createTheme',
-  )));
+    locId,
+    t,
+  );
 }
 
 export function getStableThemeId(fileId: string, locId: string) {
@@ -105,29 +108,46 @@ function annotateTokenFactoryCall(
   if (!imp || !IMPORT_PATHS.includes(imp.source)) return;
 
   if (imp.name === FN_CREATE_TOKEN) {
-    appendStringArgIfMissing(node, 1, getStableTokenId(state.fileId, pathName), t);
+    setStringArgWithStableId(node, 1, getStableTokenId(state.fileId, pathName), state.fileId, pathName, t);
     return;
   }
 
   if (imp.name === FN_CREATE_TOKENS) {
-    appendStringArgIfMissing(node, 1, getStableTokenId(state.fileId, pathName), t);
+    setStringArgWithStableId(node, 1, getStableTokenId(state.fileId, pathName), state.fileId, pathName, t);
     return;
   }
 
   if (imp.name === FN_CREATE_VALUES) {
     const hasNumberArg = node.arguments[0]?.type === 'Identifier' &&
       (node.arguments[0] as BabelTypes.Identifier).name === 'Number';
-    appendStringArgIfMissing(node, hasNumberArg ? 2 : 1, getStableTokenId(state.fileId, pathName), t);
+    setStringArgWithStableId(
+      node,
+      hasNumberArg ? 2 : 1,
+      getStableTokenId(state.fileId, pathName),
+      state.fileId,
+      pathName,
+      t,
+    );
   }
 }
 
-function appendStringArgIfMissing(
+function setStringArgWithStableId(
   node: BabelTypes.CallExpression,
   index: number,
   value: string,
+  fileId: string,
+  pathName: string,
   t: typeof BabelTypes,
 ) {
-  if (node.arguments[index]) return;
+  const existing = node.arguments[index];
+
+  if (existing) {
+    if (existing.type === 'StringLiteral') {
+      node.arguments[index] = t.stringLiteral(getStableDebugId(existing.value, fileId, pathName));
+    }
+
+    return;
+  }
 
   while (node.arguments.length < index) {
     node.arguments.push(t.identifier('undefined'));
@@ -141,6 +161,14 @@ function getStableTokenId(
   pathName: string,
 ) {
   return sanitizeTokenId(pathName) + '-' + hashString(fileId + '\n' + pathName);
+}
+
+function getStableDebugId(
+  debugId: string,
+  fileId: string,
+  pathName: string,
+) {
+  return sanitizeTokenId(debugId) + '-' + hashString(fileId + '\n' + pathName);
 }
 
 function sanitizeTokenId(value: string) {

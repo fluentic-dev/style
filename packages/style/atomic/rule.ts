@@ -40,7 +40,7 @@ export function buildAtomicRule(
     selectorStr = classSelector + parentWhere + itemSelector + ',' + parentWhere + ' ' + selectorStr;
   }
 
-  let rule = `${selectorStr}{${cssProp}:${cssValue}}`;
+  let rule = `${selectorStr}{${cssProp}: ${cssValue}}`;
 
   if (atRules) {
     for (let i = atRules.length - 1; i >= 0; i--) {

@@ -1,5 +1,7 @@
-export const TOKEN_ID = Symbol('style:token');
-export const TOKEN_OVERRIDE = Symbol('style:token-override');
+import { symbol } from '../utils/const';
+
+export const TOKEN_ID: unique symbol = symbol('style:token');
+export const TOKEN_OVERRIDE: unique symbol = symbol('style:token.override');
 
 export type StyleTokenData<T = unknown> = {
   [TOKEN_ID]: string;

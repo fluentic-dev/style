@@ -46,14 +46,14 @@ Environment:
 
 Results:
 
-| Variant | Mount Median | Update Median | Mount P95 | Update P95 | Rules | Style Tags | Fluentic Tags |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| `parentHoisted` | 15.90ms | 17.07ms | 16.15ms | 17.08ms | 20 | 3 | 2 |
-| `parentHoistedClassName` | 17.10ms | 17.04ms | 17.25ms | 17.07ms | 20 | 3 | 2 |
-| `childHoistedSameMap` | 15.90ms | 17.07ms | 15.95ms | 17.08ms | 20 | 3 | 2 |
-| `childNewMapSameSlots` | 17.90ms | 17.02ms | 18.15ms | 17.36ms | 20 | 3 | 2 |
-| `fluenticNoCssCreateElement` | 16.30ms | 17.05ms | 16.60ms | 17.07ms | 4 | 1 | 0 |
-| `reactNoCssCreateElement` | 16.30ms | 17.06ms | 16.70ms | 17.07ms | 4 | 1 | 0 |
+| Variant                      | Mount Median | Update Median | Mount P95 | Update P95 | Rules | Style Tags | Fluentic Tags |
+| ---------------------------- | -----------: | ------------: | --------: | ---------: | ----: | ---------: | ------------: |
+| `parentHoisted`              |      15.90ms |       17.07ms |   16.15ms |    17.08ms |    20 |          3 |             2 |
+| `parentHoistedClassName`     |      17.10ms |       17.04ms |   17.25ms |    17.07ms |    20 |          3 |             2 |
+| `childHoistedSameMap`        |      15.90ms |       17.07ms |   15.95ms |    17.08ms |    20 |          3 |             2 |
+| `childNewMapSameSlots`       |      17.90ms |       17.02ms |   18.15ms |    17.36ms |    20 |          3 |             2 |
+| `fluenticNoCssCreateElement` |      16.30ms |       17.05ms |   16.60ms |    17.07ms |     4 |          1 |             0 |
+| `reactNoCssCreateElement`    |      16.30ms |       17.06ms |   16.70ms |    17.07ms |     4 |          1 |             0 |
 
 Notes:
 

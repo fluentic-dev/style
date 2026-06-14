@@ -107,7 +107,8 @@
     },
     "./config/build": {
       "types": "./config/build.ts",
-      "import": "./dist/config/build.js"
+      "import": "./dist/config/build.js",
+      "default": "./dist/config/build.js"
     },
     "./dev": {
       "types": "./dev/index.ts",
@@ -130,20 +131,52 @@
       "react-server": "./dist/jsx-runtime/server.js",
       "import": "./dist/jsx-runtime/index.js"
     },
+    "./jsx-runtime/extracted": {
+      "types": "./jsx/jsx-runtime.ts",
+      "import": "./dist/jsx-runtime/extracted.js"
+    },
+    "./jsx-runtime/prod": {
+      "types": "./jsx/jsx-runtime.ts",
+      "import": "./dist/jsx-runtime/prod.js"
+    },
     "./jsx-dev-runtime": {
       "types": "./jsx/jsx-dev-runtime.ts",
       "react-server": "./dist/jsx-dev-runtime/server.js",
       "import": "./dist/jsx-dev-runtime/index.js"
+    },
+    "./jsx-dev-runtime/extracted": {
+      "types": "./jsx/jsx-dev-runtime.ts",
+      "import": "./dist/jsx-dev-runtime/extracted.js"
+    },
+    "./jsx-dev-runtime/prod": {
+      "types": "./jsx/jsx-dev-runtime.ts",
+      "import": "./dist/jsx-dev-runtime/prod.js"
     },
     "./jsx/runtime": {
       "types": "./jsx/jsx-runtime.ts",
       "react-server": "./dist/jsx-runtime/server.js",
       "import": "./dist/jsx-runtime/index.js"
     },
+    "./jsx/runtime/extracted": {
+      "types": "./jsx/jsx-runtime.ts",
+      "import": "./dist/jsx-runtime/extracted.js"
+    },
+    "./jsx/runtime/prod": {
+      "types": "./jsx/jsx-runtime.ts",
+      "import": "./dist/jsx-runtime/prod.js"
+    },
     "./jsx/dev-runtime": {
       "types": "./jsx/jsx-dev-runtime.ts",
       "react-server": "./dist/jsx-dev-runtime/server.js",
       "import": "./dist/jsx-dev-runtime/index.js"
+    },
+    "./jsx/dev-runtime/extracted": {
+      "types": "./jsx/jsx-dev-runtime.ts",
+      "import": "./dist/jsx-dev-runtime/extracted.js"
+    },
+    "./jsx/dev-runtime/prod": {
+      "types": "./jsx/jsx-dev-runtime.ts",
+      "import": "./dist/jsx-dev-runtime/prod.js"
     },
     "./plugin/compiler": {
       "types": "./compiler/index.ts",
@@ -172,8 +205,9 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
+    "report:bundle": "node ./scripts/report-bundle.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx ./test/run-tests.ts"
+    "test": "tsx ./tests/run-tests.ts"
   },
   "dependencies": {
     "@jridgewell/trace-mapping": "^0.3.31",

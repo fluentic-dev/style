@@ -1,6 +1,6 @@
-import type { ClassNameResult } from '../core/getClassName';
-import type { CssPropItem } from '../core/cache/prop';
-import { collectCssPropItemsSheetRules } from '../sheet/rules';
+import type { StylePropItem } from '../core/cache/prop';
+import type { ClassNameResult } from '../core/className';
+import { collectStylePropItemsSheetRules } from '../sheet/rules';
 import { ELEMENT_CSS_DATA_ATTR } from './constants';
 import { addRscStyleRules } from './styleStore';
 
@@ -10,9 +10,9 @@ export type ClassNameResultRSC = ClassNameResult & {
 
 export function getClassNameRSC(
   result: ClassNameResult,
-  items: readonly CssPropItem[],
+  items: readonly StylePropItem[],
 ): ClassNameResultRSC {
-  const rules = collectCssPropItemsSheetRules(items);
+  const rules = collectStylePropItemsSheetRules(items);
 
   if (!rules.length) return result;
 

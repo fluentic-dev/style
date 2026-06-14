@@ -4,7 +4,7 @@ import { isStyleTokenOverrideData, type StyleTokenOverride } from '../../../../s
 import type { CompilerOptions } from '../../../compiler/types';
 import type { CssExtractRule } from '../../../extract/types';
 import { DEFAULT_CONFIG, FN_CREATE_THEME, IMPORT_PATHS } from '../../../utils/constants';
-import { evaluateNode } from '../../evaluator';
+import { evaluateNode } from '../../evaluator/evaluator';
 import { getStableThemeClassName, getStableThemeId } from '../../syntax/static_ids';
 import { type ExtractPluginState, getEvalScope } from './state';
 

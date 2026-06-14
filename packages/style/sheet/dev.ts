@@ -4,8 +4,8 @@ import { createSourceMapComment, getRuleCallsite, type SourcemapRule } from './s
 import type { SheetOptions, SheetRule, StyleSheet } from './types';
 import {
   createNoopSheet,
-  createStyleTag,
   createSheetLayerState,
+  createStyleTag,
   getSheetRulePriority,
   insertStyleTagAfter,
   normalizeRule,

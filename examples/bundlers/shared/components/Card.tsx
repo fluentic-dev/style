@@ -1,5 +1,5 @@
 import { bindScope, combineStyle } from '@fluentic/style';
-import type { CssTheme } from '@fluentic/style';
+import type { StyleTheme } from '@fluentic/style';
 
 import { cardStyles } from '../App.styles';
 
@@ -7,7 +7,7 @@ type CardProps = {
   label: string;
   note: string;
   buttonLabel: string;
-  theme?: CssTheme;
+  theme?: StyleTheme;
 };
 
 export function Card(props: CardProps) {

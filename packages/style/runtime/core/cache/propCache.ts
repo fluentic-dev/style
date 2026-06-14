@@ -1,29 +1,25 @@
-import type { CssProp } from '../../types';
-import type { ResolvedCssProp } from './result';
-import {
-  createWeakCacheTreeNode,
-  getWeakCacheTreeChild,
-  type WeakCacheTreeNode,
-} from './utils/tree';
+import type { StyleProp } from '../../types';
+import type { ResolvedStyleProp } from './result';
+import { createWeakCacheTreeNode, getWeakCacheTreeChild, type WeakCacheTreeNode } from './utils/tree';
 
 type CacheValue = {
-  data: CssPropCacheData<object> | null;
+  data: StylePropCacheData<object> | null;
 };
 
 type CacheNode<Item extends object> = WeakCacheTreeNode<Item, CacheValue>;
 
-export type CssPropCacheData<Item extends object> = {
+export type StylePropCacheData<Item extends object> = {
   configVersion: number;
   items: Item[];
-  result: ResolvedCssProp;
+  result: ResolvedStyleProp;
 };
 
 const root = createWeakCacheTreeNode<object, CacheValue>(createCacheValue());
 
-export function getCssPropCacheValue<Item extends object>(
-  css: CssProp,
+export function getStylePropCacheValue<Item extends object>(
+  styleProp: StyleProp,
   walk: (
-    css: CssProp,
+    styleProp: StyleProp,
     fn: (item: object) => void,
     onUnsupported: () => void,
   ) => void,
@@ -34,7 +30,7 @@ export function getCssPropCacheValue<Item extends object>(
   let canCache = true;
 
   walk(
-    css,
+    styleProp,
     (item) => {
       hasItem = true;
       node = getWeakCacheTreeChild(node, item, createCacheValue);
@@ -46,7 +42,7 @@ export function getCssPropCacheValue<Item extends object>(
   );
 
   return hasItem && canCache
-    ? node.value as CacheValue & { data: CssPropCacheData<Item> | null }
+    ? node.value as CacheValue & { data: StylePropCacheData<Item> | null; }
     : null;
 }
 

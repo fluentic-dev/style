@@ -1,4 +1,5 @@
-import { createThemeData, type ThemeData } from '../data';
+import { createThemeData } from '../data/create';
+import type { ThemeData } from '../data/data';
 
 export function createExtractedTheme(
   id: string,
