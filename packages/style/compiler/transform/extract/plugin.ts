@@ -13,11 +13,12 @@ import { createImportSourceMatcher } from '../../utils/import_source';
 import { evaluateNode } from '../evaluator/evaluator';
 import { getImportedName } from '../syntax';
 import { babelPlugin } from '../utils/babel';
+import { getSelectorCompileErrorNode } from '../utils/selector';
 import { normalizePath } from '../../utils/path';
 import { compileChain, extractStyleChain } from './chain';
 import { pruneUnusedStyleImports } from './utils/imports';
 import { buildReplacement } from './utils/replacement';
-import { recordCompiledSlotBinding } from './utils/slot';
+import { recordCompiledBinding } from './utils/slot';
 import { type ExtractPluginState, getEvalScope } from './utils/state';
 import { compileThemeCall } from './utils/theme';
 import { annotateTokenDeclaration } from './utils/token';
@@ -176,7 +177,14 @@ export function createExtractPlugin(args: PluginArgs) {
           const scope = getEvalScope(state);
           const loc = path.node.loc?.start;
 
-          const result = compileChain(chain, state.fileId, loc, scope, options, state.styleNames);
+          let result: ReturnType<typeof compileChain>;
+          try {
+            result = compileChain(chain, state.fileId, loc, scope, options, state.styleNames);
+          } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            const node = getSelectorCompileErrorNode(error);
+            throw buildCodeFrameError(path, node ?? path.node, message);
+          }
           if (!result) return;
 
           result.rules.forEach((rule) => {
@@ -196,7 +204,7 @@ export function createExtractPlugin(args: PluginArgs) {
           });
           if (!replacement) return;
 
-          recordCompiledSlotBinding(path, state, result);
+          recordCompiledBinding(path, state, result);
 
           if (!replacement.hoist) {
             path.replaceWith(replacement.expression);
@@ -234,6 +242,18 @@ export function createExtractPlugin(args: PluginArgs) {
       },
     };
   });
+}
+
+function buildCodeFrameError(
+  path: BabelCore.NodePath<types.Node>,
+  node: types.Node,
+  message: string,
+) {
+  const hub = path.hub as unknown as {
+    buildError: (node: types.Node, message: string, ErrorCtor: ErrorConstructor) => Error;
+  };
+
+  return hub.buildError(node, message, Error);
 }
 
 function getProjectFileId(projectDir: string, filePath: string | null | undefined) {
@@ -274,6 +294,7 @@ function createChainReplacement(
   const runtimeTokens = createRuntimeTokenCollector(args);
   const hoistedExpression = buildReplacement(args.t, args.result, args.state, {
     getRuntimeToken: runtimeTokens.add,
+    getTokenOverride: runtimeTokens.addOverride,
   });
 
   if (!hoistedExpression) return null;
@@ -309,6 +330,9 @@ function createRuntimeTokenCollector(
 
   return {
     overrides,
+    addOverride(item: { valueNode: types.Expression; }) {
+      overrides.push(args.t.cloneNode(item.valueNode));
+    },
     add(item: object, valueNode: types.Expression) {
       const token = getRuntimeTokenIdentifier(args, tokensByItem, item);
 

@@ -1,6 +1,5 @@
 import type { StyleTokenData, StyleTokenOverride } from '../../style/token';
 import type { UniqueSymbol } from '../../utils/type';
-import type { DebugData } from './debug';
 import type {
   BUILDER_TYPE_SCOPE,
   BUILDER_TYPE_SLOT,
@@ -11,10 +10,12 @@ import type {
   ITEM_RUNTIME_DEV_PLUGIN,
   ITEM_RUNTIME_PROD,
   ITEM_RUNTIME_PROD_PLUGIN,
+  ITEM_VALUE_NUMBER_PX,
   ITEM_VALUE_TYPE_STYLE_DATA,
   ITEM_VALUE_TYPE_VARIABLE,
 } from './const';
 import type { BuilderCallsite } from './data';
+import type { DebugData } from './debug';
 
 export type BuilderType =
   | typeof BUILDER_TYPE_STYLE
@@ -23,6 +24,8 @@ export type BuilderType =
   | typeof BUILDER_TYPE_SCOPE
   | typeof BUILDER_TYPE_THEME;
 
+export type ExtractedItemValueMode = typeof ITEM_VALUE_NUMBER_PX;
+
 export type ItemRuntimeType =
   | typeof ITEM_RUNTIME_DEV
   | typeof ITEM_RUNTIME_DEV_PLUGIN
@@ -30,7 +33,7 @@ export type ItemRuntimeType =
   | typeof ITEM_RUNTIME_PROD_PLUGIN;
 
 export type ExtractedItemValue =
-  | [type: typeof ITEM_VALUE_TYPE_VARIABLE, variable: string, value: unknown]
+  | [type: typeof ITEM_VALUE_TYPE_VARIABLE, variable: string, value: unknown, valueMode?: ExtractedItemValueMode]
   | [type: typeof ITEM_VALUE_TYPE_STYLE_DATA, data: ExtractedStyleItem[]];
 
 export type ExtracteItemData = [

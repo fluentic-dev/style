@@ -1,6 +1,7 @@
 import { combineStyle, style } from '@fluentic/style';
 import type { StyleProp } from '@fluentic/style';
 import { Button } from './button';
+import { sharedControlInteraction } from './merge-common';
 import { buttonBaseStyles, pageStyles, pageTheme } from './styles';
 import { appTheme } from './tokens';
 
@@ -17,6 +18,21 @@ const cancelButtonTheme = style.scope([
   }),
 ]);
 
+const mergedCancelButtonTheme = style.scope()
+  .merge(cancelButtonTheme)
+  .hover([
+    buttonBaseStyles.container({
+      borderColor: '#94a3b8',
+    }),
+  ]);
+
+const mergedButtonStyle = style({
+  backgroundColor: '#7c3aed',
+  boxShadow: '0 12px 28px rgba(124, 58, 237, 0.25)',
+}).merge(sharedControlInteraction).focusVisible({
+  outlineColor: '#a78bfa',
+});
+
 export function Page(props: PageProps) {
   const css = combineStyle(pageStyles, pageTheme(pageStyles.container));
 
@@ -30,8 +46,11 @@ export function Page(props: PageProps) {
         </p>
         <div css={css.actions}>
           <Button>Save</Button>
-          <Button theme={cancelButtonTheme}>
+          <Button theme={mergedCancelButtonTheme}>
             Cancel
+          </Button>
+          <Button css={mergedButtonStyle}>
+            Merge
           </Button>
         </div>
       </div>

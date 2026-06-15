@@ -1,4 +1,5 @@
 import { RUNTIME_CONFIG } from '../../../config';
+import { traceError } from '../../../utils/trace';
 import { BUILDER_STATE, ITEM_RUNTIME_DEV, ITEM_RUNTIME_DEV_PLUGIN, ITEM_RUNTIME_PROD } from '../const';
 import type { BuilderData } from '../data';
 import type { DebugData } from '../debug';
@@ -26,4 +27,8 @@ export function cloneData<Data extends BuilderData, Source extends BuilderData>(
   const items = state.items;
 
   return [runtimeType, data, items, lookup] as const;
+}
+
+export function logInvalidData(message: string, data: object) {
+  console.log(traceError(message), 'data:', data);
 }

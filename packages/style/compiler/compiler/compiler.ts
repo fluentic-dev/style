@@ -29,11 +29,11 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
   const collector = createCssCollector();
 
   const compileDebug = (args: TransformDebugArgs): TransformDebugResult | null => {
-    return transformDebug(internal, args);
+    return transformDebug(internal, args, { tracer });
   };
 
   const compileDebugRSC = (args: TransformDebugArgs): TransformDebugRscResult | null => {
-    const debugResult = transformDebug(internal, args);
+    const debugResult = transformDebug(internal, args, { tracer });
     if (!debugResult) return null;
 
     const rscCollector = createCssCollector();

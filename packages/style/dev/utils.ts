@@ -1,35 +1,232 @@
-import { RUNTIME_CONFIG } from '../config';
+import { RUNTIME_CONFIG, setDevRuntimeOptions, setPriorityMode, setSourcemapTraceMode } from '../config';
+import type { PriorityMode, SourcemapTraceMode } from '../config';
+import { refreshDevSourcemapTags, refreshDevStyleTags } from '../sheet/dev';
+import {
+  createDevUtilsObject,
+  DefaultUtilsName,
+  getDevUtilsTarget,
+  getStorage,
+  getStoredItem,
+  getTraceStartMessage,
+  parsePriorityMode,
+  parseSourcemapTrace,
+  removeStoredItem,
+  setStoredItem,
+  StorageKeys,
+} from './fns';
 
-export function enableDevUtils() {
-  const name = RUNTIME_CONFIG.devUtils;
+export type StyleDevUtilsOptions = {
+  name?: string;
+  silent?: boolean;
+};
+
+export function enableStyleDevUtils(options: StyleDevUtilsOptions = {}) {
+  const name = options.name ?? DefaultUtilsName;
   if (!name) return;
+
+  applyPersistentDevConfig();
 
   const target = getDevUtilsTarget();
   if (!target) return;
 
-  target[name] = getUtils();
+  target[name] = getUtils(name);
 
-  logCssDevUtilsEnabled(name);
+  if (!options.silent && isStartupMessageEnabled()) {
+    logCssDevUtilsEnabled(name);
+  }
 }
 
-function getDevUtilsTarget(): Record<string, unknown> {
-  return typeof globalThis.window === 'undefined'
-    ? globalThis
-    : globalThis.window as {};
-}
+function getUtils(displayName: string) {
+  const setPriorityModeUtils = createDevUtilsObject({
+    toLayer() {
+      setRuntimePriorityMode('layer');
+      return null;
+    },
 
-function getUtils() {
-  return {
+    toSort() {
+      setRuntimePriorityMode('sort');
+      return null;
+    },
+  });
+
+  const baseUtils = createDevUtilsObject({
+    usage() {
+      logUsage(displayName);
+      return null;
+    },
+
+    info() {
+      logInfo(displayName);
+      return null;
+    },
+
     getConfig() {
-      return RUNTIME_CONFIG;
+      console.log(RUNTIME_CONFIG);
+      return null;
     },
 
-    traceSourcemap() {
-      traceSourcemap();
+    persistent: createDevUtilsObject({
+      on() {
+        setPersistentMode(true);
+        return null;
+      },
 
-      return logTraceStart();
-    },
-  };
+      off() {
+        setPersistentMode(false);
+        return null;
+      },
+    }),
+
+    startupMessage: createDevUtilsObject({
+      on() {
+        setStartupMessageMode(true);
+        return null;
+      },
+
+      off() {
+        setStartupMessageMode(false);
+        return null;
+      },
+    }),
+
+    setPriorityMode: setPriorityModeUtils,
+  });
+
+  const pluginUtils = createDevUtilsObject({
+    ...baseUtils,
+    setSourcemapTrace: createDevUtilsObject({
+      toStyle() {
+        setSourcemapTrace('style');
+        return null;
+      },
+
+      toValue() {
+        setSourcemapTrace('value');
+        return null;
+      },
+    }),
+  });
+
+  if (!RUNTIME_CONFIG.buildMeta) {
+    return createDevUtilsObject({
+      ...baseUtils,
+      traceSourcemap() {
+        traceSourcemap();
+        return logTraceStart();
+      },
+    });
+  }
+
+  return pluginUtils;
+}
+
+function setSourcemapTrace(mode: SourcemapTraceMode) {
+  setSourcemapTraceMode(mode);
+  savePersistentDevConfig();
+  refreshDevSourcemapTags();
+
+  logSourcemapTraceMode(mode);
+  return null;
+}
+
+function setRuntimePriorityMode(mode: PriorityMode) {
+  setPriorityMode(mode);
+  savePersistentDevConfig();
+  refreshDevStyleTags();
+
+  logPriorityMode(mode);
+}
+
+function setPersistentMode(enabled: boolean) {
+  const storage = getStorage();
+
+  if (!storage) {
+    logPersistentUnavailable();
+    return;
+  }
+
+  if (!enabled) {
+    if (!removeStoredDevConfig(storage)) {
+      logPersistentUnavailable();
+      return;
+    }
+
+    logPersistentMode(false);
+    return;
+  }
+
+  if (
+    !setStoredItem(storage, StorageKeys.persistent, '1') ||
+    !writeStoredDevConfig(storage)
+  ) {
+    logPersistentUnavailable();
+    return;
+  }
+
+  logPersistentMode(true);
+}
+
+function setStartupMessageMode(enabled: boolean) {
+  const storage = getStorage();
+
+  if (!storage) {
+    logPersistentUnavailable();
+    return;
+  }
+
+  const saved = enabled
+    ? removeStoredItem(storage, StorageKeys.startupMessage)
+    : setStoredItem(storage, StorageKeys.startupMessage, 'off');
+
+  if (!saved) {
+    logPersistentUnavailable();
+    return;
+  }
+
+  logStartupMessageMode(enabled);
+}
+
+function applyPersistentDevConfig() {
+  const storage = getStorage();
+  if (!storage || getStoredItem(storage, StorageKeys.persistent) !== '1') return;
+
+  const priorityMode = parsePriorityMode(getStoredItem(storage, StorageKeys.priorityMode));
+  const sourcemapTrace = parseSourcemapTrace(getStoredItem(storage, StorageKeys.sourcemapTrace));
+
+  if (!priorityMode && !sourcemapTrace) return;
+
+  setDevRuntimeOptions({
+    priorityMode: priorityMode ?? undefined,
+    sourcemapTrace: sourcemapTrace ?? undefined,
+  });
+}
+
+function savePersistentDevConfig() {
+  const storage = getStorage();
+  if (!storage || getStoredItem(storage, StorageKeys.persistent) !== '1') return;
+
+  writeStoredDevConfig(storage);
+}
+
+function writeStoredDevConfig(storage: Storage) {
+  return setStoredItem(storage, StorageKeys.priorityMode, RUNTIME_CONFIG.priorityMode) &&
+    setStoredItem(storage, StorageKeys.sourcemapTrace, RUNTIME_CONFIG.sourcemapTrace);
+}
+
+function removeStoredDevConfig(storage: Storage) {
+  return removeStoredItem(storage, StorageKeys.persistent) &&
+    removeStoredItem(storage, StorageKeys.priorityMode) &&
+    removeStoredItem(storage, StorageKeys.sourcemapTrace);
+}
+
+function isPersistentModeEnabled() {
+  const storage = getStorage();
+  return storage ? getStoredItem(storage, StorageKeys.persistent) === '1' : false;
+}
+
+function isStartupMessageEnabled() {
+  const storage = getStorage();
+  return storage ? getStoredItem(storage, StorageKeys.startupMessage) !== 'off' : true;
 }
 
 async function traceSourcemap() {
@@ -43,17 +240,7 @@ async function traceSourcemap() {
 }
 
 function logTraceStart() {
-  const items = [
-    'O_o [ tracing... ]',
-    '(-_-) [ mapping... ]',
-    '(^_-) [ decoding... ]',
-    'p(^_^)q [ hunting... ]',
-    'B-) [ analyzing... ]',
-  ];
-
-  const index = Math.floor(Math.random() * items.length);
-
-  return items[index];
+  return getTraceStartMessage();
 }
 
 function logTraceCompleted(result: {
@@ -68,9 +255,226 @@ function logTraceCompleted(result: {
   );
 }
 
-function logCssDevUtilsEnabled(displayName: string) {
+function logSourcemapTraceMode(mode: SourcemapTraceMode) {
+  const message = `sourcemap trace mode: ${mode}`;
+
   console.log(
-    `\x1b[35m✨\x1b[0m \x1b[1m\x1b[35m[${displayName}]\x1b[0m \x1b[32menabled\x1b[0m ` +
-      `\x1b[2m│ Run\x1b[0m \x1b[1m\x1b[36m${displayName}.traceSourcemap()\x1b[0m \x1b[2mto map back to original source code\x1b[0m`,
+    `\x1b[32m✔\x1b[0m \x1b[1m\x1b[36m[sourcemap]\x1b[0m ${message}`,
   );
+}
+
+function logPriorityMode(mode: PriorityMode) {
+  const message = `priority mode: ${mode}`;
+
+  console.log(
+    `\x1b[32m✔\x1b[0m \x1b[1m\x1b[36m[priority]\x1b[0m ${message}`,
+  );
+}
+
+function logPersistentMode(enabled: boolean) {
+  const detail = enabled
+    ? `on priority=${RUNTIME_CONFIG.priorityMode} sourcemap=${RUNTIME_CONFIG.sourcemapTrace}`
+    : 'off';
+
+  console.log(
+    `\x1b[32m✔\x1b[0m \x1b[1m\x1b[36m[persistent]\x1b[0m ${detail}`,
+  );
+}
+
+function logPersistentUnavailable() {
+  console.log(
+    '\x1b[33m!\x1b[0m \x1b[1m\x1b[36m[persistent]\x1b[0m localStorage is unavailable',
+  );
+}
+
+function logStartupMessageMode(enabled: boolean) {
+  console.log(
+    `\x1b[32m✔\x1b[0m \x1b[1m\x1b[36m[startup]\x1b[0m message: ${enabled ? 'on' : 'off'}`,
+  );
+}
+
+function logUsage(displayName: string) {
+  console.group(`%c[${displayName}] usage`, 'font-weight:700;color:#a21caf');
+  logUsageRows(displayName);
+  console.groupEnd();
+}
+
+function logInfo(displayName: string) {
+  console.group(`%c[${displayName}] info`, 'font-weight:700;color:#7c3aed');
+  logInfoRows();
+  console.groupEnd();
+}
+
+function logUsageRows(displayName: string) {
+  const commands = getUsageCommands(displayName);
+
+  for (const [command, description] of commands) {
+    console.log(`%c${command}%c // ${description}`, 'color:#0891b2', 'color:#64748b');
+  }
+}
+
+function logInfoRows() {
+  const rows: string[][] = [];
+
+  if (isPersistentModeEnabled()) {
+    rows.push(['Persistent', getPersistentLabel(), getPersistentDetail()]);
+  }
+
+  rows.push(
+    ['Priority', getPriorityModeValue(), getPriorityModeDetail()],
+    ['Sourcemap', getSourcemapLabel(), getSourcemapDetail()],
+    ['ClassNames', getClassNameLabel(), getClassNameDetail()],
+    ['CSS', getCssModeLabel(), getCssModeDetail()],
+    ['Runtime', getRuntimeModeLabel(), getRuntimeDetail()],
+    ['Plugin', getPluginLabel(), getPluginDetail()],
+  );
+
+  for (const [label, value, detail] of rows) {
+    console.log(
+      `%c${label.padEnd(12)}%c${value}%c ${detail}`,
+      'font-weight:700;color:#7c3aed',
+      'font-weight:700;color:#111827',
+      'color:#64748b',
+    );
+  }
+}
+
+function getRuntimeModeLabel() {
+  return RUNTIME_CONFIG.isDev ? 'dev' : 'prod';
+}
+
+function getRuntimeDetail() {
+  const details = [
+    RUNTIME_CONFIG.isRSC ? 'RSC runtime.' : 'Client runtime.',
+    RUNTIME_CONFIG.isHoistEnabled ? 'Hoisting is enabled.' : 'Hoisting is disabled.',
+  ];
+
+  return details.join(' / ');
+}
+
+function getPluginLabel() {
+  return RUNTIME_CONFIG.buildMeta ? 'active' : 'none';
+}
+
+function getPluginDetail() {
+  return RUNTIME_CONFIG.buildMeta
+    ? 'Build metadata is available.'
+    : 'Only runtime helpers are available.';
+}
+
+function getCssModeLabel() {
+  return RUNTIME_CONFIG.isCssExtracted ? 'extracted' : 'runtime';
+}
+
+function getCssModeDetail() {
+  if (RUNTIME_CONFIG.priorityMode === 'layer') {
+    const layer = RUNTIME_CONFIG.layer
+      ? 'Rules are wrapped in the configured CSS layer.'
+      : 'Rules are not wrapped in an output CSS layer.';
+
+    return `${layer} Priority sublayers control order.`;
+  }
+
+  return RUNTIME_CONFIG.layer
+    ? 'Sorted rules are wrapped in the configured CSS layer.'
+    : 'Sorted rules are emitted without an output CSS layer.';
+}
+
+function getPriorityModeValue() {
+  return RUNTIME_CONFIG.priorityMode;
+}
+
+function getPriorityModeDetail() {
+  return RUNTIME_CONFIG.priorityMode === 'layer'
+    ? 'Cascade layers control priority.'
+    : 'Rules are ordered by priority.';
+}
+
+function getSourcemapLabel() {
+  return RUNTIME_CONFIG.isSourcemapEnabled ? RUNTIME_CONFIG.sourcemapTrace : 'off';
+}
+
+function getSourcemapDetail() {
+  if (!RUNTIME_CONFIG.isSourcemapEnabled) {
+    return 'Sourcemaps are disabled.';
+  }
+
+  if (!RUNTIME_CONFIG.buildMeta) {
+    return 'Run traceSourcemap() to trace runtime callsites.';
+  }
+
+  return RUNTIME_CONFIG.sourcemapTrace === 'style'
+    ? 'Spread values trace to the style site.'
+    : 'Spread values trace to the value source.';
+}
+
+function getPersistentLabel() {
+  return isPersistentModeEnabled() ? 'on' : 'off';
+}
+
+function getPersistentDetail() {
+  if (!isPersistentModeEnabled()) {
+    return 'Local debug preferences are not saved.';
+  }
+
+  return `Saving priority=${RUNTIME_CONFIG.priorityMode} and sourcemap=${RUNTIME_CONFIG.sourcemapTrace}.`;
+}
+
+function getClassNameLabel() {
+  const labels = [
+    RUNTIME_CONFIG.debugClassName ? 'debug' : '',
+    RUNTIME_CONFIG.localClassName ? 'local' : '',
+  ].filter(Boolean);
+
+  return labels.length > 0 ? labels.join(' + ') : 'hashed';
+}
+
+function getClassNameDetail() {
+  return [
+    RUNTIME_CONFIG.debugClassName ? 'Friendly names are enabled.' : 'Compact names are enabled.',
+    RUNTIME_CONFIG.localClassName ? 'Names are file-scoped.' : 'Names use global hashes.',
+  ].join(' / ');
+}
+
+function getUsageCommands(displayName: string) {
+  const commands = [
+    [`${displayName}.usage()`, 'Print this help text'],
+    [`${displayName}.info()`, 'Print current debug status'],
+    [`${displayName}.getConfig()`, 'Print current runtime config'],
+    [`${displayName}.persistent.on()`, 'Save local priority and sourcemap trace modes'],
+    [`${displayName}.persistent.off()`, 'Stop saving local debug modes'],
+    [`${displayName}.startupMessage.on()`, 'Show the initial helper message'],
+    [`${displayName}.startupMessage.off()`, 'Hide the initial helper message'],
+    [`${displayName}.setPriorityMode.toLayer()`, 'Use layer priority mode'],
+    [`${displayName}.setPriorityMode.toSort()`, 'Use sorted priority mode'],
+  ];
+
+  if (RUNTIME_CONFIG.buildMeta) {
+    commands.push(
+      [`${displayName}.setSourcemapTrace.toStyle()`, 'Map spread values to the style site'],
+      [`${displayName}.setSourcemapTrace.toValue()`, 'Map spread values to the value source'],
+    );
+  } else {
+    commands.push([`${displayName}.traceSourcemap()`, 'Trace runtime sourcemaps']);
+  }
+
+  return commands;
+}
+
+function logCssDevUtilsEnabled(displayName: string) {
+  console.groupCollapsed(
+    `%c✨ %c[${displayName}] %cpriority=%c${RUNTIME_CONFIG.priorityMode}%c sourcemap=%c${RUNTIME_CONFIG.sourcemapTrace}%c │ %cFor usage run %c${displayName}.usage()`,
+    'color:#eab308',
+    'font-weight:700;color:#a21caf',
+    'font-weight:700;color:#475569',
+    'font-weight:800;color:#d97706',
+    'font-weight:700;color:#475569',
+    'font-weight:800;color:#059669',
+    'color:#94a3b8',
+    'font-weight:700;color:#475569',
+    'font-weight:800;color:#0891b2',
+  );
+
+  logInfoRows();
+  console.groupEnd();
 }

@@ -51,6 +51,7 @@ export function createNextBuildMeta(
     layer?: BuildMeta['layer'];
     priorityMode?: BuildMeta['priorityMode'];
     sourcemapTrace?: BuildMeta['sourcemapTrace'];
+    checkSelector?: BuildMeta['checkSelector'];
   },
 ): BuildMeta {
   return {
@@ -61,6 +62,7 @@ export function createNextBuildMeta(
     layer: options.layer,
     priorityMode: options.priorityMode,
     sourcemapTrace: options.sourcemapTrace,
+    checkSelector: options.checkSelector,
     css: {
       ...options.css,
       localClassName: options.css?.localClassName ?? dev,
@@ -86,6 +88,26 @@ export function resolveNextCompilerOptions(
       ...buildMeta.css,
     },
   };
+}
+
+export function removeUndefinedValues<T>(value: T): T {
+  if (Array.isArray(value)) {
+    return value.map((item) => removeUndefinedValues(item)) as T;
+  }
+
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+
+  const result: Record<string, unknown> = {};
+
+  for (const [key, item] of Object.entries(value)) {
+    if (item !== undefined) {
+      result[key] = removeUndefinedValues(item);
+    }
+  }
+
+  return result as T;
 }
 
 export function prependClientEntry(entry: unknown, moduleId: string) {

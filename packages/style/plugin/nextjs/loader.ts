@@ -142,12 +142,18 @@ function getTurbopackEntry(options: NextTurbopackLoaderOptions): NextLoaderState
   const dev = options.dev ?? false;
 
   const buildMeta = options.buildMeta ?? createNextBuildMeta(dev, options);
+  const compilerOptions = resolveNextCompilerOptions(options, null, buildMeta);
+
+  if (dev) {
+    compilerOptions.devSourcemap = 'sourceContent';
+    delete compilerOptions.getSourcemapFilePath;
+  }
 
   const compiler = createPluginCompiler({
     projectDir: options.projectDir,
     cacheDir: options.cacheDir,
     dev,
-    options: resolveNextCompilerOptions(options, null, buildMeta),
+    options: compilerOptions,
   });
 
   const configHash = options.configHash ?? createFileCssConfigHash(buildMeta);

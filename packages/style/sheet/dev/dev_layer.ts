@@ -93,10 +93,10 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
         if (!fragment || !fragmentTag) return;
 
         if (
-          fragmentTag.sourceMapNode &&
-          fragmentTag.sourceMapNode.parentNode === fragmentTag.tag
+          fragmentTag.insertBeforeNode &&
+          fragmentTag.insertBeforeNode.parentNode === fragmentTag.tag
         ) {
-          fragmentTag.tag.insertBefore(fragment, fragmentTag.sourceMapNode);
+          fragmentTag.tag.insertBefore(fragment, fragmentTag.insertBeforeNode);
         } else {
           fragmentTag.tag.appendChild(fragment);
         }

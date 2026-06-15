@@ -9,6 +9,7 @@ import {
   configureRuntime,
   createCombinedStylePool,
   createCompiler,
+  createStyleFn,
   createDebugSlot,
   createDebugStyle,
   type DebugData,
@@ -30,9 +31,12 @@ import {
   notIncludes,
   resolveStyleProp,
   RUNTIME_CONFIG,
+  setBuildMeta,
+  selector,
   style,
   styles,
   test,
+  testDir,
   theme,
 } from './setup';
 
@@ -147,14 +151,14 @@ const bad = style.slot({ color: 'blue' })();
 });
 
 test('builder callables are trace-marked for runtime callsites', () => {
-  configureRuntime({ trace: true });
+  configureRuntime({ dev: true });
 
   const tracedStyle = style({ color: 'purple' });
   const tracedStyleHover = style({ color: 'purple' }).hover({ color: 'violet' });
   const tracedSlot = style.slot({ color: 'purple' });
   const tracedOverride = tracedSlot({ color: 'violet' });
 
-  configureRuntime({ trace: false });
+  configureRuntime({ dev: false });
 
   assertRunTestsCallsite(getRuntimeCallsite(tracedStyle));
   assertRunTestsCallsite(getRuntimeCallsite(tracedStyleHover, 1));
@@ -176,7 +180,7 @@ test('builder callables prefer injected debug callsites over runtime traces', ()
   const OriginalError = globalThis.Error;
   let debugStyle: BuilderData | null = null;
 
-  configureRuntime({ trace: true });
+  configureRuntime({ dev: true });
   globalThis.Error = function() {
     throw new OriginalError('runtime trace should not run for injected debug data');
   } as unknown as ErrorConstructor;
@@ -185,7 +189,7 @@ test('builder callables prefer injected debug callsites over runtime traces', ()
     debugStyle = createDebugStyle({ color: 'purple', backgroundColor: 'blue' }, debug);
   } finally {
     globalThis.Error = OriginalError;
-    configureRuntime({ trace: false });
+    configureRuntime({ dev: false });
   }
 
   if (!debugStyle) throw new Error('expected debug style data');
@@ -426,6 +430,111 @@ const styles = {
   notIncludes(result.code, `"padding": "--token-`);
 });
 
+test('dev debug transform rejects invalid static selector args', () => {
+  let error: unknown = null;
+
+  try {
+    injectStyleDebugData(
+      `
+import { style } from '@fluentic/style';
+
+const rule = style({ color: 'red' }).select('.parent .child', { color: 'blue' });
+`,
+      '/tmp/debug-invalid-selector.ts',
+    );
+  } catch (err: unknown) {
+    error = err;
+  }
+
+  assertCompileError(error, 'Invalid selector\n\nstyle.select(".parent .child")');
+  assertCompileError(error, 'Selector must target the current element only');
+});
+
+test('dev debug transform rejects invalid custom selector definitions', () => {
+  const custom = createStyleFn({
+    style: null as any,
+    selectors: {
+      invalidState: selector('.parent .child'),
+    },
+  }).style;
+  let error: unknown = null;
+
+  try {
+    injectStyleDebugData(
+      `
+import { style } from '@fluentic/style';
+
+const rule = style({ color: 'red' }).invalidState({ color: 'blue' });
+`,
+      '/tmp/debug-invalid-selector-definition.ts',
+      { styleFn: custom },
+    );
+  } catch (err: unknown) {
+    error = err;
+  }
+
+  assertCompileError(error, 'Invalid selector definition\n\nstyle.invalidState: ".parent .child"');
+  assertCompileError(error, 'Selector must target the current element only');
+});
+
+test('dev debug transform traces imported selector constants', () => {
+  let error: unknown = null;
+
+  try {
+    injectStyleDebugData(
+      `
+import { style } from '@fluentic/style';
+import { invalidSelect } from './fixtures/selector_values';
+
+const rule = style({ color: 'red' }).select(invalidSelect, { color: 'blue' });
+`,
+      testDir + '/debug-invalid-imported-selector.ts',
+    );
+  } catch (err: unknown) {
+    error = err;
+  }
+
+  assertCompileError(error, 'Invalid selector\n\nstyle.select(".parent .child")');
+  assertCompileError(error, 'Selector must target the current element only');
+});
+
+test('dev debug transform can skip build-time selector checks', () => {
+  const result = injectStyleDebugData(
+    `
+import { style } from '@fluentic/style';
+
+const rule = style({ color: 'red' }).select('.parent .child', { color: 'blue' });
+`,
+    '/tmp/debug-skip-invalid-selector.ts',
+    { checkSelector: false },
+  );
+
+  includes(result.code, ".select('.parent .child'");
+});
+
+test('dev debug transform force mode rejects unresolved selector args', () => {
+  let error: unknown = null;
+
+  try {
+    injectStyleDebugData(
+      `
+import { style } from '@fluentic/style';
+
+export function makeRule(selector: string) {
+  return style({ color: 'red' }).select(selector, { color: 'blue' });
+}
+`,
+      '/tmp/debug-force-unresolved-selector.ts',
+      { checkSelector: 'force' },
+    );
+  } catch (err: unknown) {
+    error = err;
+  }
+
+  assertCompileError(error, 'Invalid selector\n\nstyle.select(...)');
+  assertCompileError(error, 'Selector argument must be statically analyzable');
+});
+
 test('dev debug transform lets plugins customize sourcemap file path', () => {
   let seenRelativePath = '';
   let seenSourcePath = '';
@@ -529,6 +638,20 @@ const rule = style({ color: 'red' });
   includes(result.code, `const _styleDebugSourceUrl = "webpack:///example/src/page.tsx";`);
   includes(result.code, `sourceUrl: _styleDebugSourceUrl`);
   notIncludes(result.code, `code: ${JSON.stringify(code)}`);
+});
+
+test('runtime selector checks stay on in dev unless plugin selector checking is forced', () => {
+  configureRuntime({ dev: true });
+  equal(RUNTIME_CONFIG.isCheckSelectorEnabled, true);
+
+  setBuildMeta({ dev: true, extract: false, hoist: false, rsc: false, css: null });
+  equal(RUNTIME_CONFIG.isCheckSelectorEnabled, true);
+
+  setBuildMeta({ dev: true, extract: false, hoist: false, rsc: false, checkSelector: 'force', css: null });
+  equal(RUNTIME_CONFIG.isCheckSelectorEnabled, false);
+
+  setBuildMeta(null);
+  configureRuntime({ dev: false });
 });
 
 test('runtime dev defaults enable local class name hashing', () => {

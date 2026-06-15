@@ -1,2 +1,8 @@
-export { configureRuntime, RUNTIME_CONFIG, setPriorityMode, setSourcemapTraceMode } from './config';
+export {
+  configureRuntime,
+  RUNTIME_CONFIG,
+  setDevRuntimeOptions,
+  setPriorityMode,
+  setSourcemapTraceMode,
+} from './config';
 export * from './types';

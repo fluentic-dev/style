@@ -3,6 +3,7 @@ import type { types } from '@babel/core';
 export type StyleChainMethod = {
   name: string;
   args: types.Node[];
+  nameNode: types.Node;
 };
 
 export type StyleChainParseResult = {
@@ -50,7 +51,11 @@ export function extractStyleChain(
 
       return {
         ...inner,
-        methods: [...inner.methods, { name: prop, args: node.arguments as types.Node[] }],
+        methods: [...inner.methods, {
+          name: prop,
+          args: node.arguments as types.Node[],
+          nameNode: callee.property,
+        }],
       };
     }
   }

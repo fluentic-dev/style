@@ -26,7 +26,7 @@ export type RuntimeConfig = RuntimeSharedConfig & {
   buildMeta: BuildMeta | null;
   layer: boolean;
   priorityMode: PriorityMode;
-  sourcemapTrace: SourcemapTrace;
+  sourcemapTrace: SourcemapTraceMode;
 
   isDev: boolean;
   isRSC: boolean;
@@ -37,30 +37,31 @@ export type RuntimeConfig = RuntimeSharedConfig & {
   isCheckSelectorEnabled: boolean;
   isSourcemapEnabled: boolean;
 
-  devUtils: string;
-
   runtimeCacheTTL: number;
 };
 
 export type RuntimeOptions = Partial<RuntimeSharedConfig> & {
   dev?: boolean;
-  devUtils?: string;
-  trace?: boolean;
   cache?: boolean | number;
-  checkSelector?: boolean;
   sourcemap?: boolean;
-  sourcemapTrace?: SourcemapTrace;
+  sourcemapTrace?: SourcemapTraceMode;
   layer?: boolean;
   priorityMode?: PriorityMode;
   localClassName?: boolean;
+};
+
+export type DevRuntimeOptions = {
+  priorityMode?: PriorityMode;
+  sourcemapTrace?: SourcemapTraceMode;
 };
 
 /* build meta */
 
 export type BuildCssConfig = Partial<CssConfig>;
 
-export type SourcemapTrace = 'style' | 'value';
+export type SourcemapTraceMode = 'style' | 'value';
 export type PriorityMode = 'layer' | 'sort';
+export type CheckSelectorMode = boolean | 'force';
 
 export type BuildMeta = {
   dev: boolean;
@@ -69,6 +70,7 @@ export type BuildMeta = {
   rsc: boolean;
   layer?: boolean;
   priorityMode?: PriorityMode;
-  sourcemapTrace?: SourcemapTrace;
+  sourcemapTrace?: SourcemapTraceMode;
+  checkSelector?: CheckSelectorMode;
   css: BuildCssConfig | null;
 };

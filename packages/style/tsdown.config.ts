@@ -1,5 +1,5 @@
-import { defineConfig } from 'tsdown';
 import { fileURLToPath } from 'node:url';
+import { defineConfig } from 'tsdown';
 
 const JSX_RUNTIME_ENTRY = 'jsx/jsx-runtime.ts';
 const JSX_DEV_RUNTIME_ENTRY = 'jsx/jsx-dev-runtime.ts';
@@ -85,11 +85,18 @@ function createRuntimeModeConfig(
     : mode === 'extracted'
     ? resolveLocal('runtime/sheet/global-noop.ts')
     : resolveLocal('runtime/sheet/global-runtime.ts');
+  const checkSelectorAlias = mode === 'full'
+    ? resolveLocal('builder/data/check_selector.ts')
+    : resolveLocal('builder/data/check_selector.noop.ts');
 
   return defineConfig({
     entry,
     alias: {
       '../sheet/global-runtime': globalSheetAlias,
+      './data/check_selector': checkSelectorAlias,
+      ...(mode === 'extracted'
+        ? { './getClassName': resolveLocal('runtime/core/getClassName.extracted.ts') }
+        : {}),
     },
     define: {
       __FLUENTIC_RUNTIME_MODE__: JSON.stringify(mode),

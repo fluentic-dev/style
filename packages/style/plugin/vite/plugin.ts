@@ -158,7 +158,12 @@ export function plugin(options: PluginOptions = {}): Plugin {
 
       if (!current.filter(id)) return null;
 
-      const result = current.transform(code, id);
+      let result: ReturnType<typeof current.transform>;
+      try {
+        result = current.transform(code, id);
+      } catch (error) {
+        this.error(toCleanViteError(error, id));
+      }
       if (!result) return null;
 
       return {
@@ -198,5 +203,15 @@ export function plugin(options: PluginOptions = {}): Plugin {
           'Import a CSS file from your app entry/root layout so Vite owns the output filename and hashing.',
       ));
     },
+  };
+}
+
+function toCleanViteError(error: unknown, id: string) {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return {
+    id,
+    message,
+    stack: '',
   };
 }

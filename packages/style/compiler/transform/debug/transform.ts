@@ -1,11 +1,17 @@
 import type { CompilerInternal, TransformDebugArgs, TransformDebugResult } from '../../compiler';
+import type { ExtractTracer } from '../extract/plugin';
 import { babelTransform } from '../utils/babel';
 import { createDebugPlugin } from './plugin';
 import { getDebugSourceUrl } from './utils/source_url';
 
+type TransformDebugDeps = {
+  tracer: ExtractTracer;
+};
+
 export function transformDebug(
   internal: CompilerInternal,
   args: TransformDebugArgs,
+  deps: TransformDebugDeps,
 ): TransformDebugResult | null {
   const { projectDir, options } = internal;
 
@@ -21,6 +27,7 @@ export function transformDebug(
     projectDir,
     sourceUrl,
     sourceContent: options.devSourcemap === 'sourceContent' ? args.code : null,
+    tracer: deps.tracer,
   });
 
   const result = babelTransform({

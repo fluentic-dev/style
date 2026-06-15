@@ -1,6 +1,6 @@
 import type { StylePropItem } from '../core/cache/prop';
 import type { ClassNameResult } from '../core/className';
-import { collectStylePropItemsSheetRules } from '../sheet/rules';
+import { collectStylePropItemsSheetRulesWithThemes } from '../sheet/rules';
 import { ELEMENT_CSS_DATA_ATTR } from './constants';
 import { addRscStyleRules } from './styleStore';
 
@@ -12,7 +12,7 @@ export function getClassNameRSC(
   result: ClassNameResult,
   items: readonly StylePropItem[],
 ): ClassNameResultRSC {
-  const rules = collectStylePropItemsSheetRules(items);
+  const rules = collectStylePropItemsSheetRulesWithThemes(items);
 
   if (!rules.length) return result;
 

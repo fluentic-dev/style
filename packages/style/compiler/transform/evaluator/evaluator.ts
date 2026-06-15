@@ -1,4 +1,5 @@
 import type * as BabelTypes from '@babel/types';
+import { createExtractedScope, createExtractedSlot, createExtractedStyle } from '../../../builder/extract';
 import { TRACE_VALUE, TRACE_STYLE } from '../../../builder/data/debug';
 import {
   getStyleTokenId,
@@ -9,7 +10,16 @@ import {
   TOKEN_OVERRIDE,
 } from '../../../style/token';
 import { hashString } from '../../../utils/hash';
-import { FN_CREATE_TOKEN, FN_CREATE_TOKENS, FN_CREATE_VALUES, IMPORT_PATHS } from '../../utils/constants';
+import {
+  FN_CREATE_EXTRACTED_SCOPE,
+  FN_CREATE_EXTRACTED_SLOT,
+  FN_CREATE_EXTRACTED_STYLE,
+  FN_CREATE_TOKEN,
+  FN_CREATE_TOKENS,
+  FN_CREATE_VALUES,
+  IMPORT_EXTRACT,
+  IMPORT_PATHS,
+} from '../../utils/constants';
 import type { EvalFail, EvalModuleBindings, EvalOk, EvalResult, ImportMap, ResolveImportFn } from './types';
 
 const STYLE_IMPORT_PATHS = new Set(IMPORT_PATHS);
@@ -312,6 +322,33 @@ function evaluateArray(node: BabelTypes.ArrayExpression, scope: EvalScope): Eval
 function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalResult {
   if (node.callee.type === 'Identifier') {
     const imp = scope.imports.get(node.callee.name);
+
+    if (imp && imp.source === IMPORT_EXTRACT && imp.name === FN_CREATE_EXTRACTED_STYLE) {
+      const items = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+      if (!items.ok) return items;
+      if (!Array.isArray(items.value)) return evalFail('createExtractedStyle items must be an array');
+
+      return evalOk(createExtractedStyle(items.value as Parameters<typeof createExtractedStyle>[0]));
+    }
+
+    if (imp && imp.source === IMPORT_EXTRACT && imp.name === FN_CREATE_EXTRACTED_SLOT) {
+      const slotId = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+      if (!slotId.ok) return slotId;
+
+      const items = evaluateNode(node.arguments[1] as BabelTypes.Node, scope);
+      if (!items.ok) return items;
+      if (!Array.isArray(items.value)) return evalFail('createExtractedSlot items must be an array');
+
+      return evalOk(createExtractedSlot(String(slotId.value), items.value as Parameters<typeof createExtractedSlot>[1]));
+    }
+
+    if (imp && imp.source === IMPORT_EXTRACT && imp.name === FN_CREATE_EXTRACTED_SCOPE) {
+      const items = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+      if (!items.ok) return items;
+      if (!Array.isArray(items.value)) return evalFail('createExtractedScope items must be an array');
+
+      return evalOk(createExtractedScope(items.value as Parameters<typeof createExtractedScope>[0]));
+    }
 
     if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_TOKEN) {
       const value = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);

@@ -1,16 +1,16 @@
 import { getAtomicClassName, getClassNameDedupe } from '../../../atomic/classname';
 import { RUNTIME_CONFIG } from '../../../config';
-import { isStyleTokenOverrideData, type StyleTokenOverride } from '../../../style/token';
-import { traceError } from '../../../utils/trace';
+import { getStyleTokenId, isStyleTokenOverrideData, type StyleTokenOverride } from '../../../style/token';
 import { BUILDER_SLOT_ID, BUILDER_STATE, BUILDER_TYPE_SCOPE, BUILDER_TYPE_SLOT_OVERRIDE } from '../const';
 import type { BuilderCallsite, ScopeData, SlotOverrideData } from '../data';
 import type { DebugData } from '../debug';
-import { isSlotOverrideData } from '../is';
+import { isScopeData, isSlotOverrideData } from '../is';
 import type { ItemSelector, ItemValue, RuntimeScopeItem, RuntimeSlotOverrideItem, StateItem } from '../state';
-import { cloneData } from './utils';
+import { cloneData, logInvalidData } from './utils';
 
 export type ScopeItem<Style = unknown> =
   | SlotOverrideData<Style>
+  | ScopeData<Style>
   | StyleTokenOverride
   | false
   | null
@@ -51,12 +51,91 @@ export function mergeScopeData<Style>(
     if (!source) continue;
 
     if (isStyleTokenOverrideData(source)) {
-      styles.push(source);
+      addTokenOverride(source, styles, lookup);
+      continue;
+    }
+
+    if (isScopeData(source)) {
+      const scopeItems = source[BUILDER_STATE].items;
+
+      for (let j = 0, len = scopeItems.length; j < len; j++) {
+        item = scopeItems[j];
+
+        if (isStyleTokenOverrideData(item)) {
+          addTokenOverride(item, styles, lookup);
+          continue;
+        }
+
+        if (Array.isArray(item) || item.type !== BUILDER_TYPE_SCOPE) {
+          logInvalidData('invalid scope data', { source, item });
+          continue;
+        }
+
+        const sourceScopeItem = item as RuntimeScopeItem;
+
+        atRule = scopeAtRule
+          ? (sourceScopeItem.atRule ? [scopeAtRule].concat(sourceScopeItem.atRule) : [scopeAtRule])
+          : sourceScopeItem.atRule;
+
+        const scopeItem: RuntimeScopeItem = {
+          ...sourceScopeItem,
+          runtime: runtimeType,
+          atRule,
+          parentSelector: parentSelector ?? sourceScopeItem.parentSelector,
+        };
+
+        value = scopeItem.value;
+        priority = null;
+
+        if (Array.isArray(value)) {
+          priority = value[1];
+          value = value[0];
+        }
+
+        dedupe = getClassNameDedupe(
+          scopeItem.property,
+          priority,
+          scopeItem.selector,
+          scopeItem.parentSelector,
+          scopeItem.atRule,
+        );
+
+        className = getAtomicClassName(
+          scopeItem.property,
+          priority,
+          value,
+          scopeItem.selector,
+          scopeItem.parentSelector,
+          scopeItem.atRule,
+          scopeItem.callsite ?? callsite,
+          RUNTIME_CONFIG.classNamePrefix,
+          RUNTIME_CONFIG.localClassName,
+          RUNTIME_CONFIG.debugClassName,
+          RUNTIME_CONFIG.debugPropertyLength,
+          RUNTIME_CONFIG.debugValueLength,
+          RUNTIME_CONFIG.debugSelectorLength,
+          RUNTIME_CONFIG.debugParentSelectorLength,
+          RUNTIME_CONFIG.debugAtRuleLength,
+        );
+
+        scopeItem.dedupe = dedupe;
+        scopeItem.className = className;
+
+        const lookupKey = getScopeLookupKey(scopeItem.slotId, dedupe);
+        lookupIndex = lookup[lookupKey];
+
+        if (typeof lookupIndex === 'number') {
+          styles[lookupIndex] = scopeItem;
+        } else {
+          lookup[lookupKey] = styles.push(scopeItem) - 1;
+        }
+      }
+
       continue;
     }
 
     if (!isSlotOverrideData(source)) {
-      console.log(traceError('invalid scope data'), 'data:', { source });
+      logInvalidData('invalid scope data', { source });
       continue;
     }
 
@@ -67,7 +146,7 @@ export function mergeScopeData<Style>(
       item = overrideItems[j];
 
       if (Array.isArray(item) || isStyleTokenOverrideData(item) || item.type !== BUILDER_TYPE_SLOT_OVERRIDE) {
-        console.log(traceError('invalid scope data'), 'data:', { source, item });
+        logInvalidData('invalid scope data', { source, item });
         continue;
       }
 
@@ -145,6 +224,25 @@ export function mergeScopeData<Style>(
   return data as ScopeData<Style>;
 }
 
+function addTokenOverride(
+  item: StyleTokenOverride,
+  styles: StateItem[],
+  lookup: Record<string, number>,
+) {
+  const lookupKey = getTokenLookupKey(getStyleTokenId(item));
+  const lookupIndex = lookup[lookupKey];
+
+  if (typeof lookupIndex === 'number') {
+    styles[lookupIndex] = item;
+  } else {
+    lookup[lookupKey] = styles.push(item) - 1;
+  }
+}
+
 function getScopeLookupKey(slotId: string, dedupe: string) {
   return slotId + '\0' + dedupe;
+}
+
+function getTokenLookupKey(tokenId: string) {
+  return 'token\0' + tokenId;
 }

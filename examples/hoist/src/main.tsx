@@ -1,4 +1,4 @@
-import { style } from '@fluentic/style';
+import { combineStyle, createToken, style } from '@fluentic/style';
 import { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
@@ -8,6 +8,37 @@ function readAccent() {
 
 const accents = ['#2563eb', '#059669', '#c2410c', '#7c3aed'];
 const cardTones = ['#2563eb', '#059669', '#c2410c', '#7c3aed', '#0891b2', '#be123c'];
+
+const surfaceToken = createToken('#ffffff');
+const accentToken = createToken('#2563eb');
+
+const cardStyles = {
+  root: style.slot({
+    display: 'grid',
+    gap: 12,
+    padding: 16,
+    border: '1px solid',
+    borderColor: accentToken,
+    borderRadius: 14,
+    backgroundColor: surfaceToken,
+    boxShadow: '0 14px 40px rgba(15, 23, 42, 0.08)',
+  }).hover({
+    transform: 'translateY(-1px)',
+  }),
+  title: style.slot({
+    margin: 0,
+    color: accentToken,
+    fontSize: 17,
+  }),
+};
+
+const staticCardScope = style.scope([
+  surfaceToken('#ffffff'),
+  accentToken('#2563eb'),
+  cardStyles.root({
+    transition: 'transform 160ms ease, border-color 160ms ease',
+  }),
+]);
 
 function createItems(seed = 0) {
   return Array.from({ length: 24 }, (_, index) => {
@@ -20,6 +51,57 @@ function createItems(seed = 0) {
       tone: cardTones[(index + seed) % cardTones.length],
     };
   });
+}
+
+function InlineCard(props: ReturnType<typeof createItems>[number]) {
+  const cardScope = style.scope([
+    accentToken('#2563eb'),
+    cardStyles.root({
+      borderColor: props.tone,
+    }),
+    cardStyles.title({
+      color: props.tone,
+    }),
+  ]);
+  const css = combineStyle(
+    cardStyles,
+    staticCardScope(cardStyles.root),
+    cardScope(cardStyles.root),
+  );
+
+  return (
+    <article css={css.root}>
+      <h2 css={css.title}>
+        {props.title}
+      </h2>
+      <div
+        css={style({
+          height: 8,
+          overflow: 'hidden',
+          borderRadius: 999,
+          backgroundColor: '#e2e8f0',
+        })}
+      >
+        <span
+          css={style({
+            display: 'block',
+            height: '100%',
+            width: `${props.score}%`,
+            backgroundColor: props.tone,
+          })}
+        />
+      </div>
+      <p
+        css={style({
+          margin: 0,
+          color: '#475569',
+          fontSize: 13,
+        })}
+      >
+        Score {props.score}
+      </p>
+    </article>
+  );
 }
 
 function App() {
@@ -127,58 +209,7 @@ function App() {
             gap: 14,
           })}
         >
-          {items.map((item) => (
-            <article
-              key={item.id}
-              css={style({
-                display: 'grid',
-                gap: 12,
-                padding: 16,
-                border: `1px solid ${item.tone}`,
-                borderRadius: 14,
-                backgroundColor: '#ffffff',
-                boxShadow: '0 14px 40px rgba(15, 23, 42, 0.08)',
-              }).hover({
-                transform: 'translateY(-1px)',
-              })}
-            >
-              <h2
-                css={style({
-                  margin: 0,
-                  color: item.tone,
-                  fontSize: 17,
-                })}
-              >
-                {item.title}
-              </h2>
-              <div
-                css={style({
-                  height: 8,
-                  overflow: 'hidden',
-                  borderRadius: 999,
-                  backgroundColor: '#e2e8f0',
-                })}
-              >
-                <span
-                  css={style({
-                    display: 'block',
-                    height: '100%',
-                    width: `${item.score}%`,
-                    backgroundColor: item.tone,
-                  })}
-                />
-              </div>
-              <p
-                css={style({
-                  margin: 0,
-                  color: '#475569',
-                  fontSize: 13,
-                })}
-              >
-                Score {item.score}
-              </p>
-            </article>
-          ))}
+          {items.map((item) => <InlineCard key={item.id} {...item} />)}
         </div>
       </section>
     </main>

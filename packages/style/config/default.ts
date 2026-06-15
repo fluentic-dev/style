@@ -1,4 +1,4 @@
-import { LayerDefaultNamespace, LayerPlaceholder } from '../atomic/layer';
+import { LayerDefaultNamespace, LayerPlaceholder } from '../atomic/layer/types';
 import type { RuntimeConfig } from './types';
 
 export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
@@ -16,8 +16,6 @@ export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
   isTraceEnabled: false,
   isCheckSelectorEnabled: false,
   isSourcemapEnabled: false,
-
-  devUtils: 'StyleDevUtils',
 
   runtimeCacheTTL: getCacheTTL(true),
 

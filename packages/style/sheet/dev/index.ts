@@ -1,4 +1,5 @@
 import { RUNTIME_CONFIG } from '../../config';
+import { globalData } from '../../utils/global';
 import type { SheetOptions, SheetRule, StyleSheet } from '../types';
 import { createDevLayerSheet } from './dev_layer';
 import { createDevSortSheet } from './dev_sort';
@@ -10,7 +11,10 @@ type DevSheetState = {
   rebuild(): void;
 };
 
-const DEV_SHEETS = new Set<DevSheetState>();
+const DEV_SHEETS = globalData<Set<DevSheetState>>(
+  'sheet.dev.sheets',
+  () => new Set(),
+);
 
 export {
   createDevLayerSheet,

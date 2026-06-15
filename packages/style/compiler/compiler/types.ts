@@ -1,5 +1,5 @@
 import { LayerPlaceholder } from '../../atomic/layer';
-import type { BuildCssConfig, PriorityMode, SourcemapTrace } from '../../config';
+import type { BuildCssConfig, CheckSelectorMode, PriorityMode, SourcemapTraceMode } from '../../config';
 import type { StyleFn } from '../../style';
 import type { CssExtractRule } from '../extract';
 import type { BabelTransformSourceMap } from '../transform/utils/babel';
@@ -25,7 +25,8 @@ export type CompilerOptions = {
 
   getSourcemapFilePath?: GetSourcemapFilePathFn;
   devSourcemap?: 'sourceUrl' | 'sidecarServer' | 'sourceContent';
-  sourcemapTrace?: SourcemapTrace;
+  sourcemapTrace?: SourcemapTraceMode;
+  checkSelector?: CheckSelectorMode;
 };
 
 export type TransformDebugArgs = {

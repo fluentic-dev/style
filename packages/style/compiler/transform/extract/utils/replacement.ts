@@ -4,9 +4,10 @@ import {
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
+  ITEM_VALUE_NUMBER_PX,
   ITEM_VALUE_TYPE_VARIABLE,
 } from '../../../../builder/data/const';
-import type { BuilderType, ExtractedItemValue } from '../../../../builder/data/state';
+import type { BuilderType, ExtractedItemValue, ExtractedItemValueMode } from '../../../../builder/data/state';
 import { getStyleTokenId, isStyleTokenData, type StyleTokenData } from '../../../../style/token';
 import {
   FN_CREATE_EXTRACTED_SCOPE,
@@ -14,16 +15,19 @@ import {
   FN_CREATE_EXTRACTED_STYLE,
   FN_CREATE_EXTRACTED_TOKEN,
 } from '../../../utils/constants';
-import type { CompiledChainData, CompiledCssItem, CompiledItem } from '../chain';
+import type { CompiledChainData, CompiledCssItem, CompiledItem, CompiledTokenItem } from '../chain';
 import type { ExtractPluginState } from './state';
+
+type BuildReplacementOptions = {
+  getRuntimeToken?: (item: CompiledCssItem, valueNode: types.Expression) => types.Expression | null;
+  getTokenOverride?: (item: CompiledTokenItem) => void;
+};
 
 export function buildReplacement(
   t: typeof types,
   chain: CompiledChainData,
   state: ExtractPluginState,
-  options: {
-    getRuntimeToken?: (item: CompiledCssItem, valueNode: types.Expression) => types.Expression | null;
-  } = {},
+  options: BuildReplacementOptions = {},
 ): types.Expression | null {
   if (chain.type === 'style') {
     state.usedHelpers.add(FN_CREATE_EXTRACTED_STYLE);
@@ -63,53 +67,58 @@ function buildItemsArray(
   chain: CompiledChainData,
   defaultType: number,
   state: ExtractPluginState,
-  options: {
-    getRuntimeToken?: (item: CompiledCssItem, valueNode: types.Expression) => types.Expression | null;
-  },
+  options: BuildReplacementOptions,
 ): types.ArrayExpression {
   const emitLegacyShape = defaultType === BUILDER_TYPE_SCOPE;
+  const itemExpressions: types.Expression[] = [];
 
-  return t.arrayExpression(
-    chain.items.map((item) => {
-      if (isCompiledTokenItem(item)) {
-        return t.cloneNode(item.valueNode);
+  chain.items.forEach((item) => {
+    if (isCompiledTokenItem(item)) {
+      if (options.getTokenOverride) {
+        options.getTokenOverride(item);
+      } else {
+        itemExpressions.push(t.cloneNode(item.valueNode));
       }
+      return;
+    }
 
-      const type = getItemType(item);
-      const dedupe = getItemDedupe(item);
-      const className = getItemClassName(item);
-      const value = getItemValue(item);
-      const slotId = getItemSlotId(item);
+    const type = getItemType(item);
+    const dedupe = getItemDedupe(item);
+    const className = getItemClassName(item);
+    const value = getItemValue(item);
+    const slotId = getItemSlotId(item);
 
-      const elements: types.Expression[] = emitLegacyShape
-        ? [t.numericLiteral(type), t.stringLiteral(slotId ?? '')]
-        : [];
+    const elements: types.Expression[] = emitLegacyShape
+      ? [t.numericLiteral(type), t.stringLiteral(slotId ?? '')]
+      : [];
 
-      if (!emitLegacyShape && type === BUILDER_TYPE_SLOT) {
-        elements.push(t.stringLiteral(dedupe));
-        elements.push(t.stringLiteral(className));
-
-        if (isItemVariableValue(value)) {
-          elements.push(buildItemValue(t, value, state, item, options));
-        }
-
-        return t.arrayExpression(elements);
-      }
-
+    if (!emitLegacyShape && type === BUILDER_TYPE_SLOT) {
       elements.push(t.stringLiteral(dedupe));
       elements.push(t.stringLiteral(className));
 
-      if (!emitLegacyShape && isItemVariableValue(value)) {
+      if (isItemVariableValue(value)) {
         elements.push(buildItemValue(t, value, state, item, options));
       }
 
-      if (emitLegacyShape && item.hasParentSelector) {
-        elements.push(t.booleanLiteral(true));
-      }
+      itemExpressions.push(t.arrayExpression(elements));
+      return;
+    }
 
-      return t.arrayExpression(elements);
-    }),
-  );
+    elements.push(t.stringLiteral(dedupe));
+    elements.push(t.stringLiteral(className));
+
+    if ((!emitLegacyShape || type === BUILDER_TYPE_SCOPE) && isItemVariableValue(value)) {
+      elements.push(buildItemValue(t, value, state, item, options));
+    }
+
+    if (emitLegacyShape && item.hasParentSelector) {
+      elements.push(t.booleanLiteral(true));
+    }
+
+    itemExpressions.push(t.arrayExpression(elements));
+  });
+
+  return t.arrayExpression(itemExpressions);
 }
 
 function isCompiledTokenItem(
@@ -120,7 +129,7 @@ function isCompiledTokenItem(
 
 function isItemVariableValue(
   value: ExtractedItemValue | null | undefined,
-): value is [typeof ITEM_VALUE_TYPE_VARIABLE, string, unknown] {
+): value is [typeof ITEM_VALUE_TYPE_VARIABLE, string, unknown, ExtractedItemValueMode?] {
   return !!value && value[0] === ITEM_VALUE_TYPE_VARIABLE;
 }
 
@@ -161,7 +170,7 @@ function getItemClassName(item: CompiledCssItem): string {
 function getItemValue(item: CompiledCssItem): ExtractedItemValue | undefined {
   const type = getItemType(item);
 
-  if (type === BUILDER_TYPE_SCOPE) return undefined;
+  if (type === BUILDER_TYPE_SCOPE) return item[4] === true ? undefined : item[4] as ExtractedItemValue | undefined;
 
   if (type === BUILDER_TYPE_STYLE) {
     return (typeof item[0] === 'number' ? item[3] : item[2]) as ExtractedItemValue | undefined;
@@ -175,14 +184,13 @@ function buildItemValue(
   value: [typeof ITEM_VALUE_TYPE_VARIABLE, string, unknown],
   state: ExtractPluginState,
   item: CompiledCssItem,
-  options: {
-    getRuntimeToken?: (item: CompiledCssItem, valueNode: types.Expression) => types.Expression | null;
-  },
+  options: BuildReplacementOptions,
 ): types.ArrayExpression {
   return t.arrayExpression([
     t.numericLiteral(value[0]),
     t.stringLiteral(value[1]),
     buildVariableValueExpression(t, value[2], state, item, options),
+    ...(value[3] === ITEM_VALUE_NUMBER_PX ? [t.numericLiteral(ITEM_VALUE_NUMBER_PX)] : []),
   ]);
 }
 
@@ -191,9 +199,7 @@ function buildVariableValueExpression(
   value: unknown,
   state: ExtractPluginState,
   item: CompiledCssItem,
-  options: {
-    getRuntimeToken?: (item: CompiledCssItem, valueNode: types.Expression) => types.Expression | null;
-  },
+  options: BuildReplacementOptions,
 ): types.Expression {
   if (isStyleTokenData(value)) {
     state.usedHelpers.add(FN_CREATE_EXTRACTED_TOKEN);

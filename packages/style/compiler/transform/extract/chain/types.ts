@@ -1,5 +1,6 @@
 import type { types } from '@babel/core';
 import type { CssExtractItem, CssExtractRule } from '../../../extract';
+import type { StyleTokenOverride } from '../../../../style/token';
 
 export type { CssExtractItem, CssExtractRule };
 
@@ -12,6 +13,8 @@ export type CompiledCssItem = CssExtractItem & {
 
 export type CompiledTokenItem = {
   kind: 'token';
+  tokenId: string;
+  value: StyleTokenOverride;
   valueNode: types.Expression;
 };
 

@@ -9,6 +9,8 @@ import {
   type ImportMap,
 } from '../../../../packages/style/compiler/transform/evaluator/types';
 import { createExtractPlugin } from '../../../../packages/style/compiler/transform/extract/plugin';
+import { resetStyleThemeIdCounter } from '../../../../packages/style/style/theme';
+import { resetStyleTokenIdCounter } from '../../../../packages/style/style/token';
 
 export type PlaygroundFile = {
   name: string;
@@ -27,6 +29,7 @@ export type CompileTrace = {
   filePath: string;
   line: number;
   column: number;
+  trace?: number;
 };
 
 type ModuleInfo = {
@@ -37,6 +40,9 @@ type ModuleInfo = {
 const STYLE_SOURCES = new Set(['@fluentic/style', '@fluentic/style/server']);
 
 export function compilePlayground(files: PlaygroundFile[], options: CompilerOptions): CompileResult {
+  resetStyleTokenIdCounter();
+  resetStyleThemeIdCounter();
+
   const fileMap = new Map(files.map((file) => [normalizeFileName(file.name), file.code]));
   const moduleCache = new Map<string, ModuleInfo | null>();
   const collector = createCssCollector();
@@ -112,6 +118,7 @@ export function compilePlayground(files: PlaygroundFile[], options: CompilerOpti
       imports,
       styleNames,
       filePath: normalized,
+      sourcemapTrace: options.sourcemapTrace ?? 'style',
       resolveImport,
     };
 
@@ -153,7 +160,10 @@ export function compilePlayground(files: PlaygroundFile[], options: CompilerOpti
 
   return {
     js: transformed.join('\n\n'),
-    css: extractCss(items, options.css || {}),
+    css: extractCss(items, {
+      ...options.css,
+      layer: options.layer,
+    }),
     traces: getCompileTraces(items),
   };
 }
@@ -170,6 +180,7 @@ function getCompileTraces(items: CssExtractRule[]): CompileTrace[] {
       item.trace.filePath,
       item.trace.line,
       item.trace.column,
+      item.trace.trace ?? 'direct',
       item.css,
     ].join('|');
 
@@ -182,6 +193,7 @@ function getCompileTraces(items: CssExtractRule[]): CompileTrace[] {
       filePath: item.trace.filePath,
       line: item.trace.line,
       column: item.trace.column,
+      trace: item.trace.trace,
     });
   }
 

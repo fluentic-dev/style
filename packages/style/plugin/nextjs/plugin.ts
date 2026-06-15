@@ -43,6 +43,7 @@ import {
   type PluginCompiler,
   PRECOLLECT_NAMESPACE,
   prependClientEntry,
+  removeUndefinedValues,
   replaceCssMarkerAsset,
   resolveNextCompilerOptions,
 } from './utils';
@@ -313,7 +314,7 @@ function mergeTurbopackRules(
 ): TurbopackRules {
   const loaderItem: TurbopackLoaderItem = {
     loader: LOADER_IMPORT_PATH,
-    options: {
+    options: removeUndefinedValues({
       buildMeta: args.buildMeta,
       cacheDir: args.cacheDir,
       compilerId: args.compilerId,
@@ -323,7 +324,7 @@ function mergeTurbopackRules(
       devCssHref: args.devCssHref,
       isServer: false,
       projectDir: args.projectDir,
-    },
+    }),
   };
 
   return {

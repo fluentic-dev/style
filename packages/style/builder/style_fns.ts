@@ -362,11 +362,33 @@ function createScopeFn<Style>(
     return createScopeArgFn(fnPrefix, fnName, fnSelector, cloneScope);
   }
 
-  if (selector !== SELECTOR_MERGE) {
-    return createScopeSimpleFn(fnSelector, cloneScope);
+  if (selector === SELECTOR_MERGE) {
+    return createScopeMergeFn(cloneScope);
   }
 
-  return undefined;
+  return createScopeSimpleFn(fnSelector, cloneScope);
+}
+
+function createScopeMergeFn<Style>(
+  cloneScope: CloneScope<Style>,
+) {
+  return function(
+    this: ScopeData<Style>,
+    data: ScopeItems<Style>,
+    debug?: DebugData,
+  ) {
+    const callsite = resolveCallsite(debug);
+
+    return mergeScopeItems(
+      this,
+      callsite,
+      data,
+      debug ?? null,
+      null,
+      null,
+      cloneScope,
+    );
+  };
 }
 
 function createScopeAtRuleFn<Style>(

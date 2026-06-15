@@ -1,9 +1,11 @@
 import type { ThemeData } from '../../builder/data/data';
+import { BUILDER_CALLSITE } from '../../builder/data/const';
 import { isThemeData } from '../../builder/data/is';
 import type { SheetRule } from '../../sheet';
 import { getStylePropItems, type StylePropItem, walkStyleProp } from '../core/cache/prop';
 import type { StyleProp } from '../types';
 import { createRuntimeSheetRule, type RuntimeSheetRule } from './rule';
+import { createThemeRule } from './theme';
 
 export function walkStylePropSheetRules(
   styleProp: StyleProp,
@@ -57,6 +59,41 @@ export function collectStylePropItemsSheetRules(
   });
 }
 
+export function collectStylePropItemsSheetRulesWithThemes(
+  items: readonly StylePropItem[],
+): SheetRule[] {
+  const rules: SheetRule[] = [];
+  const lookup = new Map<string, number>();
+
+  const addRule = (rule: SheetRule, dedupe: string) => {
+    const index = lookup.get(dedupe);
+
+    if (index === undefined) {
+      lookup.set(dedupe, rules.push(rule) - 1);
+    } else {
+      rules[index] = rule;
+    }
+  };
+
+  walkStylePropItemsSheetRules(
+    items,
+    (rule) => {
+      if (!rule.key || !rule.dedupe) return;
+
+      addRule(createSheetRulePayload(rule), rule.dedupe);
+    },
+    (theme) => {
+      addRule({
+        key: theme.className,
+        css: createThemeRule(theme),
+        callsite: theme[BUILDER_CALLSITE],
+      }, theme.className);
+    },
+  );
+
+  return rules;
+}
+
 function collectStylePropRules(
   walk: (onRule: (rule: RuntimeSheetRule) => void) => void,
 ) {
@@ -66,23 +103,25 @@ function collectStylePropRules(
   walk((rule) => {
     if (!rule.key || !rule.dedupe) return;
 
-    const payload: SheetRule = {
-      key: rule.key,
-      css: rule.css,
-      callsite: rule.callsite || null,
-      debug: rule.debug || null,
-      debugField: rule.debugField || null,
-      priority: rule.priority,
-    };
-
     const index = lookup.get(rule.dedupe);
 
     if (index === undefined) {
-      lookup.set(rule.dedupe, rules.push(payload) - 1);
+      lookup.set(rule.dedupe, rules.push(createSheetRulePayload(rule)) - 1);
     } else {
-      rules[index] = payload;
+      rules[index] = createSheetRulePayload(rule);
     }
   });
 
   return rules;
+}
+
+function createSheetRulePayload(rule: RuntimeSheetRule): SheetRule {
+  return {
+    key: rule.key,
+    css: rule.css,
+    callsite: rule.callsite || null,
+    debug: rule.debug || null,
+    debugField: rule.debugField || null,
+    priority: rule.priority,
+  };
 }

@@ -1,0 +1,30 @@
+{
+  "name": "@example/selector-check",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev:runtime": "vite --mode pure",
+    "dev:plugin": "vite",
+    "dev:plugin:no-check": "vite --mode plugin-no-check",
+    "dev:plugin:force": "vite --mode plugin-force",
+    "build:runtime": "vite build --mode pure",
+    "build:plugin": "vite build",
+    "build:plugin:no-check": "vite build --mode plugin-no-check",
+    "build:plugin:force": "vite build --mode plugin-force",
+    "check:plugin": "node --experimental-strip-types scripts/check-plugin.ts",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@fluentic/style": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.16"
+  }
+}

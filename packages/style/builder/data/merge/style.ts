@@ -1,24 +1,24 @@
 import { getAtomicClassName, getClassNameDedupe } from '../../../atomic/classname';
 import { getTokenVar } from '../../../atomic/token';
 import { getCssVar, getCssVarRawFallback } from '../../../atomic/utils/css';
-import { getCssPropertyValue } from '../../../atomic/value';
+import { getCssPropertyValue, shouldAppendCssPx } from '../../../atomic/value';
 import { RUNTIME_CONFIG } from '../../../config';
 import { isStyleTokenData, isStyleTokenOverrideData, type StyleTokenData } from '../../../style/token';
 import type { StyleObject, StyleValueTuple } from '../../../style/types';
-import { traceError } from '../../../utils/trace';
 import {
   BUILDER_SLOT_ID,
   BUILDER_STATE,
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
+  ITEM_VALUE_NUMBER_PX,
   ITEM_VALUE_TYPE_VARIABLE,
 } from '../const';
 import type { BuilderCallsite, BuilderData, StyleData } from '../data';
 import { type DebugData, getDebugFieldCallsite, getDebugFieldVarName } from '../debug';
 import { isSlotData, isSlotOverrideData, isStyleData } from '../is';
 import type { BuilderType, ItemSelector, ItemValue, RuntimeItem, RuntimeItemData, StateItem } from '../state';
-import { cloneData } from './utils';
+import { cloneData, logInvalidData } from './utils';
 
 export type CreateData<Data extends BuilderData> = (
   callsite: BuilderCallsite | null,
@@ -69,7 +69,7 @@ export function mergeBuilderData<Data extends BuilderData>(
       item = stylesItems[i];
 
       if (Array.isArray(item) || isStyleTokenOverrideData(item) || item.type !== BUILDER_TYPE_STYLE) {
-        console.log(traceError('invalid style data'), 'data:', { item, style });
+        logInvalidData('invalid style data', { item, style });
         continue;
       }
 
@@ -123,7 +123,12 @@ export function mergeBuilderData<Data extends BuilderData>(
         property,
         value,
         variable: variableName
-          ? [ITEM_VALUE_TYPE_VARIABLE, variableName, valueRaw]
+          ? [
+            ITEM_VALUE_TYPE_VARIABLE,
+            variableName,
+            valueRaw,
+            shouldAppendCssPx(property) ? ITEM_VALUE_NUMBER_PX : undefined,
+          ]
           : undefined,
         token,
         selector,
@@ -137,7 +142,7 @@ export function mergeBuilderData<Data extends BuilderData>(
       }
 
       if (slotId === null) {
-        console.log(traceError('invalid style data'), 'data:', { property, style });
+        logInvalidData('invalid style data', { property, style });
         continue;
       }
 
@@ -151,7 +156,7 @@ export function mergeBuilderData<Data extends BuilderData>(
         continue;
       }
 
-      console.log(traceError('invalid style data'), 'data:', { property, style });
+      logInvalidData('invalid style data', { property, style });
     }
   }
 
@@ -161,7 +166,7 @@ export function mergeBuilderData<Data extends BuilderData>(
     item = items[i];
 
     if (Array.isArray(item) || isStyleTokenOverrideData(item)) {
-      console.log(traceError('invalid style data'), 'data:', { item, style });
+      logInvalidData('invalid style data', { item, style });
       continue;
     }
 

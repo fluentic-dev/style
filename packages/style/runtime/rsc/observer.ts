@@ -1,7 +1,7 @@
 import { RUNTIME_CONFIG } from '../../config';
 import type { SheetRule } from '../../sheet';
 import { getGlobalSheet } from '../sheet';
-import { ELEMENT_CSS_DATA_ATTR, PRECOLLECT_LINK_TAG_ATTR, SEED_STYLE_TAG_ATTR } from './constants';
+import { ELEMENT_CSS_DATA_ATTR, PRECOLLECT_LINK_TAG_ATTR, SEED_STYLE_TAG_ATTR, SEED_STYLE_TAG_HREF } from './constants';
 
 let observer: MutationObserver | null = null;
 let scheduled = false;
@@ -128,11 +128,19 @@ function cleanupInitialStyle() {
   if (typeof document === 'undefined') return;
   if (document.querySelector(`[${ELEMENT_CSS_DATA_ATTR}]`)) return;
 
-  document.querySelectorAll(`[${PRECOLLECT_LINK_TAG_ATTR}], [${SEED_STYLE_TAG_ATTR}]`).forEach(
+  document.querySelectorAll(getRscDevInitialStyleSelector()).forEach(
     (element) => {
       element.remove();
     },
   );
+}
+
+export function getRscDevInitialStyleSelector() {
+  return [
+    `[${PRECOLLECT_LINK_TAG_ATTR}]`,
+    `[${SEED_STYLE_TAG_ATTR}]`,
+    `[data-href="${SEED_STYLE_TAG_HREF}"]`,
+  ].join(', ');
 }
 
 function parsePayload(value: string | null): SheetRule[] {

@@ -1,6 +1,9 @@
+import { ArgSelectors } from '../selector/presets';
+import { getStyleTokenOverrideDebug } from '../style/token';
 import {
   before,
   bindScope,
+  BUILDER_STATE,
   BUILDER_TYPE_SCOPE,
   clearRscStyleStore,
   combineStyle,
@@ -12,6 +15,7 @@ import {
   createExtractedStyle,
   createExtractedToken,
   createFakeDocument,
+  createScopeBuilder,
   createTheme,
   createThemeRule,
   createToken,
@@ -23,10 +27,12 @@ import {
   getCombinedStyleScopes,
   getGlobalSheet,
   getLayerNameForRule,
+  getRscDevInitialStyleSelector,
   getRscStyleCss,
   getToken,
   hoverTheme,
   includes,
+  ITEM_VALUE_NUMBER_PX,
   notEqual,
   notIncludes,
   resolveStyleProp,
@@ -40,7 +46,6 @@ import {
   transformRscElement,
   withTokens,
 } from './setup';
-import { getStyleTokenOverrideDebug } from '../style/token';
 
 test('pool prepends inherited scopes before own scopes', () => {
   const pool = createCombinedStylePool();
@@ -343,6 +348,34 @@ test('token override stores injected debug metadata', () => {
   equal(getStyleTokenOverrideDebug(override), debug);
 });
 
+test('scope dedupes token overrides by token id', () => {
+  const token = createToken('blue');
+  const scope = style.scope([
+    token('red'),
+    token('green'),
+  ]);
+
+  equal(scope[BUILDER_STATE].items.length, 1);
+  equal((scope[BUILDER_STATE].items[0] as any).value, 'green');
+});
+
+test('scope merge dedupes token overrides by token id', () => {
+  const token = createToken('blue');
+  const scopeFn = createScopeBuilder<Record<string, unknown>, typeof ArgSelectors>(ArgSelectors);
+  const first = style.scope([
+    token('red'),
+  ]);
+  const second = style.scope([
+    token('green'),
+  ]);
+  const scope = scopeFn()
+    .merge(first)
+    .merge(second);
+
+  equal(scope[BUILDER_STATE].items.length, 1);
+  equal((scope[BUILDER_STATE].items[0] as any).value, 'green');
+});
+
 function assertScopeTokenProviderTypes() {
   const token = createToken('blue');
 
@@ -609,6 +642,31 @@ test('style prop resolver wires extracted dynamic variables as inline style', ()
   equal((result.style as Record<string, unknown>)['--dynamic-value'], 'purple');
 });
 
+test('style prop resolver applies extracted numeric value mode markers', () => {
+  const styles = {
+    container: createExtractedSlot('numeric-marker-slot', [
+      ['numeric-marker-size-dedupe', 'numeric-marker-size-class', [
+        1,
+        '--numeric-marker-size',
+        12,
+        ITEM_VALUE_NUMBER_PX,
+      ]],
+      ['numeric-marker-opacity-dedupe', 'numeric-marker-opacity-class', [
+        1,
+        '--numeric-marker-opacity',
+        0.5,
+      ]],
+    ]),
+  };
+  const pool = createCombinedStylePool();
+  const css = pool.get(styles, [], []).style;
+  const result = resolveStyleProp(css.container as any);
+
+  equal(result.className, 'numeric-marker-size-class numeric-marker-opacity-class');
+  equal((result.style as Record<string, unknown>)['--numeric-marker-size'], '12px');
+  equal((result.style as Record<string, unknown>)['--numeric-marker-opacity'], '0.5');
+});
+
 test('style prop resolver wires token-bound extracted style variables', () => {
   const token = createExtractedToken('bound-style-token', 'blue');
   const css = withTokens(
@@ -670,6 +728,36 @@ test('combineStyle carries token-bound extracted scope target values', () => {
 
     equal(result.className, 'bound-scope-class bound-scope-extra-class');
     equal((result.style as Record<string, unknown>)['--bound-scope-value'], 'red');
+  } finally {
+    setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
+  }
+});
+
+test('style prop resolver wires token-bound extracted scope variables', () => {
+  const token = createExtractedToken('bound-scope-item-token', 'blue');
+  const styles = {
+    container: createExtractedSlot('bound-scope-item-slot', [
+      ['bound-scope-item-base-dedupe', 'bound-scope-item-base-class'],
+    ]),
+  };
+  const scope = createExtractedScope([
+    [
+      BUILDER_TYPE_SCOPE,
+      'bound-scope-item-slot',
+      'bound-scope-item-dedupe',
+      'bound-scope-item-class',
+      [1, '--bound-scope-item-value', token],
+    ],
+  ]);
+
+  try {
+    setBuildMeta({ dev: false, extract: true, hoist: true, rsc: false, css: null });
+
+    const css = combineStyle(styles, withTokens(scope(styles.container), [token('red')]));
+    const result = resolveStyleProp(css.container as any);
+
+    equal(result.className, 'bound-scope-item-base-class bound-scope-item-class');
+    equal((result.style as Record<string, unknown>)['--bound-scope-item-value'], 'red');
   } finally {
     setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
   }
@@ -772,6 +860,14 @@ test('rsc getClassName omits dev payload without css rules', () => {
   equal(props.className, 'external');
   equal(ELEMENT_CSS_DATA_ATTR in props, false);
   equal(storeCss, '');
+});
+
+test('rsc dev cleanup selector includes next managed seed style', () => {
+  const selector = getRscDevInitialStyleSelector();
+
+  includes(selector, '[data-fluentic-style-rsc-dev-link]');
+  includes(selector, '[data-fluentic-style-rsc-dev-style]');
+  includes(selector, '[data-href="href-fluentic-style-rsc-dev-style"]');
 });
 
 test('rsc dev style store wraps parent selector priority rules in layers', () => {

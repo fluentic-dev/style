@@ -10,6 +10,7 @@ import {
   type BuilderData,
   type DebugData,
   isSlotOverrideData,
+  ITEM_VALUE_NUMBER_PX,
   type SlotData,
   type StyleData,
 } from '../builder/data';
@@ -24,8 +25,9 @@ import {
 import type { CompilerOptions } from '../compiler';
 import { configureRuntime, RUNTIME_CONFIG } from '../config';
 import { setBuildMeta } from '../config/build';
+import { setDevRuntimeOptions } from '../config/config';
 import { traceDevSourcemaps } from '../dev/trace';
-import { enableDevUtils } from '../dev/utils';
+import { enableStyleDevUtils } from '../dev/utils';
 import { createPluginCompiler, createTransformFilter, getRuntimeImportAliases } from '../plugin/utils';
 import { normalizeSidecarRoutePath } from '../plugin/utils/sidecar/utils';
 import { plugin as viteStylePlugin } from '../plugin/vite';
@@ -38,13 +40,14 @@ import { getSheetRules } from '../runtime/core/getSheetRules';
 import { transformElement } from '../runtime/core/jsx';
 import { ELEMENT_CSS_DATA_ATTR } from '../runtime/rsc/constants';
 import { transformElement as transformRscElement } from '../runtime/rsc/jsx';
+import { getRscDevInitialStyleSelector } from '../runtime/rsc/observer';
 import { clearRscStyleStore, getRscStyleCss } from '../runtime/rsc/styleStore';
 import { createThemeRule, getGlobalSheet, setGlobalSheet } from '../runtime/sheet';
 import { bindScope, type CombinedStyleFor, combineStyle, getToken } from '../runtime/style';
 import { selector } from '../selector/selector';
 import { createDevSheet, createProdSheet } from '../sheet';
 import { getRuleCallsite } from '../sheet/sourcemap';
-import { createTheme, createToken, createTokens } from '../style';
+import { createStyleFn, createTheme, createToken, createTokens } from '../style';
 import { traceCallsite } from '../utils/trace';
 
 export {
@@ -66,17 +69,19 @@ export {
   createScopeBuilder,
   createSlotBuilder,
   createStyleBuilder,
+  createStyleFn,
   createTheme,
   createThemeRule,
   createToken,
   createTokens,
   createTransformFilter,
   ELEMENT_CSS_DATA_ATTR,
-  enableDevUtils,
+  enableStyleDevUtils,
   fileURLToPath,
   getClassName,
   getCombinedStyleScopes,
   getGlobalSheet,
+  getRscDevInitialStyleSelector,
   getRscStyleCss,
   getRuleCallsite,
   getRuntimeImportAliases,
@@ -84,6 +89,7 @@ export {
   getSheetRules,
   getToken,
   isSlotOverrideData,
+  ITEM_VALUE_NUMBER_PX,
   normalizeSidecarRoutePath,
   prependWebpackRuntimeEntry,
   readFileSync,
@@ -91,6 +97,7 @@ export {
   RUNTIME_CONFIG,
   selector,
   setBuildMeta,
+  setDevRuntimeOptions,
   setGlobalSheet,
   traceCallsite,
   traceDevSourcemaps,
@@ -167,7 +174,7 @@ export const hoverTheme = style.scope().hover([
   }),
 ]);
 
-export function test(name: string, fn: () => void) {
+export function test(name: string, fn: () => void | Promise<void>) {
   tests.push([name, fn]);
 }
 

@@ -1,9 +1,12 @@
 import type * as BabelCore from '@babel/core';
 import * as crypto from 'node:crypto';
+import { BUILDER_TYPE_SCOPE } from '../../../builder/data';
+import { createExtractedScope, createExtractedStyle } from '../../../builder/extract';
 import type { CompilerInternal } from '../../compiler';
+import type { CompilerOptions } from '../../compiler/types';
 import { FN_STYLE, IMPORT_PATHS } from '../../utils/constants';
 import { resolveFile } from '../../utils/file_resolver';
-import { computeSlotId, extractStyleChain } from '../extract/chain';
+import { compileChain, computeSlotId, extractStyleChain, type CompiledChainData, type CompiledCssItem, type CompiledItem } from '../extract/chain';
 import { babelTransformOptions } from '../utils/babel';
 import { getProjectFileId } from '../utils/path';
 import type { EvalScope } from './evaluator';
@@ -59,7 +62,7 @@ export function createTracer(internal: CompilerInternal) {
         resolved.content,
         babel,
         (source, fromFile) => resolveImport(babel, source, fromFile),
-        internal.options.sourcemapTrace ?? 'style',
+        internal.options,
       );
       if (!bindings) return null;
 
@@ -91,7 +94,7 @@ function parseAndExtractModule(
   content: string,
   babel: typeof BabelCore,
   resolveImport: ResolveImportFn,
-  sourcemapTrace: 'style' | 'value',
+  options: CompilerOptions,
 ): EvalModuleBindings | null {
   let ast: BabelCore.types.File | null = null;
 
@@ -182,12 +185,12 @@ function parseAndExtractModule(
     imports,
     styleNames,
     filePath,
-    sourcemapTrace,
+    sourcemapTrace: options.sourcemapTrace ?? 'style',
     resolveImport,
   };
 
   rawBindings.forEach((node, name) => {
-    bindings.set(name, evaluateResolvedNode(node, scope, styleNames, fileId));
+    bindings.set(name, evaluateResolvedNode(node, scope, styleNames, fileId, options));
   });
 
   return bindings;
@@ -209,6 +212,7 @@ function evaluateResolvedNode(
   scope: EvalScope,
   styleNames: Set<string>,
   fileId: string,
+  options: CompilerOptions,
 ): EvalResult {
   if (node.type === 'CallExpression') {
     const chain = extractStyleChain(node, styleNames);
@@ -216,10 +220,24 @@ function evaluateResolvedNode(
     if (chain?.kind === 'slot') {
       return createSlotRef(fileId, node.loc?.start);
     }
+
+    if (chain?.kind === 'style' || chain?.kind === 'scope') {
+      try {
+        const result = compileChain(chain, fileId, node.loc?.start, scope, options, styleNames);
+        if (!result) return evalFail('Cannot compile imported style chain');
+
+        const extracted = createExtractedChainValue(result);
+        if (!extracted) return evalFail('Cannot extract imported style chain');
+
+        return evalOk(extracted);
+      } catch (error) {
+        return evalFail(error instanceof Error ? error.message : String(error));
+      }
+    }
   }
 
   if (node.type === 'ObjectExpression') {
-    return evaluateResolvedObject(node, scope, styleNames, fileId);
+    return evaluateResolvedObject(node, scope, styleNames, fileId, options);
   }
 
   return evaluateNode(node, scope);
@@ -230,12 +248,13 @@ function evaluateResolvedObject(
   scope: EvalScope,
   styleNames: Set<string>,
   fileId: string,
+  options: CompilerOptions,
 ): EvalResult {
   const result: Record<string, unknown> = {};
 
   for (const prop of node.properties) {
     if (prop.type === 'SpreadElement') {
-      const value = evaluateResolvedNode(prop.argument, scope, styleNames, fileId);
+      const value = evaluateResolvedNode(prop.argument, scope, styleNames, fileId, options);
       if (!value.ok) return value;
       if (value.value && typeof value.value === 'object') {
         Object.assign(result, value.value);
@@ -250,13 +269,66 @@ function evaluateResolvedObject(
     const key = getObjectPropertyKey(prop, scope);
     if (!key.ok) return key;
 
-    const value = evaluateResolvedNode(prop.value as BabelCore.types.Node, scope, styleNames, fileId);
+    const value = evaluateResolvedNode(prop.value as BabelCore.types.Node, scope, styleNames, fileId, options);
     if (!value.ok && value.reason !== 'slot-ref') return value;
 
     result[String(key.value)] = value.ok ? value.value : value;
   }
 
   return evalOk(result);
+}
+
+function createExtractedChainValue(result: CompiledChainData): unknown {
+  if (result.type === 'style') {
+    return createExtractedStyle(
+      result.items
+        .filter(Array.isArray)
+        .map((item) => toExtractedStyleTuple(item as CompiledCssItem)),
+    );
+  }
+
+  if (result.type === 'scope') {
+    return createExtractedScope(
+      result.items
+        .map(toExtractedScopeItem)
+        .filter((item) => item !== null),
+    );
+  }
+
+  return null;
+}
+
+function toExtractedStyleTuple(item: CompiledCssItem) {
+  const dedupe = String(item[1]);
+  const className = String(item[2]);
+  const value = item[3];
+
+  return value === undefined
+    ? [dedupe, className]
+    : [dedupe, className, value];
+}
+
+function toExtractedScopeItem(item: CompiledItem): Parameters<typeof createExtractedScope>[0][number] | null {
+  if (!Array.isArray(item)) {
+    return item.kind === 'token' ? item.value : null;
+  }
+
+  return toExtractedScopeTuple(item);
+}
+
+function toExtractedScopeTuple(item: CompiledCssItem) {
+  const value = item[4];
+  const tuple: unknown[] = [
+    BUILDER_TYPE_SCOPE,
+    String(item[1]),
+    String(item[2]),
+    String(item[3]),
+  ];
+
+  if (value !== undefined) tuple.push(value);
+  if (item.hasParentSelector) tuple.push(true);
+
+  return tuple as Parameters<typeof createExtractedScope>[0][number];
 }
 
 function getObjectPropertyKey(

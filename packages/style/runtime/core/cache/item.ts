@@ -200,7 +200,7 @@ function resolveItems(
           items.push(item);
         }
 
-        if (targetSlotId === slotId && item[4] === true) {
+        if (targetSlotId === slotId && (item[4] === true || item[5] === true)) {
           items.push(getScopeParentItem(item[3]));
         }
 

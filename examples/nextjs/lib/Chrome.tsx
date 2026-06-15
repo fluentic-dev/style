@@ -9,6 +9,7 @@ const links = [
   ['/ssg', 'SSG'],
   ['/ssr', 'SSR'],
   ['/rsc', 'RSC'],
+  ['/theme', 'Theme'],
   ['/client', 'Client hook'],
   ['/sample', 'Sample'],
 ] as const;

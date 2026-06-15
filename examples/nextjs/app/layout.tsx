@@ -14,7 +14,7 @@ export default function RootLayout(props: { children: ReactNode; }) {
     <html lang='en'>
       <body>{props.children}</body>
 
-      {process.env.NODE_ENV === 'development' && <StyleDev />}
+      {process.env.NODE_ENV === 'development' && <StyleDev enableStyleDevUtils />}
     </html>
   );
 }

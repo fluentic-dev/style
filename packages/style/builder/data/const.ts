@@ -21,3 +21,4 @@ export const ITEM_RUNTIME_PROD_PLUGIN = -4;
 
 export const ITEM_VALUE_TYPE_VARIABLE = 1;
 export const ITEM_VALUE_TYPE_STYLE_DATA = 2;
+export const ITEM_VALUE_NUMBER_PX = 1;

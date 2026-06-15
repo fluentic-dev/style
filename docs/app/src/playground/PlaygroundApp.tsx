@@ -3,17 +3,18 @@
 import type { editor as MonacoEditor, IDisposable } from 'monaco-editor';
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { TRACE_STYLE, TRACE_VALUE } from '../../../../packages/style/builder/data/debug';
+import type { CompilerOptions } from '../../../../packages/style/compiler/compiler/types';
 import { compilePlayground, type CompileTrace, type PlaygroundFile } from './playground-compiler';
-import {
-  compilerConfig as defaultCompilerConfig,
-  examples,
-} from './playground-examples';
+import { compilerConfig as defaultCompilerConfig, examples } from './playground-examples';
 import './playground.css';
 
 type RuntimeWorkerResult = { kind: 'result'; id: number; html?: string; css?: string; error?: string; };
 type OutputPanel = 'runtimeCss' | 'buildJs' | 'buildCss' | 'trace' | 'errors';
 type CodeOutputPanel = Exclude<OutputPanel, 'trace' | 'errors'>;
 type PreviewTab = 'preview' | 'config';
+type SourcemapTraceState = NonNullable<CompilerOptions['sourcemapTrace']>;
+type PriorityModeState = NonNullable<CompilerOptions['priorityMode']>;
 type MonacoModule = typeof import('monaco-editor');
 type CssOptionsState = {
   layers: string[];
@@ -102,6 +103,13 @@ export default function PlaygroundApp() {
   const [isDockCollapsed, setDockCollapsed] = useState(false);
   const [isPreviewCollapsed, setPreviewCollapsed] = useState(false);
   const [cssOptions, setCssOptions] = useState<CssOptionsState>(() => ({ ...defaultCompilerConfig.css }));
+  const [layer, setLayer] = useState(() => defaultCompilerConfig.layer);
+  const [priorityMode, setPriorityMode] = useState<PriorityModeState>(
+    () => defaultCompilerConfig.priorityMode,
+  );
+  const [sourcemapTrace, setSourcemapTrace] = useState<SourcemapTraceState>(
+    () => defaultCompilerConfig.sourcemapTrace,
+  );
   const [runtimeCss, setRuntimeCss] = useState('/* Waiting for runtime output. */');
   const [buildJs, setBuildJs] = useState('// Waiting for build output.');
   const [buildCss, setBuildCss] = useState('/* Waiting for build output. */');
@@ -132,6 +140,7 @@ export default function PlaygroundApp() {
   const modelUpdateRef = useRef(false);
   const runtimeWorker = useRef<Worker | null>(null);
   const runId = useRef(0);
+  const priorityModeRef = useRef(priorityMode);
 
   const activeCode = useMemo(
     () => files.find((f) => f.name === activeFile)?.code ?? '',
@@ -146,6 +155,10 @@ export default function PlaygroundApp() {
   useEffect(() => {
     filesRef.current = files;
   }, [files]);
+
+  useEffect(() => {
+    priorityModeRef.current = priorityMode;
+  }, [priorityMode]);
 
   function switchExample(id: string) {
     const example = examples.find((e) => e.id === id);
@@ -166,22 +179,31 @@ export default function PlaygroundApp() {
   }
 
   const runRuntime = useCallback(
-    (config: CssOptionsState) => {
+    (config: CssOptionsState, runtimeLayer: boolean, runtimePriorityMode: PriorityModeState) => {
       const worker = runtimeWorker.current;
       if (!worker) return;
       const id = ++runId.current;
       // oxlint-disable-next-line unicorn/require-post-message-target-origin
-      worker.postMessage({ kind: 'run', id, files, config });
+      worker.postMessage({
+        kind: 'run',
+        id,
+        files,
+        config: {
+          ...config,
+          layer: runtimeLayer,
+          priorityMode: runtimePriorityMode,
+        },
+      });
     },
     [files],
   );
 
   const runBuild = useCallback(
-    (prodConfig: { css: Partial<CssOptionsState>; }, debugConfig: { css: Partial<CssOptionsState>; }) => {
+    (prodConfig: CompilerOptions, debugConfig: CompilerOptions) => {
       try {
         const prodResult = compilePlayground(files, prodConfig);
         const debugResult = compilePlayground(files, debugConfig);
-        setBuildJs(prodResult.js || '// No JavaScript output.');
+        setBuildJs(formatOutputJs(prodResult.js || '// No JavaScript output.'));
         setBuildCss(formatOutputCss(prodResult.css || '/* No static CSS extracted. */'));
         setTraces(debugResult.traces);
         setDiagnostics('');
@@ -197,12 +219,17 @@ export default function PlaygroundApp() {
   );
 
   const runPlayground = useCallback(() => {
-    runRuntime(cssOptions);
+    runRuntime(cssOptions, layer, priorityMode);
     runBuild(
-      { css: getProdCssOptions(cssOptions) },
-      { css: getDebugCssOptions(cssOptions) },
+      { css: getProdCssOptions(cssOptions), layer },
+      {
+        css: getDebugCssOptions(cssOptions),
+        layer,
+        priorityMode,
+        sourcemapTrace,
+      },
     );
-  }, [cssOptions, runRuntime, runBuild]);
+  }, [cssOptions, layer, priorityMode, sourcemapTrace, runRuntime, runBuild]);
 
   function updateCssOption<K extends keyof CssOptionsState>(key: K, value: CssOptionsState[K]) {
     setCssOptions((current) => ({ ...current, [key]: value }));
@@ -225,7 +252,10 @@ export default function PlaygroundApp() {
       }
       setDiagnostics('');
       setStatus('Runtime ready');
-      setRuntimeCss(formatDebugCss(data.css || '/* No runtime rules collected. */'));
+      setRuntimeCss(formatDebugCss(
+        data.css || '/* No runtime rules collected. */',
+        priorityModeRef.current,
+      ));
       setPreviewDoc(createPreviewDoc(data.html ?? '', data.css ?? ''));
     });
     return () => {
@@ -289,6 +319,9 @@ export default function PlaygroundApp() {
     if (monacoConfigured) return;
     monacoConfigured = true;
 
+    const fluenticTypes = fluenticDts();
+    const fluenticTypesPath = 'file:///node_modules/@fluentic/style/index.d.ts';
+
     monaco.editor.defineTheme(THEME_NAME, {
       base: 'vs',
       inherit: true,
@@ -346,13 +379,22 @@ export default function PlaygroundApp() {
     monaco.typescript.typescriptDefaults.setCompilerOptions(compilerOptions);
     monaco.typescript.javascriptDefaults.setCompilerOptions(compilerOptions);
     monaco.typescript.typescriptDefaults.setEagerModelSync(true);
+    monaco.typescript.javascriptDefaults.setEagerModelSync(true);
     monaco.typescript.typescriptDefaults.setDiagnosticsOptions({
       noSemanticValidation: false,
       noSyntaxValidation: false,
     });
+    monaco.typescript.javascriptDefaults.setDiagnosticsOptions({
+      noSemanticValidation: false,
+      noSyntaxValidation: false,
+    });
     monaco.typescript.typescriptDefaults.addExtraLib(
-      fluenticDts(),
-      'file:///node_modules/@fluentic/style/index.d.ts',
+      fluenticTypes,
+      fluenticTypesPath,
+    );
+    monaco.typescript.javascriptDefaults.addExtraLib(
+      fluenticTypes,
+      fluenticTypesPath,
     );
   }, []);
 
@@ -562,7 +604,6 @@ export default function PlaygroundApp() {
         options: {
           isWholeLine: true,
           className: 'pg-monaco-line-hit',
-          linesDecorationsClassName: 'pg-monaco-line-hit-glyph',
         },
       }]);
     }, 80);
@@ -709,7 +750,11 @@ export default function PlaygroundApp() {
               <div ref={outputHostRef} className={`pg-output-host${isCodeOutput ? '' : ' is-hidden'}`} />
 
               {/* Trace overlay */}
-              <div className={`pg-trace-overlay${selectedOutput === 'trace' ? ' is-active' : ''}${traces.length === 0 ? ' is-empty' : ''}`}>
+              <div
+                className={`pg-trace-overlay${selectedOutput === 'trace' ? ' is-active' : ''}${
+                  traces.length === 0 ? ' is-empty' : ''
+                }`}
+              >
                 {traces.length === 0
                   ? <p className='pg-trace-empty'>No source trace metadata was emitted.</p>
                   : traces.map((trace) => {
@@ -723,7 +768,12 @@ export default function PlaygroundApp() {
                       >
                         <span className='pg-trace-meta'>
                           <span className='pg-trace-file'>{fileName}</span>
-                          <span className='pg-trace-loc'>{trace.line}:{trace.column}</span>
+                          <span className='pg-trace-badges'>
+                            {trace.trace !== undefined
+                              ? <span className='pg-trace-kind'>{getTraceKindLabel(trace.trace)}</span>
+                              : null}
+                            <span className='pg-trace-loc'>{trace.line}:{trace.column}</span>
+                          </span>
                         </span>
                         <code className='pg-trace-css'>
                           <TraceCss css={formatTraceCss(trace.css)} />
@@ -769,113 +819,170 @@ export default function PlaygroundApp() {
             : null}
           {!isPreviewCollapsed && (
             <>
-          <div className='pg-pane-head'>
-            <div className='pg-pane-tabs'>
-              <button
-                type='button'
-                aria-selected={previewTab === 'preview'}
-                onClick={() => setPreviewTab('preview')}
-              >
-                Preview
-              </button>
-              <button
-                type='button'
-                aria-selected={previewTab === 'config'}
-                onClick={() => setPreviewTab('config')}
-              >
-                Config
-              </button>
-            </div>
-            <div className='pg-pane-actions'>
-              {previewTab === 'preview'
-                ? (
-                <span className={`pg-pane-status${isError ? ' is-error' : isLoading ? ' is-loading' : ''}`}>
-                  {isError ? (diagnostics ? '⚠ Error' : 'Error') : isLoading ? 'Loading…' : ''}
-                </span>
-                  )
-                : null}
-              <button
-                type='button'
-                className='pg-pane-collapse-btn'
-                aria-label='Hide preview panel'
-                onClick={() => setPreviewCollapsed(true)}
-              >
-                <span className='pg-side-chevron is-right' aria-hidden='true' />
-              </button>
-            </div>
-          </div>
+              <div className='pg-pane-head'>
+                <div className='pg-pane-tabs'>
+                  <button
+                    type='button'
+                    aria-selected={previewTab === 'preview'}
+                    onClick={() => setPreviewTab('preview')}
+                  >
+                    Preview
+                  </button>
+                  <button
+                    type='button'
+                    aria-selected={previewTab === 'config'}
+                    onClick={() => setPreviewTab('config')}
+                  >
+                    Config
+                  </button>
+                </div>
+                <div className='pg-pane-actions'>
+                  {previewTab === 'preview'
+                    ? (
+                      <span className={`pg-pane-status${isError ? ' is-error' : isLoading ? ' is-loading' : ''}`}>
+                        {isError ? (diagnostics ? '⚠ Error' : 'Error') : isLoading ? 'Loading…' : ''}
+                      </span>
+                    )
+                    : null}
+                  <button
+                    type='button'
+                    className='pg-pane-collapse-btn'
+                    aria-label='Hide preview panel'
+                    onClick={() => setPreviewCollapsed(true)}
+                  >
+                    <span className='pg-side-chevron is-right' aria-hidden='true' />
+                  </button>
+                </div>
+              </div>
 
-          <div className='pg-pane-content'>
-            {/* Preview iframe */}
-            <div className={`pg-iframe-wrap${previewTab === 'preview' ? ' is-active' : ''}`}>
-              <iframe title='Fluentic Style playground preview' sandbox='' srcDoc={previewDoc} />
-            </div>
+              <div className='pg-pane-content'>
+                {/* Preview iframe */}
+                <div className={`pg-iframe-wrap${previewTab === 'preview' ? ' is-active' : ''}`}>
+                  <iframe title='Fluentic Style playground preview' sandbox='' srcDoc={previewDoc} />
+                </div>
 
-            {/* Config controls */}
-            <div className={`pg-config-overlay${previewTab === 'config' ? ' is-active' : ''}`}>
-              <div className='pg-config-grid'>
-                <div className='pg-config-item is-active'>
-                  <div className='pg-config-controls'>
-                    <label className='pg-config-field'>
-                      <span>
-                        <strong>Layer namespace</strong>
-                        <small>Layer name used for emitted rules.</small>
-                      </span>
-                      <input
-                        type='text'
-                        value={cssOptions.layerNamespace}
-                        onChange={(event) => updateCssOption('layerNamespace', event.currentTarget.value)}
-                      />
-                    </label>
-                    <label className='pg-config-field'>
-                      <span>
-                        <strong>Class prefix</strong>
-                        <small>Prefix applied to generated atomic class names.</small>
-                      </span>
-                      <input
-                        type='text'
-                        value={cssOptions.classNamePrefix}
-                        onChange={(event) => updateCssOption('classNamePrefix', event.currentTarget.value)}
-                      />
-                    </label>
-                    <label className='pg-config-field'>
-                      <span>
-                        <strong>Scope target prefix</strong>
-                        <small>Prefix for generated scope target classes.</small>
-                      </span>
-                      <input
-                        type='text'
-                        value={cssOptions.scopeTargetPrefix}
-                        onChange={(event) => updateCssOption('scopeTargetPrefix', event.currentTarget.value)}
-                      />
-                    </label>
-                    <label className='pg-config-field'>
-                      <span>
-                        <strong>Theme prefix</strong>
-                        <small>Prefix for generated theme class names.</small>
-                      </span>
-                      <input
-                        type='text'
-                        value={cssOptions.themeNamePrefix}
-                        onChange={(event) => updateCssOption('themeNamePrefix', event.currentTarget.value)}
-                      />
-                    </label>
-                    <label className='pg-config-field'>
-                      <span>
-                        <strong>Token prefix</strong>
-                        <small>Prefix for generated CSS variable names.</small>
-                      </span>
-                      <input
-                        type='text'
-                        value={cssOptions.tokenVarPrefix}
-                        onChange={(event) => updateCssOption('tokenVarPrefix', event.currentTarget.value)}
-                      />
-                    </label>
+                {/* Config controls */}
+                <div className={`pg-config-overlay${previewTab === 'config' ? ' is-active' : ''}`}>
+                  <div className='pg-config-grid'>
+                    <div className='pg-config-item is-active'>
+                      <div className='pg-config-controls'>
+                        <label className='pg-config-switch'>
+                          <span>
+                            <strong>Layer</strong>
+                            <small>Wrap generated CSS in cascade layers.</small>
+                          </span>
+                          <input
+                            type='checkbox'
+                            checked={layer}
+                            onChange={(event) => setLayer(event.currentTarget.checked)}
+                          />
+                        </label>
+                        <div className='pg-config-field'>
+                          <span>
+                            <strong>Priority mode</strong>
+                            <small>Choose how Debug CSS resolves priority order.</small>
+                          </span>
+                          <div className='pg-config-segment' role='group' aria-label='Priority mode'>
+                            <button
+                              type='button'
+                              aria-pressed={priorityMode === 'layer'}
+                              onClick={() => setPriorityMode('layer')}
+                            >
+                              Layer
+                            </button>
+                            <button
+                              type='button'
+                              aria-pressed={priorityMode === 'sort'}
+                              onClick={() => setPriorityMode('sort')}
+                            >
+                              Sort
+                            </button>
+                          </div>
+                        </div>
+                        <div className='pg-config-field'>
+                          <span>
+                            <strong>Sourcemap trace</strong>
+                            <small>Choose whether spread values jump to the style site or value source.</small>
+                          </span>
+                          <div className='pg-config-segment' role='group' aria-label='Sourcemap trace'>
+                            <button
+                              type='button'
+                              aria-pressed={sourcemapTrace === 'style'}
+                              onClick={() => setSourcemapTrace('style')}
+                            >
+                              Style
+                            </button>
+                            <button
+                              type='button'
+                              aria-pressed={sourcemapTrace === 'value'}
+                              onClick={() => setSourcemapTrace('value')}
+                            >
+                              Value
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div className='pg-config-controls'>
+                        <label className='pg-config-field'>
+                          <span>
+                            <strong>Layer namespace</strong>
+                            <small>Layer name used for emitted rules.</small>
+                          </span>
+                          <input
+                            type='text'
+                            value={cssOptions.layerNamespace}
+                            onChange={(event) => updateCssOption('layerNamespace', event.currentTarget.value)}
+                          />
+                        </label>
+                        <label className='pg-config-field'>
+                          <span>
+                            <strong>Class prefix</strong>
+                            <small>Prefix applied to generated atomic class names.</small>
+                          </span>
+                          <input
+                            type='text'
+                            value={cssOptions.classNamePrefix}
+                            onChange={(event) => updateCssOption('classNamePrefix', event.currentTarget.value)}
+                          />
+                        </label>
+                        <label className='pg-config-field'>
+                          <span>
+                            <strong>Scope target prefix</strong>
+                            <small>Prefix for generated scope target classes.</small>
+                          </span>
+                          <input
+                            type='text'
+                            value={cssOptions.scopeTargetPrefix}
+                            onChange={(event) => updateCssOption('scopeTargetPrefix', event.currentTarget.value)}
+                          />
+                        </label>
+                        <label className='pg-config-field'>
+                          <span>
+                            <strong>Theme prefix</strong>
+                            <small>Prefix for generated theme class names.</small>
+                          </span>
+                          <input
+                            type='text'
+                            value={cssOptions.themeNamePrefix}
+                            onChange={(event) => updateCssOption('themeNamePrefix', event.currentTarget.value)}
+                          />
+                        </label>
+                        <label className='pg-config-field'>
+                          <span>
+                            <strong>Token prefix</strong>
+                            <small>Prefix for generated CSS variable names.</small>
+                          </span>
+                          <input
+                            type='text'
+                            value={cssOptions.tokenVarPrefix}
+                            onChange={(event) => updateCssOption('tokenVarPrefix', event.currentTarget.value)}
+                          />
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
             </>
           )}
         </section>
@@ -963,62 +1070,223 @@ function resolvePlaygroundFileName(filePath: string, files: PlaygroundFile[]) {
 }
 
 function getTraceKey(trace: CompileTrace) {
-  return `${trace.key}-${trace.filePath}-${trace.line}-${trace.column}`;
+  return `${trace.key}-${trace.filePath}-${trace.line}-${trace.column}-${trace.trace ?? 'direct'}`;
+}
+
+function getTraceKindLabel(trace: number) {
+  if (trace === TRACE_STYLE) return 'style';
+  if (trace === TRACE_VALUE) return 'value';
+  return 'trace';
 }
 
 function formatTraceCss(css: string): string {
   return css.replace(/\{(\S)/g, '{ $1').replace(/(\S)\}/g, '$1 }').trim();
 }
 
-function prettifyCss(raw: string): string {
+function formatOutputJs(raw: string): string {
+  if (!raw.trim() || raw.startsWith('// Waiting') || raw.startsWith('// Build failed')) return raw;
+
+  const lines = raw.split('\n');
+  const out: string[] = [];
+
+  for (const line of lines) {
+    const formattedExtracted = formatExtractedHelperLine(line);
+    const trimmed = line.trim();
+
+    if (trimmed.startsWith('// ') && out.length && out[out.length - 1] !== '') {
+      out.push('');
+    }
+
+    if (formattedExtracted) {
+      if (out.length && out[out.length - 1] !== '') out.push('');
+      out.push(formattedExtracted);
+      continue;
+    }
+
+    out.push(line);
+  }
+
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function formatExtractedHelperLine(line: string): string | null {
+  const match = line.match(/^const\s+([A-Za-z_$][\w$]*)\s*=\s*(createExtracted(?:Slot|Scope|Token))\((.*)\);$/);
+  if (!match) return null;
+
+  const [, name, helper, argsText] = match;
+  const args = splitTopLevel(argsText, ',');
+
+  return [
+    `const ${name} = ${helper}(`,
+    ...args.map((arg) => formatJsValue(arg, 1) + ','),
+    ');',
+  ].join('\n');
+}
+
+function formatJsValue(value: string, depth: number): string {
+  const trimmed = value.trim();
+  const pad = '  '.repeat(depth);
+
+  if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) {
+    return pad + trimmed;
+  }
+
+  const inner = trimmed.slice(1, -1).trim();
+  if (!inner) return pad + '[]';
+
+  const items = splitTopLevel(inner, ',');
+  const shouldExpand = items.length > 2 ||
+    trimmed.length > 80 ||
+    items.some((item) => item.trim().startsWith('['));
+
+  if (!shouldExpand) return pad + `[${items.map((item) => item.trim()).join(', ')}]`;
+
+  return [
+    pad + '[',
+    ...items.map((item) => formatJsValue(item, depth + 1) + ','),
+    pad + ']',
+  ].join('\n');
+}
+
+function splitTopLevel(input: string, separator: string): string[] {
+  const items: string[] = [];
+  let start = 0;
+  let depth = 0;
+  let quote: '"' | "'" | '`' | null = null;
+  let escaped = false;
+
+  for (let i = 0; i < input.length; i++) {
+    const char = input[i];
+
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
+        continue;
+      }
+      if (char === quote) quote = null;
+      continue;
+    }
+
+    if (char === '"' || char === "'" || char === '`') {
+      quote = char;
+      continue;
+    }
+
+    if (char === '[' || char === '(' || char === '{') {
+      depth++;
+      continue;
+    }
+
+    if (char === ']' || char === ')' || char === '}') {
+      depth--;
+      continue;
+    }
+
+    if (char === separator && depth === 0) {
+      items.push(input.slice(start, i).trim());
+      start = i + 1;
+    }
+  }
+
+  items.push(input.slice(start).trim());
+  return items.filter(Boolean);
+}
+
+function prettifyCss(
+  raw: string,
+  options: { layerBlockSpacing?: boolean; } = {},
+): string {
   if (!raw.trim() || raw.startsWith('//') || raw.startsWith('/*')) return raw;
 
   const lines = raw.trim().split('\n');
   const out: string[] = [];
+  const blockStack: Array<'layer' | 'other'> = [];
+  let depth = 0;
+
+  const indent = (level: number) => '  '.repeat(Math.max(level, 0));
 
   for (const line of lines) {
     const t = line.trim();
     if (!t) continue;
 
-    if (t.match(/^@\S.*\{$/) && !t.includes('}')) {
-      out.push(t);
+    const layerRuleMatch = t.match(/^@layer\s+([^{}]+)\s*\{\s*([^{}]+)\s*\{\s*([^{}]*)\s*\}\s*\}$/);
+    if (layerRuleMatch) {
+      out.push(`${indent(depth)}@layer ${layerRuleMatch[1].trim()} {`);
+      if (options.layerBlockSpacing) out.push('');
+      depth++;
+      pushRule(out, layerRuleMatch[2], layerRuleMatch[3], depth);
+      depth--;
+      if (options.layerBlockSpacing && out[out.length - 1] !== '') out.push('');
+      out.push(`${indent(depth)}}`);
+      out.push('');
       continue;
     }
+
+    if (t.match(/^@\S.*\{$/) && !t.includes('}')) {
+      out.push(`${indent(depth)}${t}`);
+      if (options.layerBlockSpacing && t.startsWith('@layer ')) out.push('');
+      blockStack.push(t.startsWith('@layer ') ? 'layer' : 'other');
+      depth++;
+      continue;
+    }
+
     if (t === '}') {
-      while (out[out.length - 1] === '') out.pop();
-      out.push('}');
+      const block = blockStack.pop() ?? 'other';
+      if (options.layerBlockSpacing && block === 'layer') {
+        if (out[out.length - 1] !== '') out.push('');
+      } else {
+        while (out[out.length - 1] === '') out.pop();
+      }
+      depth--;
+      out.push(`${indent(depth)}}`);
       out.push('');
       continue;
     }
 
     const m = t.match(/^([^{]+?)\s*\{([^}]*)\}$/);
     if (m) {
-      const selector = m[1].trim();
-      const body = m[2].trim();
-      if (!body) {
-        out.push(`${selector} {}`);
-      } else {
-        const decls = body.split(';').map((d) => d.trim()).filter(Boolean);
-        out.push(`${selector} {`);
-        for (const d of decls) out.push(`  ${d};`);
-        out.push('}');
-      }
+      pushRule(out, m[1], m[2], depth);
       out.push('');
       continue;
     }
-    out.push(t);
+    out.push(`${indent(depth)}${t}`);
   }
 
   return out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-function formatOutputCss(raw: string): string {
-  return prettifyCss(stripLayerOrderPrelude(raw));
+function pushRule(out: string[], selector: string, body: string, depth: number) {
+  const indent = (level: number) => '  '.repeat(Math.max(level, 0));
+  const trimmedSelector = selector.trim();
+  const trimmedBody = body.trim();
+
+  if (!trimmedBody) {
+    out.push(`${indent(depth)}${trimmedSelector} {}`);
+    return;
+  }
+
+  const decls = trimmedBody.split(';').map((d) => d.trim()).filter(Boolean);
+
+  out.push(`${indent(depth)}${trimmedSelector} {`);
+  for (const d of decls) out.push(`${indent(depth + 1)}${d};`);
+  out.push(`${indent(depth)}}`);
 }
 
-function formatDebugCss(raw: string): string {
+function formatOutputCss(raw: string): string {
+  return prettifyCss(stripLayerOrderPrelude(raw), { layerBlockSpacing: true });
+}
+
+function formatDebugCss(raw: string, priorityMode: PriorityModeState): string {
   const css = stripLayerOrderPrelude(raw);
   if (!css.trim() || css.startsWith('//') || css.startsWith('/*')) return css;
+
+  if (priorityMode === 'sort') {
+    return prettifyCss(css, { layerBlockSpacing: true });
+  }
 
   return css
     .split('\n')
@@ -1108,7 +1376,7 @@ function registerCompletions(monaco: MonacoModule) {
           {
             label: 'combineStyle',
             kind: monaco.languages.CompletionItemKind.Function,
-            insertText: "combineStyle(${1:styles}, ${2:theme}(${1:styles}.root))",
+            insertText: 'combineStyle(${1:styles}, ${2:theme}(${1:styles}.root))',
             insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
             detail: 'Resolve slots with a targeted scope',
             range,
@@ -1123,11 +1391,20 @@ function registerPlaygroundDefinitions(
   monaco: MonacoModule,
   filesRef: React.RefObject<PlaygroundFile[]>,
 ) {
-  return monaco.languages.registerDefinitionProvider('typescript', {
+  const provider: Parameters<MonacoModule['languages']['registerDefinitionProvider']>[1] = {
     provideDefinition(model, position) {
       return getPlaygroundDefinitionLocation(monaco, model, position, filesRef.current ?? []);
     },
-  });
+  };
+  const ts = monaco.languages.registerDefinitionProvider('typescript', provider);
+  const js = monaco.languages.registerDefinitionProvider('javascript', provider);
+
+  return {
+    dispose() {
+      ts.dispose();
+      js.dispose();
+    },
+  };
 }
 
 function getPlaygroundDefinitionLocation(
@@ -1153,7 +1430,7 @@ function getPlaygroundDefinitionLocation(
   }
 
   const importTarget = getImportedDefinitionTarget(
-    propertyTarget?.qualifier ?? word.word,
+    propertyTarget?.root ?? propertyTarget?.qualifier ?? word.word,
     code,
     fileName,
     files,
@@ -1162,8 +1439,15 @@ function getPlaygroundDefinitionLocation(
   if (importTarget) {
     const targetModel = getPlaygroundModel(monaco, importTarget.file);
     const targetWord = propertyTarget?.property ?? importTarget.exportName;
-    const range = targetModel ? findDefinitionRange(monaco, targetModel, targetWord) : null;
+    const range = targetModel
+      ? propertyTarget?.path?.length
+        ? findPropertyPathRange(monaco, targetModel, propertyTarget.path) ??
+          findDefinitionRange(monaco, targetModel, targetWord)
+        : findDefinitionRange(monaco, targetModel, targetWord)
+      : null;
     if (range && targetModel) return { range, uri: targetModel.uri };
+
+    if (propertyTarget?.root) return null;
   }
 
   const localRange = findDefinitionRange(monaco, model, word.word);
@@ -1217,8 +1501,19 @@ function getPropertyDefinitionTarget(
 ) {
   const line = code.split(/\r?\n/)[position.lineNumber - 1] ?? '';
   const beforeWord = line.slice(0, wordStartColumn - 1);
-  const match = beforeWord.match(/([A-Za-z_$][\w$]*)\.\s*$/);
-  return match ? { property, qualifier: match[1] } : null;
+  const match = beforeWord.match(/([A-Za-z_$][\w$]*(?:\s*\.\s*[A-Za-z_$][\w$]*)*)\.\s*$/);
+  if (!match) return null;
+
+  const parts = match[1].split('.').map((part) => part.trim()).filter(Boolean);
+  const root = parts[0];
+  const qualifier = parts[parts.length - 1];
+
+  return {
+    path: [...parts.slice(1), property],
+    property,
+    qualifier,
+    root,
+  };
 }
 
 function resolveRelativePlaygroundImport(source: string, fromFile: string, files: PlaygroundFile[]) {
@@ -1265,6 +1560,93 @@ function findDefinitionRange(
   }
 
   return null;
+}
+
+function findPropertyPathRange(
+  monaco: MonacoModule,
+  model: MonacoEditor.ITextModel,
+  path: string[],
+) {
+  const code = model.getValue();
+  let startIndex = 0;
+  let endIndex = code.length;
+
+  for (let i = 0, len = path.length; i < len; i++) {
+    const match = findObjectPropertyMatch(code, path[i], startIndex, endIndex);
+    if (!match) return null;
+
+    if (i === len - 1) {
+      const start = model.getPositionAt(match.nameStart);
+      const end = model.getPositionAt(match.nameStart + path[i].length);
+      return new monaco.Range(start.lineNumber, start.column, end.lineNumber, end.column);
+    }
+
+    const valueStart = findPropertyObjectValueStart(code, match.nameEnd, endIndex);
+    if (valueStart === -1) return null;
+
+    const valueEnd = findMatchingBraceIndex(code, valueStart);
+    if (valueEnd === -1) return null;
+
+    startIndex = valueStart + 1;
+    endIndex = valueEnd;
+  }
+
+  return null;
+}
+
+function findObjectPropertyMatch(
+  code: string,
+  name: string,
+  startIndex: number,
+  endIndex: number,
+) {
+  const escaped = escapeRegExp(name);
+  const pattern = new RegExp(`(?:^|[,{\\n])\\s*(${escaped})\\s*:`, 'g');
+
+  pattern.lastIndex = startIndex;
+
+  while (true) {
+    const match = pattern.exec(code);
+    if (!match || match.index >= endIndex) return null;
+
+    const nameStart = match.index + match[0].lastIndexOf(name);
+    const nameEnd = nameStart + name.length;
+    if (nameEnd <= endIndex) return { nameStart, nameEnd };
+  }
+}
+
+function findPropertyObjectValueStart(
+  code: string,
+  startIndex: number,
+  endIndex: number,
+) {
+  const colonIndex = code.indexOf(':', startIndex);
+  if (colonIndex === -1 || colonIndex >= endIndex) return -1;
+
+  for (let i = colonIndex + 1; i < endIndex; i++) {
+    const char = code[i];
+
+    if (char === '{') return i;
+    if (!/\s/.test(char)) return -1;
+  }
+
+  return -1;
+}
+
+function findMatchingBraceIndex(code: string, openIndex: number) {
+  let depth = 0;
+
+  for (let i = openIndex, len = code.length; i < len; i++) {
+    const char = code[i];
+
+    if (char === '{') depth++;
+    if (char !== '}') continue;
+
+    depth--;
+    if (depth === 0) return i;
+  }
+
+  return -1;
 }
 
 function escapeRegExp(value: string) {

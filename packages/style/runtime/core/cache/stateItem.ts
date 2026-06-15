@@ -1,10 +1,10 @@
 import { getTokenVar, getTokenVarName } from '../../../atomic/token';
-import { getCssPropertyValue } from '../../../atomic/value';
 import {
   BUILDER_TYPE_SCOPE,
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
+  ITEM_VALUE_NUMBER_PX,
   ITEM_VALUE_TYPE_VARIABLE,
 } from '../../../builder/data/const';
 import type { StateItem } from '../../../builder/data/state';
@@ -65,13 +65,13 @@ export function getStateItemVariableValue(
   const value = getStateItemValue(item);
 
   if (Array.isArray(value) && value[0] === ITEM_VALUE_TYPE_VARIABLE) {
-    return [value[1], resolveVariableValue(value[2], tokens)];
+    return [value[1], resolveMarkedVariableValue(value[2], value[3], tokens)];
   }
 
   if (!Array.isArray(item) && !isStyleTokenOverrideData(item) && item.variable?.[0] === ITEM_VALUE_TYPE_VARIABLE) {
     return [
       item.variable[1],
-      normalizeVariableValue(item.property, resolveVariableValue(item.variable[2], tokens)),
+      resolveMarkedVariableValue(item.variable[2], item.variable[3], tokens),
     ];
   }
 
@@ -90,13 +90,21 @@ export function getStateItemVariableValue(
   return null;
 }
 
-function normalizeVariableValue(
-  property: string,
+function resolveMarkedVariableValue(
   value: unknown,
+  valueMode: unknown,
+  tokens: StyleTokenValues | null,
+) {
+  return normalizeVariableValue(resolveVariableValue(value, tokens), valueMode);
+}
+
+function normalizeVariableValue(
+  value: unknown,
+  valueMode: unknown,
 ) {
   if (typeof value !== 'number') return value;
 
-  return getCssPropertyValue(property, String(value));
+  return valueMode === ITEM_VALUE_NUMBER_PX ? value + 'px' : String(value);
 }
 
 function getStateItemValue(item: StateItem) {
@@ -108,6 +116,8 @@ function getStateItemValue(item: StateItem) {
         case BUILDER_TYPE_SLOT:
         case BUILDER_TYPE_SLOT_OVERRIDE:
           return item[4];
+        case BUILDER_TYPE_SCOPE:
+          return item[4] === true ? undefined : item[4];
       }
     } else {
       return item[2];

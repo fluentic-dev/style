@@ -18,8 +18,10 @@ export type BabelTransformPlugins = NonNullable<
   babel.TransformOptions['plugins']
 >;
 
+export type BabelTransformInputSourceMap = NonNullable<babel.TransformOptions['inputSourceMap']>;
+
 export type BabelTransformSourceMap =
-  | NonNullable<babel.TransformOptions['inputSourceMap']>
+  | BabelTransformInputSourceMap
   | string
   | null;
 
@@ -49,7 +51,10 @@ export function babelTransform(args: BabelTransformArgs): BabelTransformResult |
   } catch (err: unknown) {
     if (!args.errorLabel) throw err;
 
-    throw new Error(getBabelError(err, args));
+    const message = getBabelError(err, args);
+    const error = new Error(message);
+    error.stack = undefined;
+    throw error;
   }
 
   if (!result || !result.code) return null;
@@ -77,7 +82,7 @@ function parseInputSourceMap(sourcemap: BabelTransformSourceMap | undefined) {
   if (typeof sourcemap !== 'string') return sourcemap;
 
   return JSON.parse(sourcemap) as Exclude<
-    babel.TransformOptions['inputSourceMap'],
+    BabelTransformInputSourceMap,
     boolean | undefined
   >;
 }

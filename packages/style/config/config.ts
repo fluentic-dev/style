@@ -1,7 +1,7 @@
-import { ensureLayerPlaceholder } from '../atomic/layer';
+import { ensureLayerPlaceholder } from '../atomic/layer/layer';
 import { globalData } from '../utils/global';
 import { DEFAULT_RUNTIME_CONFIG } from './default';
-import type { BuildMeta, PriorityMode, RuntimeConfig, RuntimeOptions } from './types';
+import type { BuildMeta, DevRuntimeOptions, PriorityMode, RuntimeConfig, RuntimeOptions } from './types';
 
 export const RUNTIME_CONFIG = globalData<RuntimeConfig>(
   'runtime.config',
@@ -10,6 +10,7 @@ export const RUNTIME_CONFIG = globalData<RuntimeConfig>(
 
 let configVersion = 0;
 let runtimeOptions: RuntimeOptions | null = null;
+let devRuntimeOptions: DevRuntimeOptions | null = null;
 let buildMeta: BuildMeta | null = null;
 
 export function configureRuntime(options: RuntimeOptions) {
@@ -23,18 +24,23 @@ export function setBuildMeta(meta: BuildMeta | null) {
 }
 
 export function setSourcemapTraceMode(mode: RuntimeOptions['sourcemapTrace']) {
-  runtimeOptions = {
-    ...runtimeOptions,
+  devRuntimeOptions = {
+    ...devRuntimeOptions,
     sourcemapTrace: mode,
   };
   applyRuntimeConfig();
 }
 
 export function setPriorityMode(mode: PriorityMode) {
-  runtimeOptions = {
-    ...runtimeOptions,
+  devRuntimeOptions = {
+    ...devRuntimeOptions,
     priorityMode: mode,
   };
+  applyRuntimeConfig();
+}
+
+export function setDevRuntimeOptions(options: DevRuntimeOptions | null) {
+  devRuntimeOptions = options;
   applyRuntimeConfig();
 }
 
@@ -51,11 +57,13 @@ function applyRuntimeConfig() {
     buildMeta?.layer ??
     DEFAULT_RUNTIME_CONFIG.layer;
 
-  const priorityMode = runtimeOptions?.priorityMode ??
+  const priorityMode = devRuntimeOptions?.priorityMode ??
+    runtimeOptions?.priorityMode ??
     buildMeta?.priorityMode ??
     (layer === false ? 'sort' : DEFAULT_RUNTIME_CONFIG.priorityMode);
 
-  const sourcemapTrace = options.sourcemapTrace ??
+  const sourcemapTrace = devRuntimeOptions?.sourcemapTrace ??
+    options.sourcemapTrace ??
     buildMeta?.sourcemapTrace ??
     config.sourcemapTrace;
 
@@ -73,11 +81,9 @@ function applyRuntimeConfig() {
   config.isCssExtracted = buildMeta?.extract || false;
   config.isHoistEnabled = buildMeta?.hoist || false;
 
-  config.isTraceEnabled = options.trace ?? dev;
-  config.isCheckSelectorEnabled = options.checkSelector ?? dev;
+  config.isTraceEnabled = dev;
+  config.isCheckSelectorEnabled = dev && buildMeta?.checkSelector !== 'force';
   config.isSourcemapEnabled = options.sourcemap ?? dev;
-
-  config.devUtils = options.devUtils ?? config.devUtils;
 
   config.runtimeCacheTTL = getCacheTTL(options.cache ?? config.runtimeCacheTTL);
 

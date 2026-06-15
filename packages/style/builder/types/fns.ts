@@ -157,7 +157,7 @@ export type SlotOverrideSelectorFns<Style, Selectors> = {
 };
 
 export type ScopeSelectorFns<Style, Selectors> = {
-  [P in keyof Selectors as Selectors[P] extends '...' ? never : P]: GetScopeFn<
+  [P in keyof Selectors]: GetScopeFn<
     Selectors[P],
     ScopeItems<Style>,
     ReturnType<typeof scopeRule<Style, Selectors>>

@@ -3,6 +3,7 @@ import {
   compareLayerPriority,
   createLayerPool,
   getLayerBlockCss,
+  getLayerBundleCss,
   type LayerPriority,
 } from '../../../../packages/style/atomic/layer';
 import { configureRuntime } from '../../../../packages/style/config';
@@ -13,7 +14,8 @@ import { bindScope, combineStyle } from '../../../../packages/style/runtime/styl
 import type { SheetRule } from '../../../../packages/style/sheet';
 import type { StyleProp } from '../../../../packages/style/runtime/types';
 import { style } from '../../../../packages/style/style';
-import { createTheme } from '../../../../packages/style/style/theme';
+import { createTheme, resetStyleThemeIdCounter } from '../../../../packages/style/style/theme';
+import { resetStyleTokenIdCounter } from '../../../../packages/style/style/token';
 import { createTokens } from '../../../../packages/style/style/tokens';
 import { createToken } from '../../../../packages/style/style/value';
 
@@ -31,6 +33,9 @@ const Fragment = Symbol('Fragment');
 const VOID_ELEMENTS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
 
 export function runRuntime(request: RuntimeRequest): RuntimeResult {
+  resetStyleTokenIdCounter();
+  resetStyleThemeIdCounter();
+
   // Force options needed for the playground trace panel and class name readability
   configureRuntime({ ...request.config, dev: true, localClassName: true, debugClassName: true });
 
@@ -173,13 +178,26 @@ return typeof renderApp === "function" ? renderApp
 
 function formatRuntimeCss(rules: SheetRule[]) {
   const layerState = createLayerPool(RUNTIME_CONFIG.layerNamespace);
-  const css = rules
+  const sortedRules = rules
     .filter(hasLayerPriority)
     .slice()
-    .sort((a, b) => compareLayerPriority(a.priority, b.priority))
-    .map((rule) => getLayerBlockCss(layerState.getName(rule.priority), rule.css));
+    .sort((a, b) => compareLayerPriority(a.priority, b.priority));
 
-  return css.join('\n');
+  if (RUNTIME_CONFIG.priorityMode === 'layer') {
+    return sortedRules
+      .map((rule) => getLayerBlockCss(layerState.getName(rule.priority), rule.css))
+      .join('\n');
+  }
+
+  if (RUNTIME_CONFIG.layer === false) {
+    return sortedRules.map((rule) => rule.css).join('\n');
+  }
+
+  return getLayerBundleCss(
+    RUNTIME_CONFIG.layers,
+    RUNTIME_CONFIG.layerNamespace,
+    sortedRules.map((rule) => rule.css),
+  );
 }
 
 function hasLayerPriority(rule: SheetRule): rule is SheetRule & { priority: LayerPriority; } {

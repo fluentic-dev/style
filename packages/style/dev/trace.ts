@@ -1,6 +1,6 @@
 import { type EncodedSourceMap, originalPositionFor, sourceContentFor, TraceMap } from '@jridgewell/trace-mapping';
 import { getDevSourcemapTags } from '../sheet/dev';
-import { createSourceMapComment } from '../sheet/sourcemap';
+import { createSourceMapComment, getSourcemapRuleCallsite } from '../sheet/sourcemap';
 import type { SheetCallsite } from '../sheet/types';
 import { normalizeCallsiteSourceUrl } from '../utils/trace';
 
@@ -40,14 +40,15 @@ export async function traceDevSourcemaps(): Promise<TraceSourcemapResult> {
 
     for (let j = 0, ruleLen = item.rules.length; j < ruleLen; j++) {
       const rule = item.rules[j];
+      const callsite = getSourcemapRuleCallsite(rule);
 
-      if (!rule.callsite) continue;
-      if (isDisplaySourceUrl(rule.callsite.sourceUrl || rule.callsite.filePath)) continue;
+      if (!callsite) continue;
+      if (isDisplaySourceUrl(callsite.sourceUrl || callsite.filePath)) continue;
 
       rules++;
 
       const nextCallsite = await traceCallsiteSourcemap(
-        rule.callsite,
+        callsite,
         fetcher,
         sourceMapCache,
       );
@@ -55,9 +56,13 @@ export async function traceDevSourcemaps(): Promise<TraceSourcemapResult> {
       if (nextCallsite) {
         if (nextCallsite.sourceMapUrl) sourcemaps.add(nextCallsite.sourceMapUrl);
         rule.callsite = nextCallsite.callsite;
+        rule.debug = null;
+        rule.debugField = null;
         remapped++;
       } else {
-        rule.callsite = createDisplayCallsite(rule.callsite);
+        rule.callsite = createDisplayCallsite(callsite);
+        rule.debug = null;
+        rule.debugField = null;
         unresolved++;
       }
 

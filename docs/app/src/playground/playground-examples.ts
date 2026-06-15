@@ -11,6 +11,9 @@ export type PlaygroundExample = {
 };
 
 export const compilerConfig = {
+  layer: true,
+  priorityMode: 'layer' as const,
+  sourcemapTrace: 'style' as const,
   css: {
     layerNamespace: 'fluentic',
     layers: ['reset', 'fluentic', 'override'],

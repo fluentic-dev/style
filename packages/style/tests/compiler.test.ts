@@ -9,6 +9,7 @@ import {
   BUILDER_STATE,
   countOccurrences,
   createCompiler,
+  createStyleFn,
   createTransformFilter,
   deepEqual,
   equal,
@@ -21,6 +22,7 @@ import {
   notIncludes,
   prependWebpackRuntimeEntry,
   readFileSync,
+  selector,
   style,
   test,
   testDir,
@@ -73,6 +75,183 @@ const scope = style.scope([
   includes(css, 'color: blue');
   includes(css, ':where(');
   includes(css, ':hover)');
+});
+
+test('compiler extracts merged style chains', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const interaction = style({ borderColor: 'gray' })
+  .hover({ color: 'blue' })
+  .active({ color: 'red' });
+
+const button = style({ color: 'black' })
+  .merge(interaction)
+  .focusVisible({ outlineColor: 'purple' });
+`,
+    '/tmp/compiler-merge-style.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  notIncludes(result.code, '.merge(');
+  includes(css, 'color: black');
+  includes(css, 'border-color: gray');
+  includes(css, ':hover');
+  includes(css, 'color: blue');
+  includes(css, ':active');
+  includes(css, 'color: red');
+  includes(css, ':focus-visible');
+  includes(css, 'outline-color: purple');
+});
+
+test('compiler extracts merged style chains into slots', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const interaction = style({ borderColor: 'gray' })
+  .hover({ color: 'blue' });
+
+const button = style.slot({ color: 'black' })
+  .merge(interaction);
+`,
+    '/tmp/compiler-merge-slot.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  notIncludes(result.code, '.merge(');
+  includes(result.code, 'createExtractedSlot');
+  includes(css, 'color: black');
+  includes(css, 'border-color: gray');
+  includes(css, ':hover');
+  includes(css, 'color: blue');
+});
+
+test('compiler extracts merged scope chains', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const styles = {
+  label: style.slot({ color: 'black' }),
+};
+
+const interactiveScope = style.scope([
+  styles.label({ color: 'blue' }),
+]).hover([
+  styles.label({ color: 'red' }),
+]);
+
+const mergedScope = style.scope().merge(interactiveScope);
+`,
+    '/tmp/compiler-merge-scope.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  notIncludes(result.code, '.merge(');
+  includes(result.code, 'createExtractedScope');
+  includes(css, 'color: blue');
+  includes(css, ':hover');
+  includes(css, 'color: red');
+});
+
+test('compiler extracts nested merged style chains', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const base = style({ borderColor: 'gray' })
+  .hover({ color: 'blue' });
+
+const pressed = style({ backgroundColor: 'white' })
+  .merge(base)
+  .active({ color: 'red' });
+
+const leaf = style({ color: 'black' })
+  .merge(pressed)
+  .focusVisible({ outlineColor: 'purple' });
+`,
+    '/tmp/compiler-nested-merge-style.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  notIncludes(result.code, '.merge(');
+  includes(css, 'color: black');
+  includes(css, 'background-color: white');
+  includes(css, 'border-color: gray');
+  includes(css, ':hover');
+  includes(css, 'color: blue');
+  includes(css, ':active');
+  includes(css, 'color: red');
+  includes(css, ':focus-visible');
+  includes(css, 'outline-color: purple');
+});
+
+test('compiler extracts cross-file merged style chains', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+
+  const commonFilePath = testDir + 'fixtures/merge_common.ts';
+  const commonResult = compiler.transform(readFileSync(commonFilePath, 'utf8'), commonFilePath);
+  if (!commonResult) throw new Error('expected common merge compiler transform result');
+
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import { sharedInteractive } from './fixtures/merge_common';
+
+export const button = style({ color: '#0f172a' })
+  .merge(sharedInteractive)
+  .focusVisible({ outlineColor: '#7c3aed' });
+`,
+    fileURLToPath(new URL('./merge-entry.ts', import.meta.url)),
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  notIncludes(result.code, '.merge(');
+  includes(css, 'color: #0f172a');
+  includes(css, 'background-color: #ffffff');
+  includes(css, 'border-color: #94a3b8');
+  includes(css, ':hover');
+  includes(css, 'color: #2563eb');
+  includes(css, ':active');
+  includes(css, 'color: #dc2626');
+  includes(css, ':focus-visible');
+  includes(css, 'outline-color: #7c3aed');
 });
 
 test('compiler sorts parent-scoped rules after child base and before child selectors', () => {
@@ -206,6 +385,112 @@ const two = style({ margin: 0 }).media(2, '(max-width: 700px)', {
   notEqual(classNames[0], classNames[1]);
 });
 
+test('compiler rejects invalid static selector args', () => {
+  const compiler = createCompiler({ layer: false });
+  let error: unknown = null;
+
+  try {
+    compiler.transform(
+      `
+import { style } from '@fluentic/style';
+
+const rule = style({ color: 'red' }).select('.parent .child', { color: 'blue' });
+`,
+      '/tmp/compiler-invalid-selector.ts',
+    );
+  } catch (err: unknown) {
+    error = err;
+  }
+
+  assertCompileError(error, 'Invalid selector\n\nstyle.select(".parent .child")');
+  assertCompileError(error, 'Selector must target the current element only');
+});
+
+test('compiler rejects invalid custom selector definitions', () => {
+  const custom = createStyleFn({
+    style: null as any,
+    selectors: {
+      invalidState: selector('.parent .child'),
+    },
+  }).style;
+  const compiler = createCompiler({ layer: false, styleFn: custom });
+  let error: unknown = null;
+
+  try {
+    compiler.transform(
+      `
+import { style } from '@fluentic/style';
+
+const rule = style({ color: 'red' }).invalidState({ color: 'blue' });
+`,
+      '/tmp/compiler-invalid-selector-definition.ts',
+    );
+  } catch (err: unknown) {
+    error = err;
+  }
+
+  assertCompileError(error, 'Invalid selector definition\n\nstyle.invalidState: ".parent .child"');
+  assertCompileError(error, 'Selector must target the current element only');
+});
+
+test('compiler can skip build-time selector checks', () => {
+  const compiler = createCompiler({ layer: false, checkSelector: false });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const rule = style({ color: 'red' }).select('.parent .child', { color: 'blue' });
+`,
+    '/tmp/compiler-skip-invalid-selector.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+});
+
+test('compiler force mode rejects unresolved selector args', () => {
+  const compiler = createCompiler({ layer: false, checkSelector: 'force' });
+  let error: unknown = null;
+
+  try {
+    compiler.transform(
+      `
+import { style } from '@fluentic/style';
+
+export function makeRule(selector: string) {
+  return style({ color: 'red' }).select(selector, { color: 'blue' });
+}
+`,
+      '/tmp/compiler-force-unresolved-selector.ts',
+    );
+  } catch (err: unknown) {
+    error = err;
+  }
+
+  assertCompileError(error, 'Invalid selector\n\nstyle.select(...)');
+  assertCompileError(error, 'Selector argument must be statically analyzable');
+});
+
+test('compiler rejects invalid static at-rule selector args', () => {
+  const compiler = createCompiler({ layer: false });
+  let error: unknown = null;
+
+  try {
+    compiler.transform(
+      `
+import { style } from '@fluentic/style';
+
+const rule = style({ color: 'red' }).media('{ color: blue }', { color: 'blue' });
+`,
+      '/tmp/compiler-invalid-media-selector.ts',
+    );
+  } catch (err: unknown) {
+    error = err;
+  }
+
+  assertCompileError(error, 'Invalid selector\n\nstyle.media("{ color: blue }")');
+  assertCompileError(error, 'Media query must not contain "{" or "}"');
+});
+
 test('compiler keeps nested StyleData chained methods inside at-rules', () => {
   const compiler = createCompiler({
     layer: false,
@@ -283,6 +568,7 @@ const styles = {
 };
 const scope = style.scope([
   token('red'),
+  token('green'),
   styles.container({
     color: 'white',
   }),
@@ -294,7 +580,11 @@ const scope = style.scope([
   if (!result) throw new Error('expected compiler transform result');
 
   includes(result.code, 'createExtractedScope');
-  includes(result.code, "token('red')");
+  includes(result.code, 'withTokens');
+  includes(result.code, "token('green')");
+  notIncludes(result.code, "token('red')");
+  notIncludes(result.code, 'createExtractedScope([token');
+  before(result.code, "const token = createToken('blue'", 'const scope = withTokens');
 });
 
 test('compiler honors configured token variable prefix', () => {
@@ -420,6 +710,79 @@ export function Card({ color }) {
   notIncludes(result.code, '/tmp/compiler-inline-dynamic-style.tsx:runtime');
   includes(css, 'color: var(--token-');
   includes(css, 'background-color: white');
+});
+
+test('compiler hoists inline dynamic extracted slot with token binding', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true, localClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+export function useSlot(color) {
+  return style.slot({
+    color,
+    backgroundColor: 'white',
+  });
+}
+`,
+    '/tmp/compiler-inline-dynamic-slot.tsx',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(result.code, 'withTokens');
+  includes(result.code, 'const _fluenticToken = createExtractedToken(');
+  includes(result.code, 'const _fluenticStyle = createExtractedSlot(');
+  includes(result.code, 'return withTokens(_fluenticStyle, [_fluenticToken(color)]);');
+  includes(css, 'color: var(--token-');
+  includes(css, 'background-color: white');
+});
+
+test('compiler hoists scope token providers and dynamic scope values with token bindings', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true, localClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { createToken, style } from '@fluentic/style';
+
+const accent = createToken('blue');
+const styles = {
+  root: style.slot({
+    backgroundColor: accent,
+  }),
+};
+
+export function Card({ color }) {
+  return style.scope([
+    accent('green'),
+    styles.root({
+      color,
+    }),
+  ]);
+}
+`,
+    '/tmp/compiler-scope-hoist-token-bindings.tsx',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(result.code, 'createExtractedScope');
+  includes(result.code, 'createExtractedToken');
+  includes(result.code, 'withTokens');
+  includes(result.code, "accent('green')");
+  includes(result.code, '_fluenticToken(color)');
+  includes(result.code, '[1, "--token-');
+  notIncludes(result.code, 'return style.scope');
+  includes(css, 'color: var(--token-');
 });
 
 test('compiler can disable extracted style hoisting', () => {

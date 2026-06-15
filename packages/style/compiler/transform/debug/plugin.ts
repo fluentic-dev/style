@@ -1,24 +1,32 @@
 import type * as BabelCore from '@babel/core';
 import type { NodePath, types as BabelTypes } from '@babel/core';
+import type { SelectorsRecord } from '../../../builder';
+import type { CheckSelectorMode } from '../../../config';
+import { PrioritySelectors } from '../../../selector/presets';
+import { getStyleFnMeta } from '../../../style/style';
 import type { CompilerOptions } from '../../compiler/types';
 import { DEBUG_SOURCE_CONTENT_VAR, DEBUG_SOURCE_URL_VAR, DEFAULT_CONFIG } from '../../utils/constants';
 import { createImportSourceMatcher, type ImportSourceMatcher } from '../../utils/import_source';
-import {
-  annotateThemeCall,
-  annotateTokenDeclaration,
-  getImportedName,
-  isStyleChainCall,
-  type StaticIdImport,
-} from '../syntax';
+import { type EvalScope, evaluateNode } from '../evaluator/evaluator';
+import type { EvalModuleBindings, ImportMap, ResolveImportFn } from '../evaluator/types';
+import type { ExtractTracer } from '../extract/plugin';
+import { annotateThemeCall, annotateTokenDeclaration, getImportedName, isStyleChainCall } from '../syntax';
 import { babelPlugin } from '../utils/babel';
 import { getProjectFileId } from '../utils/path';
-import { buildDebugDataObject, hasDebugArgument, type DebugTraceProperty } from './utils/debug_data';
+import { getSelectorArgIndex, validateResolvedSelectorValue, validateSelectorDefinition } from '../utils/selector';
+import { buildDebugDataObject, type DebugTraceProperty, hasDebugArgument } from './utils/debug_data';
 
 type PluginState = BabelCore.PluginPass & {
   styleNames: Set<string>;
-  imports: Map<string, StaticIdImport>;
+  bindings: EvalModuleBindings;
+  imports: ImportMap;
+  resolveImport: ResolveImportFn;
   importSourceMatcher: ImportSourceMatcher;
+  selectors: SelectorsRecord;
+  checkSelector: CheckSelectorMode | undefined;
+  filePath: string;
   fileId: string;
+  sourcemapTrace: SourcemapTrace;
   programPath: NodePath<BabelTypes.Program> | null;
   sourceUrlId: BabelTypes.Identifier | null;
   sourceContentId: BabelTypes.Identifier | null;
@@ -29,6 +37,7 @@ type PluginArgs = {
   projectDir: string;
   sourceUrl: string;
   sourceContent: string | null;
+  tracer: ExtractTracer;
 };
 
 type SourcemapTrace = NonNullable<CompilerOptions['sourcemapTrace']>;
@@ -41,13 +50,23 @@ type BabelBinding = {
 export function createDebugPlugin(args: PluginArgs) {
   const { options, projectDir, sourceUrl, sourceContent } = args;
 
-  return babelPlugin<PluginState>(({ types: t }) => {
+  return babelPlugin<PluginState>((babel) => {
+    const { types: t } = babel;
+
     return {
       pre(this: PluginState) {
         this.styleNames = new Set();
+        this.bindings = new Map();
         this.imports = new Map();
+        this.resolveImport = (source, fromFile) => args.tracer.resolveImport(babel, source, fromFile);
         this.importSourceMatcher = createImportSourceMatcher(options.importSources ?? null);
+        this.selectors = options.styleFn
+          ? getStyleFnMeta(options.styleFn).selectors
+          : PrioritySelectors;
+        this.checkSelector = options.checkSelector;
+        this.filePath = this.file?.opts?.filename ?? 'unknown';
         this.fileId = getProjectFileId(projectDir, this.file?.opts?.filename);
+        this.sourcemapTrace = options.sourcemapTrace ?? 'style';
         this.programPath = null;
         this.sourceUrlId = null;
         this.sourceContentId = null;
@@ -102,6 +121,13 @@ export function createDebugPlugin(args: PluginArgs) {
         VariableDeclaration(path, state) {
           path.node.declarations.forEach((decl) => {
             annotateTokenDeclaration(decl, state, t);
+
+            if (decl.id.type !== 'Identifier' || !decl.init) return;
+
+            state.bindings.set(
+              decl.id.name,
+              evaluateNode(decl.init, getDebugEvalScope(state)),
+            );
           });
         },
 
@@ -112,6 +138,7 @@ export function createDebugPlugin(args: PluginArgs) {
           annotateThemeCall(path.node, state, t);
 
           if (!state.styleNames.size) return;
+          validateStaticSelectorArg(path, state);
           if (isRawPlainCall(path.node.callee, state.styleNames)) return;
           if (
             isScopeChainCall(path.node.callee, state.styleNames) ||
@@ -142,6 +169,90 @@ export function createDebugPlugin(args: PluginArgs) {
       },
     };
   });
+}
+
+function validateStaticSelectorArg(
+  path: NodePath<BabelTypes.CallExpression>,
+  state: PluginState,
+) {
+  const methodName = getSelectorMethodName(path.node.callee);
+  if (!methodName) return;
+
+  const selector = state.selectors[methodName];
+  if (!selector) return;
+  if (!isStyleChainCall(path.node.callee, state.styleNames) && !isScopeItemCall(path, state)) return;
+
+  try {
+    validateSelectorDefinition(
+      state.checkSelector,
+      `style.${methodName}`,
+      selector,
+      getSelectorMethodNode(path.node.callee),
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const methodPath = getSelectorMethodPath(path);
+    throw (methodPath ?? path).buildCodeFrameError(message);
+  }
+
+  const argIndex = getSelectorArgIndex(selector, path.node.arguments as BabelTypes.Node[]);
+  if (argIndex === null) return;
+
+  try {
+    validateResolvedSelectorValue(
+      state.checkSelector,
+      `style.${methodName}`,
+      selector,
+      evaluateNode(
+        path.node.arguments[argIndex] as BabelTypes.Node | undefined,
+        getDebugEvalScope(state),
+      ),
+      path.node.arguments[argIndex] as BabelTypes.Node | undefined,
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const argPath = path.get(`arguments.${argIndex}`) as NodePath<BabelTypes.Node>;
+    throw argPath.buildCodeFrameError(message);
+  }
+}
+
+function getDebugEvalScope(state: PluginState): EvalScope {
+  return {
+    bindings: state.bindings,
+    imports: state.imports,
+    resolveImport: state.resolveImport,
+    filePath: state.filePath,
+    styleFilePath: state.filePath,
+    sourcemapTrace: state.sourcemapTrace,
+    styleNames: state.styleNames,
+  };
+}
+
+function getSelectorMethodName(
+  callee: BabelTypes.CallExpression['callee'],
+) {
+  const node = getSelectorMethodNode(callee);
+  return node?.type === 'Identifier' ? node.name : null;
+}
+
+function getSelectorMethodNode(
+  callee: BabelTypes.CallExpression['callee'],
+) {
+  if (callee.type !== 'MemberExpression' || callee.computed) return null;
+  return callee.property.type === 'Identifier' ? callee.property : null;
+}
+
+function getSelectorMethodPath(
+  path: NodePath<BabelTypes.CallExpression>,
+) {
+  const callee = path.get('callee');
+  if (!callee.isMemberExpression()) return null;
+
+  const property = callee.get('property');
+  if (Array.isArray(property)) return null;
+  if (!property.isIdentifier()) return null;
+
+  return property;
 }
 
 function getDebugStyleArg(

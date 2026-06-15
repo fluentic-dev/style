@@ -46,6 +46,7 @@ export function getBuildMeta(dev: boolean, options: PluginOptions): BuildMeta {
     layer: options.layer,
     priorityMode: options.priorityMode,
     sourcemapTrace: options.sourcemapTrace,
+    checkSelector: options.checkSelector,
     css: options.css ?? null,
   };
 }

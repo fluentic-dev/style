@@ -1,9 +1,12 @@
-import { compareLayerPriority, type LayerPriority } from '../../atomic/layer';
+import { compareLayerPriority, getLayerOrderCss, type LayerPriority } from '../../atomic/layer';
 import { RUNTIME_CONFIG } from '../../config';
 import type { SheetOptions, SheetRule, StyleSheet } from '../types';
 import {
   createNoopSheet,
+  createStyleTag,
   getSheetRulePriority,
+  getStyleLayerName,
+  insertStyleTagAfter,
   normalizeRule,
   resolveDocument,
 } from '../utils';
@@ -31,9 +34,21 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
   const inserted = new Set<string>();
   const queued: QueuedRule[] = [];
   const groups: SortGroup[] = [];
+  const shouldLayer = RUNTIME_CONFIG.layer !== false;
+  const layerName = getStyleLayerName();
+  const layerTag = shouldLayer ? createStyleTag(document, 'layers', options.nonce) : null;
+  let activeLayers: readonly string[] = RUNTIME_CONFIG.layers;
+  let layerText = '';
+
+  if (layerTag) {
+    insertStyleTagAfter(document, layerTag, null);
+  }
 
   return {
-    updateLayers() {},
+    updateLayers(layers) {
+      activeLayers = layers;
+      updateLayerText();
+    },
 
     insert(rule) {
       const css = normalizeRule(rule);
@@ -66,10 +81,10 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
         if (!fragment || !fragmentTag) return;
 
         if (
-          fragmentTag.sourceMapNode &&
-          fragmentTag.sourceMapNode.parentNode === fragmentTag.tag
+          fragmentTag.insertBeforeNode &&
+          fragmentTag.insertBeforeNode.parentNode === fragmentTag.tag
         ) {
-          fragmentTag.tag.insertBefore(fragment, fragmentTag.sourceMapNode);
+          fragmentTag.tag.insertBefore(fragment, fragmentTag.insertBeforeNode);
         } else {
           fragmentTag.tag.appendChild(fragment);
         }
@@ -88,6 +103,8 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
         if (!active || active.count >= maxRules) {
           flushFragment();
           active = createGroupTag(document, groups, group, {
+            previous: layerTag,
+            layerName: shouldLayer ? layerName : null,
             sourcemap,
             nonce: options.nonce,
           });
@@ -116,6 +133,17 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
       }
     },
   };
+
+  function updateLayerText() {
+    if (!layerTag) return;
+
+    const next = getLayerOrderCss(activeLayers, layerName);
+
+    if (next === layerText) return;
+
+    layerText = next;
+    layerTag.textContent = next;
+  }
 }
 
 function ensureGroup(
@@ -149,16 +177,25 @@ function createGroupTag(
   groups: SortGroup[],
   group: SortGroup,
   options: {
+    previous: HTMLStyleElement | null;
+    layerName: string | null;
     sourcemap: boolean;
     nonce?: string | null;
   },
 ) {
-  const previous = getPreviousTag(groups, group);
+  const previous = getPreviousTag(groups, group, options.previous);
   const before = getNextTag(groups, group);
   const item = createDevTag(document, previous, {
     ...options,
     className: 'rules ' + group.key,
     before: before?.tag ?? null,
+    wrapper: options.layerName
+      ? {
+        before: '@layer ' + options.layerName + ' {\n',
+        after: '}\n',
+        sourceMapLineOffset: 1,
+      }
+      : undefined,
   });
 
   group.tags.push(item);
@@ -166,7 +203,11 @@ function createGroupTag(
   return item;
 }
 
-function getPreviousTag(groups: SortGroup[], group: SortGroup) {
+function getPreviousTag(
+  groups: SortGroup[],
+  group: SortGroup,
+  fallback: HTMLStyleElement | null,
+) {
   const index = groups.indexOf(group);
 
   for (let i = index; i >= 0; i--) {
@@ -176,7 +217,7 @@ function getPreviousTag(groups: SortGroup[], group: SortGroup) {
     if (tag) return tag.tag;
   }
 
-  return null;
+  return fallback;
 }
 
 function getNextTag(groups: SortGroup[], group: SortGroup) {
