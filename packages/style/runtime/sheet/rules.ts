@@ -70,6 +70,8 @@ function collectStylePropRules(
       key: rule.key,
       css: rule.css,
       callsite: rule.callsite || null,
+      debug: rule.debug || null,
+      debugField: rule.debugField || null,
       priority: rule.priority,
     };
 

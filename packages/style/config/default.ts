@@ -4,6 +4,9 @@ import type { RuntimeConfig } from './types';
 export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
   buildMeta: null,
   configVersion: 0,
+  layer: true,
+  priorityMode: 'layer',
+  sourcemapTrace: 'style',
 
   isDev: false,
   isRSC: false,
@@ -14,7 +17,7 @@ export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
   isCheckSelectorEnabled: false,
   isSourcemapEnabled: false,
 
-  devUtils: 'CssDevUtils',
+  devUtils: 'StyleDevUtils',
 
   runtimeCacheTTL: getCacheTTL(true),
 

@@ -10,6 +10,7 @@ export type SheetRule = {
   priority?: LayerPriority | null;
   callsite?: SheetCallsite | null;
   debug?: DebugData | null;
+  debugField?: string | null;
 };
 
 export type SheetOptions = {

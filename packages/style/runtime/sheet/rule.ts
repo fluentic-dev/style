@@ -50,5 +50,7 @@ export function createRuntimeSheetRule(item: StateItem): RuntimeSheetRule | null
     priority: layerPriority,
     css: ruleCss,
     callsite: runtimeItem.callsite,
+    debug: runtimeItem.debug,
+    debugField: runtimeItem.debugField,
   };
 }

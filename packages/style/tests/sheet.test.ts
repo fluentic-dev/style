@@ -9,6 +9,7 @@ import {
   getInlineSourceMap,
   getRuleCallsite,
   includes,
+  setBuildMeta,
   test,
   traceCallsite,
   traceDevSourcemaps,
@@ -83,6 +84,31 @@ test('dev sheet sourcemap prefers property callsite over whole debug callsite', 
   equal(callsite?.line, 42);
   equal(callsite?.column, 7);
   equal(callsite?.sourceUrl, 'http://127.0.0.1:43210/src/styles.ts?__fluentic_source=abc');
+});
+
+test('dev sheet sourcemap selects traced debug field location by runtime mode', () => {
+  const debug = {
+    $$debug: true,
+    loc: [12, 3],
+    label: ['', '', ''],
+    sourceUrl: '/src/styles.ts',
+    fields: {
+      color: {
+        0: [20, 5],
+        1: [8, 3],
+      },
+    },
+  } as const;
+
+  configureRuntime({ dev: true, sourcemapTrace: 'style' });
+  let callsite = getRuleCallsite(null, debug, 'color');
+  equal(callsite?.line, 20);
+  equal(callsite?.column, 5);
+
+  configureRuntime({ dev: true, sourcemapTrace: 'value' });
+  callsite = getRuleCallsite(null, debug, 'color');
+  equal(callsite?.line, 8);
+  equal(callsite?.column, 3);
 });
 
 test('dev sheet sourcemap emits sourcesContent from debug code', () => {
@@ -237,6 +263,109 @@ test('dev sheet wraps priority rules in generated priority layers', () => {
   includes(ruleText, '{.priority{padding:18px}}');
 });
 
+test('dev sort sheet orders priority groups without css layers', () => {
+  const document = createFakeDocument();
+
+  configureRuntime({ dev: true, layer: false });
+
+  try {
+    const sheet = createDevSheet({
+      document: document as unknown as Document,
+      maxRules: 1,
+      sourcemap: true,
+    });
+
+    sheet.updateLayers(['reset', '$layer', 'override']);
+    sheet.insert({
+      key: 'high',
+      css: '.high{color:red}',
+      priority: [2, 0, 0, 0, 0, 0, 0],
+    });
+    sheet.flush();
+    sheet.insert({
+      key: 'low-one',
+      css: '.low-one{color:blue}',
+      priority: [0, 0, 0, 0, 0, 0, 0],
+      callsite: { filePath: '/src/styles.ts', line: 1, column: 1 },
+    });
+    sheet.insert({
+      key: 'low-two',
+      css: '.low-two{color:green}',
+      priority: [0, 0, 0, 0, 0, 0, 1],
+    });
+    sheet.flush();
+
+    equal(document.head.childNodes.length, 3);
+    equal(document.head.childNodes[0].getAttribute('data-css-sheet'), 'rules p-0-0-0-0-0-0-0');
+    equal(document.head.childNodes[1].getAttribute('data-css-sheet'), 'rules p-0-0-0-0-0-0-1');
+    equal(document.head.childNodes[2].getAttribute('data-css-sheet'), 'rules p-2-0-0-0-0-0-0');
+    includes(document.head.childNodes[0].textContent, '.low-one{color:blue}');
+    includes(document.head.childNodes[1].textContent, '.low-two{color:green}');
+    includes(document.head.childNodes[2].textContent, '.high{color:red}');
+    equal(document.head.childNodes[0].textContent.includes('@layer'), false);
+    includes(document.head.childNodes[0].textContent, 'sourceMappingURL=');
+  } finally {
+    configureRuntime({ dev: false, layer: true, priorityMode: 'layer' });
+  }
+});
+
+test('dev priority mode command rebuilds existing style tags', () => {
+  const document = createFakeDocument();
+  const root = globalThis as typeof globalThis & {
+    window?: Window & typeof globalThis & Record<string, unknown>;
+  };
+  const previousWindow = root.window;
+
+  try {
+    root.window = {} as Window & typeof globalThis & Record<string, unknown>;
+    configureRuntime({
+      dev: true,
+      devUtils: 'CssDevUtils',
+      layer: true,
+      priorityMode: 'layer',
+    });
+    enableDevUtils();
+
+    const sheet = createDevSheet({
+      document: document as unknown as Document,
+      sourcemap: false,
+    });
+    const utils = root.window.CssDevUtils as {
+      setPriorityMode?: {
+        toLayer?: () => null;
+        toSort?: () => null;
+      };
+    };
+
+    sheet.updateLayers(['$layer']);
+    sheet.insert({
+      key: 'low',
+      css: '.low{color:blue}',
+      priority: [0, 0, 0, 0, 0, 0, 0],
+    });
+    sheet.insert({
+      key: 'high',
+      css: '.high{color:red}',
+      priority: [2, 0, 0, 0, 0, 0, 0],
+    });
+    sheet.flush();
+
+    includes(document.head.textContent, '@layer css.');
+    equal(utils.setPriorityMode?.toSort?.(), null);
+    equal(document.head.textContent.includes('@layer'), false);
+    includes(document.head.textContent, '.low{color:blue}');
+    includes(document.head.textContent, '.high{color:red}');
+
+    equal(utils.setPriorityMode?.toLayer?.(), null);
+    includes(document.head.textContent, '@layer css.');
+    includes(document.head.textContent, '.low{color:blue}');
+    includes(document.head.textContent, '.high{color:red}');
+  } finally {
+    configureRuntime({ dev: false, devUtils: '', layer: true, priorityMode: 'layer' });
+    root.window = previousWindow;
+  }
+});
+
 test('dev utils installs on window target', () => {
   const root = globalThis as typeof globalThis & {
     window?: Window & typeof globalThis & Record<string, unknown>;
@@ -248,7 +377,26 @@ test('dev utils installs on window target', () => {
     configureRuntime({ dev: true, devUtils: 'CssDevUtils' });
     enableDevUtils();
 
-    equal(typeof (root.window.CssDevUtils as { traceSourcemap?: unknown; }).traceSourcemap, 'function');
+    const utils = root.window.CssDevUtils as {
+      usage?: () => null;
+      info?: () => null;
+      traceSourcemap?: unknown;
+      setSourcemapTrace?: { toStyle?: unknown; toValue?: unknown; };
+      setPriorityMode?: { toLayer?: unknown; toSort?: unknown; };
+    };
+
+    equal(Object.getPrototypeOf(utils), null);
+    equal(Object.getPrototypeOf(utils.setPriorityMode), null);
+    equal(Object.getPrototypeOf(utils.setSourcemapTrace), null);
+    equal(typeof utils.usage, 'function');
+    equal(typeof utils.info, 'function');
+    equal(typeof utils.traceSourcemap, 'undefined');
+    equal(typeof utils.setSourcemapTrace?.toStyle, 'function');
+    equal(typeof utils.setSourcemapTrace?.toValue, 'function');
+    equal(typeof utils.setPriorityMode?.toLayer, 'function');
+    equal(typeof utils.setPriorityMode?.toSort, 'function');
+    equal(utils.usage?.(), null);
+    equal(utils.info?.(), null);
   } finally {
     configureRuntime({ dev: false, devUtils: '' });
     root.window = previousWindow;
@@ -257,21 +405,38 @@ test('dev utils installs on window target', () => {
 
 test('enableDevUtils works without a window global', () => {
   const root = globalThis as unknown as Record<string, unknown> & {
-    CssDevUtils?: { traceSourcemap?: unknown; };
+    CssDevUtils?: {
+      usage?: () => null;
+      info?: () => null;
+      traceSourcemap?: unknown;
+      setSourcemapTrace?: { toStyle?: unknown; toValue?: unknown; };
+      setPriorityMode?: { toLayer?: unknown; toSort?: unknown; };
+    };
     window?: Window & typeof globalThis;
   };
   const previousWindow = root.window;
   const previousUtils = root.CssDevUtils;
 
   try {
+    setBuildMeta(null);
     delete (root as { window?: unknown; }).window;
     delete (root as { CssDevUtils?: unknown; }).CssDevUtils;
     configureRuntime({ dev: true, devUtils: 'CssDevUtils' });
 
     enableDevUtils();
 
-    const utils = root.CssDevUtils as { traceSourcemap?: unknown; } | undefined;
+    const utils = root.CssDevUtils;
+    equal(Object.getPrototypeOf(utils), null);
+    equal(Object.getPrototypeOf(utils?.setPriorityMode), null);
+    equal(typeof utils?.usage, 'function');
+    equal(typeof utils?.info, 'function');
     equal(typeof utils?.traceSourcemap, 'function');
+    equal(typeof utils?.setSourcemapTrace?.toStyle, 'undefined');
+    equal(typeof utils?.setSourcemapTrace?.toValue, 'undefined');
+    equal(typeof utils?.setPriorityMode?.toLayer, 'function');
+    equal(typeof utils?.setPriorityMode?.toSort, 'function');
+    equal(utils?.usage?.(), null);
+    equal(utils?.info?.(), null);
   } finally {
     configureRuntime({ dev: false });
     root.window = previousWindow;

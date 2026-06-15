@@ -40,7 +40,7 @@ test('invariant: runtime token identity uses stable ids for nested tokens and al
 });
 
 test('invariant: extracted theme and style modules share imported token ids', () => {
-  const compiler = createCompiler({ css: { layer: false } });
+  const compiler = createCompiler({ layer: false });
   const themeFile = fileURLToPath(new URL('./fixtures/theme_cross_themes.ts', import.meta.url));
   const stylesFile = fileURLToPath(new URL('./fixtures/theme_cross_styles.ts', import.meta.url));
 

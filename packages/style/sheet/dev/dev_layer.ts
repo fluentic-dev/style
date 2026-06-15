@@ -1,7 +1,6 @@
-import { getLayerBlockCss, getLayerOrderCss } from '../atomic/layer';
-import { RUNTIME_CONFIG } from '../config';
-import { createSourceMapComment, getRuleCallsite, type SourcemapRule } from './sourcemap';
-import type { SheetOptions, SheetRule, StyleSheet } from './types';
+import { getLayerBlockCss, getLayerOrderCss } from '../../atomic/layer';
+import { RUNTIME_CONFIG } from '../../config';
+import type { SheetOptions, SheetRule, StyleSheet } from '../types';
 import {
   createNoopSheet,
   createSheetLayerState,
@@ -10,27 +9,23 @@ import {
   insertStyleTagAfter,
   normalizeRule,
   resolveDocument,
+} from '../utils';
+import {
+  createDevTag,
+  getDevSourcemapTags,
+  insertDevRule,
+  refreshDevSourcemapTags,
+  type DevRuleTag,
 } from './utils';
-
-type SourcemapTag = {
-  tag: HTMLStyleElement;
-  rules: SourcemapRule[];
-  sourceMapNode: Text | null;
-  count: number;
-};
 
 type QueuedRule = {
   css: string;
   rule: SheetRule | null;
 };
 
-const SOURCEMAP_TAGS: SourcemapTag[] = [];
+export { getDevSourcemapTags, refreshDevSourcemapTags };
 
-export function getDevSourcemapTags() {
-  return SOURCEMAP_TAGS;
-}
-
-export function createDevSheet(options: SheetOptions = {}): StyleSheet {
+export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
   const document = resolveDocument(options.document);
 
   if (!document) return createNoopSheet();
@@ -44,7 +39,7 @@ export function createDevSheet(options: SheetOptions = {}): StyleSheet {
 
   let layerText = '';
   let activeLayers: readonly string[] = RUNTIME_CONFIG.layers;
-  let active: SourcemapTag | null = null;
+  let active: DevRuleTag | null = null;
   let lastTag: HTMLStyleElement = layerTag;
 
   insertStyleTagAfter(document, layerTag, null);
@@ -90,9 +85,9 @@ export function createDevSheet(options: SheetOptions = {}): StyleSheet {
     flush() {
       if (!queued.length) return;
 
-      const touched: SourcemapTag[] = [];
+      const touched: DevRuleTag[] = [];
       let fragment: DocumentFragment | null = null;
-      let fragmentTag: SourcemapTag | null = null;
+      let fragmentTag: DevRuleTag | null = null;
 
       const flushFragment = () => {
         if (!fragment || !fragmentTag) return;
@@ -115,7 +110,10 @@ export function createDevSheet(options: SheetOptions = {}): StyleSheet {
 
         if (!active || active.count >= maxRules) {
           flushFragment();
-          active = createDevTag(document, lastTag, sourcemap, options.nonce);
+          active = createDevTag(document, lastTag, {
+            sourcemap,
+            nonce: options.nonce,
+          });
           lastTag = active.tag;
         }
 
@@ -138,64 +136,8 @@ export function createDevSheet(options: SheetOptions = {}): StyleSheet {
       if (!sourcemap) return;
 
       for (let i = 0, len = touched.length; i < len; i++) {
-        updateSourceMap(touched[i]);
+        touched[i].updateSourceMap();
       }
     },
   };
-}
-
-function createDevTag(
-  document: Document,
-  previous: HTMLStyleElement,
-  sourcemap: boolean,
-  nonce?: string | null,
-): SourcemapTag {
-  const tag = createStyleTag(document, 'rules', nonce);
-  const sourceMapNode = sourcemap ? document.createTextNode('') : null;
-
-  if (sourceMapNode) tag.appendChild(sourceMapNode);
-
-  insertStyleTagAfter(document, tag, previous);
-
-  const item: SourcemapTag = {
-    tag,
-    rules: [],
-    sourceMapNode,
-    count: 0,
-  };
-
-  if (sourceMapNode) {
-    SOURCEMAP_TAGS.push(item);
-  }
-
-  return item;
-}
-
-function insertDevRule(
-  document: Document,
-  item: SourcemapTag,
-  fragment: DocumentFragment,
-  css: string,
-  rule: SheetRule | null,
-) {
-  const text = document.createTextNode(css + '\n');
-
-  fragment.appendChild(text);
-
-  item.rules.push({
-    css,
-    callsite: rule ? getRuleCallsite(rule.callsite, rule.debug) : null,
-  });
-
-  item.count++;
-}
-
-function updateSourceMap(item: SourcemapTag) {
-  if (item.sourceMapNode) {
-    if (item.sourceMapNode.parentNode !== item.tag) {
-      item.tag.appendChild(item.sourceMapNode);
-    }
-
-    item.sourceMapNode.data = '\n' + createSourceMapComment(item.rules);
-  }
 }

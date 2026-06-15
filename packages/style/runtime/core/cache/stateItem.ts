@@ -1,4 +1,5 @@
 import { getTokenVar, getTokenVarName } from '../../../atomic/token';
+import { getCssPropertyValue } from '../../../atomic/value';
 import {
   BUILDER_TYPE_SCOPE,
   BUILDER_TYPE_SLOT,
@@ -68,7 +69,10 @@ export function getStateItemVariableValue(
   }
 
   if (!Array.isArray(item) && !isStyleTokenOverrideData(item) && item.variable?.[0] === ITEM_VALUE_TYPE_VARIABLE) {
-    return [item.variable[1], resolveVariableValue(item.variable[2], tokens)];
+    return [
+      item.variable[1],
+      normalizeVariableValue(item.property, resolveVariableValue(item.variable[2], tokens)),
+    ];
   }
 
   if (!Array.isArray(item) && !isStyleTokenOverrideData(item) && item.token) {
@@ -84,6 +88,15 @@ export function getStateItemVariableValue(
   }
 
   return null;
+}
+
+function normalizeVariableValue(
+  property: string,
+  value: unknown,
+) {
+  if (typeof value !== 'number') return value;
+
+  return getCssPropertyValue(property, String(value));
 }
 
 function getStateItemValue(item: StateItem) {

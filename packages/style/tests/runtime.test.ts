@@ -40,6 +40,7 @@ import {
   transformRscElement,
   withTokens,
 } from './setup';
+import { getStyleTokenOverrideDebug } from '../style/token';
 
 test('pool prepends inherited scopes before own scopes', () => {
   const pool = createCombinedStylePool();
@@ -111,6 +112,28 @@ test('style prop resolver accepts direct raw style and slot data', () => {
 
   if (!result.className) throw new Error('expected direct raw css class name');
   equal(result, cached);
+});
+
+test('style prop resolver normalizes numeric debug variable values by property', () => {
+  const rule = style({
+    padding: 12,
+    opacity: 0.5,
+  }, {
+    $$debug: true,
+    loc: [1, 1],
+    label: ['rule', 'style', 'runtime.test.ts'],
+    vars: {
+      padding: '--debug-padding',
+      opacity: '--debug-opacity',
+    },
+    sourceUrl: 'source:///runtime.test.ts',
+  });
+
+  const result = resolveStyleProp(rule);
+  const styleVars = result.style as Record<string, unknown>;
+
+  equal(styleVars['--debug-padding'], '12px');
+  equal(styleVars['--debug-opacity'], '0.5');
 });
 
 test('style prop resolver skips result cache when cache is disabled', () => {
@@ -304,6 +327,20 @@ test('static combineStyle resolves scope token provider values', () => {
   if (!varName) throw new Error('expected token variable name');
 
   equal((result.style as Record<string, unknown>)[varName], 'red');
+});
+
+test('token override stores injected debug metadata', () => {
+  const token = createToken('blue');
+  const debug: DebugData = {
+    $$debug: true,
+    loc: [12, 3],
+    label: ['token', 'themeColor', 'tokens.ts'],
+    sourceUrl: '/src/tokens.ts',
+  };
+
+  const override = token('red', debug);
+
+  equal(getStyleTokenOverrideDebug(override), debug);
 });
 
 function assertScopeTokenProviderTypes() {

@@ -1,7 +1,7 @@
 import { RUNTIME_CONFIG } from '../../config';
 import type { StyleRuntimeMode } from '../../utils/imports';
 import { getClassNameRSC } from '../rsc/getClassName';
-import { getGlobalSheet } from '../sheet';
+import { getGlobalSheet } from '../sheet/global-runtime';
 import { insertStylePropRuntimeItems } from '../sheet/insert';
 import type { StyleProp } from '../types';
 import { resolveStylePropRuntime } from './cache/prop';

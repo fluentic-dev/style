@@ -1,4 +1,5 @@
 import type * as BabelTypes from '@babel/types';
+import { TRACE_VALUE, TRACE_STYLE } from '../../../builder/data/debug';
 import {
   getStyleTokenId,
   isStyleTokenData,
@@ -25,6 +26,7 @@ export type CompiledStyleObjectLocations = Record<string, {
   filePath: string;
   line: number;
   column: number;
+  trace?: typeof TRACE_STYLE | typeof TRACE_VALUE;
 }>;
 
 export type CompiledStyleObject = Record<string, unknown> & {
@@ -51,6 +53,7 @@ export type EvalScope = {
   filePath: string;
   styleFilePath?: string;
   styleNames?: Set<string>;
+  sourcemapTrace?: 'style' | 'value';
 };
 
 export function evaluateNode(
@@ -204,10 +207,27 @@ function evaluateObject(node: BabelTypes.ObjectExpression, scope: EvalScope): Ev
       if (v.value && typeof v.value === 'object') {
         Object.assign(result, v.value);
 
-        Object.assign(
-          locations,
-          (v.value as CompiledStyleObject)[COMPILED_STYLE_OBJECT_LOCATIONS],
-        );
+        const sourceLocations = (v.value as CompiledStyleObject)[COMPILED_STYLE_OBJECT_LOCATIONS];
+        if (sourceLocations) {
+          const trace = scope.sourcemapTrace === 'value'
+            ? TRACE_VALUE
+            : TRACE_STYLE;
+          const spreadLoc = prop.loc?.start;
+
+          for (const [key, loc] of Object.entries(sourceLocations)) {
+            locations[key] = trace === TRACE_STYLE && spreadLoc
+              ? {
+                line: spreadLoc.line,
+                column: spreadLoc.column + 1,
+                filePath: scope.styleFilePath ?? scope.filePath,
+                trace,
+              }
+              : {
+                ...loc,
+                trace,
+              };
+          }
+        }
       }
     } else if (prop.type === 'ObjectProperty') {
       let key: string;

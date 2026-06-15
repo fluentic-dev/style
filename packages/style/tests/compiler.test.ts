@@ -42,7 +42,8 @@ test('debug utility normalizers keep property and keyword names class-safe', () 
 
 test('compiler extracts scope base and parent selector rules', () => {
   const compiler = createCompiler({
-    css: { classNamePrefix: 't', layer: false, debugClassName: true },
+    layer: false,
+    css: { classNamePrefix: 't', debugClassName: true },
   });
   const result = compiler.transform(
     `
@@ -111,7 +112,8 @@ const scope = style.scope().hover([
 
 test('compiler evaluates style.priority helper as static priority tuple', () => {
   const compiler = createCompiler({
-    css: { layer: false, debugClassName: true },
+    layer: false,
+    css: { debugClassName: true },
   });
   const result = compiler.transform(
     `
@@ -141,7 +143,7 @@ const styles = {
 
 test('compiler includes value priority in extracted class hash', () => {
   const compiler = createCompiler({
-    css: { layer: false },
+    layer: false,
   });
   const result = compiler.transform(
     `
@@ -180,7 +182,7 @@ test('runtime builder preserves explicit zero value priority', () => {
 
 test('compiler includes media priority in extracted class hash', () => {
   const compiler = createCompiler({
-    css: { layer: false },
+    layer: false,
   });
   const result = compiler.transform(
     `
@@ -206,7 +208,8 @@ const two = style({ margin: 0 }).media(2, '(max-width: 700px)', {
 
 test('compiler keeps nested StyleData chained methods inside at-rules', () => {
   const compiler = createCompiler({
-    css: { layer: false, debugClassName: true },
+    layer: false,
+    css: { debugClassName: true },
   });
   const result = compiler.transform(
     `
@@ -233,7 +236,8 @@ const rule = style({ margin: 0 }).media('(max-width: 700px)', style({
 
 test('compiler extracts token values as css variables', () => {
   const compiler = createCompiler({
-    css: { layer: false, debugClassName: true },
+    layer: false,
+    css: { debugClassName: true },
   });
   const result = compiler.transform(
     `
@@ -264,7 +268,8 @@ const styles = {
 
 test('compiler preserves scope token provider values', () => {
   const compiler = createCompiler({
-    css: { layer: false, debugClassName: true },
+    layer: false,
+    css: { debugClassName: true },
   });
   const result = compiler.transform(
     `
@@ -294,8 +299,8 @@ const scope = style.scope([
 
 test('compiler honors configured token variable prefix', () => {
   const compiler = createCompiler({
+    layer: false,
     css: {
-      layer: false,
       debugClassName: true,
       localClassName: true,
       tokenVarPrefix: 'custom-token-',
@@ -327,7 +332,8 @@ const styles = {
 
 test('compiler uses property-local variables for token values', () => {
   const compiler = createCompiler({
-    css: { layer: false, debugClassName: true, localClassName: true },
+    layer: false,
+    css: { debugClassName: true, localClassName: true },
   });
   const filePath = '/tmp/compiler-token-local-variable.ts';
   const result = compiler.transform(
@@ -356,7 +362,8 @@ const styles = {
 
 test('compiler extracts static siblings when a style object has a dynamic value', () => {
   const compiler = createCompiler({
-    css: { layer: false, debugClassName: true, localClassName: true },
+    layer: false,
+    css: { debugClassName: true, localClassName: true },
   });
   const result = compiler.transform(
     `
@@ -385,7 +392,8 @@ const rule = style({
 
 test('compiler hoists inline dynamic extracted style with token binding', () => {
   const compiler = createCompiler({
-    css: { layer: false, debugClassName: true, localClassName: true },
+    layer: false,
+    css: { debugClassName: true, localClassName: true },
   });
   const result = compiler.transform(
     `
@@ -417,7 +425,8 @@ export function Card({ color }) {
 test('compiler can disable extracted style hoisting', () => {
   const compiler = createCompiler({
     hoist: false,
-    css: { layer: false, debugClassName: true, localClassName: true },
+    layer: false,
+    css: { debugClassName: true, localClassName: true },
   });
   const result = compiler.transform(
     `
@@ -441,7 +450,7 @@ export function Card({ color }) {
 });
 
 test('compiler extracts spread style.raw and style.plain objects', () => {
-  const compiler = createCompiler({ css: { layer: false } });
+  const compiler = createCompiler({ layer: false });
   const result = compiler.transform(
     `
 import { style, createToken } from '@fluentic/style';
@@ -480,7 +489,7 @@ export const styles = {
 });
 
 test('compiler extracts imported style.raw and style.plain objects', () => {
-  const compiler = createCompiler({ css: { layer: false } });
+  const compiler = createCompiler({ layer: false });
   const result = compiler.transform(
     `
 import { style } from '@fluentic/style';
@@ -511,8 +520,8 @@ export const styles = {
 test('scope parent selectors use configured target prefix in production mode', () => {
   const scopeTargetPrefix = 'scope-';
   const compiler = createCompiler({
+    layer: false,
     css: {
-      layer: false,
       debugClassName: false,
       scopeTargetPrefix,
     },
@@ -544,7 +553,7 @@ const scope = style.scope().hover([
 test('compiler resolves cross-file constants slots and scoped overrides', () => {
   const slotsFilePath = testDir + 'fixtures/slots.ts';
   const slotsCode = readFileSync(slotsFilePath, 'utf8');
-  const slotsResult = createCompiler({ css: { classNamePrefix: 't', layer: false } }).transform(
+  const slotsResult = createCompiler({ layer: false, css: { classNamePrefix: 't' } }).transform(
     slotsCode,
     slotsFilePath,
   );
@@ -602,7 +611,7 @@ const rule = style({ color: 'red' });
 
 test('compiler preserves side effect imports during extraction', () => {
   const compiler = createCompiler({
-    css: { layer: false },
+    layer: false,
   });
   const result = compiler.transform(
     `
@@ -639,7 +648,7 @@ const rule = style({ color: 'red' });
   equal(filter('/tmp/project/node_modules/@acme/ui/nested/card.js'), false);
 
   const included = createCompiler({
-    css: { layer: false },
+    layer: false,
   }).transform(code, nodeModuleId);
 
   if (!included) throw new Error('expected explicit include to transform node_modules package');
@@ -745,7 +754,7 @@ test('webpack plugin prepends runtime to existing entries', () => {
 });
 
 test('compiler can disable extracted css layer wrapping', () => {
-  const compiler = createCompiler({ css: { layer: false } });
+  const compiler = createCompiler({ layer: false });
   const result = compiler.transform(
     `
 import { style } from '@fluentic/style';
@@ -791,7 +800,7 @@ const rule = style({ color: 'red' });
 });
 
 test('compiler extracts style imports from server entry', () => {
-  const compiler = createCompiler({ css: { layer: false } });
+  const compiler = createCompiler({ layer: false });
   const result = compiler.transform(
     `
 import { style } from '@fluentic/style/server';
@@ -812,7 +821,8 @@ const rule = style.slot({ display: 'grid', gap: 16 });
 
 test('compiler dedupes identical extracted style declarations', () => {
   const compiler = createCompiler({
-    css: { layer: false, localClassName: true },
+    layer: false,
+    css: { localClassName: true },
   });
   const result = compiler.transform(
     `
@@ -835,7 +845,7 @@ const two = style({ color: 'purple' });
 });
 
 test('compiler sorts extracted css by layer priority', () => {
-  const compiler = createCompiler({ css: { debugClassName: true, layer: false } });
+  const compiler = createCompiler({ layer: false, css: { debugClassName: true } });
   const result = compiler.transform(
     `
 import { style } from '@fluentic/style';
@@ -855,7 +865,7 @@ const rule = style({ marginTop: 2, margin: 1 }).hover({ color: 'red' }).media('(
 });
 
 test('compiler sorts direct scope overrides after slot shorthand priority', () => {
-  const compiler = createCompiler({ css: { debugClassName: true, layer: false } });
+  const compiler = createCompiler({ layer: false, css: { debugClassName: true } });
   const result = compiler.transform(
     `
 import { style } from '@fluentic/style';
@@ -879,7 +889,7 @@ const scope = style.scope([
 });
 
 test('compiler extracts createTheme token overrides to an extracted theme', () => {
-  const compiler = createCompiler({ css: { layer: false, themeNamePrefix: 'theme-' } });
+  const compiler = createCompiler({ layer: false, css: { themeNamePrefix: 'theme-' } });
   const result = compiler.transform(
     `
 import { createTheme, createToken } from '@fluentic/style';
@@ -901,7 +911,7 @@ export const dark = createTheme([color('red')], 'dark');
 });
 
 test('compiler extracts createTheme with imported nested tokens and aliases', () => {
-  const compiler = createCompiler({ css: { layer: false } });
+  const compiler = createCompiler({ layer: false });
   const result = compiler.transform(
     `
 import { createTheme, style } from '@fluentic/style';
@@ -944,7 +954,7 @@ export const styles = {
 });
 
 test('compiler keeps token identity across separately extracted theme and style modules', () => {
-  const compiler = createCompiler({ css: { layer: false } });
+  const compiler = createCompiler({ layer: false });
   const themeFile = fileURLToPath(new URL('./fixtures/theme_cross_themes.ts', import.meta.url));
   const stylesFile = fileURLToPath(new URL('./fixtures/theme_cross_styles.ts', import.meta.url));
 
@@ -976,7 +986,7 @@ test('compiler keeps token identity across separately extracted theme and style 
 });
 
 test('compiler rejects createTheme values that are not token overrides', () => {
-  const compiler = createCompiler({ css: { layer: false } });
+  const compiler = createCompiler({ layer: false });
   let error: unknown = null;
 
   try {
@@ -996,7 +1006,7 @@ export const theme = createTheme(['red']);
 });
 
 test('compiler default hashed class names do not need leading digit escapes', () => {
-  const compiler = createCompiler({ css: { layer: false } });
+  const compiler = createCompiler({ layer: false });
   const result = compiler.transform(
     `
 import { style } from '@fluentic/style';
@@ -1017,7 +1027,7 @@ const rule = style({ width: 18, display: 'flex', color: 'red' });
 });
 
 test('compiler debug extracted css keeps readable values and hash suffix', () => {
-  const compiler = createCompiler({ css: { debugClassName: true, layer: false } });
+  const compiler = createCompiler({ layer: false, css: { debugClassName: true } });
   const result = compiler.transform(
     `
 import { style } from '@fluentic/style';

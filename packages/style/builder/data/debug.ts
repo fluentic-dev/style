@@ -1,8 +1,12 @@
 import { hashString } from '../../utils/hash';
 import { type TraceCallsite } from '../../utils/trace';
+import { RUNTIME_CONFIG } from '../../config';
 
 export const LOC_LINE = 0;
 export const LOC_COL = 1;
+
+export const TRACE_STYLE = 0;
+export const TRACE_VALUE = 1;
 
 export const LABEL_SHORT = 0;
 export const LABEL_LONG = 1;
@@ -11,6 +15,7 @@ export const LABEL_FILE = 2;
 type DebugLoc = [
   line: number,
   column: number,
+  trace?: number,
 ];
 
 type DebugLabel = [
@@ -23,7 +28,7 @@ export type DebugData = {
   $$debug: true;
   loc: DebugLoc;
   label: DebugLabel;
-  fields?: Record<string, DebugLoc>;
+  fields?: Record<string, DebugLoc | Record<number, DebugLoc>>;
   vars?: Record<string, string>;
   sourceUrl: string;
   code?: string;
@@ -61,7 +66,9 @@ export function getDebugFieldCallsite(
   debug: DebugData | null,
   field: string,
 ): TraceCallsite | null {
-  const loc = debug?.fields?.[field];
+  if (!debug) return null;
+
+  const loc = getDebugFieldLoc(debug, field);
 
   return loc ? createDebugCallsite(loc, debug) : null;
 }
@@ -84,4 +91,19 @@ function createDebugCallsite(loc: DebugLoc, debug: DebugData): TraceCallsite {
     line,
     column,
   };
+}
+
+function getDebugFieldLoc(
+  debug: DebugData | null,
+  field: string,
+) {
+  const loc = debug?.fields?.[field];
+  if (!loc) return null;
+  if (Array.isArray(loc)) return loc;
+
+  const trace = RUNTIME_CONFIG.sourcemapTrace === 'value'
+    ? TRACE_VALUE
+    : TRACE_STYLE;
+
+  return loc[trace] ?? loc[TRACE_STYLE] ?? loc[TRACE_VALUE] ?? null;
 }

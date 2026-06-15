@@ -1,9 +1,15 @@
 import type { types } from '@babel/core';
 import { basename } from 'node:path';
 import { getLocalVarName } from '../../../../atomic/token';
+import { TRACE_VALUE, TRACE_STYLE } from '../../../../builder/data/debug';
 import { DEFAULT_CONFIG } from '../../../utils/constants';
 import { getCallLabel, getObjectPropertyKey, isStaticStyleValue } from '../../syntax';
 import type { CallArg, CallArgs } from '../../syntax/types';
+
+export type DebugTraceProperty = types.ObjectProperty & {
+  __styleSourcemapStyleLoc?: types.SourceLocation['start'];
+  __styleSourcemapValueLoc?: types.SourceLocation['start'];
+};
 
 export function buildDebugDataObject(
   t: typeof types,
@@ -12,6 +18,7 @@ export function buildDebugDataObject(
   sourceUrlRef: types.Expression,
   sourceContentRef: types.Expression | null,
   tokenVarPrefix: string = DEFAULT_CONFIG.tokenVarPrefix,
+  styleArg: CallArg = node.arguments[0],
 ) {
   const loc = node.loc?.start;
   const line = loc?.line ?? 1;
@@ -38,11 +45,11 @@ export function buildDebugDataObject(
     ),
     t.objectProperty(
       t.identifier('fields'),
-      buildFields(t, node.arguments[0]),
+      buildFields(t, styleArg),
     ),
     t.objectProperty(
       t.identifier('vars'),
-      buildVars(t, node.arguments[0], fileId, tokenVarPrefix),
+      buildVars(t, styleArg, fileId, tokenVarPrefix),
     ),
   ];
 
@@ -104,11 +111,35 @@ function buildFields(
 
     fields.push(t.objectProperty(
       t.stringLiteral(name),
-      buildLoc(t, loc.line, loc.column + 1),
+      buildFieldLoc(t, property as DebugTraceProperty, loc),
     ));
   }
 
   return t.objectExpression(fields);
+}
+
+function buildFieldLoc(
+  t: typeof types,
+  property: DebugTraceProperty,
+  loc: types.SourceLocation['start'],
+) {
+  const styleLoc = property.__styleSourcemapStyleLoc;
+  const valueLoc = property.__styleSourcemapValueLoc;
+
+  if (styleLoc && valueLoc) {
+    return t.objectExpression([
+      t.objectProperty(
+        t.numericLiteral(TRACE_STYLE),
+        buildLoc(t, styleLoc.line, styleLoc.column + 1),
+      ),
+      t.objectProperty(
+        t.numericLiteral(TRACE_VALUE),
+        buildLoc(t, valueLoc.line, valueLoc.column + 1),
+      ),
+    ]);
+  }
+
+  return buildLoc(t, loc.line, loc.column + 1);
 }
 
 function buildVars(
@@ -126,7 +157,7 @@ function buildVars(
     if (isStaticStyleValue(property.value)) continue;
 
     const name = getObjectPropertyKey(property);
-    const loc = property.loc?.start;
+    const loc = property.value.loc?.start ?? property.loc?.start;
     if (!name || !loc) continue;
 
     fields.push(t.objectProperty(

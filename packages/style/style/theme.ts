@@ -6,6 +6,10 @@ import type { StyleTokenOverride } from './token';
 
 let themeIdCounter = 0;
 
+export function resetStyleThemeIdCounter() {
+  themeIdCounter = 0;
+}
+
 export function createTheme(
   tokens: readonly StyleTokenOverride[],
   debugId?: string,

@@ -1,5 +1,5 @@
 import { LayerPlaceholder } from '../../atomic/layer';
-import type { BuildCssConfig } from '../../config';
+import type { BuildCssConfig, PriorityMode, SourcemapTrace } from '../../config';
 import type { StyleFn } from '../../style';
 import type { CssExtractRule } from '../extract';
 import type { BabelTransformSourceMap } from '../transform/utils/babel';
@@ -12,19 +12,20 @@ export const CompilerConstants = {
 
 export const Constants = CompilerConstants;
 
-export type CompilerCssOptions = BuildCssConfig & {
-  layer?: boolean;
-};
+export type CompilerCssOptions = BuildCssConfig;
 
 export type CompilerOptions = {
   styleFn?: StyleFn;
   css?: CompilerCssOptions;
+  layer?: boolean;
+  priorityMode?: PriorityMode;
   hoist?: boolean;
 
   importSources?: ImportSource[];
 
   getSourcemapFilePath?: GetSourcemapFilePathFn;
   devSourcemap?: 'sourceUrl' | 'sidecarServer' | 'sourceContent';
+  sourcemapTrace?: SourcemapTrace;
 };
 
 export type TransformDebugArgs = {

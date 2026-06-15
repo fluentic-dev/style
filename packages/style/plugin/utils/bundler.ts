@@ -43,6 +43,9 @@ export function getBuildMeta(dev: boolean, options: PluginOptions): BuildMeta {
     extract: !dev,
     hoist: options.hoist !== false,
     rsc: false,
+    layer: options.layer,
+    priorityMode: options.priorityMode,
+    sourcemapTrace: options.sourcemapTrace,
     css: options.css ?? null,
   };
 }

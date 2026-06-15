@@ -1,4 +1,5 @@
 import { defineConfig } from 'tsdown';
+import { fileURLToPath } from 'node:url';
 
 const JSX_RUNTIME_ENTRY = 'jsx/jsx-runtime.ts';
 const JSX_DEV_RUNTIME_ENTRY = 'jsx/jsx-dev-runtime.ts';
@@ -79,8 +80,17 @@ function createRuntimeModeConfig(
   mode: RuntimeMode,
   entry: Record<string, string>,
 ) {
+  const globalSheetAlias = mode === 'prod'
+    ? resolveLocal('runtime/sheet/global-prod.ts')
+    : mode === 'extracted'
+    ? resolveLocal('runtime/sheet/global-noop.ts')
+    : resolveLocal('runtime/sheet/global-runtime.ts');
+
   return defineConfig({
     entry,
+    alias: {
+      '../sheet/global-runtime': globalSheetAlias,
+    },
     define: {
       __FLUENTIC_RUNTIME_MODE__: JSON.stringify(mode),
     },
@@ -90,4 +100,8 @@ function createRuntimeModeConfig(
     sourcemap: true,
     platform: 'neutral',
   });
+}
+
+function resolveLocal(file: string) {
+  return fileURLToPath(new URL(file, import.meta.url));
 }

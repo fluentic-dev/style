@@ -538,6 +538,17 @@ export class FakeElement {
     return child;
   }
 
+  removeChild(child: any) {
+    const index = this.childNodes.indexOf(child);
+
+    if (index !== -1) {
+      this.childNodes.splice(index, 1);
+      child.parentNode = null;
+    }
+
+    return child;
+  }
+
   setAttribute(name: string, value: string) {
     this.attributes[name] = value;
   }

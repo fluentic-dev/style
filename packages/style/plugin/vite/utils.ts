@@ -15,7 +15,7 @@ export function createRuntimeModuleSource(
 }
 
 export function isVirtualModuleRequest(id: string, moduleId: string) {
-  const normalized = normalizeVirtualModuleId(id);
+  const normalized = normalizeViteModuleId(id);
 
   return normalized === moduleId || normalized === `\0${moduleId}`;
 }
@@ -32,7 +32,7 @@ export function replaceVirtualCssMarker(
   return text.replace(marker, css);
 }
 
-function normalizeVirtualModuleId(id: string) {
+export function normalizeViteModuleId(id: string) {
   const base = id.split('?')[0]?.split('#')[0] ?? id;
 
   if (base.startsWith('/@id/__x00__')) {
@@ -41,6 +41,10 @@ function normalizeVirtualModuleId(id: string) {
 
   if (base.startsWith('/@id/')) {
     return base.slice('/@id/'.length);
+  }
+
+  if (base.startsWith('/@fs/')) {
+    return base.slice('/@fs'.length);
   }
 
   return base;

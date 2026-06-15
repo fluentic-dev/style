@@ -1,5 +1,6 @@
 import type { StyleTokenData, StyleTokenOverride } from '../../style/token';
 import type { UniqueSymbol } from '../../utils/type';
+import type { DebugData } from './debug';
 import type {
   BUILDER_TYPE_SCOPE,
   BUILDER_TYPE_SLOT,
@@ -66,6 +67,8 @@ export type ExtractedScopeItem = [
 export type RuntimeItemData = {
   runtime: ItemRuntimeType;
   callsite: BuilderCallsite | null;
+  debug: DebugData | null;
+  debugField: string | null;
   dedupe: string;
   className: string;
   property: string;

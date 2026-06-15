@@ -24,6 +24,9 @@ export type RuntimeSharedConfig = CssConfig & {
 export type RuntimeConfig = RuntimeSharedConfig & {
   configVersion: number;
   buildMeta: BuildMeta | null;
+  layer: boolean;
+  priorityMode: PriorityMode;
+  sourcemapTrace: SourcemapTrace;
 
   isDev: boolean;
   isRSC: boolean;
@@ -46,6 +49,9 @@ export type RuntimeOptions = Partial<RuntimeSharedConfig> & {
   cache?: boolean | number;
   checkSelector?: boolean;
   sourcemap?: boolean;
+  sourcemapTrace?: SourcemapTrace;
+  layer?: boolean;
+  priorityMode?: PriorityMode;
   localClassName?: boolean;
 };
 
@@ -53,10 +59,16 @@ export type RuntimeOptions = Partial<RuntimeSharedConfig> & {
 
 export type BuildCssConfig = Partial<CssConfig>;
 
+export type SourcemapTrace = 'style' | 'value';
+export type PriorityMode = 'layer' | 'sort';
+
 export type BuildMeta = {
   dev: boolean;
   extract: boolean;
   hoist: boolean;
   rsc: boolean;
+  layer?: boolean;
+  priorityMode?: PriorityMode;
+  sourcemapTrace?: SourcemapTrace;
   css: BuildCssConfig | null;
 };

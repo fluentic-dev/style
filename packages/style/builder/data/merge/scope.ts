@@ -89,6 +89,8 @@ export function mergeScopeData<Style>(
         selector: overrideItem.selector,
         atRule,
         callsite: overrideItem.callsite ?? callsite,
+        debug: overrideItem.debug,
+        debugField: overrideItem.debugField,
         parentSelector,
       };
 

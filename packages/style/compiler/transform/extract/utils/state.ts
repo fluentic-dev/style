@@ -8,6 +8,7 @@ export type ExtractPluginState = {
   fileId: string;
   filePath: string;
   styleFilePath: string;
+  sourcemapTrace: 'style' | 'value';
   styleNames: Set<string>;
   bindings: EvalModuleBindings;
   imports: ImportMap;
@@ -27,6 +28,7 @@ export function getEvalScope(state: ExtractPluginState): EvalScope {
     resolveImport: state.resolveImport,
     filePath: state.filePath,
     styleFilePath: state.styleFilePath,
+    sourcemapTrace: state.sourcemapTrace,
     styleNames: state.styleNames,
   };
 }

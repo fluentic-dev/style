@@ -56,7 +56,10 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
 
     return {
       ...debugResult,
-      css: extractCss(rules, options.css || {}),
+      css: extractCss(rules, {
+        ...options.css,
+        layer: options.layer,
+      }),
       rules,
     };
   };
@@ -78,7 +81,10 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
   };
 
   const getExtractedCss = () => {
-    return extractCss(collector.getItems(), options.css || {});
+    return extractCss(collector.getItems(), {
+      ...options.css,
+      layer: options.layer,
+    });
   };
 
   const invalidateFile = (_info: CompilerInvalidateFileInfo) => {

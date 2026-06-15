@@ -1,4 +1,5 @@
 import type { LayerPriority } from '../../atomic/layer';
+import type { TRACE_VALUE, TRACE_STYLE } from '../../builder/data/debug';
 import type {
   BUILDER_TYPE_SCOPE,
   ExtractedScopeItem,
@@ -35,5 +36,6 @@ export type CssExtractRule = {
     filePath: string;
     line: number;
     column: number;
+    trace?: typeof TRACE_STYLE | typeof TRACE_VALUE;
   };
 };

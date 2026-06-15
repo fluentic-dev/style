@@ -59,6 +59,7 @@ export function createTracer(internal: CompilerInternal) {
         resolved.content,
         babel,
         (source, fromFile) => resolveImport(babel, source, fromFile),
+        internal.options.sourcemapTrace ?? 'style',
       );
       if (!bindings) return null;
 
@@ -90,6 +91,7 @@ function parseAndExtractModule(
   content: string,
   babel: typeof BabelCore,
   resolveImport: ResolveImportFn,
+  sourcemapTrace: 'style' | 'value',
 ): EvalModuleBindings | null {
   let ast: BabelCore.types.File | null = null;
 
@@ -180,6 +182,7 @@ function parseAndExtractModule(
     imports,
     styleNames,
     filePath,
+    sourcemapTrace,
     resolveImport,
   };
 

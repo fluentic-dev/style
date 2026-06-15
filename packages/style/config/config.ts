@@ -1,10 +1,12 @@
 import { ensureLayerPlaceholder } from '../atomic/layer';
+import { globalData } from '../utils/global';
 import { DEFAULT_RUNTIME_CONFIG } from './default';
-import type { BuildMeta, RuntimeConfig, RuntimeOptions } from './types';
+import type { BuildMeta, PriorityMode, RuntimeConfig, RuntimeOptions } from './types';
 
-export const RUNTIME_CONFIG: RuntimeConfig = {
-  ...DEFAULT_RUNTIME_CONFIG,
-};
+export const RUNTIME_CONFIG = globalData<RuntimeConfig>(
+  'runtime.config',
+  () => ({ ...DEFAULT_RUNTIME_CONFIG }),
+);
 
 let configVersion = 0;
 let runtimeOptions: RuntimeOptions | null = null;
@@ -15,8 +17,24 @@ export function configureRuntime(options: RuntimeOptions) {
   applyRuntimeConfig();
 }
 
-export function setBuildMeta(meta: BuildMeta) {
+export function setBuildMeta(meta: BuildMeta | null) {
   buildMeta = meta;
+  applyRuntimeConfig();
+}
+
+export function setSourcemapTraceMode(mode: RuntimeOptions['sourcemapTrace']) {
+  runtimeOptions = {
+    ...runtimeOptions,
+    sourcemapTrace: mode,
+  };
+  applyRuntimeConfig();
+}
+
+export function setPriorityMode(mode: PriorityMode) {
+  runtimeOptions = {
+    ...runtimeOptions,
+    priorityMode: mode,
+  };
   applyRuntimeConfig();
 }
 
@@ -25,12 +43,30 @@ function applyRuntimeConfig() {
 
   const options = Object.assign({}, runtimeOptions, buildMeta?.css);
 
-  const dev = buildMeta ? buildMeta.dev : (options.dev ?? false);
+  const dev = buildMeta
+    ? buildMeta.dev
+    : (options.dev ?? false);
+
+  const layer = runtimeOptions?.layer ??
+    buildMeta?.layer ??
+    DEFAULT_RUNTIME_CONFIG.layer;
+
+  const priorityMode = runtimeOptions?.priorityMode ??
+    buildMeta?.priorityMode ??
+    (layer === false ? 'sort' : DEFAULT_RUNTIME_CONFIG.priorityMode);
+
+  const sourcemapTrace = options.sourcemapTrace ??
+    buildMeta?.sourcemapTrace ??
+    config.sourcemapTrace;
 
   Object.assign(config, DEFAULT_RUNTIME_CONFIG);
 
   config.configVersion = ++configVersion;
+
   config.buildMeta = buildMeta;
+  config.layer = layer;
+  config.priorityMode = priorityMode;
+  config.sourcemapTrace = sourcemapTrace;
 
   config.isDev = dev;
   config.isRSC = buildMeta?.rsc || false;

@@ -1,4 +1,5 @@
 import { hashString } from '../utils/hash';
+import type { DebugData } from '../builder/data/debug';
 import { createStyleToken, type StyleToken, type StyleTokenOverride } from './token';
 
 export type ValueBase = string | number;
@@ -7,6 +8,7 @@ export type InferValue<T extends ValueBase> = T extends string ? string : T exte
 export type StyleValueFn<T extends ValueBase, Value extends ValueBase> = {
   (value: T): StyleToken<Value>;
   (value: T, provide: Value | StyleToken<Value>): StyleTokenOverride<Value>;
+  (value: T, provide: Value | StyleToken<Value>, debug: DebugData): StyleTokenOverride<Value>;
 };
 
 export function createToken<T>(value: T | StyleToken<T>, debugId?: string) {
@@ -52,7 +54,11 @@ export function createValues(
   }
 
   const fn = function ValueFn(...args: unknown[]) {
-    const [value, provide] = args as [ValueBase, ValueBase | StyleToken<ValueBase>];
+    const [value, provide, debug] = args as [
+      ValueBase,
+      ValueBase | StyleToken<ValueBase>,
+      DebugData | undefined,
+    ];
     const token = tokens.get(value);
 
     if (!token) {
@@ -61,6 +67,10 @@ export function createValues(
 
     if (args.length === 2) {
       return token(provide);
+    }
+
+    if (args.length >= 3) {
+      return token(provide, debug);
     }
 
     return token;

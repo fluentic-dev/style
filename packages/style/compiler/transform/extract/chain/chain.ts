@@ -1131,6 +1131,7 @@ function addStyleItems(
           filePath: propertyLoc.filePath ?? fileId,
           line: propertyLoc.line,
           column: propertyLoc.column,
+          trace: propertyLoc.trace,
         }
         : undefined,
     });

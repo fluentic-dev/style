@@ -250,6 +250,164 @@ const styles = {
   includes(result.code, `sourceUrl: _styleDebugSourceUrl`);
 });
 
+test('dev debug transform flattens raw and plain spreads into consuming callsites', () => {
+  const result = injectStyleDebugData(
+    `
+import { style } from '@fluentic/style';
+import { spacing } from './tokens';
+
+const pageContainerTokens = style.raw({
+  display: 'flex',
+  minHeight: '100vh',
+  padding: spacing.container,
+});
+
+const pageTitleTokens = style.plain({
+  fontSize: 48,
+});
+
+const pageStyles = {
+  container: style.slot({
+    ...pageContainerTokens,
+    ...pageTitleTokens,
+    color: 'black',
+  }),
+};
+`,
+    '/src/styles.ts',
+    {},
+    'http://127.0.0.1:4321/src/styles.ts',
+  );
+
+  notIncludes(result.code, `label: ["raw", "style.raw", "styles.ts"]`);
+  notIncludes(result.code, `label: ["plain", "style.plain", "styles.ts"]`);
+  includes(result.code, `"display": { 0: [17, 5], 1: [6, 3] }`);
+  includes(result.code, `"minHeight": { 0: [17, 5], 1: [7, 3] }`);
+  includes(result.code, `"padding": { 0: [17, 5], 1: [8, 3] }`);
+  includes(result.code, `"fontSize": { 0: [18, 5], 1: [12, 3] }`);
+  includes(result.code, `"color": [19, 5]`);
+  includes(result.code, `"padding": "--token-`);
+});
+
+test('dev debug transform can trace raw and plain spreads to value sources', () => {
+  const result = injectStyleDebugData(
+    `
+import { style } from '@fluentic/style';
+import { spacing } from './tokens';
+
+const pageContainerTokens = style.raw({
+  display: 'flex',
+  minHeight: '100vh',
+  padding: spacing.container,
+});
+
+const pageTitleTokens = style.plain({
+  fontSize: 48,
+});
+
+const pageStyles = {
+  container: style.slot({
+    ...pageContainerTokens,
+    ...pageTitleTokens,
+    color: 'black',
+  }),
+};
+`,
+    '/src/styles.ts',
+    {
+      sourcemapTrace: 'value',
+    },
+    'http://127.0.0.1:4321/src/styles.ts',
+  );
+
+  notIncludes(result.code, `label: ["raw", "style.raw", "styles.ts"]`);
+  notIncludes(result.code, `label: ["plain", "style.plain", "styles.ts"]`);
+  includes(result.code, `"display": { 0: [17, 5], 1: [6, 3] }`);
+  includes(result.code, `"minHeight": { 0: [17, 5], 1: [7, 3] }`);
+  includes(result.code, `"padding": { 0: [17, 5], 1: [8, 3] }`);
+  includes(result.code, `"fontSize": { 0: [18, 5], 1: [12, 3] }`);
+  includes(result.code, `"color": [19, 5]`);
+});
+
+test('dev debug transform injects scope item override callsites', () => {
+  const result = injectStyleDebugData(
+    `
+import { style } from '@fluentic/style';
+import { buttonBaseStyles, pageStyles } from './styles';
+import { themeColor } from './tokens';
+
+const heroButton = buttonBaseStyles.container({
+  backgroundColor: 'blue',
+  color: 'white',
+});
+
+const compactItems = [
+  pageStyles.panel({
+    padding: 12,
+    borderRadius: 18,
+  }),
+  themeColor('red'),
+];
+
+const exportedTitle = pageStyles.title({
+  fontSize: 36,
+});
+
+export { exportedTitle };
+
+export const primaryButtonTheme = style.scope([
+  buttonBaseStyles.container({
+    backgroundColor: 'green',
+    color: 'white',
+  }),
+  buttonBaseStyles.label({
+    letterSpacing: 0,
+  }),
+]);
+
+export const buttonBaseState = style.scope()
+  .hover([
+    buttonBaseStyles.container({
+      opacity: .86,
+    }),
+  ])
+  .active([
+    buttonBaseStyles.container({
+      transform: 'translateY(1px)',
+    }),
+  ]);
+
+export const pageTheme = style.scope([
+  heroButton,
+  ...compactItems,
+]).media('(max-width: 700px)', [
+  exportedTitle,
+  buttonBaseStyles.container({
+    minWidth: 0,
+  }),
+]);
+`,
+    '/src/styles.ts',
+    {},
+    'http://127.0.0.1:4321/src/styles.ts',
+  );
+
+  notIncludes(result.code, `label: ["scope", "style.scope", "styles.ts"]`);
+  notIncludes(result.code, `label: ["media", "style.media", "styles.ts"]`);
+  notIncludes(result.code, `label: ["hover", "style.hover", "styles.ts"]`);
+  notIncludes(result.code, `label: ["active", "style.active", "styles.ts"]`);
+  includes(result.code, `"backgroundColor": [7, 3]`);
+  includes(result.code, `"padding": [13, 5]`);
+  includes(result.code, `themeColor('red', {`);
+  includes(result.code, `"fontSize": [20, 3]`);
+  includes(result.code, `"backgroundColor": [27, 5]`);
+  includes(result.code, `"letterSpacing": [31, 5]`);
+  includes(result.code, `"opacity": [38, 7]`);
+  includes(result.code, `"transform": [43, 7]`);
+  includes(result.code, `"minWidth": [53, 5]`);
+  includes(result.code, `sourceUrl: _styleDebugSourceUrl`);
+});
+
 test('dev debug transform treats static style.priority values as static', () => {
   const result = injectStyleDebugData(
     `

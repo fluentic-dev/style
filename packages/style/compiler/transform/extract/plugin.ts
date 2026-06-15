@@ -62,6 +62,7 @@ export function createExtractPlugin(args: PluginArgs) {
         this.collector = args.collector;
         this.filePath = this.file?.opts?.filename ?? 'unknown';
         this.styleFilePath = args.styleFilePath ?? this.filePath;
+        this.sourcemapTrace = options.sourcemapTrace ?? 'style';
         this.fileId = args.styleFilePath ?? getProjectFileId(args.projectDir, this.file?.opts?.filename);
       },
 
