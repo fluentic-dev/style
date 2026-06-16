@@ -2,19 +2,26 @@ import { createThemeClassName } from '../atomic/theme';
 import { createThemeData } from '../builder/data/create';
 import type { ThemeData } from '../builder/data/data';
 import { RUNTIME_CONFIG } from '../config';
+import { globalData } from '../utils/global';
 import type { StyleTokenOverride } from './token';
 
-let themeIdCounter = 0;
+type IdCounter = { value: number; };
+
+let themeIdCounter: IdCounter | null = null;
+
+function getThemeIdCounter() {
+  return themeIdCounter ??= globalData('style.theme.idCounter', () => ({ value: 0 }));
+}
 
 export function resetStyleThemeIdCounter() {
-  themeIdCounter = 0;
+  getThemeIdCounter().value = 0;
 }
 
 export function createTheme(
   tokens: readonly StyleTokenOverride[],
   debugId?: string,
 ): ThemeData {
-  const id = debugId || (themeIdCounter++).toString();
+  const id = debugId || (getThemeIdCounter().value++).toString();
   const className = createThemeClassName(id, RUNTIME_CONFIG);
 
   return createThemeData(null, id, className, tokens);

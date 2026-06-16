@@ -1,5 +1,6 @@
 import type * as BabelTypes from '@babel/types';
 import { getAtomicClassName, getClassNameDedupe } from '../../../../atomic/classname';
+import { LayerDefaultPriority } from '../../../../atomic/layer';
 import { buildAtomicRule, getAtomicRuleLayerPriority } from '../../../../atomic/rule';
 import { getLocalVarName } from '../../../../atomic/token';
 import { getTokenVar, getTokenVarName } from '../../../../atomic/token';
@@ -21,6 +22,7 @@ import {
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
   ITEM_VALUE_NUMBER_PX,
+  ITEM_VALUE_TYPE_AT_RULE_REF,
   ITEM_VALUE_TYPE_VARIABLE,
 } from '../../../../builder/data/const';
 import { isScopeData, isStyleData } from '../../../../builder/data/is';
@@ -40,6 +42,7 @@ import {
   type StyleTokenOverride,
 } from '../../../../style/token';
 import type { StyleTransform } from '../../../../style/transform';
+import { isAtRuleRef } from '../../../../style/valueRef';
 import { hashString } from '../../../../utils/hash';
 import type { CompilerOptions } from '../../../compiler/types';
 import { DEFAULT_CONFIG } from '../../../utils/constants';
@@ -202,7 +205,10 @@ function compileStyleChainInto(
 ): boolean {
   if (chain.baseArgs.length > 0) {
     const styleArg = evaluateNode(chain.baseArgs[0], scope);
-    if (!styleArg.ok) return false;
+    if (!styleArg.ok) {
+      throwIfRequiredStaticStyleValue(styleArg);
+      return false;
+    }
     const styleObj = applyTransform(styleArg.value as Record<string, unknown>, transform);
     if (!addStyleItems(styleObj, null, null, atRules, fileId, type, slotId, items, rules, cssConfig)) {
       return false;
@@ -254,7 +260,10 @@ function compileSlotChain(
   // Base slot style
   if (chain.baseArgs.length > 0) {
     const styleArg = evaluateNode(chain.baseArgs[0], scope);
-    if (!styleArg.ok) return null;
+    if (!styleArg.ok) {
+      throwIfRequiredStaticStyleValue(styleArg);
+      return null;
+    }
     const styleObj = applyTransform(styleArg.value as Record<string, unknown>, transform);
     if (!addStyleItems(styleObj, null, null, null, fileId, BUILDER_TYPE_SLOT, slotId, items, rules, cssConfig)) {
       return null;
@@ -383,6 +392,7 @@ function compileScopeMethod(
       queryArg,
       method.args[argOffset],
     );
+    throwIfRequiredStaticSelectorValue(options, `style.${method.name}`, queryArg);
     if (!queryArg.ok) return false;
 
     const [before, after] = selectorStr.split(SELECTOR_ARGS);
@@ -691,6 +701,7 @@ function resolveOverrideMethod(
 
     const queryArg = evaluateNode(args[argOffset], scope);
     validateResolvedSelectorValue(options.checkSelector, `style.${methodName}`, sel, queryArg, args[argOffset]);
+    throwIfRequiredStaticSelectorValue(options, `style.${methodName}`, queryArg);
     if (!queryArg.ok) return null;
 
     const styleArg = evaluateNode(args[argOffset + 1], scope);
@@ -850,7 +861,10 @@ function compileChainMethod(
 
   if (selectorStr === SELECTOR_MERGE) {
     const styleArg = evaluateNode(method.args[0], scope);
-    if (!styleArg.ok) return false;
+    if (!styleArg.ok) {
+      throwIfRequiredStaticStyleValue(styleArg);
+      return false;
+    }
 
     return addStyleDataItems(
       styleArg.value,
@@ -909,7 +923,10 @@ function compileChainMethod(
     : selectorStr;
 
   const styleArg = evaluateNode(method.args[0], scope);
-  if (!styleArg.ok) return false;
+  if (!styleArg.ok) {
+    throwIfRequiredStaticStyleValue(styleArg);
+    return false;
+  }
   const styleObj = applyTransform(styleArg.value as Record<string, unknown>, transform);
 
   return addStyleItems(styleObj, itemSelector, null, atRules, fileId, type, slotId, items, cssRules, cssConfig);
@@ -949,6 +966,7 @@ function compileAtRuleMethod(
     queryArg,
     method.args[argOffset],
   );
+  throwIfRequiredStaticSelectorValue(options, `style.${method.name}`, queryArg);
   if (!queryArg.ok) return false;
 
   const [before, after] = selectorStr.split(SELECTOR_ARGS);
@@ -983,7 +1001,10 @@ function compileAtRuleMethod(
     }
     // Could not parse as chain — try to evaluate as static object
     const evaled = evaluateNode(styleArg, scope);
-    if (!evaled.ok) return false;
+    if (!evaled.ok) {
+      throwIfRequiredStaticStyleValue(evaled);
+      return false;
+    }
     return addStyleItems(
       applyTransform(evaled.value as Record<string, unknown>, transform),
       null,
@@ -999,7 +1020,10 @@ function compileAtRuleMethod(
   }
 
   const styleResult = evaluateNode(styleArg, scope);
-  if (!styleResult.ok) return false;
+  if (!styleResult.ok) {
+    throwIfRequiredStaticStyleValue(styleResult);
+    return false;
+  }
 
   return addStyleItems(
     applyTransform(styleResult.value as Record<string, unknown>, transform),
@@ -1043,6 +1067,7 @@ function compileArgMethod(
 
   const selectorArg = evaluateNode(argNode, scope);
   validateResolvedSelectorValue(options.checkSelector, `style.${method.name}`, selector, selectorArg, argNode);
+  throwIfRequiredStaticSelectorValue(options, `style.${method.name}`, selectorArg);
   if (!selectorArg.ok) return false;
 
   const styleResult = evaluateNode(styleArg, scope);
@@ -1105,7 +1130,12 @@ function addScopeDataItems(
       }
 
       if (isStyleTokenOverrideData(sourceItem)) {
-        addCompiledTokenItem(getStyleTokenId(sourceItem), sourceItem, getCompiledRuntimeValue(sourceItem), items);
+        addCompiledTokenItem(
+          getStyleTokenId(sourceItem),
+          sourceItem,
+          getCompiledRuntimeValue(sourceItem) ?? null,
+          items,
+        );
         j++;
         continue;
       }
@@ -1494,6 +1524,9 @@ function addStyleItems(
       continue;
     }
 
+    const ref = isAtRuleRef(value) ? value : null;
+    if (ref) value = ref.value;
+
     const token = isStyleTokenData(value) ? value : null;
 
     const runtimeValue = getCompiledRuntimeValue(value);
@@ -1560,7 +1593,18 @@ function addStyleItems(
       !!parentSelector,
     );
 
-    if (token || runtimeValue) {
+    if (ref && type !== BUILDER_TYPE_SCOPE) {
+      setCompiledItemValue(item, [
+        ITEM_VALUE_TYPE_AT_RULE_REF,
+        {
+          type: ref.type,
+          key: ref.key,
+          value: ref.value,
+          css: null,
+          tokens: ref.tokens,
+        },
+      ]);
+    } else if (token || runtimeValue) {
       setCompiledItemValue(item, [
         ITEM_VALUE_TYPE_VARIABLE,
         variableName ?? (token ? getTokenVarName(token, cssConfig.tokenVarPrefix) : ''),
@@ -1607,10 +1651,57 @@ function addStyleItems(
         : undefined,
     });
 
+    if (ref?.css) {
+      cssRules.push({
+        dedupe: ref.key,
+        className: ref.value,
+        css: ref.css,
+        priority: LayerDefaultPriority,
+        trace: propertyLoc
+          ? {
+            filePath: propertyLoc.filePath ?? fileId,
+            line: propertyLoc.line,
+            column: propertyLoc.column,
+          }
+          : undefined,
+      });
+    }
+
     i++;
   }
 
   return true;
+}
+
+function throwIfRequiredStaticStyleValue(result: EvalResult) {
+  if (result.ok) return;
+  if (
+    result.reason.includes('createCounterStyle') ||
+    result.reason.includes('createFontFace') ||
+    result.reason.includes('createFontPaletteValues') ||
+    result.reason.includes('createPositionTry') ||
+    result.reason.includes('createProperty') ||
+    result.reason.includes('createScrollTimeline') ||
+    result.reason.includes('createViewTimeline') ||
+    result.reason.includes('fontSrc')
+  ) {
+    throw new Error(result.reason);
+  }
+}
+
+function throwIfRequiredStaticSelectorValue(
+  options: CompilerOptions,
+  fnLabel: string,
+  result: EvalResult,
+) {
+  if (result.ok || options.checkSelector === false) return;
+
+  throw new Error([
+    'Invalid selector',
+    '',
+    `${fnLabel}(...)`,
+    `Selector argument must be statically analyzable: ${result.reason}`,
+  ].join('\n'));
 }
 
 function createCompiledItem(

@@ -1,7 +1,7 @@
 import type { types } from '@babel/core';
 import { basename } from 'node:path';
 import { getLocalVarName } from '../../../../atomic/token';
-import { TRACE_VALUE, TRACE_STYLE } from '../../../../builder/data/debug';
+import { TRACE_STYLE, TRACE_VALUE } from '../../../../builder/data/debug';
 import { DEFAULT_CONFIG } from '../../../utils/constants';
 import { getCallLabel, getObjectPropertyKey, isStaticStyleValue } from '../../syntax';
 import type { CallArg, CallArgs } from '../../syntax/types';

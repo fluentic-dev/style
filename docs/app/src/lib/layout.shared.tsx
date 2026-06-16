@@ -31,6 +31,6 @@ export function baseOptions(): BaseLayoutProps {
         active: 'url',
       },
     ],
-    githubUrl: 'https://github.com/fluentic',
+    githubUrl: 'https://github.com/fluentic-dev/style',
   };
 }

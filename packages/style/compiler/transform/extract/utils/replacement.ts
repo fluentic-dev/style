@@ -5,10 +5,12 @@ import {
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
   ITEM_VALUE_NUMBER_PX,
+  ITEM_VALUE_TYPE_AT_RULE_REF,
   ITEM_VALUE_TYPE_VARIABLE,
 } from '../../../../builder/data/const';
-import type { BuilderType, ExtractedItemValue, ExtractedItemValueMode } from '../../../../builder/data/state';
+import type { BuilderType, ExtractedItemValue } from '../../../../builder/data/state';
 import { getStyleTokenId, isStyleTokenData, type StyleTokenData } from '../../../../style/token';
+import type { AtRuleRefData } from '../../../../style/valueRef';
 import {
   FN_CREATE_EXTRACTED_SCOPE,
   FN_CREATE_EXTRACTED_SLOT,
@@ -96,7 +98,7 @@ function buildItemsArray(
       elements.push(t.stringLiteral(dedupe));
       elements.push(t.stringLiteral(className));
 
-      if (isItemVariableValue(value)) {
+      if (isItemMetadataValue(value)) {
         elements.push(buildItemValue(t, value, state, item, options));
       }
 
@@ -107,7 +109,7 @@ function buildItemsArray(
     elements.push(t.stringLiteral(dedupe));
     elements.push(t.stringLiteral(className));
 
-    if ((!emitLegacyShape || type === BUILDER_TYPE_SCOPE) && isItemVariableValue(value)) {
+    if ((!emitLegacyShape || type === BUILDER_TYPE_SCOPE) && isItemMetadataValue(value)) {
       elements.push(buildItemValue(t, value, state, item, options));
     }
 
@@ -127,10 +129,17 @@ function isCompiledTokenItem(
   return !Array.isArray(item) && item.kind === 'token';
 }
 
-function isItemVariableValue(
+function isItemMetadataValue(
   value: ExtractedItemValue | null | undefined,
-): value is [typeof ITEM_VALUE_TYPE_VARIABLE, string, unknown, ExtractedItemValueMode?] {
-  return !!value && value[0] === ITEM_VALUE_TYPE_VARIABLE;
+): value is Extract<
+  ExtractedItemValue,
+  [typeof ITEM_VALUE_TYPE_VARIABLE, string, unknown, unknown?] | [typeof ITEM_VALUE_TYPE_AT_RULE_REF, unknown]
+> {
+  return !!value &&
+    (
+      value[0] === ITEM_VALUE_TYPE_VARIABLE ||
+      value[0] === ITEM_VALUE_TYPE_AT_RULE_REF
+    );
 }
 
 function getItemType(item: CompiledCssItem): BuilderType {
@@ -181,16 +190,49 @@ function getItemValue(item: CompiledCssItem): ExtractedItemValue | undefined {
 
 function buildItemValue(
   t: typeof types,
-  value: [typeof ITEM_VALUE_TYPE_VARIABLE, string, unknown],
+  value: ExtractedItemValue,
   state: ExtractPluginState,
   item: CompiledCssItem,
   options: BuildReplacementOptions,
 ): types.ArrayExpression {
+  if (value[0] === ITEM_VALUE_TYPE_AT_RULE_REF) {
+    return buildAtRuleRefExpression(t, value[1], state);
+  }
+
+  if (value[0] !== ITEM_VALUE_TYPE_VARIABLE) {
+    throw new Error('Unsupported extracted item value');
+  }
+
   return t.arrayExpression([
     t.numericLiteral(value[0]),
     t.stringLiteral(value[1]),
     buildVariableValueExpression(t, value[2], state, item, options),
     ...(value[3] === ITEM_VALUE_NUMBER_PX ? [t.numericLiteral(ITEM_VALUE_NUMBER_PX)] : []),
+  ]);
+}
+
+function buildAtRuleRefExpression(
+  t: typeof types,
+  ref: AtRuleRefData,
+  state: ExtractPluginState,
+): types.ArrayExpression {
+  const props: types.ObjectProperty[] = [
+    t.objectProperty(t.identifier('type'), t.numericLiteral(ref.type)),
+    t.objectProperty(t.identifier('key'), t.stringLiteral(ref.key)),
+    t.objectProperty(t.identifier('value'), t.stringLiteral(ref.value)),
+    t.objectProperty(t.identifier('css'), ref.css ? t.stringLiteral(ref.css) : t.nullLiteral()),
+  ];
+
+  if (ref.tokens?.length) {
+    props.push(t.objectProperty(
+      t.identifier('tokens'),
+      t.arrayExpression(ref.tokens.map((token) => buildExtractedTokenExpression(t, token, state))),
+    ));
+  }
+
+  return t.arrayExpression([
+    t.numericLiteral(ITEM_VALUE_TYPE_AT_RULE_REF),
+    t.objectExpression(props),
   ]);
 }
 

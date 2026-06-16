@@ -1,4 +1,4 @@
-import { type DebugData, LOC_COL, LOC_LINE, TRACE_VALUE, TRACE_STYLE } from '../builder/data/debug';
+import { type DebugData, LOC_COL, LOC_LINE, TRACE_STYLE, TRACE_VALUE } from '../builder/data/debug';
 import { RUNTIME_CONFIG } from '../config';
 import { normalizeCallsiteSourceUrl } from '../utils/trace';
 import type { SheetCallsite } from './types';

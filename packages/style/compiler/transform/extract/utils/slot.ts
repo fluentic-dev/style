@@ -1,8 +1,14 @@
 import type { NodePath, types as BabelTypes } from '@babel/core';
+import { BUILDER_TYPE_SCOPE, BUILDER_TYPE_SLOT, BUILDER_TYPE_STYLE } from '../../../../builder/data/const';
+import {
+  createExtractedScope,
+  createExtractedSlot,
+  createExtractedStyle,
+  type ExtractedSlotTuple,
+  type ExtractedStyleTuple,
+} from '../../../../builder/extract';
 import { evalOk } from '../../evaluator/evaluator';
 import type { EvalSlotRef } from '../../evaluator/types';
-import { BUILDER_TYPE_SCOPE, BUILDER_TYPE_SLOT, BUILDER_TYPE_STYLE } from '../../../../builder/data/const';
-import { createExtractedScope, createExtractedSlot, createExtractedStyle } from '../../../../builder/extract';
 import { getObjectPropertyKey } from '../../syntax';
 import type { CompiledChainData, CompiledCssItem, CompiledItem } from '../chain';
 import type { ExtractPluginState } from './state';
@@ -93,13 +99,19 @@ function recordCompiledValueBinding(
 
 function getCompiledBindingValue(chain: CompiledChainData) {
   if (chain.type === 'style') {
-    return createExtractedStyle(chain.items.filter(Array.isArray).map((item) => toExtractedTuple(item as CompiledCssItem)));
+    return createExtractedStyle(
+      chain.items.filter(Array.isArray).map((item) =>
+        toExtractedTuple(item as CompiledCssItem)
+      ) as ExtractedStyleTuple[],
+    );
   }
 
   if (chain.type === 'slot' && chain.slotId) {
     return createExtractedSlot(
       chain.slotId,
-      chain.items.filter(Array.isArray).map((item) => toExtractedTuple(item as CompiledCssItem)),
+      chain.items.filter(Array.isArray).map((item) =>
+        toExtractedTuple(item as CompiledCssItem)
+      ) as ExtractedSlotTuple[],
     );
   }
 
@@ -118,24 +130,34 @@ function toExtractedScopeItem(item: CompiledItem): Parameters<typeof createExtra
   return toExtractedScopeTuple(item);
 }
 
-function toExtractedTuple(item: CompiledCssItem) {
+function toExtractedTuple(item: CompiledCssItem): ExtractedStyleTuple | ExtractedSlotTuple {
   const type = typeof item[0] === 'number' ? item[0] : BUILDER_TYPE_STYLE;
 
   if (type === BUILDER_TYPE_STYLE) {
     return typeof item[0] === 'number'
-      ? [item[1], item[2], item[3]].filter((value) => value !== undefined)
-      : [item[0], item[1], item[2]].filter((value) => value !== undefined);
+      ? toOptionalValueTuple(String(item[1]), String(item[2]), item[3])
+      : toOptionalValueTuple(String(item[0]), String(item[1]), item[2]);
   }
 
   if (type === BUILDER_TYPE_SLOT) {
-    return [item[2], item[3], item[4]].filter((value) => value !== undefined);
+    return toOptionalValueTuple(String(item[2]), String(item[3]), item[4]);
   }
 
   if (type === BUILDER_TYPE_SCOPE) {
-    return [item[2], item[3], item[4]].filter((value) => value !== undefined);
+    return toOptionalValueTuple(String(item[2]), String(item[3]), item[4]);
   }
 
-  return [item[2], item[3], item[4]].filter((value) => value !== undefined);
+  return toOptionalValueTuple(String(item[2]), String(item[3]), item[4]);
+}
+
+function toOptionalValueTuple(
+  dedupe: string,
+  className: string,
+  value: CompiledCssItem[number],
+): ExtractedStyleTuple {
+  return value === undefined
+    ? [dedupe, className]
+    : [dedupe, className, value as ExtractedStyleTuple[2]];
 }
 
 function toExtractedScopeTuple(item: CompiledCssItem): Parameters<typeof createExtractedScope>[0][number] {

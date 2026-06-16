@@ -1,8 +1,4 @@
-import {
-  normalizeDebugKeywordValue,
-  normalizePropertyName,
-  sanitizeDebugPropertyName,
-} from '../atomic/utils/debug';
+import { normalizeDebugKeywordValue, normalizePropertyName, sanitizeDebugPropertyName } from '../atomic/utils/debug';
 import {
   assertCompileError,
   before,
@@ -289,7 +285,7 @@ const scope = style.scope().hover([
   equal(parentHoverBaseIndex < childHoverIndex, true);
 });
 
-test('compiler evaluates style.priority helper as static priority tuple', () => {
+test('compiler evaluates style.value helper as static value tuple', () => {
   const compiler = createCompiler({
     layer: false,
     css: { debugClassName: true },
@@ -300,7 +296,7 @@ import { style } from '@fluentic/style';
 
 const styles = {
   container: style.slot({
-    display: style.priority('flex', 1),
+    display: style.value('flex', 1),
   }),
   hidden: style.slot({
     display: 'none',
@@ -329,10 +325,10 @@ test('compiler includes value priority in extracted class hash', () => {
 import { style } from '@fluentic/style';
 
 const one = style({
-  display: style.priority('flex', 1),
+  display: style.value('flex', 1),
 });
 const two = style({
-  display: style.priority('flex', 2),
+  display: style.value('flex', 2),
 });
 `,
     '/tmp/compiler-value-priority-class-hash.ts',
@@ -344,6 +340,247 @@ const two = style({
 
   equal(classNames.length, 2);
   notEqual(classNames[0], classNames[1]);
+});
+
+test('compiler extracts keyframes used as style value refs', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { createToken, style } from '@fluentic/style';
+import { createKeyframes } from '@fluentic/style/css';
+
+const enterTransform = createToken('translateY(8px)', 'enter-transform');
+const enter = createKeyframes({
+  from: {
+    opacity: 0,
+    transform: enterTransform,
+  },
+  to: {
+    opacity: 1,
+    transform: 'none',
+  },
+});
+
+const panel = style({
+  animationName: enter,
+  animationDuration: '180ms',
+});
+`,
+    '/tmp/compiler-keyframes.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(result.code, 'createExtractedStyle');
+  includes(result.code, 'type: 1');
+  includes(result.code, 'css: null');
+  includes(css, '@keyframes');
+  includes(css, 'from{');
+  includes(css, 'to{');
+  includes(css, 'kf-enter');
+  includes(css, 'transform: var(--token-enter-transform-');
+  includes(css, 'translateY(8px)');
+  includes(css, 'animation-name');
+});
+
+test('compiler extracts style.keyframes with style function transform', () => {
+  const custom = createStyleFn({
+    style: null as any,
+    selectors: {},
+    transform: {
+      transform(style: Record<string, unknown>) {
+        const result = { ...style };
+        if (result.tone === 'brand') {
+          delete result.tone;
+          result.color = 'blue';
+        }
+        return result;
+      },
+    },
+  }).style;
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+    styleFn: custom,
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const enter = style.keyframes({
+  from: {
+    tone: 'brand',
+    opacity: 0,
+  },
+  to: {
+    tone: 'brand',
+    opacity: 1,
+  },
+});
+
+const panel = style({
+  animationName: enter,
+  animationDuration: '180ms',
+});
+`,
+    '/tmp/compiler-style-keyframes.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(result.code, 'createExtractedStyle');
+  includes(result.code, 'type: 1');
+  includes(result.code, 'css: null');
+  includes(css, '@keyframes');
+  includes(css, 'from{');
+  includes(css, 'to{');
+  includes(css, 'color: blue;');
+  notIncludes(css, 'tone');
+  includes(css, 'animation-name');
+});
+
+test('compiler extracts font-face used as style value refs', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import { createFontFace, fontSrc } from '@fluentic/style/css';
+import { MONA_FONT_URL } from './fixtures/font_constants';
+
+const mona = createFontFace({
+  src: fontSrc(MONA_FONT_URL, 'woff2'),
+  fontWeight: 400,
+  fontStyle: 'normal',
+  fontDisplay: 'swap',
+});
+
+const panel = style({
+  fontFamily: mona,
+});
+`,
+    fileURLToPath(new URL('./compiler-font-face.ts', import.meta.url)),
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(result.code, 'createExtractedStyle');
+  includes(result.code, 'type: 2');
+  includes(result.code, 'css: null');
+  includes(css, '@font-face');
+  includes(css, 'ff-mona-');
+  includes(css, 'src: url("/fonts/Mona-Sans.woff2") format("woff2")');
+  includes(css, 'font-weight: 400;');
+  notIncludes(css, 'font-weight: 400px;');
+  includes(css, 'font-family');
+});
+
+test('compiler rejects font-face src that cannot resolve to a static string', () => {
+  const compiler = createCompiler({
+    layer: false,
+  });
+  let error: unknown = null;
+
+  try {
+    compiler.transform(
+      `
+import { style } from '@fluentic/style';
+import { createFontFace, fontSrc } from '@fluentic/style/css';
+import fontUrl from './Mona-Sans.woff2';
+
+const mona = createFontFace({
+  src: fontSrc(fontUrl),
+});
+
+const panel = style({
+  fontFamily: mona,
+});
+`,
+      '/tmp/compiler-font-face-unresolved.ts',
+    );
+  } catch (err) {
+    error = err;
+  }
+
+  assertCompileError(error, 'createFontFace descriptors must be statically analyzable');
+  assertCompileError(error, 'fontSrc url must be statically analyzable');
+});
+
+test('compiler extracts additional at-rule value refs', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import {
+  createCounterStyle,
+  createFontPaletteValues,
+  createPositionTry,
+  createProperty,
+  createScrollTimeline,
+  createViewTimeline,
+} from '@fluentic/style/css';
+
+const positionTry = createPositionTry({ insetArea: 'bottom', margin: '8px' });
+const counterStyle = createCounterStyle({ system: 'cyclic', symbols: '"*"', suffix: '" "' });
+const property = createProperty('--spin-angle', {
+  syntax: '"<angle>"',
+  inherits: false,
+  initialValue: '0deg',
+});
+const scrollTimeline = createScrollTimeline({ source: 'auto', orientation: 'block' });
+const viewTimeline = createViewTimeline({ subject: 'auto', axis: 'block' });
+const palette = createFontPaletteValues({ fontFamily: 'system-ui', basePalette: 1 });
+
+const one = style({
+  positionTryFallbacks: positionTry,
+  listStyleType: counterStyle,
+  transitionProperty: property,
+  animationTimeline: scrollTimeline,
+  fontPalette: palette,
+});
+
+const two = style({
+  animationTimeline: viewTimeline,
+});
+`,
+    '/tmp/compiler-at-rule-value-refs.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(result.code, 'type: 3');
+  includes(result.code, 'type: 4');
+  includes(result.code, 'type: 5');
+  includes(result.code, 'type: 6');
+  includes(result.code, 'type: 7');
+  includes(result.code, 'type: 8');
+  includes(result.code, 'css: null');
+  includes(css, '@position-try');
+  includes(css, 'inset-area: bottom;');
+  includes(css, '@counter-style');
+  includes(css, 'symbols: "*";');
+  includes(css, '@property --spin-angle');
+  includes(css, 'syntax: "<angle>";');
+  includes(css, '@scroll-timeline');
+  includes(css, '@view-timeline');
+  includes(css, '@font-palette-values');
+  includes(css, 'base-palette: 1;');
 });
 
 test('runtime builder preserves explicit zero value priority', () => {
@@ -467,6 +704,35 @@ export function makeRule(selector: string) {
   }
 
   assertCompileError(error, 'Invalid selector\n\nstyle.select(...)');
+  assertCompileError(error, 'Selector argument must be statically analyzable');
+});
+
+test('compiler rejects media helper calls that cannot resolve to static values', () => {
+  const compiler = createCompiler({ layer: false });
+  let error: unknown = null;
+
+  try {
+    compiler.transform(
+      `
+import { style } from '@fluentic/style';
+
+const Breakpoints = {
+  min(value: number) {
+    return \`(min-width: \${value}px)\`;
+  },
+};
+
+const rule = style({ color: 'red' }).media(Breakpoints.min(500), {
+  color: 'blue',
+});
+`,
+      '/tmp/compiler-media-helper-call.ts',
+    );
+  } catch (err: unknown) {
+    error = err;
+  }
+
+  assertCompileError(error, 'Invalid selector\n\nstyle.media(...)');
   assertCompileError(error, 'Selector argument must be statically analyzable');
 });
 
@@ -1428,11 +1694,11 @@ const rule = style({
 
 test('compiler debug property and value lengths are applied independently', () => {
   const compiler = createCompiler({
+    layer: false,
     css: {
       debugClassName: true,
       debugPropertyLength: 16,
       debugValueLength: 6,
-      layer: false,
     },
   });
   const result = compiler.transform(
@@ -1459,11 +1725,11 @@ const rule = style({
 
 test('compiler debug names keep common keyword values with tight property length', () => {
   const compiler = createCompiler({
+    layer: false,
     css: {
       debugClassName: true,
       debugPropertyLength: 8,
       debugValueLength: 10,
-      layer: false,
     },
   });
   const result = compiler.transform(

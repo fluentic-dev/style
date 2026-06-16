@@ -26,6 +26,17 @@ import type { CompilerOptions } from '../compiler';
 import { configureRuntime, RUNTIME_CONFIG } from '../config';
 import { setBuildMeta } from '../config/build';
 import { setDevRuntimeOptions } from '../config/config';
+import {
+  createCounterStyle,
+  createFontFace,
+  createFontPaletteValues,
+  createKeyframes,
+  createPositionTry,
+  createProperty,
+  createScrollTimeline,
+  createViewTimeline,
+  fontSrc,
+} from '../css';
 import { traceDevSourcemaps } from '../dev/trace';
 import { enableStyleDevUtils } from '../dev/utils';
 import { createPluginCompiler, createTransformFilter, getRuntimeImportAliases } from '../plugin/utils';
@@ -59,14 +70,21 @@ export {
   combineStyle,
   configureRuntime,
   createCombinedStylePool,
+  createCounterStyle,
   createDevSheet,
   createExtractedScope,
   createExtractedSlot,
   createExtractedStyle,
   createExtractedToken,
+  createFontFace,
+  createFontPaletteValues,
+  createKeyframes,
   createPluginCompiler,
+  createPositionTry,
   createProdSheet,
+  createProperty,
   createScopeBuilder,
+  createScrollTimeline,
   createSlotBuilder,
   createStyleBuilder,
   createStyleFn,
@@ -75,9 +93,11 @@ export {
   createToken,
   createTokens,
   createTransformFilter,
+  createViewTimeline,
   ELEMENT_CSS_DATA_ATTR,
   enableStyleDevUtils,
   fileURLToPath,
+  fontSrc,
   getClassName,
   getCombinedStyleScopes,
   getGlobalSheet,

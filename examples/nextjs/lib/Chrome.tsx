@@ -12,7 +12,7 @@ const links = [
   ['/theme', 'Theme'],
   ['/client', 'Client hook'],
   ['/sample', 'Sample'],
-] as const;
+];
 
 export function Chrome(props: { children: ReactNode; }) {
   const css = combineStyle(page);

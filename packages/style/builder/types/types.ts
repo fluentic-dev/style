@@ -1,6 +1,6 @@
 import type { Selector } from '../../selector';
 import type { StyleObject } from '../../style/types';
-import type { DebugData, ScopeData, SlotData, SlotOverrideData, StyleData } from '../data';
+import type { ScopeData, SlotData, SlotOverrideData, StyleData } from '../data';
 import type { ScopeSelectorFns, ScopeSelfFn, SlotOverrideSelectorFns, SlotSelectorFns, StyleSelectorFns } from './fns';
 
 export type { ScopeSelfFn };
@@ -37,7 +37,7 @@ export type StyleBuilder<Style, Selectors> =
 
 export type SlotBuilder<Style, Selectors> =
   & SlotData<Style>
-  & ((style?: StyleObject<Style>, debug?: DebugData) => SlotOverrideBuilder<Style, Selectors>)
+  & ((style?: StyleObject<Style>) => SlotOverrideBuilder<Style, Selectors>)
   & SlotBuilderFns<Style, Selectors>;
 
 export type SlotOverrideBuilder<Style, Selectors> =

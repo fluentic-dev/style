@@ -11,12 +11,12 @@ export default [
     entry: {
       'index': 'index.ts',
       'server': 'server.ts',
+      'css/index': 'css/index.ts',
       'config/index': 'config/index.ts',
       'config/build': 'config/build.ts',
       'dev': 'dev/index.ts',
       'runtime/rsc': 'runtime/rsc/index.ts',
       'runtime/style/index': 'runtime/style/index.ts',
-      'builder/extract/index': 'builder/extract/index.ts',
       'plugin/nextjs/runtime/client': 'plugin/nextjs/runtime/client.ts',
       'plugin/nextjs/runtime/server': 'plugin/nextjs/runtime/server.ts',
     },
@@ -35,6 +35,8 @@ export default [
   createRuntimeModeConfig('extracted', {
     'jsx-runtime/extracted': JSX_RUNTIME_ENTRY,
     'jsx-dev-runtime/extracted': JSX_DEV_RUNTIME_ENTRY,
+    'runtime/extract': 'runtime/extract/index.ts',
+    'builder/extract/index': 'builder/extract/index.ts',
   }),
 
   createRuntimeModeConfig('prod', {
@@ -84,7 +86,7 @@ function createRuntimeModeConfig(
     ? resolveLocal('runtime/sheet/global-prod.ts')
     : mode === 'extracted'
     ? resolveLocal('runtime/sheet/global-noop.ts')
-    : resolveLocal('runtime/sheet/global-runtime.ts');
+    : resolveLocal('runtime/sheet/global.ts');
   const checkSelectorAlias = mode === 'full'
     ? resolveLocal('builder/data/check_selector.ts')
     : resolveLocal('builder/data/check_selector.noop.ts');
@@ -92,10 +94,10 @@ function createRuntimeModeConfig(
   return defineConfig({
     entry,
     alias: {
-      '../sheet/global-runtime': globalSheetAlias,
+      '../sheet/global': globalSheetAlias,
       './data/check_selector': checkSelectorAlias,
       ...(mode === 'extracted'
-        ? { './getClassName': resolveLocal('runtime/core/getClassName.extracted.ts') }
+        ? { './getClassName': resolveLocal('runtime/extract/getClassName.ts') }
         : {}),
     },
     define: {

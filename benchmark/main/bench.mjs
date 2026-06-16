@@ -1,8 +1,8 @@
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium } from 'playwright-core';
-import { getBenchmarkSelection, getUniqueBuildApps } from './contract.mjs';
+import { getBenchmarkSelection, getBuildKey, getUniqueBuildApps } from './contract.mjs';
 
 const presets = {
   quick: {
@@ -67,6 +67,7 @@ const stdev = (n) => {
   return Math.sqrt(variance);
 };
 const formatMs = (value) => Number.isFinite(value) ? value.toFixed(2) : 'invalid';
+const formatKb = (value) => ((value ?? 0) / 1024).toFixed(1);
 
 async function runCmd(cmd, args) {
   await new Promise((resolve, reject) => {
@@ -82,7 +83,7 @@ async function startPreview(filter, port) {
   const args = [
     '--filter',
     filter,
-    'preview',
+    'serve',
     '--host',
     '127.0.0.1',
     '--port',
@@ -112,10 +113,42 @@ async function startPreview(filter, port) {
   return { proc, localUrl };
 }
 
+function getDistStats(app) {
+  const packageName = app.filter.replace('@benchmark/', '');
+  const distPath = join(process.cwd(), '..', 'apps', packageName, app.distDir || 'dist');
+
+  if (!existsSync(distPath)) return { distBytes: 0, jsBytes: 0, cssBytes: 0, fileCount: 0 };
+
+  const stats = { distBytes: 0, jsBytes: 0, cssBytes: 0, fileCount: 0 };
+
+  function walk(dir) {
+    for (const entry of readdirSync(dir)) {
+      const path = join(dir, entry);
+      const stat = statSync(path);
+
+      if (stat.isDirectory()) {
+        walk(path);
+        continue;
+      }
+
+      stats.fileCount += 1;
+      stats.distBytes += stat.size;
+      if (path.endsWith('.js')) stats.jsBytes += stat.size;
+      if (path.endsWith('.css')) stats.cssBytes += stat.size;
+    }
+  }
+
+  walk(distPath);
+  return stats;
+}
+
+const buildResults = new Map();
+
 for (const app of getUniqueBuildApps(apps)) {
   const args = ['--filter', app.filter, app.buildScript || 'build'];
   if (app.distDir) args.push('--outDir', app.distDir);
   await runCmd('pnpm', args);
+  buildResults.set(getBuildKey(app), getDistStats(app));
 }
 const chromeExecutablePath = getChromeExecutablePath();
 const browser = await chromium.launch({
@@ -202,6 +235,7 @@ const report = {
     filter: app.filter,
     lane: app.lane || 'static-dashboard',
     experimental: !!app.experimental,
+    build: buildResults.get(getBuildKey(app)),
   })),
   skippedApps: selection.skipped,
   results: summary,
@@ -210,6 +244,7 @@ const outputPath = join(OUT_DIR, `bench-${Date.now()}.json`);
 writeFileSync(outputPath, JSON.stringify(report, null, 2));
 
 console.log(`\nReact app benchmark report: ${outputPath}\n`);
+const appByName = new Map(apps.map((app) => [app.name, app]));
 console.table(
   summary.map((r) => ({
     scenario: r.scenario,
@@ -222,10 +257,18 @@ console.table(
     remountMedian: formatMs(r.remount.median),
     routeMedian: formatMs(r.route.median),
     updateStyleMedian: formatMs(r.updateStyle.median),
+    jsKb: formatKb(getBuildStats(r.library)?.jsBytes),
+    cssKb: formatKb(getBuildStats(r.library)?.cssBytes),
     rules: r.styleTelemetry?.ruleCount ?? '',
     styleTags: r.styleTelemetry?.styleTagCount ?? '',
   })),
 );
+
+function getBuildStats(appName) {
+  const app = appByName.get(appName);
+
+  return app ? buildResults.get(getBuildKey(app)) : null;
+}
 
 function summarizeRuns(scenario, library, runs) {
   if (!runs.length) {

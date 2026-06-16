@@ -9,9 +9,9 @@ import {
   configureRuntime,
   createCombinedStylePool,
   createCompiler,
-  createStyleFn,
   createDebugSlot,
   createDebugStyle,
+  createStyleFn,
   type DebugData,
   deepEqual,
   equal,
@@ -31,8 +31,8 @@ import {
   notIncludes,
   resolveStyleProp,
   RUNTIME_CONFIG,
-  setBuildMeta,
   selector,
+  setBuildMeta,
   style,
   styles,
   test,
@@ -412,13 +412,13 @@ export const pageTheme = style.scope([
   includes(result.code, `sourceUrl: _styleDebugSourceUrl`);
 });
 
-test('dev debug transform treats static style.priority values as static', () => {
+test('dev debug transform treats static style.value values as static', () => {
   const result = injectStyleDebugData(
     `
 import { style } from '@fluentic/style';
 
 const styles = {
-  card: style({ padding: style.priority(18, 2) }),
+  card: style({ padding: style.value(18, 2) }),
 };
 `,
     '/src/page.tsx',

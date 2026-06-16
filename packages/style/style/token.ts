@@ -1,5 +1,6 @@
-import { symbol } from '../utils/const';
 import type { DebugData } from '../builder/data/debug';
+import { symbol } from '../utils/const';
+import { globalData } from '../utils/global';
 
 export const TOKEN_ID: unique symbol = symbol('style:token');
 export const TOKEN_OVERRIDE: unique symbol = symbol('style:token.override');
@@ -24,10 +25,16 @@ export type StyleToken<T = unknown> = StyleTokenData<T> & {
   (value: T | StyleTokenData<T>, debug?: DebugData): StyleTokenOverride<T>;
 };
 
-let tokenIdCounter = 0;
+type IdCounter = { value: number; };
+
+let tokenIdCounter: IdCounter | null = null;
+
+function getTokenIdCounter() {
+  return tokenIdCounter ??= globalData('style.token.idCounter', () => ({ value: 0 }));
+}
 
 export function resetStyleTokenIdCounter() {
-  tokenIdCounter = 0;
+  getTokenIdCounter().value = 0;
 }
 
 export function createStyleToken<T>(value: T | StyleToken<T>, debugId?: string) {
@@ -35,7 +42,7 @@ export function createStyleToken<T>(value: T | StyleToken<T>, debugId?: string) 
     return createStyleTokenOverride(token, value, debug);
   };
 
-  token[TOKEN_ID] = debugId || (tokenIdCounter++).toString();
+  token[TOKEN_ID] = debugId || (getTokenIdCounter().value++).toString();
 
   if (isStyleTokenData<T>(value)) {
     token.value = value.value;

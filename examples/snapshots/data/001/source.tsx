@@ -8,7 +8,7 @@ const styles = {
   container: style.slot({
     fontFamily: Fonts.Default,
     width: [1, 18],
-    display: style.priority('flex', 1),
+    display: style.value('flex', 1),
   }).hover({
     width: 20,
     backgroundColor: token,

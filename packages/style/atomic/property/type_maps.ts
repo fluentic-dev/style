@@ -1,7 +1,7 @@
-import type { CSSProperties } from 'react';
+import type { CSSPropertyName } from '../utils/types';
 import { INTERMEDIATE, LONGHAND, type PropertyTypeRecord, SHORTHAND } from './types';
 
-type TypeMap = PropertyTypeRecord<keyof CSSProperties>;
+type TypeMap = PropertyTypeRecord<CSSPropertyName>;
 
 export const animation: TypeMap = {
   animation: SHORTHAND,

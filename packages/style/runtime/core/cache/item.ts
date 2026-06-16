@@ -200,8 +200,9 @@ function resolveItems(
           items.push(item);
         }
 
-        if (targetSlotId === slotId && (item[4] === true || item[5] === true)) {
-          items.push(getScopeParentItem(item[3]));
+        const hasParentSelector = item[4] === true || item[5] === true;
+        if (targetSlotId === slotId && hasParentSelector) {
+          items.push(getScopeParentItem(String(item[3])));
         }
 
         continue;

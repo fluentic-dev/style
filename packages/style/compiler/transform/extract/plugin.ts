@@ -10,11 +10,12 @@ import {
   IMPORT_EXTRACT,
 } from '../../utils/constants';
 import { createImportSourceMatcher } from '../../utils/import_source';
+import { normalizePath } from '../../utils/path';
 import { evaluateNode } from '../evaluator/evaluator';
 import { getImportedName } from '../syntax';
+import { annotateAtRuleDeclaration } from '../syntax/static_ids';
 import { babelPlugin } from '../utils/babel';
 import { getSelectorCompileErrorNode } from '../utils/selector';
-import { normalizePath } from '../../utils/path';
 import { compileChain, extractStyleChain } from './chain';
 import { pruneUnusedStyleImports } from './utils/imports';
 import { buildReplacement } from './utils/replacement';
@@ -58,6 +59,7 @@ export function createExtractPlugin(args: PluginArgs) {
         this.usedHelpers = new Set<string>();
         this.hoistedDeclarations = [];
         this.runtimeTokenIndex = 0;
+        this.options = options;
         this.importSourceMatcher = createImportSourceMatcher(options.importSources ?? null);
         this.resolveImport = (source, fromFile) => args.tracer.resolveImport(babel, source, fromFile);
         this.collector = args.collector;
@@ -103,6 +105,7 @@ export function createExtractPlugin(args: PluginArgs) {
             if (decl.id.type !== 'Identifier' || !decl.init) return;
 
             annotateTokenDeclaration(decl, state, t);
+            annotateAtRuleDeclaration(decl, state, t);
 
             const name = decl.id.name;
             const scope = getEvalScope(state);
@@ -120,6 +123,7 @@ export function createExtractPlugin(args: PluginArgs) {
             if (decl.id.type !== 'Identifier' || !decl.init) return;
 
             annotateTokenDeclaration(decl, state, t);
+            annotateAtRuleDeclaration(decl, state, t);
 
             const name = decl.id.name;
             const scope = getEvalScope(state);

@@ -53,7 +53,7 @@ async function startPreview(app) {
   const args = [
     '--filter',
     app.filter,
-    'preview',
+    'serve',
     '--host',
     '127.0.0.1',
     '--port',
@@ -278,12 +278,6 @@ async function runCorrectness(browser, app, localUrl) {
 
       failures.push(...await runDomAssertions(page, correctnessContract.structureAssertions, viewport.name));
 
-      await page.goto(`${localUrl}?${correctnessContract.detailsQuery}${app.extraQuery}`, {
-        waitUntil: 'load',
-      });
-      await page.waitForSelector('h1', { timeout: RENDER_TIMEOUT_MS });
-      failures.push(...await runDomAssertions(page, correctnessContract.detailsAssertions, viewport.name));
-
       const snapshot = {
         viewport: viewport.name,
         styleTagCount: await page.locator('style').count(),
@@ -305,6 +299,12 @@ async function runCorrectness(browser, app, localUrl) {
 
       snapshots.push(snapshot);
       failures.push(...compareStyleContract(snapshot, app.styleContract, viewport.name));
+
+      await page.goto(`${localUrl}?${correctnessContract.detailsQuery}${app.extraQuery}`, {
+        waitUntil: 'load',
+      });
+      await page.waitForSelector('h1', { timeout: RENDER_TIMEOUT_MS });
+      failures.push(...await runDomAssertions(page, correctnessContract.detailsAssertions, viewport.name));
     } finally {
       await page.close();
     }
@@ -359,6 +359,22 @@ function compareStyleContract(snapshot, styleContract, viewportName) {
       assertion: 'fluentic runtime style tags',
       reason:
         `Expected at least ${styleContract.minFluenticRuntimeTags} Fluentic runtime style tags, got ${snapshot.fluenticRuntimeStyleTagCount}`,
+    });
+  }
+
+  if (styleContract.minRules !== undefined && snapshot.ruleCount < styleContract.minRules) {
+    failures.push({
+      viewport: viewportName,
+      assertion: 'stylesheet rule count',
+      reason: `Expected at least ${styleContract.minRules} stylesheet rules, got ${snapshot.ruleCount}`,
+    });
+  }
+
+  if (styleContract.maxRules !== undefined && snapshot.ruleCount > styleContract.maxRules) {
+    failures.push({
+      viewport: viewportName,
+      assertion: 'stylesheet rule count',
+      reason: `Expected at most ${styleContract.maxRules} stylesheet rules, got ${snapshot.ruleCount}`,
     });
   }
 

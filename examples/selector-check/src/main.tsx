@@ -25,15 +25,15 @@ function App() {
   const modeLabel = getModeLabel();
 
   return (
-    <main className="app-shell">
-      <section className="toolbar">
+    <main className='app-shell'>
+      <section className='toolbar'>
         <div>
-          <p className="eyebrow">Selector check</p>
+          <p className='eyebrow'>Selector check</p>
           <h1>Runtime selector validation cases</h1>
-          <p className="mode-note">{modeLabel}</p>
+          <p className='mode-note'>{modeLabel}</p>
         </div>
         <button
-          className="run-all"
+          className='run-all'
           onClick={() => {
             const results = cases.map(runCase);
             setResult(
@@ -52,18 +52,18 @@ function App() {
         </button>
       </section>
 
-      <section className="case-grid">
+      <section className='case-grid'>
         {groups.map((group) => (
-          <div className="case-group" key={group.name}>
+          <div className='case-group' key={group.name}>
             <h2>{group.name}</h2>
-            <div className="case-list">
+            <div className='case-list'>
               {group.items.map((item) => (
                 <button
                   className={'case-button ' + (item.expectError ? 'expect-error' : 'expect-pass')}
                   key={item.name}
                   onClick={() => setResult(runCase(item))}
                 >
-                  <span className="case-button-header">
+                  <span className='case-button-header'>
                     <span>{item.name}</span>
                     <small>{item.expectError ? 'should throw' : 'should pass'}</small>
                   </span>
@@ -76,7 +76,7 @@ function App() {
       </section>
 
       <section className={'result-panel ' + (result?.status ?? 'idle')}>
-        <div className="result-heading">
+        <div className='result-heading'>
           <span>{result ? result.status : 'idle'}</span>
           <strong>{result ? result.name + ' - ' + result.expectation : 'Run a selector case'}</strong>
         </div>

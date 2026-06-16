@@ -1,6 +1,5 @@
 import type { Selector } from '../../selector';
 import type { StyleObject } from '../../style/types';
-import type { DebugData } from '../data';
 import type { ScopeItems } from '../data/merge/scope';
 import type { scopeRule, slotOverrideRule, slotRule, styleRule } from './alias';
 import type { AtRuleStyleData, MergeRuleStyleData } from './types';
@@ -119,17 +118,14 @@ type GetScopeFn<Selector, Style, Result> = GetFn<SelectorString<Selector>, {
 
 export type StyleSelfFn<Style, Selectors> = (
   style?: StyleObject<Style>,
-  debug?: DebugData,
 ) => ReturnType<typeof styleRule<Style, Selectors>>;
 
 export type SlotSelfFn<Style, Selectors> = (
   style?: StyleObject<Style>,
-  debug?: DebugData,
 ) => ReturnType<typeof slotRule<Style, Selectors>>;
 
 export type ScopeSelfFn<Style, Selectors> = (
   styles?: ScopeItems<Style>,
-  debug?: DebugData,
 ) => ReturnType<typeof scopeRule<Style, Selectors>>;
 
 export type StyleSelectorFns<Style, Selectors> = {

@@ -1,7 +1,7 @@
+import { globalData } from '../../utils/global';
 import { createSourceMapComment, type SourcemapRule } from '../sourcemap';
 import type { SheetRule } from '../types';
 import { createStyleTag, insertStyleTagAfter } from '../utils';
-import { globalData } from '../../utils/global';
 
 export type DevRuleTag = {
   tag: HTMLStyleElement;

@@ -1,12 +1,11 @@
 import type { LayerPriority } from '../../atomic/layer';
-import type { TRACE_VALUE, TRACE_STYLE } from '../../builder/data/debug';
 import type {
-  BUILDER_TYPE_SCOPE,
   ExtractedScopeItem,
   ExtractedSlotItem,
   ExtractedSlotOverrideItem,
   ExtractedStyleItem,
 } from '../../builder/data';
+import type { TRACE_STYLE, TRACE_VALUE } from '../../builder/data/debug';
 
 export type CssExtractStyleItem = ExtractedStyleItem;
 
@@ -14,12 +13,7 @@ export type CssExtractSlotItem = ExtractedSlotItem;
 
 export type CssExtractSlotOverrideItem = ExtractedSlotOverrideItem;
 
-export type CssExtractScopeItem = [
-  type: typeof BUILDER_TYPE_SCOPE,
-  slotId: ExtractedScopeItem[1],
-  dedupe: ExtractedScopeItem[2],
-  className: ExtractedScopeItem[3],
-];
+export type CssExtractScopeItem = ExtractedScopeItem;
 
 export type CssExtractItem =
   | CssExtractStyleItem

@@ -5,6 +5,7 @@ import { getCssPropertyValue, shouldAppendCssPx } from '../../../atomic/value';
 import { RUNTIME_CONFIG } from '../../../config';
 import { isStyleTokenData, isStyleTokenOverrideData, type StyleTokenData } from '../../../style/token';
 import type { StyleObject, StyleValueTuple } from '../../../style/types';
+import { type AtRuleRef, isAtRuleRef } from '../../../style/valueRef';
 import {
   BUILDER_SLOT_ID,
   BUILDER_STATE,
@@ -12,6 +13,7 @@ import {
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
   ITEM_VALUE_NUMBER_PX,
+  ITEM_VALUE_TYPE_AT_RULE_REF,
   ITEM_VALUE_TYPE_VARIABLE,
 } from '../const';
 import type { BuilderCallsite, BuilderData, StyleData } from '../data';
@@ -59,6 +61,7 @@ export function mergeBuilderData<Data extends BuilderData>(
   let className: string;
   let dedupe: string;
   let token: StyleTokenData | null;
+  let ref: AtRuleRef | null;
   let variableName: string | null;
   let lookupIndex: number;
 
@@ -100,6 +103,9 @@ export function mergeBuilderData<Data extends BuilderData>(
         valueRaw = (valueRaw as StyleValueTuple)[1];
       }
 
+      ref = isAtRuleRef(valueRaw) ? valueRaw : null;
+      if (ref) valueRaw = ref.value;
+
       token = isStyleTokenData(valueRaw) ? valueRaw : null;
       variableName = getDebugFieldVarName(debug, property);
 
@@ -122,13 +128,17 @@ export function mergeBuilderData<Data extends BuilderData>(
         className: '',
         property,
         value,
-        variable: variableName
+        variable: ref
+          ? [ITEM_VALUE_TYPE_AT_RULE_REF, ref]
+          : variableName
           ? [
             ITEM_VALUE_TYPE_VARIABLE,
             variableName,
             valueRaw,
             shouldAppendCssPx(property) ? ITEM_VALUE_NUMBER_PX : undefined,
           ]
+          : ref
+          ? [ITEM_VALUE_TYPE_AT_RULE_REF, ref]
           : undefined,
         token,
         selector,

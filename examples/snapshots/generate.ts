@@ -14,7 +14,6 @@ const requestedId = process.argv[2];
 
 const cssOptions: CompilerCssOptions = {
   layers: ['reset', Constants.LayerPlaceholder, 'override'],
-  layer: true,
 };
 
 const generatedJsHeader = '/* eslint-disable */\n';
@@ -72,14 +71,17 @@ async function runForId(itemId: string) {
   const styleFn = await getSnapshotStyleFn(snapshotDir);
 
   let compilerOptions: CompilerOptions = {
+    layer: true,
     css: { ...cssOptions },
   };
   let debugCompilerOptions: CompilerOptions = {
+    layer: true,
     css: { ...cssOptions, debugClassName: true },
   };
 
   if (styleFn) {
     compilerOptions = {
+      layer: true,
       css: { ...cssOptions },
       styleFn,
       importSources: [{ source: './style', name: 'style' }],

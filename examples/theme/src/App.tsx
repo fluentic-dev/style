@@ -6,13 +6,13 @@ const metrics = [
   ['Revenue', '$84k'],
   ['Latency', '128ms'],
   ['Tasks', '42'],
-] as const;
+];
 
 const feed = [
   ['Sync complete', 'Design tokens propagated across three surfaces.', 'Live'],
   ['Theme audit', 'Nested token aliases stayed stable through extraction.', 'Clean'],
   ['Preview ready', 'Runtime switching keeps component class data reusable.', 'Fast'],
-] as const;
+];
 
 export function ThemeApp() {
   const [themeIndex, setThemeIndex] = useState(0);

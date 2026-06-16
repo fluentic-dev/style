@@ -1,6 +1,6 @@
 import type { types } from '@babel/core';
-import type { CssExtractItem, CssExtractRule } from '../../../extract';
 import type { StyleTokenOverride } from '../../../../style/token';
+import type { CssExtractItem, CssExtractRule } from '../../../extract';
 
 export type { CssExtractItem, CssExtractRule };
 

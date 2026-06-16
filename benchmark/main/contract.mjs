@@ -73,7 +73,7 @@ export const benchmarkApps = [
     port: 5403,
     extraQuery: '',
     lane: 'runtime-css-prop',
-    styleContract: { minFluenticRuntimeTags: 2 },
+    styleContract: { minRules: 20 },
   },
   {
     name: 'fluentic-runtime-css-prop-stress',
@@ -81,7 +81,7 @@ export const benchmarkApps = [
     port: 5417,
     extraQuery: '&stressStyle=1',
     lane: 'inline-dynamic-style-stress',
-    styleContract: { minFluenticRuntimeTags: 2 },
+    styleContract: { minRules: 20 },
   },
   { name: 'emotion', filter: '@benchmark/app-emotion', port: 5405, extraQuery: '' },
   {

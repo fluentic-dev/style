@@ -5,11 +5,14 @@ import {
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
   ITEM_VALUE_NUMBER_PX,
+  ITEM_VALUE_TYPE_AT_RULE_REF,
   ITEM_VALUE_TYPE_VARIABLE,
 } from '../../../builder/data/const';
 import type { StateItem } from '../../../builder/data/state';
 import { RUNTIME_CONFIG } from '../../../config';
 import { getStyleTokenId, isStyleTokenData, isStyleTokenOverrideData, type StyleTokenData } from '../../../style/token';
+import type { AtRuleRefData } from '../../../style/valueRef';
+import { hasOwn } from '../../../utils/object';
 import type { StyleTokenValues } from './tokenValues';
 
 export function getStateItemDedupe(item: StateItem) {
@@ -65,7 +68,10 @@ export function getStateItemVariableValue(
   const value = getStateItemValue(item);
 
   if (Array.isArray(value) && value[0] === ITEM_VALUE_TYPE_VARIABLE) {
-    return [value[1], resolveMarkedVariableValue(value[2], value[3], tokens)];
+    return [
+      value[1],
+      resolveMarkedVariableValue(value[2], value[3], tokens),
+    ];
   }
 
   if (!Array.isArray(item) && !isStyleTokenOverrideData(item) && item.variable?.[0] === ITEM_VALUE_TYPE_VARIABLE) {
@@ -79,7 +85,7 @@ export function getStateItemVariableValue(
     if (!tokens) return null;
 
     const id = getStyleTokenId(item.token);
-    if (!Object.prototype.hasOwnProperty.call(tokens.lookup, id)) return null;
+    if (!hasOwn(tokens.lookup, id)) return null;
 
     return [
       getTokenVarName(item.token, RUNTIME_CONFIG.tokenVarPrefix),
@@ -107,6 +113,51 @@ function normalizeVariableValue(
   return valueMode === ITEM_VALUE_NUMBER_PX ? value + 'px' : String(value);
 }
 
+export function getStateItemAtRuleRef(item: StateItem): AtRuleRefData | null {
+  const value = getStateItemValue(item);
+
+  if (Array.isArray(value) && value[0] === ITEM_VALUE_TYPE_AT_RULE_REF) {
+    return value[1];
+  }
+
+  if (
+    !Array.isArray(item) && !isStyleTokenOverrideData(item) &&
+    item.variable?.[0] === ITEM_VALUE_TYPE_AT_RULE_REF
+  ) {
+    return item.variable[1];
+  }
+
+  return null;
+}
+
+export function getStateItemAtRuleRefVariables(
+  item: StateItem,
+  tokens: StyleTokenValues | null,
+): [string, unknown][] | null {
+  if (!tokens) return null;
+
+  const ref = getStateItemAtRuleRef(item);
+  const refTokens = ref?.tokens;
+
+  if (!refTokens?.length) return null;
+
+  const values: [string, unknown][] = [];
+
+  for (let i = 0, len = refTokens.length; i < len; i++) {
+    const token = refTokens[i];
+    const id = getStyleTokenId(token);
+
+    if (!hasOwn(tokens.lookup, id)) continue;
+
+    values.push([
+      getTokenVarName(token, RUNTIME_CONFIG.tokenVarPrefix),
+      tokens.lookup[id],
+    ]);
+  }
+
+  return values.length ? values : null;
+}
+
 function getStateItemValue(item: StateItem) {
   if (Array.isArray(item)) {
     if (typeof item[0] === 'number') {
@@ -122,8 +173,6 @@ function getStateItemValue(item: StateItem) {
     } else {
       return item[2];
     }
-
-    return undefined;
   }
 
   return undefined;
@@ -146,7 +195,7 @@ function resolveTokenValue<T>(
 ): T {
   if (tokens) {
     const id = getStyleTokenId(token);
-    if (Object.prototype.hasOwnProperty.call(tokens.lookup, id)) {
+    if (hasOwn(tokens.lookup, id)) {
       return tokens.lookup[id] as T;
     }
   }

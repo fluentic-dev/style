@@ -12,7 +12,7 @@ export const palette = {
   panelText: '#ffffff',
   border: '#e5e7eb',
   shadow: '0 24px 80px rgba(15, 23, 42, 0.14)',
-} as const;
+};
 
 export const colorTokens = {
   background: createToken(palette.background),
@@ -31,7 +31,7 @@ export const spacing = {
   buttonGap: 12,
   buttonPaddingX: 20,
   buttonPaddingY: 12,
-} as const;
+};
 
 export const pageTypography = {
   titleSize: 48,
@@ -41,14 +41,14 @@ export const pageTypography = {
   bodyWeight: 500,
   labelSize: 15,
   labelWeight: 700,
-} as const;
+};
 
 export const radius = {
   page: 24,
   button: 12,
-} as const;
+};
 
 export const size = {
   pageWidth: 760,
   buttonMinWidth: 112,
-} as const;
+};

@@ -1,7 +1,24 @@
 import type { NodePath, types as BabelTypes } from '@babel/core';
-import { FN_CREATE_THEME, IMPORT_PATHS } from '../../../utils/constants';
+import { STYLE_EXTRACT_RUNTIME_IMPORT_PATH, STYLE_IMPORT_PATH } from '../../../../utils/imports';
+import {
+  FN_BIND_SCOPE,
+  FN_COMBINE_SCOPE,
+  FN_COMBINE_STYLE,
+  FN_CREATE_THEME,
+  FN_GET_CLASS_NAME,
+  FN_GET_TOKEN,
+  IMPORT_PATHS,
+} from '../../../utils/constants';
 import { getImportedName } from '../../syntax';
 import type { ExtractPluginState } from './state';
+
+const EXTRACT_RUNTIME_IMPORT_NAMES = new Set([
+  FN_BIND_SCOPE,
+  FN_COMBINE_SCOPE,
+  FN_COMBINE_STYLE,
+  FN_GET_CLASS_NAME,
+  FN_GET_TOKEN,
+]);
 
 export function pruneUnusedStyleImports(
   path: NodePath<BabelTypes.Program>,
@@ -87,8 +104,23 @@ export function pruneUnusedStyleImports(
       importDecl.specifiers = keptSpecifiers;
     }
 
+    if (
+      sourceName === STYLE_IMPORT_PATH &&
+      keptSpecifiers.every(isExtractRuntimeImportSpecifier)
+    ) {
+      importDecl.source.value = STYLE_EXTRACT_RUNTIME_IMPORT_PATH;
+    }
+
     i++;
   }
+}
+
+function isExtractRuntimeImportSpecifier(spec: BabelTypes.ImportDeclaration['specifiers'][number]) {
+  if (spec.type !== 'ImportSpecifier') return false;
+
+  const imported = getImportedName(spec);
+
+  return EXTRACT_RUNTIME_IMPORT_NAMES.has(imported);
 }
 
 function isCompilerHandledImport(

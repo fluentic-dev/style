@@ -2,6 +2,7 @@ import type { ScopeTargetData } from '../../builder/data';
 import type { SlotData, StyleData } from '../../builder/data';
 import { RUNTIME_CONFIG } from '../../config';
 import { globalData } from '../../utils/global';
+import { hasOwn } from '../../utils/object';
 import type { ResolvedStyleItem } from './cache/item';
 import type { StyleTokenValues } from './cache/tokenValues';
 
@@ -75,7 +76,7 @@ const handlers: ProxyHandler<object> = {
       target.configVersion = RUNTIME_CONFIG.configVersion;
     }
 
-    if (Object.prototype.hasOwnProperty.call(target.cache, prop)) {
+    if (hasOwn(target.cache, prop)) {
       return target.cache[prop];
     }
 

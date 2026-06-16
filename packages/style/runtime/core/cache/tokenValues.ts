@@ -1,6 +1,7 @@
 import { getTokenOverrideValue } from '../../../atomic/token';
 import { RUNTIME_CONFIG } from '../../../config';
 import { getStyleTokenId, isStyleTokenOverrideData, type StyleTokenOverride } from '../../../style/token';
+import { hasOwn } from '../../../utils/object';
 
 export type StyleTokenValues = {
   ids: readonly string[];
@@ -138,7 +139,7 @@ function isSameTokenValues(
   const baseLookup = base.lookup;
 
   for (let i = 0, len = ids.length; i < len; i++) {
-    if (!Object.prototype.hasOwnProperty.call(baseLookup, ids[i])) return false;
+    if (!hasOwn(baseLookup, ids[i])) return false;
     if (baseLookup[ids[i]] !== values[i]) return false;
   }
 

@@ -11,8 +11,8 @@ import { RUNTIME_CONFIG } from '../../../../packages/style/config/config';
 import { getClassName } from '../../../../packages/style/runtime/core';
 import { collectStylePropSheetRules } from '../../../../packages/style/runtime/sheet';
 import { bindScope, combineStyle } from '../../../../packages/style/runtime/style';
-import type { SheetRule } from '../../../../packages/style/sheet';
 import type { StyleProp } from '../../../../packages/style/runtime/types';
+import type { SheetRule } from '../../../../packages/style/sheet';
 import { style } from '../../../../packages/style/style';
 import { createTheme, resetStyleThemeIdCounter } from '../../../../packages/style/style/theme';
 import { resetStyleTokenIdCounter } from '../../../../packages/style/style/token';
@@ -30,7 +30,21 @@ type VElement = {
 };
 
 const Fragment = Symbol('Fragment');
-const VOID_ELEMENTS = new Set(['area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link', 'meta', 'source', 'track', 'wbr']);
+const VOID_ELEMENTS = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'source',
+  'track',
+  'wbr',
+]);
 
 export function runRuntime(request: RuntimeRequest): RuntimeResult {
   resetStyleTokenIdCounter();
@@ -39,9 +53,11 @@ export function runRuntime(request: RuntimeRequest): RuntimeResult {
   // Force options needed for the playground trace panel and class name readability
   configureRuntime({ ...request.config, dev: true, localClassName: true, debugClassName: true });
 
-  const source = transformRuntimeSource(request.files
-    .map((file) => `/* ${file.name} */\n${stripModuleSyntax(file.code)}`)
-    .join('\n\n'));
+  const source = transformRuntimeSource(
+    request.files
+      .map((file) => `/* ${file.name} */\n${stripModuleSyntax(file.code)}`)
+      .join('\n\n'),
+  );
 
   const cssRules: SheetRule[] = [];
   const seen = new Set<string>();

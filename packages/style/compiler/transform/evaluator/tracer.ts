@@ -2,11 +2,20 @@ import type * as BabelCore from '@babel/core';
 import * as crypto from 'node:crypto';
 import { BUILDER_TYPE_SCOPE } from '../../../builder/data';
 import { createExtractedScope, createExtractedStyle } from '../../../builder/extract';
+import type { ExtractedStyleTuple } from '../../../builder/extract';
+import { getStyleFnMeta } from '../../../style/style';
 import type { CompilerInternal } from '../../compiler';
 import type { CompilerOptions } from '../../compiler/types';
 import { FN_STYLE, IMPORT_PATHS } from '../../utils/constants';
 import { resolveFile } from '../../utils/file_resolver';
-import { compileChain, computeSlotId, extractStyleChain, type CompiledChainData, type CompiledCssItem, type CompiledItem } from '../extract/chain';
+import {
+  compileChain,
+  type CompiledChainData,
+  type CompiledCssItem,
+  type CompiledItem,
+  computeSlotId,
+  extractStyleChain,
+} from '../extract/chain';
 import { babelTransformOptions } from '../utils/babel';
 import { getProjectFileId } from '../utils/path';
 import type { EvalScope } from './evaluator';
@@ -180,12 +189,14 @@ function parseAndExtractModule(
     }
   }
 
+  const meta = options.styleFn ? getStyleFnMeta(options.styleFn) : null;
   const scope: EvalScope = {
     bindings,
     imports,
     styleNames,
     filePath,
     sourcemapTrace: options.sourcemapTrace ?? 'style',
+    styleTransform: meta?.transform ?? null,
     resolveImport,
   };
 
@@ -298,14 +309,15 @@ function createExtractedChainValue(result: CompiledChainData): unknown {
   return null;
 }
 
-function toExtractedStyleTuple(item: CompiledCssItem) {
-  const dedupe = String(item[1]);
-  const className = String(item[2]);
-  const value = item[3];
+function toExtractedStyleTuple(item: CompiledCssItem): ExtractedStyleTuple {
+  const startsWithType = typeof item[0] === 'number';
+  const dedupe = String(startsWithType ? item[1] : item[0]);
+  const className = String(startsWithType ? item[2] : item[1]);
+  const value = startsWithType ? item[3] : item[2];
 
   return value === undefined
     ? [dedupe, className]
-    : [dedupe, className, value];
+    : [dedupe, className, value as ExtractedStyleTuple[2]];
 }
 
 function toExtractedScopeItem(item: CompiledItem): Parameters<typeof createExtractedScope>[0][number] | null {

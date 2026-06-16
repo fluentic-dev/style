@@ -5,12 +5,26 @@ import type { CheckSelectorMode } from '../../../config';
 import { PrioritySelectors } from '../../../selector/presets';
 import { getStyleFnMeta } from '../../../style/style';
 import type { CompilerOptions } from '../../compiler/types';
-import { DEBUG_SOURCE_CONTENT_VAR, DEBUG_SOURCE_URL_VAR, DEFAULT_CONFIG } from '../../utils/constants';
+import {
+  DEBUG_SOURCE_CONTENT_VAR,
+  DEBUG_SOURCE_URL_VAR,
+  DEFAULT_CONFIG,
+  FN_STYLE_KEYFRAMES,
+  FN_STYLE_PLAIN,
+  FN_STYLE_RAW,
+  FN_STYLE_SCOPE,
+} from '../../utils/constants';
 import { createImportSourceMatcher, type ImportSourceMatcher } from '../../utils/import_source';
 import { type EvalScope, evaluateNode } from '../evaluator/evaluator';
 import type { EvalModuleBindings, ImportMap, ResolveImportFn } from '../evaluator/types';
 import type { ExtractTracer } from '../extract/plugin';
-import { annotateThemeCall, annotateTokenDeclaration, getImportedName, isStyleChainCall } from '../syntax';
+import {
+  annotateAtRuleDeclaration,
+  annotateThemeCall,
+  annotateTokenDeclaration,
+  getImportedName,
+  isStyleChainCall,
+} from '../syntax';
 import { babelPlugin } from '../utils/babel';
 import { getProjectFileId } from '../utils/path';
 import { getSelectorArgIndex, validateResolvedSelectorValue, validateSelectorDefinition } from '../utils/selector';
@@ -121,6 +135,7 @@ export function createDebugPlugin(args: PluginArgs) {
         VariableDeclaration(path, state) {
           path.node.declarations.forEach((decl) => {
             annotateTokenDeclaration(decl, state, t);
+            annotateAtRuleDeclaration(decl, state, t);
 
             if (decl.id.type !== 'Identifier' || !decl.init) return;
 
@@ -139,7 +154,7 @@ export function createDebugPlugin(args: PluginArgs) {
 
           if (!state.styleNames.size) return;
           validateStaticSelectorArg(path, state);
-          if (isRawPlainCall(path.node.callee, state.styleNames)) return;
+          if (isStyleUtilityCall(path.node.callee, state.styleNames)) return;
           if (
             isScopeChainCall(path.node.callee, state.styleNames) ||
             (
@@ -335,7 +350,7 @@ function resolveDebugSpreadObject(
 
     if (
       init.type === 'CallExpression' &&
-      isRawPlainCall(init.callee, state.styleNames) &&
+      isStyleUtilityCall(init.callee, state.styleNames) &&
       init.arguments[0]?.type === 'ObjectExpression'
     ) {
       return createSpreadDebugObject(t, init.arguments[0], spread, sourcemapTrace);
@@ -379,7 +394,7 @@ function createSpreadDebugObject(
   return t.objectExpression(properties);
 }
 
-function isRawPlainCall(
+function isStyleUtilityCall(
   callee: BabelTypes.CallExpression['callee'],
   styleNames: Set<string>,
 ) {
@@ -387,7 +402,9 @@ function isRawPlainCall(
   if (callee.object.type !== 'Identifier' || !styleNames.has(callee.object.name)) return false;
   if (callee.property.type !== 'Identifier') return false;
 
-  return callee.property.name === 'raw' || callee.property.name === 'plain';
+  return callee.property.name === FN_STYLE_RAW ||
+    callee.property.name === FN_STYLE_PLAIN ||
+    callee.property.name === FN_STYLE_KEYFRAMES;
 }
 
 function isScopeItemCall(
@@ -548,7 +565,7 @@ function isScopeChainCall(
     object.type === 'Identifier' &&
     styleNames.has(object.name) &&
     property.type === 'Identifier' &&
-    property.name === 'scope'
+    property.name === FN_STYLE_SCOPE
   ) {
     return true;
   }

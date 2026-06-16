@@ -4,6 +4,7 @@ import { PrioritySelectors } from '../selector/presets';
 import { symbol } from '../utils/const';
 import { type } from '../utils/type';
 import type { Type } from '../utils/type';
+import { createStyleKeyframes } from './keyframes';
 import type { StyleTransform } from './transform';
 import type { CSSProperties } from './types';
 
@@ -39,19 +40,22 @@ export function createStyleFn<
   const fnSlot = createSlotBuilder<Style, Selectors>(selectors, transform);
   const fnScope = createScopeBuilder<Style, Selectors>(selectors);
 
-  const fnPriority: Types['PriorityFn'] = (value, weight) => {
+  const fnValue: Types['ValueFn'] = (value, weight) => {
     return [weight, value];
   };
   const fnRaw: Types['RawFn'] = (style) => style;
   const fnPlain: Types['PlainFn'] = (style) => style;
+  const fnKeyframes: Types['KeyframesFn'] =
+    ((frames, stableId?: string) => createStyleKeyframes(frames, transform ?? null, stableId)) as Types['KeyframesFn'];
 
   const style = fnStyle as unknown as Types['StyleFn'];
 
   style.slot = fnSlot;
   style.scope = fnScope;
-  style.priority = fnPriority;
+  style.value = fnValue;
   style.raw = fnRaw;
   style.plain = fnPlain;
+  style.keyframes = fnKeyframes;
 
   const meta: StyleFnMeta = {
     selectors,

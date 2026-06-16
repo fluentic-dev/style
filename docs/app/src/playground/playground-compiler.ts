@@ -4,10 +4,7 @@ import { createCssCollector } from '../../../../packages/style/compiler/extract/
 import { extractCss } from '../../../../packages/style/compiler/extract/extract';
 import type { CssExtractRule } from '../../../../packages/style/compiler/extract/types';
 import { evaluateNode } from '../../../../packages/style/compiler/transform/evaluator/evaluator';
-import {
-  type EvalModuleBindings,
-  type ImportMap,
-} from '../../../../packages/style/compiler/transform/evaluator/types';
+import { type EvalModuleBindings, type ImportMap } from '../../../../packages/style/compiler/transform/evaluator/types';
 import { createExtractPlugin } from '../../../../packages/style/compiler/transform/extract/plugin';
 import { resetStyleThemeIdCounter } from '../../../../packages/style/style/theme';
 import { resetStyleTokenIdCounter } from '../../../../packages/style/style/token';

@@ -1,5 +1,5 @@
-import { hashString } from '../utils/hash';
 import type { DebugData } from '../builder/data/debug';
+import { hashString } from '../utils/hash';
 import { createStyleToken, type StyleToken, type StyleTokenOverride } from './token';
 
 export type ValueBase = string | number;

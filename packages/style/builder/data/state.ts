@@ -1,4 +1,5 @@
 import type { StyleTokenData, StyleTokenOverride } from '../../style/token';
+import type { AtRuleRefData } from '../../style/valueRef';
 import type { UniqueSymbol } from '../../utils/type';
 import type {
   BUILDER_TYPE_SCOPE,
@@ -11,6 +12,7 @@ import type {
   ITEM_RUNTIME_PROD,
   ITEM_RUNTIME_PROD_PLUGIN,
   ITEM_VALUE_NUMBER_PX,
+  ITEM_VALUE_TYPE_AT_RULE_REF,
   ITEM_VALUE_TYPE_STYLE_DATA,
   ITEM_VALUE_TYPE_VARIABLE,
 } from './const';
@@ -34,7 +36,8 @@ export type ItemRuntimeType =
 
 export type ExtractedItemValue =
   | [type: typeof ITEM_VALUE_TYPE_VARIABLE, variable: string, value: unknown, valueMode?: ExtractedItemValueMode]
-  | [type: typeof ITEM_VALUE_TYPE_STYLE_DATA, data: ExtractedStyleItem[]];
+  | [type: typeof ITEM_VALUE_TYPE_STYLE_DATA, data: ExtractedStyleItem[]]
+  | [type: typeof ITEM_VALUE_TYPE_AT_RULE_REF, ref: AtRuleRefData];
 
 export type ExtracteItemData = [
   dedupe: string,
@@ -64,6 +67,7 @@ export type ExtractedScopeItem = [
   slotId: string,
   dedupe: string,
   className: string,
+  valueOrHasParentSelector?: true | ExtractedItemValue,
   hasParentSelector?: true,
 ];
 

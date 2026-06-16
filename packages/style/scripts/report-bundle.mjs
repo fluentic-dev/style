@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -9,11 +9,100 @@ const distRoot = join(packageRoot, 'dist');
 const reportRoot = join(tmpdir(), 'fluentic-style-bundle-report');
 
 const entries = [
-  ['jsx extracted', 'jsx-runtime/extracted.js'],
-  ['jsx prod', 'jsx-runtime/prod.js'],
-  ['jsx full', 'jsx-runtime/index.js'],
-  ['jsx server', 'jsx-runtime/server.js'],
-  ['style runtime', 'runtime/style/index.js'],
+  {
+    name: 'dev runtime',
+    imports: [
+      ['jsx-dev-runtime/index.js', ['Fragment', 'createElement', 'jsxDEV']],
+      [
+        'index.js',
+        [
+          'bindScope',
+          'combineScope',
+          'combineStyle',
+          'createStyleFn',
+          'createTheme',
+          'createToken',
+          'createTokens',
+          'createValues',
+          'getClassName',
+          'getToken',
+          'style',
+        ],
+      ],
+    ],
+  },
+  {
+    name: 'extracted production runtime',
+    imports: [
+      ['jsx-runtime/extracted.js', ['Fragment', 'createElement', 'jsx', 'jsxs']],
+      [
+        'runtime/extract.js',
+        [
+          'bindScope',
+          'combineScope',
+          'combineStyle',
+          'getClassName',
+          'getToken',
+        ],
+      ],
+      [
+        'builder/extract/index.js',
+        [
+          'createExtractedScope',
+          'createExtractedSlot',
+          'createExtractedSlotOverride',
+          'createExtractedStyle',
+          'createExtractedTheme',
+          'createExtractedToken',
+          'withTokens',
+        ],
+      ],
+    ],
+  },
+  {
+    name: 'production runtime',
+    imports: [
+      ['jsx-runtime/index.js', ['Fragment', 'createElement', 'jsx', 'jsxs']],
+      [
+        'index.js',
+        [
+          'bindScope',
+          'combineScope',
+          'combineStyle',
+          'createStyleFn',
+          'createTheme',
+          'createToken',
+          'createTokens',
+          'createValues',
+          'getClassName',
+          'getToken',
+          'style',
+        ],
+      ],
+    ],
+  },
+  {
+    name: 'server production runtime',
+    imports: [
+      ['jsx-runtime/server.js', ['Fragment', 'createElement', 'jsx', 'jsxs']],
+      [
+        'server.js',
+        [
+          'bindScope',
+          'combineScope',
+          'combineStyle',
+          'createStyleFn',
+          'createTheme',
+          'createToken',
+          'createTokens',
+          'createValues',
+          'getClassName',
+          'getToken',
+          'style',
+        ],
+      ],
+    ],
+  },
 ];
 
 const externalDeps = new Set([
@@ -30,29 +119,31 @@ mkdirSync(reportRoot, { recursive: true });
 
 const rows = [];
 
-for (const [name, relativeEntry] of entries) {
-  const entry = join(distRoot, relativeEntry);
-  if (!existsSync(entry)) {
+for (const entry of entries) {
+  const imports = entry.imports.map(([root, names]) => [join(distRoot, root), names]);
+  const missing = imports.map(([root]) => root).filter((root) => !existsSync(root));
+
+  if (missing.length) {
     rows.push({
-      name,
+      name: entry.name,
       graphRaw: 0,
       graphGzip: 0,
       minRaw: 0,
       minGzip: 0,
       files: 0,
-      deps: 'missing',
+      deps: `missing: ${missing.map((root) => root.slice(distRoot.length + 1)).join(', ')}`,
     });
     continue;
   }
 
-  const graph = collectGraph(entry);
+  const graph = collectGraph(imports.map(([root]) => root));
   const graphFiles = [...graph.files];
   const graphRaw = graphFiles.reduce((total, file) => total + statSync(file).size, 0);
   const graphGzip = gzipSize(Buffer.concat(graphFiles.map((file) => readFileSync(file))));
-  const bundle = await minifyBundle(name, entry);
+  const bundle = await minifyBundle(entry.name, imports);
 
   rows.push({
-    name,
+    name: entry.name,
     graphRaw,
     graphGzip,
     minRaw: bundle.raw,
@@ -65,10 +156,10 @@ for (const [name, relativeEntry] of entries) {
 printTable(rows);
 console.log(`\nMinified bundles written to ${reportRoot}`);
 
-function collectGraph(entry) {
+function collectGraph(entries) {
   const files = new Set();
   const externals = new Set();
-  const queue = [entry];
+  const queue = [...entries];
 
   while (queue.length > 0) {
     const file = queue.pop();
@@ -122,11 +213,22 @@ function resolveLocalImport(fromFile, specifier) {
   return candidates.find((candidate) => existsSync(candidate));
 }
 
-async function minifyBundle(name, entry) {
+async function minifyBundle(name, imports) {
   const outDir = join(reportRoot, slug(name));
+  const entryFile = join(reportRoot, `${slug(name)}.entry.js`);
+
+  writeFileSync(
+    entryFile,
+    imports.map(([entry, names], index) => {
+      const imported = names.map((name) => `${name} as entry${index}_${name}`).join(', ');
+      const exported = names.map((name) => `entry${index}_${name}`).join(', ');
+
+      return `import { ${imported} } from ${JSON.stringify(entry)};\nexport { ${exported} };`;
+    }).join('\n') + '\n',
+  );
 
   await build({
-    input: entry,
+    input: entryFile,
     external: (id) => externalDeps.has(id),
     platform: 'browser',
     treeshake: true,

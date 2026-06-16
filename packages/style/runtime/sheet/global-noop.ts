@@ -1,5 +1,5 @@
-import { createNoopSheet } from '../../sheet/utils/noop';
 import type { StyleSheet } from '../../sheet';
+import { createNoopSheet } from '../../sheet/utils/noop';
 import { globalData, setGlobalData } from '../../utils/global';
 
 const GLOBAL_KEY = 'runtime.sheet.global';

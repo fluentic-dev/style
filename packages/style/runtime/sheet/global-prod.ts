@@ -1,5 +1,5 @@
-import { createProdSheet } from '../../sheet/prod';
 import type { StyleSheet } from '../../sheet';
+import { createProdSheet } from '../../sheet/prod';
 import { globalData, setGlobalData } from '../../utils/global';
 
 const GLOBAL_KEY = 'runtime.sheet.global';

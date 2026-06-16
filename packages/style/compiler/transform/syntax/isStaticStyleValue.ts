@@ -1,4 +1,5 @@
 import type { types } from '@babel/core';
+import { FN_STYLE_VALUE } from '../../utils/constants';
 
 export function isStaticStyleValue(value: types.Node): boolean {
   if (
@@ -26,13 +27,13 @@ export function isStaticStyleValue(value: types.Node): boolean {
     value.callee.type === 'MemberExpression' &&
     !value.callee.computed &&
     value.callee.property.type === 'Identifier' &&
-    value.callee.property.name === 'priority'
+    value.callee.property.name === FN_STYLE_VALUE
   ) {
-    const [itemValue, priority] = value.arguments;
+    const [itemValue, weight] = value.arguments;
 
     return !!itemValue && itemValue.type !== 'SpreadElement' &&
       isStaticStyleValue(itemValue) &&
-      !!priority && priority.type === 'NumericLiteral';
+      !!weight && weight.type === 'NumericLiteral';
   }
 
   if (value.type === 'UnaryExpression') {

@@ -4,6 +4,7 @@ import {
   createFakeDocument,
   createFetchResponse,
   createProdSheet,
+  type DebugData,
   enableStyleDevUtils,
   equal,
   getInlineSourceMap,
@@ -145,7 +146,7 @@ test('dev sheet sourcemap prefers property callsite over whole debug callsite', 
 });
 
 test('dev sheet sourcemap selects traced debug field location by runtime mode', () => {
-  const debug = {
+  const debug: DebugData = {
     $$debug: true,
     loc: [12, 3],
     label: ['', '', ''],
@@ -156,7 +157,7 @@ test('dev sheet sourcemap selects traced debug field location by runtime mode', 
         1: [8, 3],
       },
     },
-  } as const;
+  };
 
   configureRuntime({ dev: true, sourcemapTrace: 'style' });
   let callsite = getRuleCallsite(null, debug, 'color');
@@ -465,8 +466,10 @@ test('dev priority mode command rebuilds existing style tags', () => {
 });
 
 test('dev sheet registries are shared across duplicate module instances', async () => {
-  const runtimeDev = await import('../sheet/dev/index.ts?runtime-copy') as typeof import('../sheet/dev');
-  const commandDev = await import('../sheet/dev/index.ts?command-copy') as typeof import('../sheet/dev');
+  const runtimeDevPath = '../sheet/dev/index.ts?runtime-copy';
+  const commandDevPath = '../sheet/dev/index.ts?command-copy';
+  const runtimeDev = await import(runtimeDevPath) as typeof import('../sheet/dev');
+  const commandDev = await import(commandDevPath) as typeof import('../sheet/dev');
   const document = createFakeDocument();
 
   try {

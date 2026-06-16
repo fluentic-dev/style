@@ -1,5 +1,6 @@
 import { combineStyle, style } from '@fluentic/style';
 import type { StyleProp } from '@fluentic/style';
+import { createKeyframes } from '@fluentic/style/css';
 import { Button } from './button';
 import { sharedControlInteraction } from './merge-common';
 import { buttonBaseStyles, pageStyles, pageTheme } from './styles';
@@ -33,6 +34,32 @@ const mergedButtonStyle = style({
   outlineColor: '#a78bfa',
 });
 
+const pulseIn = createKeyframes({
+  from: {
+    opacity: 0.35,
+    transform: 'translateY(10px) scale(0.98)',
+  },
+  to: {
+    opacity: 1,
+    transform: 'translateY(0) scale(1)',
+  },
+});
+
+const keyframeBadge = style({
+  alignSelf: 'flex-start',
+  padding: '8px 12px',
+  borderRadius: 999,
+  backgroundColor: '#eef2ff',
+  color: '#3730a3',
+  fontSize: 13,
+  fontWeight: 700,
+  animationName: pulseIn,
+  animationDuration: '900ms',
+  animationTimingFunction: 'ease-out',
+  animationIterationCount: 3,
+  animationDirection: 'alternate',
+});
+
 export function Page(props: PageProps) {
   const css = combineStyle(pageStyles, pageTheme(pageStyles.container));
 
@@ -44,6 +71,7 @@ export function Page(props: PageProps) {
         <p css={css.description}>
           A small demo of tokens, slots, scoped themes, and state styles working together in a React view.
         </p>
+        <div css={keyframeBadge}>Keyframes are wired</div>
         <div css={css.actions}>
           <Button>Save</Button>
           <Button theme={mergedCancelButtonTheme}>

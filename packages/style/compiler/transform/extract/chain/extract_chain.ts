@@ -1,4 +1,5 @@
 import type { types } from '@babel/core';
+import { FN_STYLE_SCOPE, FN_STYLE_SLOT } from '../../../utils/constants';
 
 export type StyleChainMethod = {
   name: string;
@@ -40,8 +41,8 @@ export function extractStyleChain(
     const obj = callee.object;
 
     if (obj.type === 'Identifier' && styleNames.has(obj.name)) {
-      if (prop === 'slot') return { kind: 'slot', baseArgs: node.arguments as types.Node[], methods: [] };
-      if (prop === 'scope') return { kind: 'scope', baseArgs: node.arguments as types.Node[], methods: [] };
+      if (prop === FN_STYLE_SLOT) return { kind: 'slot', baseArgs: node.arguments as types.Node[], methods: [] };
+      if (prop === FN_STYLE_SCOPE) return { kind: 'scope', baseArgs: node.arguments as types.Node[], methods: [] };
       return null;
     }
 

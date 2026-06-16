@@ -3,6 +3,19 @@
   "version": "0.1.0-beta.0",
   "description": "Type-safe styles that scale with your components.",
   "homepage": "https://fluenticstack.com/style",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fluentic-dev/style.git",
+    "directory": "packages/style"
+  },
+  "bugs": {
+    "url": "https://github.com/fluentic-dev/style/issues"
+  },
+  "author": {
+    "name": "Fluentic",
+    "email": "omnidev@fluenticstack.com",
+    "url": "https://fluenticstack.com"
+  },
   "license": "MIT",
   "type": "module",
   "keywords": [
@@ -33,14 +46,6 @@
       "types": "./compiler/index.ts",
       "import": "./dist/compiler/index.mjs",
       "default": "./dist/compiler/index.mjs"
-    },
-    "./babel": {
-      "types": "./plugin/babel/index.ts",
-      "import": "./dist/plugin/babel/index.mjs"
-    },
-    "./plugin/babel": {
-      "types": "./plugin/babel/index.ts",
-      "import": "./dist/plugin/babel/index.mjs"
     },
     "./plugin/vite": {
       "types": "./plugin/vite/index.ts",
@@ -122,9 +127,13 @@
       "types": "./runtime/style/index.ts",
       "import": "./dist/runtime/style/index.js"
     },
-    "./runtime/static": {
-      "types": "./runtime/style/index.ts",
-      "import": "./dist/runtime/style/index.js"
+    "./runtime/extract": {
+      "types": "./runtime/extract/index.ts",
+      "import": "./dist/runtime/extract.js"
+    },
+    "./css": {
+      "types": "./css/index.ts",
+      "import": "./dist/css/index.js"
     },
     "./jsx-runtime": {
       "types": "./jsx/jsx-runtime.ts",
@@ -198,6 +207,8 @@
     "selector",
     "server.ts",
     "sheet",
+    "atRule",
+    "css",
     "style",
     "utils",
     "index.ts"
@@ -212,6 +223,7 @@
   "dependencies": {
     "@jridgewell/trace-mapping": "^0.3.31",
     "css-what": "^8.0.0",
+    "csstype": "^3.2.3",
     "oxc-resolver": "^11.20.0",
     "picomatch": "^4.0.4"
   },

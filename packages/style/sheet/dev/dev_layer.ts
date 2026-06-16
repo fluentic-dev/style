@@ -10,13 +10,7 @@ import {
   normalizeRule,
   resolveDocument,
 } from '../utils';
-import {
-  createDevTag,
-  getDevSourcemapTags,
-  insertDevRule,
-  refreshDevSourcemapTags,
-  type DevRuleTag,
-} from './utils';
+import { createDevTag, type DevRuleTag, getDevSourcemapTags, insertDevRule, refreshDevSourcemapTags } from './utils';
 
 type QueuedRule = {
   css: string;

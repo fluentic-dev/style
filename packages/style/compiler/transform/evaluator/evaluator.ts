@@ -1,6 +1,18 @@
 import type * as BabelTypes from '@babel/types';
+import { buildCounterStyleCss } from '../../../atomic/atRule/counterStyle';
+import { buildFontFaceCss, type FontFaceObject } from '../../../atomic/atRule/fontFace';
+import { buildFontPaletteValuesCss } from '../../../atomic/atRule/fontPaletteValues';
+import { fontSrc } from '../../../atomic/atRule/fontSrc';
+import { buildKeyframesCss, type KeyframesObject } from '../../../atomic/atRule/keyframes';
+import { buildPositionTryCss } from '../../../atomic/atRule/positionTry';
+import { buildPropertyCss, type PropertyObject } from '../../../atomic/atRule/property';
+import { buildScrollTimelineCss } from '../../../atomic/atRule/scrollTimeline';
+import { type AtRuleCssOptions, createAtRuleName } from '../../../atomic/atRule/utils';
+import { buildViewTimelineCss } from '../../../atomic/atRule/viewTimeline';
+import { TRACE_STYLE, TRACE_VALUE } from '../../../builder/data/debug';
 import { createExtractedScope, createExtractedSlot, createExtractedStyle } from '../../../builder/extract';
-import { TRACE_VALUE, TRACE_STYLE } from '../../../builder/data/debug';
+import { RUNTIME_CONFIG } from '../../../config';
+import { transformKeyframes } from '../../../style/keyframes';
 import {
   getStyleTokenId,
   isStyleTokenData,
@@ -9,14 +21,41 @@ import {
   TOKEN_ID,
   TOKEN_OVERRIDE,
 } from '../../../style/token';
+import type { StyleTransform } from '../../../style/transform';
+import {
+  AT_RULE_REF_TYPE_COUNTER_STYLE,
+  AT_RULE_REF_TYPE_FONT_FACE,
+  AT_RULE_REF_TYPE_FONT_PALETTE_VALUES,
+  AT_RULE_REF_TYPE_KEYFRAMES,
+  AT_RULE_REF_TYPE_POSITION_TRY,
+  AT_RULE_REF_TYPE_PROPERTY,
+  AT_RULE_REF_TYPE_SCROLL_TIMELINE,
+  AT_RULE_REF_TYPE_VIEW_TIMELINE,
+  type AtRuleRef,
+  type AtRuleRefType,
+  createAtRuleRef,
+} from '../../../style/valueRef';
 import { hashString } from '../../../utils/hash';
 import {
+  FN_CREATE_COUNTER_STYLE,
   FN_CREATE_EXTRACTED_SCOPE,
   FN_CREATE_EXTRACTED_SLOT,
   FN_CREATE_EXTRACTED_STYLE,
+  FN_CREATE_FONT_FACE,
+  FN_CREATE_FONT_PALETTE_VALUES,
+  FN_CREATE_KEYFRAMES,
+  FN_CREATE_POSITION_TRY,
+  FN_CREATE_PROPERTY,
+  FN_CREATE_SCROLL_TIMELINE,
   FN_CREATE_TOKEN,
   FN_CREATE_TOKENS,
   FN_CREATE_VALUES,
+  FN_CREATE_VIEW_TIMELINE,
+  FN_FONT_SRC,
+  FN_STYLE_KEYFRAMES,
+  FN_STYLE_PLAIN,
+  FN_STYLE_RAW,
+  FN_STYLE_VALUE,
   IMPORT_EXTRACT,
   IMPORT_PATHS,
 } from '../../utils/constants';
@@ -63,6 +102,7 @@ export type EvalScope = {
   filePath: string;
   styleFilePath?: string;
   styleNames?: Set<string>;
+  styleTransform?: StyleTransform | null;
   sourcemapTrace?: 'style' | 'value';
 };
 
@@ -255,6 +295,8 @@ function evaluateObject(node: BabelTypes.ObjectExpression, scope: EvalScope): Ev
 
       const val = evaluateNode(prop.value as BabelTypes.Node, scope);
 
+      if (!val.ok && isRequiredStaticStyleValueFail(val.reason)) return val;
+
       result[key] = val.ok
         ? val.value
         : createCompiledRuntimeValue(prop.value as BabelTypes.Expression);
@@ -319,6 +361,17 @@ function evaluateArray(node: BabelTypes.ArrayExpression, scope: EvalScope): Eval
   return evalOk(result);
 }
 
+function isRequiredStaticStyleValueFail(reason: string) {
+  return reason.includes('createCounterStyle') ||
+    reason.includes('createFontFace') ||
+    reason.includes('createFontPaletteValues') ||
+    reason.includes('createPositionTry') ||
+    reason.includes('createProperty') ||
+    reason.includes('createScrollTimeline') ||
+    reason.includes('createViewTimeline') ||
+    reason.includes('fontSrc');
+}
+
 function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalResult {
   if (node.callee.type === 'Identifier') {
     const imp = scope.imports.get(node.callee.name);
@@ -339,7 +392,9 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
       if (!items.ok) return items;
       if (!Array.isArray(items.value)) return evalFail('createExtractedSlot items must be an array');
 
-      return evalOk(createExtractedSlot(String(slotId.value), items.value as Parameters<typeof createExtractedSlot>[1]));
+      return evalOk(
+        createExtractedSlot(String(slotId.value), items.value as Parameters<typeof createExtractedSlot>[1]),
+      );
     }
 
     if (imp && imp.source === IMPORT_EXTRACT && imp.name === FN_CREATE_EXTRACTED_SCOPE) {
@@ -358,6 +413,151 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
       if (!debugId.ok) return debugId;
 
       return evalOk(createCompiledToken(value.value, scope, node.loc?.start, node, debugId.value));
+    }
+
+    if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_KEYFRAMES) {
+      const frames = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+      if (!frames.ok) return frames;
+
+      const debugId = evaluateOptionalDebugId(node.arguments[1] as BabelTypes.Node, scope);
+      if (!debugId.ok) return debugId;
+
+      const id = debugId.value ?? createCompiledAtRuleId(scope, node.loc?.start, frames.value);
+
+      return evalOk(createCompiledAtRuleRef({
+        type: AT_RULE_REF_TYPE_KEYFRAMES,
+        keyPrefix: 'keyframes',
+        value: createAtRuleName(id, 'kf', false, RUNTIME_CONFIG.classNamePrefix),
+        buildCss: (name, tokens, tokenLookup, options) =>
+          buildKeyframesCss(name, frames.value as KeyframesObject, tokens, tokenLookup, options),
+      }));
+    }
+
+    if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_POSITION_TRY) {
+      return evaluateDebugNamedAtRuleCall(node, scope, {
+        label: 'createPositionTry',
+        type: AT_RULE_REF_TYPE_POSITION_TRY,
+        keyPrefix: 'position-try',
+        namePrefix: 'pt',
+        dashedName: true,
+        buildCss: buildPositionTryCss as NamedAtRuleCssBuilder,
+      });
+    }
+
+    if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_COUNTER_STYLE) {
+      return evaluateDebugNamedAtRuleCall(node, scope, {
+        label: 'createCounterStyle',
+        type: AT_RULE_REF_TYPE_COUNTER_STYLE,
+        keyPrefix: 'counter-style',
+        namePrefix: 'cs',
+        buildCss: buildCounterStyleCss as NamedAtRuleCssBuilder,
+      });
+    }
+
+    if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_SCROLL_TIMELINE) {
+      return evaluateDebugNamedAtRuleCall(node, scope, {
+        label: 'createScrollTimeline',
+        type: AT_RULE_REF_TYPE_SCROLL_TIMELINE,
+        keyPrefix: 'scroll-timeline',
+        namePrefix: 'st',
+        dashedName: true,
+        buildCss: buildScrollTimelineCss as NamedAtRuleCssBuilder,
+      });
+    }
+
+    if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_VIEW_TIMELINE) {
+      return evaluateDebugNamedAtRuleCall(node, scope, {
+        label: 'createViewTimeline',
+        type: AT_RULE_REF_TYPE_VIEW_TIMELINE,
+        keyPrefix: 'view-timeline',
+        namePrefix: 'vtl',
+        dashedName: true,
+        buildCss: buildViewTimelineCss as NamedAtRuleCssBuilder,
+      });
+    }
+
+    if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_FONT_PALETTE_VALUES) {
+      return evaluateDebugNamedAtRuleCall(node, scope, {
+        label: 'createFontPaletteValues',
+        type: AT_RULE_REF_TYPE_FONT_PALETTE_VALUES,
+        keyPrefix: 'font-palette-values',
+        namePrefix: 'fp',
+        dashedName: true,
+        buildCss: buildFontPaletteValuesCss as NamedAtRuleCssBuilder,
+      });
+    }
+
+    if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_PROPERTY) {
+      const name = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+      if (!name.ok) return evalFail(`createProperty name must be statically analyzable: ${name.reason}`);
+      if (typeof name.value !== 'string') return evalFail('createProperty name must be a static string');
+
+      const descriptors = evaluateNode(node.arguments[1] as BabelTypes.Node, scope);
+      if (!descriptors.ok) {
+        return evalFail(`createProperty descriptors must be statically analyzable: ${descriptors.reason}`);
+      }
+      if (!descriptors.value || typeof descriptors.value !== 'object') {
+        return evalFail('createProperty descriptors must be a static object');
+      }
+
+      const cssName = name.value as `--${string}`;
+      if (!cssName.startsWith('--')) return evalFail('createProperty name must be a custom property name');
+
+      return evalOk(createCompiledAtRuleRef({
+        type: AT_RULE_REF_TYPE_PROPERTY,
+        keyPrefix: 'property',
+        value: cssName,
+        buildCss: (atRuleName, tokens, tokenLookup, options) =>
+          buildPropertyCss(
+            atRuleName as `--${string}`,
+            descriptors.value as PropertyObject,
+            tokens,
+            tokenLookup,
+            options,
+          ),
+      }));
+    }
+
+    if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_FONT_FACE) {
+      const descriptors = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+      if (!descriptors.ok) {
+        return evalFail(`createFontFace descriptors must be statically analyzable: ${descriptors.reason}`);
+      }
+      if (!descriptors.value || typeof descriptors.value !== 'object') {
+        return evalFail('createFontFace descriptors must be a static object');
+      }
+      if (typeof (descriptors.value as { src?: unknown; }).src !== 'string') {
+        return evalFail('createFontFace src must be a static string');
+      }
+
+      const debugId = evaluateOptionalDebugId(node.arguments[1] as BabelTypes.Node, scope);
+      if (!debugId.ok) return debugId;
+
+      const id = debugId.value ?? createCompiledAtRuleId(scope, node.loc?.start, descriptors.value);
+
+      const fontFaceDescriptors = descriptors.value as FontFaceObject;
+      if (typeof fontFaceDescriptors.src !== 'string') {
+        return evalFail('createFontFace src must be a static string');
+      }
+
+      return evalOk(createCompiledAtRuleRef({
+        type: AT_RULE_REF_TYPE_FONT_FACE,
+        keyPrefix: 'font-face',
+        value: createAtRuleName(id, 'ff', false, RUNTIME_CONFIG.classNamePrefix),
+        buildCss: (name, tokens, tokenLookup, options) =>
+          buildFontFaceCss(name, fontFaceDescriptors, tokens, tokenLookup, options),
+      }));
+    }
+
+    if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_FONT_SRC) {
+      const url = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+      if (!url.ok) return evalFail(`fontSrc url must be statically analyzable: ${url.reason}`);
+      if (typeof url.value !== 'string') return evalFail('fontSrc url must be a static string');
+
+      const format = evaluateOptionalDebugId(node.arguments[1] as BabelTypes.Node, scope);
+      if (!format.ok) return evalFail(`fontSrc format must be statically analyzable: ${format.reason}`);
+
+      return evalOk(fontSrc(url.value, format.value));
     }
 
     if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_TOKENS) {
@@ -434,28 +634,54 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
     node.callee.type === 'MemberExpression' &&
     !node.callee.computed &&
     node.callee.property.type === 'Identifier' &&
-    node.callee.property.name === 'priority' &&
+    node.callee.property.name === FN_STYLE_KEYFRAMES &&
     node.callee.object.type === 'Identifier' &&
     scope.styleNames?.has(node.callee.object.name)
   ) {
-    const value = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
-    if (!value.ok) return value;
+    const frames = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+    if (!frames.ok) return frames;
 
-    const priority = evaluateNode(node.arguments[1] as BabelTypes.Node, scope);
-    if (!priority.ok) return priority;
+    const debugId = evaluateOptionalDebugId(node.arguments[1] as BabelTypes.Node, scope);
+    if (!debugId.ok) return debugId;
 
-    if (typeof priority.value !== 'number') {
-      return evalFail('style.priority priority must be a number');
-    }
+    const id = debugId.value ?? createCompiledAtRuleId(scope, node.loc?.start, frames.value);
+    const transformedFrames = transformKeyframes(frames.value as KeyframesObject, scope.styleTransform ?? null);
 
-    return evalOk([priority.value, value.value]);
+    return evalOk(createCompiledAtRuleRef({
+      type: AT_RULE_REF_TYPE_KEYFRAMES,
+      keyPrefix: 'keyframes',
+      value: createAtRuleName(id, 'kf', false, RUNTIME_CONFIG.classNamePrefix),
+      buildCss: (name, tokens, tokenLookup, options) =>
+        buildKeyframesCss(name, transformedFrames, tokens, tokenLookup, options),
+    }));
   }
 
   if (
     node.callee.type === 'MemberExpression' &&
     !node.callee.computed &&
     node.callee.property.type === 'Identifier' &&
-    (node.callee.property.name === 'raw' || node.callee.property.name === 'plain') &&
+    node.callee.property.name === FN_STYLE_VALUE &&
+    node.callee.object.type === 'Identifier' &&
+    scope.styleNames?.has(node.callee.object.name)
+  ) {
+    const value = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+    if (!value.ok) return value;
+
+    const weight = evaluateNode(node.arguments[1] as BabelTypes.Node, scope);
+    if (!weight.ok) return weight;
+
+    if (typeof weight.value !== 'number') {
+      return evalFail('style.value weight must be a number');
+    }
+
+    return evalOk([weight.value, value.value]);
+  }
+
+  if (
+    node.callee.type === 'MemberExpression' &&
+    !node.callee.computed &&
+    node.callee.property.type === 'Identifier' &&
+    (node.callee.property.name === FN_STYLE_RAW || node.callee.property.name === FN_STYLE_PLAIN) &&
     node.callee.object.type === 'Identifier' &&
     scope.styleNames?.has(node.callee.object.name)
   ) {
@@ -463,6 +689,85 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
   }
 
   return evalFail(`Cannot statically evaluate: ${node.type}`);
+}
+
+type NamedAtRuleCssBuilder = (
+  name: string,
+  descriptors: object,
+  tokens: StyleTokenData[],
+  tokenLookup: Set<string>,
+  options?: AtRuleCssOptions,
+) => string;
+
+type NamedAtRuleConfig = {
+  label: string;
+  type: AtRuleRefType;
+  keyPrefix: string;
+  namePrefix: string;
+  dashedName?: boolean;
+  buildCss: NamedAtRuleCssBuilder;
+};
+
+function evaluateDebugNamedAtRuleCall(
+  node: BabelTypes.CallExpression,
+  scope: EvalScope,
+  config: NamedAtRuleConfig,
+): EvalResult {
+  const descriptors = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+
+  if (!descriptors.ok) {
+    return evalFail(`${config.label} descriptors must be statically analyzable: ${descriptors.reason}`);
+  }
+
+  if (!descriptors.value || typeof descriptors.value !== 'object') {
+    return evalFail(`${config.label} descriptors must be a static object`);
+  }
+
+  const debugId = evaluateOptionalDebugId(node.arguments[1] as BabelTypes.Node, scope);
+
+  if (!debugId.ok) {
+    return evalFail(`${config.label} debugId must be statically analyzable: ${debugId.reason}`);
+  }
+
+  const id = debugId.value ?? createCompiledAtRuleId(scope, node.loc?.start, descriptors.value);
+  const name = createAtRuleName(id, config.namePrefix, config.dashedName, RUNTIME_CONFIG.classNamePrefix);
+
+  try {
+    return evalOk(createCompiledAtRuleRef({
+      type: config.type,
+      keyPrefix: config.keyPrefix,
+      value: name,
+      buildCss: (atRuleName, tokens, tokenLookup, options) =>
+        config.buildCss(atRuleName, descriptors.value as object, tokens, tokenLookup, options),
+    }));
+  } catch (error) {
+    return evalFail(error instanceof Error ? error.message : String(error));
+  }
+}
+
+function createCompiledAtRuleRef(config: {
+  type: AtRuleRefType;
+  keyPrefix: string;
+  value: string;
+  buildCss: (name: string, tokens: StyleTokenData[], tokenLookup: Set<string>, options?: AtRuleCssOptions) => string;
+}): AtRuleRef {
+  const tokens: StyleTokenData[] = [];
+  const tokenLookup = new Set<string>();
+  const css = config.buildCss(config.value, tokens, tokenLookup, createCompiledAtRuleCssOptions());
+
+  return createAtRuleRef({
+    type: config.type,
+    key: config.keyPrefix + ':' + config.value,
+    value: config.value,
+    css,
+    tokens: tokens.length ? tokens : undefined,
+  });
+}
+
+function createCompiledAtRuleCssOptions(): AtRuleCssOptions {
+  return {
+    tokenVarPrefix: RUNTIME_CONFIG.tokenVarPrefix,
+  };
 }
 
 function createCompiledTokenOverride(
@@ -561,6 +866,17 @@ function createCompiledTokenGroupId(
 ) {
   const hash = (scope.styleFilePath ?? scope.filePath) + '\n' +
     (loc ? loc.line + ':' + loc.column : 'createTokens');
+
+  return hashString(hash);
+}
+
+function createCompiledAtRuleId(
+  scope: EvalScope,
+  loc: { line: number; column: number; } | null | undefined,
+  value: unknown,
+) {
+  const hash = (scope.styleFilePath ?? scope.filePath) + '\n' +
+    (loc ? loc.line + ':' + loc.column : String(value));
 
   return hashString(hash);
 }

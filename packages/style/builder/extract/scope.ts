@@ -1,8 +1,8 @@
 import type { StyleTokenOverride } from '../../style/token';
 import { BUILDER_STATE, BUILDER_TYPE_SCOPE } from '../data/const';
-import { createScopeData, createScopeTargetData } from '../data/create';
 import type { ScopeData, SlotData } from '../data/data';
 import type { ExtractedItemValue } from '../data/state';
+import { createExtractedData, createExtractedScopeTarget } from './utils';
 
 export type ExtractedScopeTuple = [
   type: typeof BUILDER_TYPE_SCOPE,
@@ -19,10 +19,10 @@ export function createExtractedScope(
   items: ExtractedScopeItem[],
 ): ScopeData {
   const scope = ((slot: SlotData) => {
-    return createScopeTargetData(scope, slot);
+    return createExtractedScopeTarget(scope, slot);
   }) as unknown as ScopeData;
 
-  Object.assign(scope, createScopeData(null));
+  Object.assign(scope, createExtractedData(BUILDER_TYPE_SCOPE));
 
   scope[BUILDER_STATE].items = items;
 

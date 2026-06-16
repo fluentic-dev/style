@@ -56,7 +56,7 @@ async function startPreview() {
   const proc = spawn('pnpm', [
     '--filter',
     app.filter,
-    'preview',
+    'serve',
     '--host',
     '127.0.0.1',
     '--port',

@@ -1,6 +1,6 @@
 import { getTokenVar } from '../../atomic/token';
 import { RUNTIME_CONFIG } from '../../config';
-import { isStyleTokenData } from '../../style';
+import { isStyleTokenData } from '../../style/token';
 import type { Falsy, StyleTokenInput } from '../types';
 
 export function getToken<T>(value: StyleTokenInput<T>): T | string;

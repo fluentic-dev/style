@@ -170,7 +170,7 @@ importers:
     devDependencies:
       '@pandacss/dev':
         specifier: latest
-        version: 1.11.3(typescript@6.0.2)
+        version: 1.11.3(typescript@5.9.3)
       '@vitejs/plugin-react':
         specifier: latest
         version: 6.0.2(vite@8.0.16(@types/node@25.9.1)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4))
@@ -346,6 +346,34 @@ importers:
         version: 5.9.3
 
   docs/content: {}
+
+  examples/atRule:
+    dependencies:
+      '@fluentic/style':
+        specifier: workspace:*
+        version: link:../../packages/style
+      react:
+        specifier: ^19.2.0
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.2.0
+        version: 19.2.7(react@19.2.7)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      '@vitejs/plugin-react':
+        specifier: ^6.0.2
+        version: 6.0.2(vite@8.0.16(@types/node@25.9.1)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4))
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vite:
+        specifier: ^8.0.16
+        version: 8.0.16(@types/node@25.9.1)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)
 
   examples/basic:
     dependencies:
@@ -716,7 +744,7 @@ importers:
         version: link:../../packages/style
       next:
         specifier: ^16.2.7
-        version: 16.2.7(@babel/core@7.29.7)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+        version: 16.2.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       react:
         specifier: ^19.2.0
         version: 19.2.7
@@ -784,6 +812,34 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  examples/static-values:
+    dependencies:
+      '@fluentic/style':
+        specifier: workspace:*
+        version: link:../../packages/style
+      react:
+        specifier: ^19.2.0
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.2.0
+        version: 19.2.7(react@19.2.7)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.14
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.14)
+      '@vitejs/plugin-react':
+        specifier: ^6.0.2
+        version: 6.0.2(vite@8.0.16(@types/node@25.9.1)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4))
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vite:
+        specifier: ^8.0.16
+        version: 8.0.16(@types/node@25.9.1)(esbuild@0.28.0)(jiti@2.7.0)(terser@5.48.0)(tsx@4.22.4)
+
   examples/theme:
     dependencies:
       '@fluentic/style':
@@ -829,6 +885,9 @@ importers:
       css-what:
         specifier: ^8.0.0
         version: 8.0.0
+      csstype:
+        specifier: ^3.2.3
+        version: 3.2.3
       esbuild:
         specifier: '>=0.20'
         version: 0.28.0
@@ -9722,14 +9781,14 @@ snapshots:
       postcss-selector-parser: 7.1.1
       ts-pattern: 5.9.0
 
-  '@pandacss/dev@1.11.3(typescript@6.0.2)':
+  '@pandacss/dev@1.11.3(typescript@5.9.3)':
     dependencies:
       '@clack/prompts': 0.11.0
       '@pandacss/config': 1.11.3
       '@pandacss/logger': 1.11.3
-      '@pandacss/mcp': 1.11.3(typescript@6.0.2)
-      '@pandacss/node': 1.11.3(typescript@6.0.2)
-      '@pandacss/postcss': 1.11.3(typescript@6.0.2)
+      '@pandacss/mcp': 1.11.3(typescript@5.9.3)
+      '@pandacss/node': 1.11.3(typescript@5.9.3)
+      '@pandacss/postcss': 1.11.3(typescript@5.9.3)
       '@pandacss/preset-base': 1.11.3
       '@pandacss/preset-panda': 1.11.3
       '@pandacss/shared': 1.11.3
@@ -9742,10 +9801,10 @@ snapshots:
       - supports-color
       - typescript
 
-  '@pandacss/extractor@1.11.3(typescript@6.0.2)':
+  '@pandacss/extractor@1.11.3(typescript@5.9.3)':
     dependencies:
       '@pandacss/shared': 1.11.3
-      ts-evaluator: 1.2.0(typescript@6.0.2)
+      ts-evaluator: 1.2.0(typescript@5.9.3)
       ts-morph: 28.0.0
     transitivePeerDependencies:
       - jsdom
@@ -9772,12 +9831,12 @@ snapshots:
       '@pandacss/types': 1.11.3
       kleur: 4.1.5
 
-  '@pandacss/mcp@1.11.3(typescript@6.0.2)':
+  '@pandacss/mcp@1.11.3(typescript@5.9.3)':
     dependencies:
       '@clack/prompts': 0.11.0
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.3)
       '@pandacss/logger': 1.11.3
-      '@pandacss/node': 1.11.3(typescript@6.0.2)
+      '@pandacss/node': 1.11.3(typescript@5.9.3)
       '@pandacss/token-dictionary': 1.11.3
       '@pandacss/types': 1.11.3
       zod: 4.4.3
@@ -9787,13 +9846,13 @@ snapshots:
       - supports-color
       - typescript
 
-  '@pandacss/node@1.11.3(typescript@6.0.2)':
+  '@pandacss/node@1.11.3(typescript@5.9.3)':
     dependencies:
       '@pandacss/config': 1.11.3
       '@pandacss/core': 1.11.3
       '@pandacss/generator': 1.11.3
       '@pandacss/logger': 1.11.3
-      '@pandacss/parser': 1.11.3(typescript@6.0.2)
+      '@pandacss/parser': 1.11.3(typescript@5.9.3)
       '@pandacss/plugin-lightningcss': 1.11.3
       '@pandacss/plugin-svelte': 1.11.3
       '@pandacss/plugin-vue': 1.11.3
@@ -9825,11 +9884,11 @@ snapshots:
       - jsdom
       - typescript
 
-  '@pandacss/parser@1.11.3(typescript@6.0.2)':
+  '@pandacss/parser@1.11.3(typescript@5.9.3)':
     dependencies:
       '@pandacss/config': 1.11.3
       '@pandacss/core': 1.11.3
-      '@pandacss/extractor': 1.11.3(typescript@6.0.2)
+      '@pandacss/extractor': 1.11.3(typescript@5.9.3)
       '@pandacss/logger': 1.11.3
       '@pandacss/shared': 1.11.3
       '@pandacss/types': 1.11.3
@@ -9857,9 +9916,9 @@ snapshots:
       '@vue/compiler-sfc': 3.5.25
       magic-string: 0.30.21
 
-  '@pandacss/postcss@1.11.3(typescript@6.0.2)':
+  '@pandacss/postcss@1.11.3(typescript@5.9.3)':
     dependencies:
-      '@pandacss/node': 1.11.3(typescript@6.0.2)
+      '@pandacss/node': 1.11.3(typescript@5.9.3)
       postcss: 8.5.14
     transitivePeerDependencies:
       - jsdom
@@ -13740,6 +13799,30 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
+  next@16.2.7(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
+    dependencies:
+      '@next/env': 16.2.7
+      '@swc/helpers': 0.5.15
+      baseline-browser-mapping: 2.10.33
+      caniuse-lite: 1.0.30001793
+      postcss: 8.4.31
+      react: 19.2.7
+      react-dom: 19.2.7(react@19.2.7)
+      styled-jsx: 5.1.6(react@19.2.7)
+    optionalDependencies:
+      '@next/swc-darwin-arm64': 16.2.7
+      '@next/swc-darwin-x64': 16.2.7
+      '@next/swc-linux-arm64-gnu': 16.2.7
+      '@next/swc-linux-arm64-musl': 16.2.7
+      '@next/swc-linux-x64-gnu': 16.2.7
+      '@next/swc-linux-x64-musl': 16.2.7
+      '@next/swc-win32-arm64-msvc': 16.2.7
+      '@next/swc-win32-x64-msvc': 16.2.7
+      sharp: 0.34.5
+    transitivePeerDependencies:
+      - '@babel/core'
+      - babel-plugin-macros
+
   next@16.2.9(react-dom@19.2.7(react@19.2.7))(react@19.2.7):
     dependencies:
       '@next/env': 16.2.9
@@ -13749,7 +13832,7 @@ snapshots:
       postcss: 8.4.31
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
-      styled-jsx: 5.1.6(@babel/core@7.29.7)(react@19.2.7)
+      styled-jsx: 5.1.6(react@19.2.7)
     optionalDependencies:
       '@next/swc-darwin-arm64': 16.2.9
       '@next/swc-darwin-x64': 16.2.9
@@ -14831,6 +14914,11 @@ snapshots:
     optionalDependencies:
       '@babel/core': 7.29.7
 
+  styled-jsx@5.1.6(react@19.2.7):
+    dependencies:
+      client-only: 0.0.1
+      react: 19.2.7
+
   styleq@0.2.1: {}
 
   stylis@4.2.0: {}
@@ -14936,12 +15024,12 @@ snapshots:
 
   trough@2.2.0: {}
 
-  ts-evaluator@1.2.0(typescript@6.0.2):
+  ts-evaluator@1.2.0(typescript@5.9.3):
     dependencies:
       ansi-colors: 4.1.3
       crosspath: 2.0.0
       object-path: 0.11.8
-      typescript: 6.0.2
+      typescript: 5.9.3
 
   ts-morph@28.0.0:
     dependencies:

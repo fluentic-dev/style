@@ -3,7 +3,9 @@ const pkg = '@fluentic/style';
 const styleImports = {
   root: pkg,
   server: pkg + '/server',
-  extract: pkg + '/builder/extract',
+  css: pkg + '/css',
+  builderExtract: pkg + '/builder/extract',
+  extractRuntime: pkg + '/runtime/extract',
   configBuild: pkg + '/config/build',
   plugin: pkg + '/plugin',
 };
@@ -22,7 +24,9 @@ export type StyleClientRuntimeMode = Exclude<StyleRuntimeMode, 'full' | 'rsc'>;
 export const STYLE_IMPORT_PATH = pkg;
 
 export const STYLE_SERVER_IMPORT_PATH = styleImports.server;
-export const STYLE_EXTRACT_IMPORT_PATH = styleImports.extract;
+export const STYLE_CSS_IMPORT_PATH = styleImports.css;
+export const STYLE_BUILDER_EXTRACT_IMPORT_PATH = styleImports.builderExtract;
+export const STYLE_EXTRACT_RUNTIME_IMPORT_PATH = styleImports.extractRuntime;
 export const STYLE_CONFIG_BUILD_IMPORT_PATH = styleImports.configBuild;
 export const STYLE_PLUGIN_IMPORT_PATH = styleImports.plugin;
 

@@ -1,4 +1,4 @@
-import type { PlainStyleObject, StyleObject, StyleValueTuple } from '../../style';
+import type { AtRuleRef, PlainStyleObject, StyleKeyframesObject, StyleObject, StyleValueTuple } from '../../style';
 import type { Collapse } from '../../utils/type';
 // oxlint-disable-next-line no-unused-vars
 import type { BUILDER_SLOT_ID } from '../data';
@@ -36,14 +36,16 @@ export function typeAliases<Style, Selectors>() {
   type StyleFn<Style> = StyleSelfFn<Style, Selectors> & {
     slot: SlotFn<Style>;
     scope: ScopeFn<Style>;
-    priority: PriorityFn;
+    value: ValueFn;
     raw: RawFn<Style>;
     plain: PlainFn<Style>;
+    keyframes: KeyframesFn<Style>;
   };
 
-  type PriorityFn = <const T>(value: T, priority: number) => StyleValueTuple<T>;
-  type RawFn<Style> = <const T extends StyleObject<Style>>(style: T) => T;
-  type PlainFn<Style> = <const T extends PlainStyleObject<Style>>(style: T) => T;
+  type ValueFn = <const T>(value: T, weight: number) => StyleValueTuple<T>;
+  type RawFn<Style> = <T extends StyleObject<Style>>(style: T) => T;
+  type PlainFn<Style> = <T extends PlainStyleObject<Style>>(style: T) => T;
+  type KeyframesFn<Style> = <T extends StyleKeyframesObject<Style>>(frames: T) => AtRuleRef;
 
   type SlotFn<Style> = SlotSelfFn<Style, Selectors>;
 
@@ -61,9 +63,10 @@ export function typeAliases<Style, Selectors>() {
     SlotFn: SlotFn<Style>;
     ScopeFn: ScopeFn<Style>;
     //
-    PriorityFn: PriorityFn;
+    ValueFn: ValueFn;
     RawFn: RawFn<Style>;
     PlainFn: PlainFn<Style>;
+    KeyframesFn: KeyframesFn<Style>;
   };
 
   return {} as Types<Style>;

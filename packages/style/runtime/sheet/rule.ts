@@ -3,12 +3,13 @@ import { BUILDER_TYPE_SCOPE } from '../../builder/data/const';
 import type { RuntimeItem, StateItem } from '../../builder/data/state';
 import type { SheetRule } from '../../sheet';
 import { isStyleTokenOverrideData } from '../../style/token';
+import { getStateItemAtRuleRef } from '../core/cache/stateItem';
 
 export type RuntimeSheetRule = SheetRule & {
   dedupe: string;
 };
 
-export function createRuntimeSheetRule(item: StateItem): RuntimeSheetRule | null {
+export function createRuntimeSheetRules(item: StateItem): RuntimeSheetRule[] | null {
   if (Array.isArray(item)) return null;
   if (isStyleTokenOverrideData(item)) return null;
 
@@ -44,7 +45,7 @@ export function createRuntimeSheetRule(item: StateItem): RuntimeSheetRule | null
     runtimeItem.atRule,
   );
 
-  return {
+  const rule = {
     key: runtimeItem.className,
     dedupe: runtimeItem.dedupe,
     priority: layerPriority,
@@ -53,4 +54,22 @@ export function createRuntimeSheetRule(item: StateItem): RuntimeSheetRule | null
     debug: runtimeItem.debug,
     debugField: runtimeItem.debugField,
   };
+
+  const ref = getStateItemAtRuleRef(item);
+  if (!ref?.css) return [rule];
+
+  return [
+    {
+      key: ref.key,
+      dedupe: ref.key,
+      priority: null,
+      css: ref.css,
+      callsite: runtimeItem.callsite,
+    },
+    rule,
+  ];
+}
+
+export function createRuntimeSheetRule(item: StateItem): RuntimeSheetRule | null {
+  return createRuntimeSheetRules(item)?.[0] ?? null;
 }

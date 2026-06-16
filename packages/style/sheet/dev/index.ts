@@ -16,11 +16,7 @@ const DEV_SHEETS = globalData<Set<DevSheetState>>(
   () => new Set(),
 );
 
-export {
-  createDevLayerSheet,
-  getDevSourcemapTags,
-  refreshDevSourcemapTags,
-} from './dev_layer';
+export { createDevLayerSheet, getDevSourcemapTags, refreshDevSourcemapTags } from './dev_layer';
 
 export { createDevSortSheet } from './dev_sort';
 

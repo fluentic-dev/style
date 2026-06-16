@@ -1,5 +1,5 @@
 import { ArgSelectors } from '../selector/presets';
-import { getStyleTokenOverrideDebug } from '../style/token';
+import { getStyleTokenId, getStyleTokenOverrideDebug } from '../style/token';
 import {
   before,
   bindScope,
@@ -9,20 +9,30 @@ import {
   combineStyle,
   configureRuntime,
   createCombinedStylePool,
+  createCounterStyle,
   createDevSheet,
   createExtractedScope,
   createExtractedSlot,
   createExtractedStyle,
   createExtractedToken,
   createFakeDocument,
+  createFontFace,
+  createFontPaletteValues,
+  createKeyframes,
+  createPositionTry,
+  createProperty,
   createScopeBuilder,
+  createScrollTimeline,
+  createStyleFn,
   createTheme,
   createThemeRule,
   createToken,
   createTokens,
+  createViewTimeline,
   type DebugData,
   ELEMENT_CSS_DATA_ATTR,
   equal,
+  fontSrc,
   getClassName,
   getCombinedStyleScopes,
   getGlobalSheet,
@@ -120,7 +130,7 @@ test('style prop resolver accepts direct raw style and slot data', () => {
 });
 
 test('style prop resolver normalizes numeric debug variable values by property', () => {
-  const rule = style({
+  const rule = (style as any)({
     padding: 12,
     opacity: 0.5,
   }, {
@@ -219,6 +229,208 @@ test('jsx style prop inserts direct raw style and slot runtime rules', () => {
 
     includes(text, 'color: maroon');
     includes(text, 'color: olive');
+  } finally {
+    setGlobalSheet(previousSheet);
+  }
+});
+
+test('style value ref inserts keyframes when consumed', () => {
+  const document = createFakeDocument();
+  const sheet = createDevSheet({
+    document: document as unknown as Document,
+    sourcemap: false,
+  });
+  const enter = createKeyframes({
+    from: {
+      opacity: 0,
+      transform: 'scale(0.95) translateY(16px)',
+    },
+    to: {
+      opacity: 1,
+      transform: 'none',
+    },
+  });
+  const direct = style({
+    animationName: enter,
+    animationDuration: '180ms',
+  });
+  const previousSheet = getGlobalSheet();
+
+  setGlobalSheet(sheet);
+
+  try {
+    const result = getClassName(direct);
+
+    if (!result.className) throw new Error('expected class name');
+
+    const text = document.head.textContent;
+
+    includes(text, '@keyframes');
+    includes(text, 'from{');
+    includes(text, 'to{');
+    includes(text, 'animation-name');
+    includes(text, enter.value);
+  } finally {
+    setGlobalSheet(previousSheet);
+  }
+});
+
+test('style.keyframes applies the style function transform', () => {
+  const custom = createStyleFn({
+    style: null as any,
+    selectors: ArgSelectors,
+    transform: {
+      transform(style: Record<string, unknown>) {
+        const result = { ...style };
+        if (result.tone === 'brand') {
+          delete result.tone;
+          result.color = 'blue';
+        }
+        return result;
+      },
+    },
+  }).style;
+  const document = createFakeDocument();
+  const sheet = createDevSheet({
+    document: document as unknown as Document,
+    sourcemap: false,
+  });
+  const enter = custom.keyframes({
+    from: {
+      tone: 'brand',
+      opacity: 0,
+    },
+    to: {
+      tone: 'brand',
+      opacity: 1,
+    },
+  });
+  const direct = custom({
+    animationName: enter,
+    animationDuration: '180ms',
+  });
+  const previousSheet = getGlobalSheet();
+
+  setGlobalSheet(sheet);
+
+  try {
+    getClassName(direct);
+
+    const text = document.head.textContent;
+
+    includes(text, '@keyframes');
+    includes(text, 'color: blue;');
+    notIncludes(text, 'tone');
+    includes(text, enter.value);
+  } finally {
+    setGlobalSheet(previousSheet);
+  }
+});
+
+test('style value ref inserts font-face when consumed', () => {
+  const document = createFakeDocument();
+  const sheet = createDevSheet({
+    document: document as unknown as Document,
+    sourcemap: false,
+  });
+  const mona = createFontFace({
+    src: fontSrc('/fonts/Mona-Sans.woff2', 'woff2'),
+    fontWeight: 400,
+    fontStyle: 'normal',
+    fontDisplay: 'swap',
+  });
+  const direct = style({
+    fontFamily: mona,
+  });
+  const previousSheet = getGlobalSheet();
+
+  setGlobalSheet(sheet);
+
+  try {
+    const result = getClassName(direct);
+
+    if (!result.className) throw new Error('expected class name');
+
+    const text = document.head.textContent;
+
+    includes(text, '@font-face');
+    includes(text, 'src: url("/fonts/Mona-Sans.woff2") format("woff2")');
+    includes(text, 'font-weight: 400;');
+    notIncludes(text, 'font-weight: 400px;');
+    includes(text, 'font-family');
+    includes(text, mona.value);
+  } finally {
+    setGlobalSheet(previousSheet);
+  }
+});
+
+test('style value ref inserts additional at-rules when consumed', () => {
+  const document = createFakeDocument();
+  const sheet = createDevSheet({
+    document: document as unknown as Document,
+    sourcemap: false,
+  });
+  const positionTry = createPositionTry({
+    insetArea: 'bottom',
+    margin: '8px',
+  });
+  const counterStyle = createCounterStyle({
+    system: 'cyclic',
+    symbols: '"*"',
+    suffix: '" "',
+  });
+  const property = createProperty('--spin-angle', {
+    syntax: '"<angle>"',
+    inherits: false,
+    initialValue: '0deg',
+  });
+  const scrollTimeline = createScrollTimeline({
+    source: 'auto',
+    orientation: 'block',
+  });
+  const viewTimeline = createViewTimeline({
+    subject: 'auto',
+    axis: 'block',
+  });
+  const palette = createFontPaletteValues({
+    fontFamily: 'system-ui',
+    basePalette: 1,
+  });
+  const direct = style({
+    positionTryFallbacks: positionTry,
+    listStyleType: counterStyle,
+    transitionProperty: property,
+    animationTimeline: scrollTimeline,
+    fontPalette: palette,
+  });
+  const viewTimelineStyle = style({
+    animationTimeline: viewTimeline,
+  });
+  const previousSheet = getGlobalSheet();
+
+  setGlobalSheet(sheet);
+
+  try {
+    getClassName(direct);
+    getClassName(viewTimelineStyle);
+
+    const text = document.head.textContent;
+
+    includes(text, '@position-try');
+    includes(text, 'inset-area: bottom;');
+    includes(text, '@counter-style');
+    includes(text, 'symbols: "*";');
+    includes(text, '@property --spin-angle');
+    includes(text, 'inherits: false;');
+    includes(text, '@scroll-timeline');
+    includes(text, '@view-timeline');
+    includes(text, '@font-palette-values');
+    includes(text, 'base-palette: 1;');
+    includes(text, positionTry.value);
+    includes(text, counterStyle.value);
+    includes(text, scrollTimeline.value);
+    includes(text, viewTimeline.value);
+    includes(text, palette.value);
   } finally {
     setGlobalSheet(previousSheet);
   }
@@ -492,6 +704,37 @@ test('static getToken resolves token values to css variable fallbacks', () => {
   equal(getToken(alias), 'var(--token-static-alias, var(--token-static-base, blue))');
 });
 
+test('generated id counters are shared across duplicate module instances', async () => {
+  const tokenAPath = '../style/token.ts?counter-a';
+  const tokenBPath = '../style/token.ts?counter-b';
+  const themeAPath = '../style/theme.ts?counter-a';
+  const themeBPath = '../style/theme.ts?counter-b';
+  const keyframesAPath = '../css/keyframes.ts?counter-a';
+  const keyframesBPath = '../css/keyframes.ts?counter-b';
+
+  const tokenA = await import(tokenAPath) as typeof import('../style/token');
+  const tokenB = await import(tokenBPath) as typeof import('../style/token');
+  const themeA = await import(themeAPath) as typeof import('../style/theme');
+  const themeB = await import(themeBPath) as typeof import('../style/theme');
+  const keyframesA = await import(keyframesAPath) as typeof import('../css/keyframes');
+  const keyframesB = await import(keyframesBPath) as typeof import('../css/keyframes');
+
+  tokenA.resetStyleTokenIdCounter();
+  themeA.resetStyleThemeIdCounter();
+
+  equal(tokenA.getStyleTokenId(tokenA.createStyleToken('a')), '0');
+  equal(tokenB.getStyleTokenId(tokenB.createStyleToken('b')), '1');
+  equal(getStyleTokenId(tokenB.createStyleToken('c')), '2');
+
+  equal(themeA.createTheme([tokenA.createStyleToken('a')('a')]).id, '0');
+  equal(themeB.createTheme([tokenB.createStyleToken('b')('b')]).id, '1');
+
+  const first = keyframesA.createKeyframes({ from: { opacity: 0 }, to: { opacity: 1 } });
+  const second = keyframesB.createKeyframes({ from: { opacity: 1 }, to: { opacity: 0 } });
+
+  notEqual(first.value, second.value);
+});
+
 test('createTokens supports nested object token groups', () => {
   const tokens = createTokens({
     color: {
@@ -616,7 +859,7 @@ test('runtime debug variables make tokens use property-local inline styles', () 
     },
     sourceUrl: '/tmp/runtime-token-local-variable.ts',
   };
-  const css = style.slot({
+  const css = (style.slot as any)({
     backgroundColor: token,
   }, debug);
   const result = resolveStyleProp(css as any);
@@ -704,6 +947,33 @@ test('style prop cache keeps token-bound extracted style values dynamic', () => 
     equal(second.className, 'bound-style-cache-class');
     equal((first.style as Record<string, unknown>)['--bound-style-cache-value'], 'red');
     equal((second.style as Record<string, unknown>)['--bound-style-cache-value'], 'green');
+  } finally {
+    setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
+  }
+});
+
+test('style value ref token deps resolve from direct token bindings', () => {
+  const enterTransform = createToken('translateY(8px)', 'enter-transform');
+  const enter = createKeyframes({
+    from: {
+      transform: enterTransform,
+    },
+    to: {
+      transform: 'none',
+    },
+  });
+  const direct = style({
+    animationName: enter,
+  });
+
+  try {
+    setBuildMeta({ dev: false, extract: true, hoist: true, rsc: false, css: null });
+
+    const result = resolveStyleProp(withTokens(direct, [
+      enterTransform('translateY(24px)'),
+    ] as never));
+
+    equal(result.style?.['--token-enter-transform' as never], 'translateY(24px)');
   } finally {
     setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
   }

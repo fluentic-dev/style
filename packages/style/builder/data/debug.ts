@@ -1,6 +1,6 @@
+import { RUNTIME_CONFIG } from '../../config';
 import { hashString } from '../../utils/hash';
 import { type TraceCallsite } from '../../utils/trace';
-import { RUNTIME_CONFIG } from '../../config';
 
 export const LOC_LINE = 0;
 export const LOC_COL = 1;

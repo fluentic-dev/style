@@ -7,9 +7,10 @@ component slots, scoped themes, token overrides, and optional build-time
 extraction. Start with runtime styles while designing components, then extract
 static chains into CSS when your app or library is ready for production.
 
-[Docs](https://fluenticstack.com/style/docs/) |
+[Docs](https://fluenticstack.com/style) |
 [Quick start](https://fluenticstack.com/style/docs/getting-started/quick-start/) |
 [Playground](https://fluenticstack.com/style/playground/) |
+[GitHub](https://github.com/fluentic-dev/style) |
 [npm](https://www.npmjs.com/package/@fluentic/style)
 
 ## Why Fluentic Style
@@ -200,8 +201,8 @@ compiler, and bundler usage.
 | `@fluentic/style/plugin/rspack`   | Rspack plugin.                                                            |
 | `@fluentic/style/plugin/rolldown` | Rolldown plugin.                                                          |
 | `@fluentic/style/plugin/esbuild`  | esbuild plugin.                                                           |
-| `@fluentic/style/plugin/unplugin` | Shared unplugin adapter.                                                  |
-| `@fluentic/style/babel`           | Babel plugin factory.                                                     |
+| `@fluentic/style/plugin/farm`     | Farm plugin.                                                              |
+| `@fluentic/style/plugin/sidecar`  | Sidecar server helpers for bundler integrations.                          |
 | `@fluentic/style/compiler`        | Low-level compiler API.                                                   |
 | `@fluentic/style/builder/extract` | Extracted style helpers.                                                  |
 | `@fluentic/style/config`          | Runtime and compiler configuration helpers.                               |
@@ -209,7 +210,7 @@ compiler, and bundler usage.
 | `@fluentic/style/runtime/style`   | Style runtime helpers for extracted output.                               |
 
 See the [integration guide](https://fluenticstack.com/style/docs/integrations/overview/)
-for Vite, Rollup, Rolldown, Webpack, Rspack, esbuild, Babel, and Next.js.
+for Vite, Rollup, Rolldown, Webpack, Rspack, esbuild, Farm, and Next.js.
 
 ## Status
 

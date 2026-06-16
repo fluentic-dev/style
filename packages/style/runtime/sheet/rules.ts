@@ -1,10 +1,10 @@
-import type { ThemeData } from '../../builder/data/data';
 import { BUILDER_CALLSITE } from '../../builder/data/const';
+import type { ThemeData } from '../../builder/data/data';
 import { isThemeData } from '../../builder/data/is';
 import type { SheetRule } from '../../sheet';
 import { getStylePropItems, type StylePropItem, walkStyleProp } from '../core/cache/prop';
 import type { StyleProp } from '../types';
-import { createRuntimeSheetRule, type RuntimeSheetRule } from './rule';
+import { createRuntimeSheetRules, type RuntimeSheetRule } from './rule';
 import { createThemeRule } from './theme';
 
 export function walkStylePropSheetRules(
@@ -40,8 +40,12 @@ function walkStylePropItemSheetRules(
   const items = getStylePropItems(item);
 
   for (let i = 0, len = items.length; i < len; i++) {
-    const rule = createRuntimeSheetRule(items[i]);
-    if (rule) onRule(rule);
+    const rules = createRuntimeSheetRules(items[i]);
+    if (!rules) continue;
+
+    for (let j = 0, len = rules.length; j < len; j++) {
+      onRule(rules[j]);
+    }
   }
 }
 

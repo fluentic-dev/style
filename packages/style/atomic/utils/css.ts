@@ -32,6 +32,10 @@ export function escapeCssIdent(ident: string): string {
   return escaped;
 }
 
+export function sanitizeCssIdentName(value: string, fallback: string = '') {
+  return value.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || fallback;
+}
+
 export function getIdentifierSafeHash(hash: string) {
   const first = hash.charCodeAt(0);
 

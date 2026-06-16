@@ -2,7 +2,12 @@ import type { CSSProperties } from 'react';
 import type { StateItem } from '../../../builder/data/state';
 import type { ResolvedStyleItem } from './item';
 import { getStyleTokenValues, isResolvedStyleItem } from './item';
-import { getStateItemClassName, getStateItemDedupe, getStateItemVariableValue } from './stateItem';
+import {
+  getStateItemAtRuleRefVariables,
+  getStateItemClassName,
+  getStateItemDedupe,
+  getStateItemVariableValue,
+} from './stateItem';
 import type { StyleTokenValues } from './tokenValues';
 
 export type ResolvedStyleProp = {
@@ -83,11 +88,28 @@ function addItemStyle(
   tokens: StyleTokenValues | null,
 ) {
   const variableValue = getStateItemVariableValue(item, tokens);
-  if (!variableValue) return style;
+  if (variableValue) {
+    style = setStyleValue(style, variableValue[0], variableValue[1]);
+  }
 
+  const refValues = getStateItemAtRuleRefVariables(item, tokens);
+  if (!refValues) return style;
+
+  for (let i = 0, len = refValues.length; i < len; i++) {
+    style = setStyleValue(style, refValues[i][0], refValues[i][1]);
+  }
+
+  return style;
+}
+
+function setStyleValue(
+  style: CSSProperties | undefined,
+  name: string,
+  value: unknown,
+) {
   const next = style ?? {};
 
-  (next as Record<string, unknown>)[variableValue[0]] = variableValue[1];
+  (next as Record<string, unknown>)[name] = value;
 
   return next;
 }
