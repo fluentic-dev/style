@@ -561,7 +561,7 @@ const rule = style({ color: 'red' });
 
   equal(seenRelativePath, 'src/page.tsx');
   equal(seenSourcePath, 'src/page.tsx');
-  equal(seenSourceUrl, 'http://127.0.0.1:4321/src/page.tsx');
+  equal(seenSourceUrl, 'source:///src/page.tsx');
   includes(result.code, `const _styleDebugSourceUrl = "/@bundler/src/page.tsx";`);
   includes(result.code, `sourceUrl: _styleDebugSourceUrl`);
 });

@@ -1,3 +1,4 @@
+import { FLUENTIC_SIDECAR_URL_SYMBOL_KEY } from '../../config';
 import { normalizeCallsiteSourceUrl } from '../../utils/trace';
 
 export type SourceMapSource = {
@@ -46,7 +47,7 @@ export function createSourceMapComment(
       const source = getSource(
         sources,
         sourceLookup,
-        normalizeSourcePath(sourceData.sourceUrl || sourceData.filePath),
+        getSourceMapSourceUrl(sourceData),
         sourceData.sourceContent,
       );
       const originalLine = Math.max(sourceData.line - 1, 0);
@@ -136,6 +137,53 @@ function normalizeSourcePath(filePath: string) {
   }
 
   return filePath.replace(/^at\s+/, '');
+}
+
+function getSourceMapSourceUrl(sourceData: SourceMapSource) {
+  const sourceUrl = sourceData.sourceUrl || sourceData.filePath;
+
+  if (sourceData.sourceContent !== undefined) {
+    return normalizeSourcePath(sourceUrl);
+  }
+
+  return normalizeSourcePath(resolveSidecarSourceUrl(sourceUrl));
+}
+
+function resolveSidecarSourceUrl(sourceUrl: string) {
+  const sidecarUrl = getSidecarUrl();
+  if (!sidecarUrl) return sourceUrl;
+
+  const sourcePath = getSourceUrlPath(sourceUrl);
+  return joinSourceUrl(sidecarUrl, sourcePath);
+}
+
+function getSidecarUrl() {
+  const value = (globalThis as Record<symbol, unknown>)[
+    Symbol.for(FLUENTIC_SIDECAR_URL_SYMBOL_KEY)
+  ];
+
+  return typeof value === 'string' && value ? value : null;
+}
+
+function getSourceUrlPath(sourceUrl: string) {
+  if (sourceUrl.startsWith('source://')) {
+    return sourceUrl.slice('source://'.length).replace(/^\/+/, '');
+  }
+
+  try {
+    return new URL(sourceUrl).pathname.replace(/^\/+/, '');
+  } catch {
+    return sourceUrl
+      .replace(/^[a-zA-Z][a-zA-Z\d+.-]*:\/+/, '')
+      .replace(/^\/+/, '');
+  }
+}
+
+function joinSourceUrl(baseUrl: string, sourcePath: string) {
+  const base = baseUrl.replace(/\/+$/, '');
+  const path = sourcePath.replace(/^\/+/, '');
+
+  return path ? `${base}/${path}` : base;
 }
 
 function getLineCount(css: string) {

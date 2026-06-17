@@ -1,3 +1,4 @@
+import { transformElement as transformExtractedElement } from '../runtime/extract/jsx';
 import { ArgSelectors } from '../selector/presets';
 import { getStyleTokenId, getStyleTokenOverrideDebug } from '../style/token';
 import {
@@ -21,6 +22,7 @@ import {
   createKeyframes,
   createPositionTry,
   createProperty,
+  createRscStylePayload,
   createScopeBuilder,
   createScrollTimeline,
   createStyleFn,
@@ -37,6 +39,7 @@ import {
   getCombinedStyleScopes,
   getGlobalSheet,
   getLayerNameForRule,
+  getRscClassName,
   getRscDevInitialStyleSelector,
   getRscStyleCss,
   getToken,
@@ -45,6 +48,7 @@ import {
   ITEM_VALUE_NUMBER_PX,
   notEqual,
   notIncludes,
+  parseRscStylePayload,
   resolveStyleProp,
   setBuildMeta,
   setGlobalSheet,
@@ -127,6 +131,33 @@ test('style prop resolver accepts direct raw style and slot data', () => {
 
   if (!result.className) throw new Error('expected direct raw css class name');
   equal(result, cached);
+});
+
+test('style prop resolver strips debug element marker before walking css items', () => {
+  const direct = style({
+    color: 'orchid',
+  });
+
+  const result = resolveStyleProp([{
+    $$elementDebug: true,
+    loc: [69, 9],
+    label: 'appTheme',
+    sourceUrl: 'source:///src/page.tsx',
+  }, direct] as any);
+
+  if (!result.className) throw new Error('expected class name');
+});
+
+test('style prop resolver ignores bare debug element marker', () => {
+  const result = resolveStyleProp({
+    $$elementDebug: true,
+    loc: [69, 9],
+    label: 'appTheme',
+    sourceUrl: 'source:///src/page.tsx',
+  } as any);
+
+  equal(Boolean(result.className), false);
+  equal(result.style, undefined);
 });
 
 test('style prop resolver normalizes numeric debug variable values by property', () => {
@@ -231,6 +262,53 @@ test('jsx style prop inserts direct raw style and slot runtime rules', () => {
     includes(text, 'color: olive');
   } finally {
     setGlobalSheet(previousSheet);
+  }
+});
+
+test('jsx style prop prepends debug element marker class in dev', () => {
+  const direct = style({
+    color: 'plum',
+  });
+
+  try {
+    setBuildMeta({
+      dev: true,
+      extract: false,
+      hoist: false,
+      rsc: false,
+      css: {
+        debugElementClassName: true,
+        debugElementClassNamePrefix: 'elm-',
+      },
+    });
+
+    const result = transformElement({
+      type: 'div',
+      source: {
+        fileName: 'source:///src/Card.tsx',
+        lineNumber: 12,
+        columnNumber: 3,
+      },
+      props: {
+        css: [{
+          $$elementDebug: true,
+          loc: [12, 3],
+          label: 'container',
+          sourceUrl: 'source:///src/Card.tsx',
+        }, direct],
+        className: 'external',
+      },
+    });
+    const props = result.props as { className?: string; css?: unknown; };
+
+    if (!props.className) throw new Error('expected transformed class name');
+
+    const classNames = props.className.split(' ');
+    equal(classNames[0].startsWith('elm-container-'), true);
+    equal(classNames[1], 'external');
+    equal(props.css, undefined);
+  } finally {
+    setBuildMeta(null);
   }
 });
 
@@ -952,6 +1030,59 @@ test('style prop cache keeps token-bound extracted style values dynamic', () => 
   }
 });
 
+test('extracted transform keeps combined token values dynamic across pooled styles', () => {
+  const tone = createExtractedToken('combined-token-cache-tone', '#0f766e');
+  const surface = createExtractedToken('combined-token-cache-surface', 'rgba(240,253,250,0.92)');
+  const card = createExtractedSlot('combined-token-cache-card', [
+    ['combined-token-cache-card-dedupe', 'combined-token-cache-card-class'],
+  ]);
+  const panel = createExtractedSlot('combined-token-cache-panel', [
+    ['combined-token-cache-panel-bg', 'combined-token-cache-panel-bg-class', [1, '--combined-panel-bg', surface]],
+    ['combined-token-cache-panel-border', 'combined-token-cache-panel-border-class', [
+      1,
+      '--combined-panel-border',
+      tone,
+    ]],
+  ]);
+  const styles = { card, panel };
+
+  try {
+    setBuildMeta({ dev: false, extract: true, hoist: true, rsc: false, css: null });
+
+    const green = combineStyle(
+      styles,
+      tone('#0f766e'),
+      surface('rgba(240,253,250,0.92)'),
+    );
+    const brown = combineStyle(
+      styles,
+      tone('#7c2d12'),
+      surface('rgba(239,246,255,0.92)'),
+    );
+
+    const first = transformExtractedElement({
+      type: 'article',
+      props: { css: [green.card, green.panel] },
+    }).props as { className?: string; style?: Record<string, unknown>; };
+    const second = transformExtractedElement({
+      type: 'article',
+      props: { css: [brown.card, brown.panel] },
+    }).props as { className?: string; style?: Record<string, unknown>; };
+
+    equal(
+      first.className,
+      'combined-token-cache-card-class combined-token-cache-panel-bg-class combined-token-cache-panel-border-class',
+    );
+    equal(second.className, first.className);
+    equal(first.style?.['--combined-panel-bg'], 'rgba(240,253,250,0.92)');
+    equal(first.style?.['--combined-panel-border'], '#0f766e');
+    equal(second.style?.['--combined-panel-bg'], 'rgba(239,246,255,0.92)');
+    equal(second.style?.['--combined-panel-border'], '#7c2d12');
+  } finally {
+    setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
+  }
+});
+
 test('style value ref token deps resolve from direct token bindings', () => {
   const enterTransform = createToken('translateY(8px)', 'enter-transform');
   const enter = createKeyframes({
@@ -1080,7 +1211,7 @@ test('rsc dev payload is emitted by getClassName', () => {
 
   const pool = createCombinedStylePool();
   const css = pool.get(styles, [], []).style;
-  const manual = getClassName(css.container);
+  const manual = getRscClassName(css.container);
   const manualProps = manual as Record<string, unknown>;
   const result = transformRscElement({
     type: 'div',
@@ -1102,6 +1233,169 @@ test('rsc dev payload is emitted by getClassName', () => {
   includes(storeCss, 'color');
   equal(typeof props.className, 'string');
   equal(typeof props[ELEMENT_CSS_DATA_ATTR], 'string');
+  equal('css' in props, false);
+});
+
+test('rsc dev payload trims bulky debug metadata', () => {
+  const payload = createRscStylePayload([{
+    key: 'color-test',
+    css: '.color-test{color:red}',
+    priority: [0, 0, 0, 0, 0, 0, 0],
+    callsite: null,
+    debugField: 'color',
+    debug: {
+      $$debug: true,
+      sourceUrl: 'source://@app/page.tsx',
+      code: 'const veryLongSource = "inline source content should not be serialized";',
+      label: ['slot', 'style.slot', 'page.tsx'],
+      loc: [4, 3],
+      fields: {
+        color: [5, 7],
+        backgroundColor: [8, 9],
+      },
+      vars: {},
+    },
+  }]);
+  const parsed = JSON.parse(payload);
+
+  equal(parsed.length, 1);
+  equal(parsed[0].key, 'color-test');
+  equal('callsite' in parsed[0], false);
+  equal(parsed[0].debug.sourceUrl, 'source://@app/page.tsx');
+  equal(parsed[0].debug.fields.color[0], 5);
+  equal(parsed[0].debug.fields.color[1], 7);
+  equal('backgroundColor' in parsed[0].debug.fields, false);
+  equal(parsed[0].debugField, 'color');
+  equal('code' in parsed[0].debug, false);
+  notIncludes(payload, 'veryLongSource');
+});
+
+test('rsc dev payload keeps only selected debug trace field', () => {
+  const payload = createRscStylePayload([{
+    key: 'color-test',
+    css: '.color-test{color:red}',
+    priority: [0, 0, 0, 0, 0, 0, 0],
+    callsite: null,
+    debugField: 'color',
+    debug: {
+      $$debug: true,
+      sourceUrl: 'source://@app/page.tsx',
+      code: 'source content should not be serialized',
+      label: ['slot', 'style.slot', 'page.tsx'],
+      loc: [4, 3],
+      fields: {
+        color: {
+          0: [5, 7],
+          1: [6, 8],
+        },
+        backgroundColor: {
+          0: [8, 9],
+        },
+      },
+      vars: {},
+    },
+  }]);
+  const parsed = JSON.parse(payload);
+
+  equal(parsed[0].debug.fields.color[0][0], 5);
+  equal(parsed[0].debug.fields.color[1][0], 6);
+  equal('backgroundColor' in parsed[0].debug.fields, false);
+  equal('code' in parsed[0].debug, false);
+});
+
+test('rsc dev compact payload is accepted by client observer parser', () => {
+  const payload = createRscStylePayload([{
+    key: 'color-test',
+    css: '.color-test{color:red}',
+    priority: [0, 0, 0, 0, 0, 0, 0],
+    callsite: {
+      filePath: 'source://@app/page.tsx',
+      sourceUrl: 'source://@app/page.tsx',
+      sourceContent: 'source content should be omitted before parsing',
+      line: 5,
+      column: 7,
+    },
+    debugField: 'color',
+    debug: {
+      $$debug: true,
+      sourceUrl: 'http://127.0.0.1:1234/app/page.tsx',
+      code: 'source content should be omitted before parsing',
+      label: ['slot', 'style.slot', 'page.tsx'],
+      loc: [4, 3],
+      fields: {
+        color: [5, 7],
+      },
+      vars: {},
+    },
+  }]);
+  const rules = parseRscStylePayload(payload);
+  const wire = JSON.parse(payload);
+
+  equal(rules.length, 1);
+  equal('callsite' in wire[0], false);
+  equal(rules[0].key, 'color-test');
+  equal(rules[0].css, '.color-test{color:red}');
+  equal(rules[0].callsite, undefined);
+  equal(rules[0].debug?.sourceUrl, 'http://127.0.0.1:1234/app/page.tsx');
+  equal(rules[0].debugField, 'color');
+  equal('code' in rules[0].debug!, false);
+});
+
+test('rsc dev payload preserves debug source urls without callsites', () => {
+  const payload = createRscStylePayload([{
+    key: 'color-test',
+    css: '.color-test{color:red}',
+    priority: [0, 0, 0, 0, 0, 0, 0],
+    callsite: {
+      filePath: '/Users/example/project/app/page.tsx',
+      sourceUrl: '/Users/example/project/app/page.tsx',
+      line: 5,
+      column: 7,
+    },
+    debug: {
+      $$debug: true,
+      sourceUrl: '/Users/example/project/app/page.tsx',
+      label: ['slot', 'style.slot', 'page.tsx'],
+      loc: [4, 3],
+    },
+  }]);
+  const parsed = JSON.parse(payload);
+  const rules = parseRscStylePayload(payload);
+
+  equal(parsed.length, 1);
+  equal('callsite' in parsed[0], false);
+  equal(parsed[0].debug.sourceUrl, '/Users/example/project/app/page.tsx');
+  equal(rules.length, 1);
+  equal(rules[0].callsite, undefined);
+  equal(rules[0].debug?.sourceUrl, '/Users/example/project/app/page.tsx');
+});
+
+test('rsc prod style prop omits dev payload', () => {
+  clearRscStyleStore();
+  setBuildMeta({ dev: false, extract: true, hoist: true, rsc: true, css: null });
+
+  const pool = createCombinedStylePool();
+  const css = pool.get(styles, [], []).style;
+  const manual = getRscClassName(css.container) as Record<string, unknown>;
+  const result = transformRscElement({
+    type: 'div',
+    props: {
+      css: css.container,
+      id: 'target',
+    },
+  });
+  const props = result.props as Record<string, unknown>;
+  const storeCss = getRscStyleCss();
+
+  setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
+  configureRuntime({ dev: false });
+
+  equal(props.id, 'target');
+  equal(typeof manual.className, 'string');
+  equal(typeof props.className, 'string');
+  equal(ELEMENT_CSS_DATA_ATTR in manual, false);
+  equal(ELEMENT_CSS_DATA_ATTR in props, false);
+  equal(storeCss, '');
   equal('css' in props, false);
 });
 
@@ -1161,8 +1455,8 @@ test('rsc dev style store wraps parent selector priority rules in layers', () =>
   ]);
   const css = combineStyle(card, bindScope(card.root, parentHover));
 
-  getClassName(css.root);
-  getClassName(css.button);
+  getRscClassName(css.root);
+  getRscClassName(css.button);
 
   const storeCss = getRscStyleCss();
   const blueLayer = getLayerNameForRule(storeCss, 'background: blue');

@@ -1,5 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { rewriteImportSources } from '../../compiler/transform/utils/import';
+import { getDefaultSourcemapUrl, type SourcemapFilePathInfo } from '../../compiler/utils/sourcemap';
 import type { BuildMeta } from '../../config';
 import {
   createFileCssCache,
@@ -8,6 +10,9 @@ import {
   createPluginCompiler,
   type FileCssCache,
   getExtractedCssMarker,
+  STYLE_ROOT_IMPORT_PATH,
+  STYLE_SERVER_EXTRACTED_RUNTIME_IMPORT_PATH,
+  STYLE_SERVER_RUNTIME_IMPORT_PATH,
 } from '../utils';
 import { injectModuleImport } from '../utils/injection';
 import { createWebpackStyleLoader, type WebpackStyleLoaderOptions } from '../utils/webpack/loader';
@@ -102,6 +107,10 @@ function injectNextRuntimeCode(
   let nextCode = code;
 
   if (entry.isServer) {
+    nextCode = entry.dev
+      ? rewriteServerDevStyleImports(nextCode)
+      : rewriteServerStyleImports(nextCode);
+
     nextCode = injectModuleImport(nextCode, SERVER_ENTRY_IMPORT_PATH);
   } else {
     nextCode = injectModuleImport(nextCode, CLIENT_ENTRY_IMPORT_PATH);
@@ -116,6 +125,21 @@ function injectNextRuntimeCode(
   }
 
   return nextCode;
+}
+
+export function rewriteServerDevStyleImports(code: string) {
+  return rewriteServerStyleImports(code, STYLE_SERVER_RUNTIME_IMPORT_PATH);
+}
+
+export function rewriteServerStyleImports(
+  code: string,
+  importPath = STYLE_SERVER_EXTRACTED_RUNTIME_IMPORT_PATH,
+) {
+  return rewriteImportSources(
+    code,
+    (source) => source === STYLE_ROOT_IMPORT_PATH ? importPath : null,
+    'fluentic-next-server-style-imports.js',
+  );
 }
 
 function ensureCssEntryImportPath(importPath: string, importerPath: string) {
@@ -145,8 +169,12 @@ function getTurbopackEntry(options: NextTurbopackLoaderOptions): NextLoaderState
   const compilerOptions = resolveNextCompilerOptions(options, null, buildMeta);
 
   if (dev) {
-    compilerOptions.devSourcemap = 'sourceContent';
-    delete compilerOptions.getSourcemapFilePath;
+    compilerOptions.devSourcemap = 'sidecarServer';
+
+    compilerOptions.getSourcemapFilePath = createTurbopackFallbackSourcemapFilePath(
+      options,
+      compilerOptions.getSourcemapFilePath,
+    );
   }
 
   const compiler = createPluginCompiler({
@@ -172,5 +200,21 @@ function getTurbopackEntry(options: NextTurbopackLoaderOptions): NextLoaderState
     isServer: options.isServer ?? false,
     devCssHref: options.devCssHref ?? null,
     dev,
+  };
+}
+
+function createTurbopackFallbackSourcemapFilePath(
+  options: NextTurbopackLoaderOptions,
+  getSourcemapFilePath: typeof options.getSourcemapFilePath,
+): typeof options.getSourcemapFilePath {
+  return (info) => {
+    const defaultSourceUrl = getDefaultSourcemapUrl(info);
+
+    const nextInfo: SourcemapFilePathInfo = {
+      ...info,
+      sourceUrl: defaultSourceUrl,
+    };
+
+    return getSourcemapFilePath?.(nextInfo) || defaultSourceUrl;
   };
 }

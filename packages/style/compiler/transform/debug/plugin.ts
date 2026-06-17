@@ -91,16 +91,7 @@ export function createDebugPlugin(args: PluginArgs) {
             state.programPath = path;
           },
           exit(path: NodePath<BabelTypes.Program>, state: PluginState) {
-            if (!state.sourceUrlId) return;
-
-            insertDebugSourceDeclaration(
-              t,
-              path,
-              state.sourceUrlId,
-              sourceUrl,
-              state.sourceContentId,
-              sourceContent,
-            );
+            insertDebugDeclarations(t, path, state, sourceUrl, sourceContent);
           },
         },
 
@@ -181,9 +172,179 @@ export function createDebugPlugin(args: PluginArgs) {
             ),
           );
         },
+
+        JSXOpeningElement(
+          path: NodePath<BabelTypes.JSXOpeningElement>,
+          state: PluginState,
+        ) {
+          if (isElementDebugEnabled(options) !== true) return;
+          if (!isHostJsxElement(path.node.name)) return;
+
+          const cssAttr = getJsxAttribute(path.node, 'css');
+          if (!cssAttr) return;
+
+          const loc = path.node.loc?.start;
+          if (!loc) return;
+
+          const sourceUrlRef = getSourceUrlId(t, state);
+          const sourceContentRef = sourceContent
+            ? getSourceContentId(t, state)
+            : null;
+
+          const debugInfo = getElementDebugInfo(cssAttr);
+          const label = debugInfo.label || getShortFileLabel(state.fileId);
+          const debugLoc = debugInfo.loc ?? loc;
+          const debug = buildElementDebugDataObject(
+            t,
+            debugLoc.line,
+            debugLoc.column + 1,
+            label,
+            sourceUrlRef,
+            sourceContentRef,
+          );
+
+          wrapCssAttributeWithElementDebug(t, cssAttr, debug);
+        },
       },
     };
   });
+}
+
+function isHostJsxElement(name: BabelTypes.JSXOpeningElement['name']) {
+  if (name.type !== 'JSXIdentifier') return false;
+
+  const first = name.name.charCodeAt(0);
+  return first >= 97 && first <= 122;
+}
+
+function getJsxAttribute(
+  node: BabelTypes.JSXOpeningElement,
+  name: string,
+) {
+  for (const attr of node.attributes) {
+    if (attr.type !== 'JSXAttribute') continue;
+    if (attr.name.type !== 'JSXIdentifier') continue;
+    if (attr.name.name === name) return attr;
+  }
+
+  return null;
+}
+
+type ElementDebugInfo = {
+  label: string;
+  loc: BabelTypes.SourceLocation['start'] | null;
+};
+
+function getElementDebugInfo(attr: BabelTypes.JSXAttribute): ElementDebugInfo {
+  const value = attr.value;
+  if (!value || value.type !== 'JSXExpressionContainer') return { label: '', loc: null };
+
+  return getExpressionDebugInfo(value.expression);
+}
+
+function wrapCssAttributeWithElementDebug(
+  t: typeof BabelTypes,
+  attr: BabelTypes.JSXAttribute,
+  debug: BabelTypes.ObjectExpression,
+) {
+  const value = attr.value;
+  if (!value || value.type !== 'JSXExpressionContainer') return;
+
+  const expression = value.expression;
+  if (expression.type === 'JSXEmptyExpression') return;
+
+  if (expression.type === 'ArrayExpression') {
+    expression.elements.unshift(debug);
+    return;
+  }
+
+  value.expression = t.arrayExpression([debug, expression]);
+}
+
+function buildElementDebugDataObject(
+  t: typeof BabelTypes,
+  line: number,
+  column: number,
+  label: string,
+  sourceUrlRef: BabelTypes.Expression,
+  sourceContentRef: BabelTypes.Expression | null,
+) {
+  return t.objectExpression([
+    t.objectProperty(
+      t.identifier('$$elementDebug'),
+      t.booleanLiteral(true),
+    ),
+    t.objectProperty(
+      t.identifier('loc'),
+      t.arrayExpression([
+        t.numericLiteral(line),
+        t.numericLiteral(column),
+      ]),
+    ),
+    t.objectProperty(
+      t.identifier('label'),
+      t.stringLiteral(label),
+    ),
+    t.objectProperty(
+      t.identifier('sourceUrl'),
+      sourceUrlRef,
+    ),
+    ...sourceContentRef
+      ? [
+        t.objectProperty(
+          t.identifier('code'),
+          sourceContentRef,
+        ),
+      ]
+      : [],
+  ]);
+}
+
+function getExpressionDebugInfo(node: BabelTypes.JSXExpressionContainer['expression']): ElementDebugInfo {
+  if (node.type === 'JSXEmptyExpression') return { label: '', loc: null };
+
+  if (node.type === 'ArrayExpression') {
+    for (const element of node.elements) {
+      if (!element || element.type === 'SpreadElement') continue;
+
+      const info = getExpressionDebugInfo(element);
+      if (info.label) return info;
+    }
+
+    return { label: '', loc: null };
+  }
+
+  if (node.type === 'MemberExpression' && !node.computed) {
+    if (node.property.type === 'Identifier') {
+      return { label: node.property.name, loc: node.loc?.start ?? node.property.loc?.start ?? null };
+    }
+
+    if (node.property.type === 'PrivateName') {
+      return { label: node.property.id.name, loc: node.loc?.start ?? node.property.loc?.start ?? null };
+    }
+  }
+
+  if (node.type === 'MemberExpression' && node.computed && node.property.type === 'StringLiteral') {
+    return { label: node.property.value, loc: node.loc?.start ?? node.property.loc?.start ?? null };
+  }
+
+  if (node.type === 'Identifier') {
+    return { label: node.name, loc: node.loc?.start ?? null };
+  }
+
+  return { label: '', loc: null };
+}
+
+function getShortFileLabel(filePath: string) {
+  const normalized = filePath.split(/[?#]/, 1)[0] || filePath;
+  const fileName = normalized.split(/[\\/]/).pop() || 'element';
+  const index = fileName.lastIndexOf('.');
+
+  return index > 0 ? fileName.slice(0, index) : fileName;
+}
+
+function isElementDebugEnabled(options: CompilerOptions) {
+  return options.css?.debugElementClassName ?? options.debugElementClassName ?? false;
 }
 
 function validateStaticSelectorArg(
@@ -605,9 +766,39 @@ function getSourceContentId(
   return t.cloneNode(state.sourceContentId);
 }
 
-function insertDebugSourceDeclaration(
+function insertDebugDeclarations(
   t: typeof BabelTypes,
   programPath: NodePath<BabelTypes.Program>,
+  state: PluginState,
+  sourceUrl: string,
+  sourceContent: string | null,
+) {
+  const declarations: BabelTypes.Statement[] = [];
+
+  if (state.sourceUrlId) {
+    declarations.push(createDebugSourceDeclaration(
+      t,
+      state.sourceUrlId,
+      sourceUrl,
+      state.sourceContentId,
+      sourceContent,
+    ));
+  }
+
+  if (!declarations.length) return;
+
+  const bodyPaths = programPath.get('body');
+  const insertAt = getSourceContentInsertIndex(bodyPaths);
+
+  if (insertAt >= bodyPaths.length) {
+    programPath.pushContainer('body', declarations);
+  } else {
+    bodyPaths[insertAt].insertBefore(declarations);
+  }
+}
+
+function createDebugSourceDeclaration(
+  t: typeof BabelTypes,
   sourceUrlId: BabelTypes.Identifier,
   sourceUrl: string,
   sourceContentId: BabelTypes.Identifier | null,
@@ -629,15 +820,7 @@ function insertDebugSourceDeclaration(
     );
   }
 
-  const declaration = t.variableDeclaration('const', declarators);
-  const bodyPaths = programPath.get('body');
-  const insertAt = getSourceContentInsertIndex(bodyPaths);
-
-  if (insertAt >= bodyPaths.length) {
-    programPath.pushContainer('body', declaration);
-  } else {
-    bodyPaths[insertAt].insertBefore(declaration);
-  }
+  return t.variableDeclaration('const', declarators);
 }
 
 function getSourceContentInsertIndex(

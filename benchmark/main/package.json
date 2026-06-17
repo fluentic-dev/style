@@ -7,6 +7,7 @@
   "scripts": {
     "bench": "node bench.mjs",
     "bench:contract": "node contract-bench.mjs",
+    "bench:compiler": "node compiler-bench.mjs",
     "bench:dynamic-values": "BENCH_KIND=dynamic-value-browser-benchmark BENCH_LABEL='Dynamic value benchmark' OUTPUT_PREFIX=dynamic-values VARIANTS=fluenticDynamicVars,fluenticInlineDynamicValues,gooberDynamicVars,emotionDynamicVars,styledComponentsDynamicVars node fluentic-cache-bench.mjs",
     "bench:fluentic-cache": "node fluentic-cache-bench.mjs",
     "bench:ssr-style": "node ssr-style-bench.mjs"
@@ -19,6 +20,7 @@
     "@emotion/react": "latest",
     "@emotion/styled": "latest",
     "@fluentic/style": "workspace:*",
+    "@stylexjs/stylex": "^0.18.3",
     "benchmark": "^2.1.4",
     "goober": "latest",
     "react": "latest",
@@ -26,6 +28,8 @@
     "styled-components": "latest"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "@stylexjs/babel-plugin": "^0.18.3",
     "playwright-core": "^1.54.2"
   }
 }

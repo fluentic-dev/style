@@ -1,11 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
+import path from 'node:path';
 import { formatError } from '../misc';
 import { getRequestPathname, isPortUnavailableError, readCachedPort, writeCachedPort } from './utils';
 
 export const SIDECAR_HOST = '127.0.0.1';
 
 export type CreateSidecarServerArgs = {
+  projectDir: string;
   routes: Map<string, string>;
   handlers?: Map<string, SidecarRouteHandler>;
 };
@@ -46,7 +48,9 @@ export function createSidecarServer(args: CreateSidecarServerArgs) {
       return;
     }
 
-    const filePath = pathname ? args.routes.get(pathname) : null;
+    const filePath = pathname
+      ? args.routes.get(pathname) ?? getProjectSourcePath(args.projectDir, pathname)
+      : null;
 
     if (!filePath || !existsSync(filePath)) {
       res.statusCode = 404;
@@ -61,6 +65,21 @@ export function createSidecarServer(args: CreateSidecarServerArgs) {
     res.statusCode = 200;
     res.end(readFileSync(filePath, 'utf8'));
   });
+}
+
+function getProjectSourcePath(projectDir: string, pathname: string) {
+  const sourcePath = pathname
+    .replace(/^\/+/, '')
+    .replace(/^@\/?/, '');
+
+  if (!sourcePath || sourcePath.startsWith('..')) return null;
+
+  const filePath = path.resolve(projectDir, sourcePath);
+  const projectPath = path.resolve(projectDir);
+
+  return filePath === projectPath || filePath.startsWith(projectPath + path.sep)
+    ? filePath
+    : null;
 }
 
 export async function startSidecarServer(args: StartSidecarServerArgs) {

@@ -19,6 +19,9 @@ import {
   type StyleTokenData,
   type StyleTokenOverride,
 } from '../../style/token';
+import { getStylePropCacheValue } from '../core/cache/propCache';
+import { getResolvedStyleItemTokenValues, isResolvedStyleItem } from '../core/cache/resolvedItem';
+import { walkRecursiveItems } from '../core/cache/utils/walk';
 import {
   type ClassNameProps,
   type ClassNameResult,
@@ -33,17 +36,32 @@ import type { StyleProp } from '../types';
 
 type TokenValues = Record<string, unknown> | null;
 
+type ExtractedStylePropResult = {
+  className: string;
+  style: Record<string, unknown> | undefined;
+};
+
 let runId = 0;
 
 const dedupeRun: Record<string, number> = Object.create(null);
 const dedupeIndex: Record<string, number> = Object.create(null);
 
+const resolvedItemCache = new WeakMap<object, {
+  configVersion: number;
+  result: ExtractedStylePropResult | null;
+}>();
+
 export function getClassName(
   styleProp: StyleProp,
-  props: ClassNameProps = {},
+  props?: ClassNameProps,
 ): ClassNameResult {
-  const result = createClassNameResult(props);
   const resolved = resolveExtractedStyleProp(styleProp);
+
+  if (!props?.className && !props?.style) {
+    return resolved ?? {};
+  }
+
+  const result = createClassNameResult(props);
 
   if (resolved) {
     mergeResolvedClassName(result, resolved.className);
@@ -58,6 +76,87 @@ export { type ClassNameProps, type ClassNameResult, mergeClassName, mergeStyle }
 function resolveExtractedStyleProp(styleProp: StyleProp | undefined) {
   if (!styleProp) return null;
 
+  if (RUNTIME_CONFIG.runtimeCacheTTL !== 0) {
+    const directCached = resolveDirectCachedExtractedStyleProp(styleProp);
+    if (directCached !== undefined) return directCached;
+
+    const cached = resolveCachedExtractedStyleProp(styleProp);
+    if (cached !== undefined) return cached;
+  }
+
+  return resolveExtractedStylePropUncached(styleProp);
+}
+
+function resolveDirectCachedExtractedStyleProp(styleProp: StyleProp): ExtractedStylePropResult | null | undefined {
+  if (!isResolvedStyleItem(styleProp)) return undefined;
+
+  const configVersion = RUNTIME_CONFIG.configVersion;
+  const cached = resolvedItemCache.get(styleProp);
+
+  if (cached?.configVersion === configVersion) return cached.result;
+
+  const result = resolveExtractedStylePropUncached(styleProp);
+
+  resolvedItemCache.set(styleProp, {
+    configVersion,
+    result,
+  });
+
+  return result;
+}
+
+function resolveCachedExtractedStyleProp(styleProp: StyleProp): ExtractedStylePropResult | null | undefined {
+  let unsupported = false;
+  const cache = getStylePropCacheValue<object>(
+    styleProp,
+    (item, fn, onUnsupported) =>
+      walkExtractedStylePropCachePath(item, fn, () => {
+        unsupported = true;
+        onUnsupported();
+      }),
+  );
+
+  if (!cache || unsupported) return undefined;
+
+  const configVersion = RUNTIME_CONFIG.configVersion;
+  const data = cache.data as ({ configVersion: number; result: ExtractedStylePropResult | null; } | null);
+
+  if (data?.configVersion === configVersion) return data.result;
+
+  const result = resolveExtractedStylePropUncached(styleProp);
+  cache.data = { configVersion, items: [], result } as any;
+
+  return result;
+}
+
+function walkExtractedStylePropCachePath(
+  styleProp: StyleProp,
+  fn: (item: object) => void,
+  onUnsupported: () => void,
+) {
+  walkRecursiveItems(styleProp, (item) => {
+    if (isExtractedTokenBoundData(item)) {
+      const bound = getExtractedTokenBoundData(item);
+
+      if (bound.tokens.length) {
+        onUnsupported();
+        return;
+      }
+
+      fn(bound.data as object);
+      return;
+    }
+
+    if (item && (typeof item === 'object' || typeof item === 'function')) {
+      fn(item as object);
+      return;
+    }
+
+    onUnsupported();
+  });
+}
+
+function resolveExtractedStylePropUncached(styleProp: StyleProp) {
   runId++;
 
   const classNames: string[] = [];
@@ -106,6 +205,11 @@ function appendExtractedData(
   const resolvedItems = (data as { items?: StateItem[]; }).items;
 
   if (resolvedItems) {
+    tokens = mergeResolvedTokenValues(
+      isResolvedStyleItem(data) ? getResolvedStyleItemTokenValues(data) : null,
+      tokens,
+    );
+
     for (let i = 0, len = resolvedItems.length; i < len; i++) {
       style = addStateItem(classNames, style, resolvedItems[i], tokens);
     }
@@ -246,6 +350,20 @@ function createTokenValues(tokens: readonly StyleTokenOverride[]) {
   }
 
   return values;
+}
+
+function mergeResolvedTokenValues(
+  resolved: ReturnType<typeof getResolvedStyleItemTokenValues>,
+  tokens: TokenValues,
+): TokenValues {
+  if (!resolved) return tokens;
+
+  if (!tokens) return resolved.lookup;
+
+  return {
+    ...resolved.lookup,
+    ...tokens,
+  };
 }
 
 function getTokenVarName(token: StyleTokenData | StyleTokenOverride) {

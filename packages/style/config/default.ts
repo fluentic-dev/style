@@ -29,6 +29,8 @@ export const DEFAULT_RUNTIME_CONFIG: RuntimeConfig = {
   sheetStyleTagNonce: null,
   localClassName: false,
   debugClassName: false,
+  debugElementClassName: false,
+  debugElementClassNamePrefix: '@',
   debugPropertyLength: 24,
   debugValueLength: 8,
   debugSelectorLength: 8,

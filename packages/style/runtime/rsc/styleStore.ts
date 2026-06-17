@@ -3,17 +3,21 @@ import { RUNTIME_CONFIG } from '../../config';
 import type { SheetRule } from '../../sheet';
 import { createSheetLayerState, getSheetRulePriority } from '../../sheet/utils';
 import { clearGlobalData, getGlobalData, globalData } from '../../utils/global';
+import { IS_SERVER_RUNTIME } from '../env';
 
 const GLOBAL_KEY = 'runtime.rsc.styleStore';
 
 type RscStyleStore = {
   rules: SheetRule[];
   keys: Set<string>;
+  //
+  counter: number;
+  lastCounter: number;
 };
 
 export function addRscStyleRules(rules: SheetRule[]): void {
   if (!RUNTIME_CONFIG.isRSC) return;
-  if (typeof window !== 'undefined') return;
+  if (!IS_SERVER_RUNTIME) return;
 
   const store = getRscStyleStore();
 
@@ -24,11 +28,24 @@ export function addRscStyleRules(rules: SheetRule[]): void {
     store.keys.add(rule.key);
     store.rules.push(rule);
   }
+
+  store.counter += 1;
+}
+
+export function getRscStyleCssIfChanged() {
+  const store = getGlobalData<RscStyleStore>(GLOBAL_KEY);
+  if (!store) return null;
+
+  if (store.counter === store.lastCounter) return null;
+
+  store.lastCounter = store.counter;
+
+  return getRscStyleCss();
 }
 
 export function getRscStyleCss(): string {
   if (!RUNTIME_CONFIG.isRSC) return '';
-  if (typeof window !== 'undefined') return '';
+  if (!IS_SERVER_RUNTIME) return '';
 
   const store = getGlobalData<RscStyleStore>(GLOBAL_KEY);
   if (!store?.rules.length) return '';
@@ -52,6 +69,8 @@ export function getRscStyleCss(): string {
 
 function getRscStyleStore(): RscStyleStore {
   return globalData(GLOBAL_KEY, () => ({
+    counter: 0,
+    lastCounter: 0,
     rules: [],
     keys: new Set(),
   }));

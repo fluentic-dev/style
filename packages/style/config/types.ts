@@ -1,5 +1,7 @@
 /* runtime config */
 
+import type { OmitProps } from '../utils/type';
+
 export type CssConfig = {
   layers: string[];
   layerNamespace: string;
@@ -9,6 +11,8 @@ export type CssConfig = {
   tokenVarPrefix: string;
   localClassName: boolean;
   debugClassName: boolean;
+  debugElementClassName: boolean;
+  debugElementClassNamePrefix: string;
   debugPropertyLength: number;
   debugValueLength: number;
   debugSelectorLength: number;
@@ -40,19 +44,22 @@ export type RuntimeConfig = RuntimeSharedConfig & {
   runtimeCacheTTL: number;
 };
 
-export type RuntimeOptions = Partial<RuntimeSharedConfig> & {
-  dev?: boolean;
-  cache?: boolean | number;
-  sourcemap?: boolean;
-  sourcemapTrace?: SourcemapTraceMode;
-  layer?: boolean;
-  priorityMode?: PriorityMode;
-  localClassName?: boolean;
-};
+export type RuntimeOptions =
+  & Partial<OmitProps<RuntimeSharedConfig, 'debugElementClassName' | 'debugElementClassNamePrefix'>>
+  & {
+    dev?: boolean;
+    cache?: boolean | number;
+    sourcemap?: boolean;
+    sourcemapTrace?: SourcemapTraceMode;
+    layer?: boolean;
+    priorityMode?: PriorityMode;
+    localClassName?: boolean;
+  };
 
 export type DevRuntimeOptions = {
   priorityMode?: PriorityMode;
   sourcemapTrace?: SourcemapTraceMode;
+  debugElementClassName?: boolean;
 };
 
 /* build meta */

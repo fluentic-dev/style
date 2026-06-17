@@ -4,10 +4,11 @@ import { createBuildMetaSnippet } from '../utils/snippet';
 export function createRuntimeModuleSource(
   meta: BuildMeta,
   cssModuleId: string,
+  sidecarUrl?: string | null,
 ) {
   const code = [
     meta.extract && `import ${JSON.stringify(cssModuleId)};`,
-    createBuildMetaSnippet(meta),
+    createBuildMetaSnippet(meta, { sidecarUrl }),
     '',
   ];
 

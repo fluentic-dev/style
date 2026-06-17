@@ -38,6 +38,20 @@ export type SourcemapFilePathInfo = {
  */
 export type GetSourcemapFilePathFn = (info: SourcemapFilePathInfo) => string | null | undefined;
 
+export type DefaultSourcemapUrlInput =
+  | string
+  | Pick<SourcemapFilePathInfo, 'absolutePath' | 'relativePath' | 'sourcePath'>;
+
+export function getDefaultSourcemapUrl(input: DefaultSourcemapUrlInput) {
+  const sourcePath = typeof input === 'string'
+    ? input
+    : input.sourcePath || input.relativePath || input.absolutePath;
+
+  const resourcePath = normalizeSourcemapSourcePath(sourcePath);
+
+  return `source:///${resourcePath}`;
+}
+
 export function normalizeSourcemapSourcePath(filePath: string) {
   return filePath
     .replace(/\\/g, '/')

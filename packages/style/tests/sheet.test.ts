@@ -1,3 +1,4 @@
+import { FLUENTIC_SIDECAR_URL_SYMBOL_KEY } from '../config';
 import {
   configureRuntime,
   createDevSheet,
@@ -196,6 +197,46 @@ test('dev sheet sourcemap emits sourcesContent from debug code', () => {
 
   equal(map.sources[0], 'webpack:///example/src/styles.ts');
   equal(map.sourcesContent?.[0], code);
+});
+
+test('dev sheet sourcemap rebases source urls through sidecar url', () => {
+  const key = Symbol.for(FLUENTIC_SIDECAR_URL_SYMBOL_KEY);
+  const root = globalThis as Record<symbol, unknown>;
+  const previous = root[key];
+
+  root[key] = 'http://127.0.0.1:12345';
+
+  try {
+    const document = createFakeDocument();
+    const sheet = createDevSheet({
+      document: document as unknown as Document,
+      sourcemap: true,
+    });
+
+    sheet.insert({
+      key: 'one',
+      css: '.one{color:red}',
+      debug: {
+        $$debug: true,
+        loc: [1, 1],
+        label: ['', '', ''],
+        sourceUrl: 'source://@/src/styles.ts',
+      },
+    });
+    sheet.flush();
+
+    const tag = document.head.childNodes[1];
+    const map = getInlineSourceMap(tag.textContent);
+
+    equal(map.sources[0], 'http://127.0.0.1:12345/@/src/styles.ts');
+    equal(map.sourcesContent, undefined);
+  } finally {
+    if (previous === undefined) {
+      delete root[key];
+    } else {
+      root[key] = previous;
+    }
+  }
 });
 
 test('dev sheet sourcemap strips stray /at prefix from source urls', () => {
@@ -555,25 +596,27 @@ test('dev utils installs on window target', () => {
     const utils = root.window.CssDevUtils as {
       usage?: () => null;
       info?: () => null;
+      reset?: () => null;
       traceSourcemap?: unknown;
-      persistent?: { on?: unknown; off?: unknown; };
       startupMessage?: { on?: unknown; off?: unknown; };
+      setElementMarker?: { on?: unknown; off?: unknown; };
       setSourcemapTrace?: { toStyle?: unknown; toValue?: unknown; };
       setPriorityMode?: { toLayer?: unknown; toSort?: unknown; };
     };
 
     equal(Object.getPrototypeOf(utils), null);
-    equal(Object.getPrototypeOf(utils.persistent), null);
     equal(Object.getPrototypeOf(utils.startupMessage), null);
+    equal(Object.getPrototypeOf(utils.setElementMarker), null);
     equal(Object.getPrototypeOf(utils.setPriorityMode), null);
     equal(Object.getPrototypeOf(utils.setSourcemapTrace), null);
     equal(typeof utils.usage, 'function');
     equal(typeof utils.info, 'function');
+    equal(typeof utils.reset, 'function');
     equal(typeof utils.traceSourcemap, 'undefined');
-    equal(typeof utils.persistent?.on, 'function');
-    equal(typeof utils.persistent?.off, 'function');
     equal(typeof utils.startupMessage?.on, 'function');
     equal(typeof utils.startupMessage?.off, 'function');
+    equal(typeof utils.setElementMarker?.on, 'function');
+    equal(typeof utils.setElementMarker?.off, 'function');
     equal(typeof utils.setSourcemapTrace?.toStyle, 'function');
     equal(typeof utils.setSourcemapTrace?.toValue, 'function');
     equal(typeof utils.setPriorityMode?.toLayer, 'function');
@@ -592,9 +635,10 @@ test('enableStyleDevUtils works without a window global', () => {
     CssDevUtils?: {
       usage?: () => null;
       info?: () => null;
+      reset?: () => null;
       traceSourcemap?: unknown;
-      persistent?: { on?: unknown; off?: unknown; };
       startupMessage?: { on?: unknown; off?: unknown; };
+      setElementMarker?: { on?: unknown; off?: unknown; };
       setSourcemapTrace?: { toStyle?: unknown; toValue?: unknown; };
       setPriorityMode?: { toLayer?: unknown; toSort?: unknown; };
     };
@@ -613,16 +657,17 @@ test('enableStyleDevUtils works without a window global', () => {
 
     const utils = root.CssDevUtils;
     equal(Object.getPrototypeOf(utils), null);
-    equal(Object.getPrototypeOf(utils?.persistent), null);
     equal(Object.getPrototypeOf(utils?.startupMessage), null);
+    equal(Object.getPrototypeOf(utils?.setElementMarker), null);
     equal(Object.getPrototypeOf(utils?.setPriorityMode), null);
     equal(typeof utils?.usage, 'function');
     equal(typeof utils?.info, 'function');
+    equal(typeof utils?.reset, 'function');
     equal(typeof utils?.traceSourcemap, 'function');
-    equal(typeof utils?.persistent?.on, 'function');
-    equal(typeof utils?.persistent?.off, 'function');
     equal(typeof utils?.startupMessage?.on, 'function');
     equal(typeof utils?.startupMessage?.off, 'function');
+    equal(typeof utils?.setElementMarker?.on, 'function');
+    equal(typeof utils?.setElementMarker?.off, 'function');
     equal(typeof utils?.setSourcemapTrace?.toStyle, 'undefined');
     equal(typeof utils?.setSourcemapTrace?.toValue, 'undefined');
     equal(typeof utils?.setPriorityMode?.toLayer, 'function');
@@ -637,7 +682,7 @@ test('enableStyleDevUtils works without a window global', () => {
   }
 });
 
-test('style dev utils persists local priority and sourcemap trace modes', () => {
+test('style dev utils saves local debug preferences automatically', () => {
   const root = globalThis as typeof globalThis & {
     window?: Window & typeof globalThis & Record<string, unknown>;
     localStorage?: Storage;
@@ -669,21 +714,19 @@ test('style dev utils persists local priority and sourcemap trace modes', () => 
     enableStyleDevUtils({ name: 'CssDevUtils', silent: true });
 
     const utils = root.window.CssDevUtils as {
-      persistent?: { on?: () => null; off?: () => null; };
+      reset?: () => null;
       startupMessage?: { on?: () => null; off?: () => null; };
+      setElementMarker?: { off?: () => null; };
       setPriorityMode?: { toSort?: () => null; };
       setSourcemapTrace?: { toValue?: () => null; };
     };
 
-    equal(utils.persistent?.on?.(), null);
-    equal(storage.getItem('@fluentic/style.dev.persistent'), '1');
-    equal(storage.getItem('@fluentic/style.dev.priorityMode'), 'layer');
-    equal(storage.getItem('@fluentic/style.dev.sourcemapTrace'), 'style');
-
     equal(utils.setPriorityMode?.toSort?.(), null);
     equal(utils.setSourcemapTrace?.toValue?.(), null);
+    equal(utils.setElementMarker?.off?.(), null);
     equal(storage.getItem('@fluentic/style.dev.priorityMode'), 'sort');
     equal(storage.getItem('@fluentic/style.dev.sourcemapTrace'), 'value');
+    equal(storage.getItem('@fluentic/style.dev.elementMarker'), 'false');
 
     configureRuntime({
       dev: true,
@@ -691,16 +734,20 @@ test('style dev utils persists local priority and sourcemap trace modes', () => 
       priorityMode: 'layer',
       sourcemapTrace: 'style',
     });
+    setDevRuntimeOptions({ debugElementClassName: true });
     enableStyleDevUtils({ name: 'CssDevUtils', silent: true });
 
     equal(storage.getItem('@fluentic/style.dev.priorityMode'), 'sort');
     equal(storage.getItem('@fluentic/style.dev.sourcemapTrace'), 'value');
+    equal(storage.getItem('@fluentic/style.dev.elementMarker'), 'false');
     equal(utils.startupMessage?.off?.(), null);
     equal(storage.getItem('@fluentic/style.dev.startupMessage'), 'off');
     equal(utils.startupMessage?.on?.(), null);
     equal(storage.getItem('@fluentic/style.dev.startupMessage'), null);
-    equal(utils.persistent?.off?.(), null);
-    equal(storage.getItem('@fluentic/style.dev.persistent'), null);
+    equal(utils.reset?.(), null);
+    equal(storage.getItem('@fluentic/style.dev.priorityMode'), null);
+    equal(storage.getItem('@fluentic/style.dev.sourcemapTrace'), null);
+    equal(storage.getItem('@fluentic/style.dev.elementMarker'), null);
   } finally {
     configureRuntime({
       dev: false,
@@ -715,7 +762,7 @@ test('style dev utils persists local priority and sourcemap trace modes', () => 
   }
 });
 
-test('style dev utils startup logs current info with persistent status first', () => {
+test('style dev utils startup logs current saved debug info', () => {
   const root = globalThis as typeof globalThis & {
     window?: Window & typeof globalThis & Record<string, unknown>;
     localStorage?: Storage;
@@ -737,9 +784,9 @@ test('style dev utils startup logs current info with persistent status first', (
     });
     root.window = {} as Window & typeof globalThis & Record<string, unknown>;
     root.localStorage = storage as Storage;
-    storage.setItem('@fluentic/style.dev.persistent', '1');
     storage.setItem('@fluentic/style.dev.priorityMode', 'sort');
     storage.setItem('@fluentic/style.dev.sourcemapTrace', 'value');
+    storage.setItem('@fluentic/style.dev.elementMarker', 'false');
     configureRuntime({
       dev: true,
       layer: true,
@@ -755,18 +802,20 @@ test('style dev utils startup logs current info with persistent status first', (
 
     includes(startup, '[CssDevUtils]');
     includes(startup, 'priority=%csort%c sourcemap=%cvalue');
+    includes(startup, 'marker=%coff');
     includes(startup, 'For usage run');
     includes(startup, 'CssDevUtils.usage()');
-    includes(logRows[0], 'Persistent');
-    includes(logRows[0], 'Saving priority=sort and sourcemap=value.');
-    includes(logRows[1], 'Priority');
-    includes(logRows[2], 'Sourcemap');
-    includes(logRows[2], 'Sourcemap   %cvalue%c');
-    includes(logRows[3], 'ClassNames');
-    includes(logRows[4], 'CSS');
-    includes(logRows[4], 'Sorted rules are wrapped in the configured CSS layer.');
-    includes(logRows[5], 'Runtime');
-    includes(logRows[6], 'Plugin');
+    includes(logRows[0], 'Priority');
+    includes(logRows[1], 'Sourcemap');
+    includes(logRows[1], 'Sourcemap   %cvalue%c');
+    includes(logRows[2], 'ClassNames');
+    includes(logRows[3], 'ElementMark');
+    includes(logRows[3], 'ElementMark %coff%c');
+    const cssRow = logRows.find((row) => row.includes('CSS')) ?? '';
+    includes(cssRow, 'CSS');
+    includes(cssRow, 'Sorted rules are wrapped in the configured CSS layer.');
+    equal(logRows.some((row) => row.includes('Runtime')), true);
+    equal(logRows.some((row) => row.includes('Plugin')), true);
     equal(logRows.some((row) => row.includes('Startup')), false);
     equal(logRows.some((row) => row.includes('Checks')), false);
   } finally {

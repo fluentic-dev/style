@@ -1,4 +1,8 @@
+import { mkdtempSync, statSync, utimesSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { normalizeDebugKeywordValue, normalizePropertyName, sanitizeDebugPropertyName } from '../atomic/utils/debug';
+import { writeCacheFile } from '../plugin/utils/cache';
 import {
   assertCompileError,
   before,
@@ -13,11 +17,17 @@ import {
   getCallStringArgs,
   getCssClassNames,
   getRuntimeImportAliases,
+  getServerRuntimeImportAliases,
+  getTurbopackRuntimeImportAliases,
   includes,
+  injectDevCssLink,
+  injectStyleDebugData,
   notEqual,
   notIncludes,
   prependWebpackRuntimeEntry,
   readFileSync,
+  rewriteServerDevStyleImports,
+  rewriteServerStyleImports,
   selector,
   style,
   test,
@@ -36,6 +46,73 @@ test('debug utility normalizers keep property and keyword names class-safe', () 
   equal(normalizeDebugKeywordValue(' Inline-Flex '), 'inline-flex');
   equal(normalizeDebugKeywordValue('-invalid'), null);
   equal(normalizeDebugKeywordValue('var(--x)'), null);
+});
+
+test('debug transform injects host element marker metadata from css prop label', () => {
+  const result = injectStyleDebugData(
+    `
+import { style } from '@fluentic/style';
+
+const css = {
+  container: style({ color: 'red' }),
+  label: style({ color: 'black' }),
+};
+
+export function App() {
+  return <main css={[css.container, css.label]} />;
+}
+`,
+    '/project/src/App.tsx',
+    {
+      rootDir: '/project',
+      css: { debugElementClassName: true },
+    },
+  );
+
+  includes(result.code, '$$elementDebug: true');
+  includes(result.code, 'css={[{');
+  includes(result.code, 'label: "container"');
+  includes(result.code, 'sourceUrl: _');
+  includes(result.code, 'loc: [');
+});
+
+test('debug transform accepts top-level element marker option', () => {
+  const result = injectStyleDebugData(
+    `
+import { style } from '@fluentic/style';
+
+const container = style({ color: 'red' });
+
+export function App() {
+  return <main css={container} />;
+}
+`,
+    '/project/src/App.tsx',
+    {
+      rootDir: '/project',
+      debugElementClassName: true,
+    },
+  );
+
+  includes(result.code, '$$elementDebug: true');
+});
+
+test('debug transform does not inject host element marker metadata by default', () => {
+  const result = injectStyleDebugData(
+    `
+import { style } from '@fluentic/style';
+
+const container = style({ color: 'red' });
+
+export function App() {
+  return <main css={container} />;
+}
+`,
+    '/project/src/App.tsx',
+    { rootDir: '/project' },
+  );
+
+  notIncludes(result.code, '$$elementDebug');
 });
 
 test('compiler extracts scope base and parent selector rules', () => {
@@ -1359,6 +1436,100 @@ test('runtime import aliases split production extracted and runtime entries', ()
   equal(Object.keys(dev).length, 0);
 });
 
+test('server runtime import aliases split dev rsc and production extracted entries', () => {
+  const extracted = getServerRuntimeImportAliases({
+    dev: false,
+    extract: true,
+    hoist: true,
+    rsc: true,
+    css: null,
+  });
+  const prod = getServerRuntimeImportAliases({
+    dev: false,
+    extract: false,
+    hoist: true,
+    rsc: true,
+    css: null,
+  });
+  const dev = getServerRuntimeImportAliases({
+    dev: true,
+    extract: false,
+    hoist: true,
+    rsc: true,
+    css: null,
+  });
+
+  equal(extracted['@fluentic/style'], '@fluentic/style/server/extracted');
+  equal(extracted['@fluentic/style/server'], '@fluentic/style/server/extracted');
+  equal(extracted['@fluentic/style/jsx-runtime/server'], '@fluentic/style/jsx-runtime/server/extracted');
+  equal(extracted['@fluentic/style/jsx-dev-runtime/server'], '@fluentic/style/jsx-dev-runtime/server/extracted');
+  equal(prod['@fluentic/style/jsx-runtime/server'], '@fluentic/style/jsx-runtime/server');
+  equal(dev['@fluentic/style'], '@fluentic/style/server');
+  equal(Object.keys(dev).length, 1);
+});
+
+test('turbopack runtime aliases keep root style import target-neutral', () => {
+  const extracted = getTurbopackRuntimeImportAliases({
+    dev: false,
+    extract: true,
+    hoist: true,
+    rsc: true,
+    css: null,
+  });
+
+  equal(extracted['@fluentic/style'], undefined);
+  equal(extracted['@fluentic/style/jsx-runtime'], '@fluentic/style/jsx-runtime/extracted');
+  equal(extracted['@fluentic/style/jsx-runtime/server'], '@fluentic/style/jsx-runtime/server/extracted');
+});
+
+test('next dev css link is appended after layout children', () => {
+  const result = injectDevCssLink(
+    `
+export default function RootLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+      <StyleDev />
+    </html>
+  );
+}
+`,
+    'http://127.0.0.1:4180/__fluentic/dev.css',
+  );
+
+  before(result, '<StyleDev />', 'data-fluentic-style-rsc-dev-link');
+});
+
+test('next loader rewrites exact server dev style imports', () => {
+  const result = rewriteServerDevStyleImports(`
+import { getClassName } from "@fluentic/style";
+import { jsx } from "@fluentic/style/jsx-runtime";
+import '@fluentic/style';
+export { style } from '@fluentic/style';
+`);
+
+  includes(result, 'from "@fluentic/style/server"');
+  includes(result, 'import "@fluentic/style/server";');
+  includes(result, 'from "@fluentic/style/server"');
+  includes(result, 'from "@fluentic/style/jsx-runtime"');
+  notIncludes(result, '@fluentic/style/server/jsx-runtime');
+});
+
+test('next loader rewrites exact server production style imports to extracted entry', () => {
+  const result = rewriteServerStyleImports(
+    `
+import { createTheme, style } from "@fluentic/style";
+import { jsx } from "@fluentic/style/jsx-runtime";
+export { combineStyle } from "@fluentic/style";
+`,
+    '@fluentic/style/server/extracted',
+  );
+
+  includes(result, 'from "@fluentic/style/server/extracted"');
+  includes(result, 'from "@fluentic/style/jsx-runtime"');
+  notIncludes(result, '@fluentic/style/server/extracted/jsx-runtime');
+});
+
 test('webpack plugin prepends runtime to existing entries', () => {
   const runtime = '/tmp/fluentic-style/webpack-runtime.js';
 
@@ -1380,6 +1551,17 @@ test('webpack plugin prepends runtime to existing entries', () => {
       app: { import: [runtime, '/tmp/app/src/main.tsx'] },
     },
   );
+});
+
+test('cache file writes preserve timestamp when content is unchanged', () => {
+  const cacheDir = mkdtempSync(path.join(tmpdir(), 'fluentic-style-cache-'));
+  const filePath = writeCacheFile(cacheDir, 'runtime.js', 'export {};');
+  const timestamp = new Date('2024-01-01T00:00:00.000Z');
+
+  utimesSync(filePath, timestamp, timestamp);
+  writeCacheFile(cacheDir, 'runtime.js', 'export {};');
+
+  equal(statSync(filePath).mtimeMs, timestamp.getTime());
 });
 
 test('compiler can disable extracted css layer wrapping', () => {
@@ -1446,6 +1628,43 @@ const rule = style.slot({ display: 'grid', gap: 16 });
   includes(css, 'display: grid');
   includes(css, 'gap: 16px');
   includes(result.code, 'createExtractedSlot');
+});
+
+test('compiler extracts explicit getClassName calls for next link props', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { combineStyle, style } from '@fluentic/style';
+import { getClassName } from '@fluentic/style';
+import Link from 'next/link';
+
+const page = {
+  nav: style.slot({ display: 'flex' }),
+  link: style.slot({ color: 'black', textDecoration: 'none' }).hover({ color: 'teal' }),
+};
+
+export function Chrome() {
+  const css = combineStyle(page);
+
+  return (
+    <nav css={css.nav}>
+      <Link href="/" {...getClassName(css.link)}>Home</Link>
+    </nav>
+  );
+}
+`,
+    '/tmp/compiler-next-link-get-class-name.tsx',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  includes(result.code, 'from "@fluentic/style/runtime/extract"');
+  includes(result.code, 'getClassName(css.link)');
+  includes(result.css.join('\n'), 'text-decoration: none');
+  includes(result.css.join('\n'), ':hover');
 });
 
 test('compiler dedupes identical extracted style declarations', () => {
@@ -1527,6 +1746,28 @@ const color = createToken('blue');
 export const dark = createTheme([color('red')], 'dark');
 `,
     '/tmp/compiler-theme.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\\n');
+
+  includes(result.code, 'createExtractedTheme');
+  includes(css, '.theme-');
+  includes(css, ':red');
+  notIncludes(result.code, 'createTheme,');
+});
+
+test('compiler extracts createTheme from server extracted import source', () => {
+  const compiler = createCompiler({ layer: false, css: { themeNamePrefix: 'theme-' } });
+  const result = compiler.transform(
+    `
+import { createTheme, createToken } from '@fluentic/style/server/extracted';
+
+const color = createToken('blue');
+export const dark = createTheme([color('red')], 'dark');
+`,
+    '/tmp/compiler-theme-server-extracted.ts',
   );
 
   if (!result) throw new Error('expected compiler transform result');

@@ -1,9 +1,10 @@
+import { useServerInsertedHTML } from 'next/navigation';
 import { createElement, useState } from 'react';
 import { useEffect } from 'react';
 import { enableStyleDevUtils, type StyleDevUtilsOptions } from '../../dev';
 import { SEED_STYLE_TAG_ATTR, SEED_STYLE_TAG_HREF } from './constants';
 import { startRscDevObserver } from './observer';
-import { getRscStyleCss } from './styleStore';
+import { getRscStyleCssIfChanged } from './styleStore';
 
 type StyleDevProps = StyleDevUtilsOptions & {
   enableStyleDevUtils?: StyleDevUtilsOptions | boolean;
@@ -20,14 +21,18 @@ export function StyleDev(props: StyleDevProps) {
     }
   }, [devUtils]);
 
-  const css = getRscStyleCss();
-  if (!css) return null;
+  useServerInsertedHTML(() => {
+    const css = getRscStyleCssIfChanged();
+    if (!css) return null;
 
-  return createElement('style', {
-    [SEED_STYLE_TAG_ATTR]: '',
-    href: SEED_STYLE_TAG_HREF,
-    precedence: 'default',
-    dangerouslySetInnerHTML: { __html: css },
-    suppressHydrationWarning: true,
+    return createElement('style', {
+      [SEED_STYLE_TAG_ATTR]: '',
+      href: SEED_STYLE_TAG_HREF,
+      precedence: 'default',
+      dangerouslySetInnerHTML: { __html: css },
+      suppressHydrationWarning: true,
+    });
   });
+
+  return null;
 }

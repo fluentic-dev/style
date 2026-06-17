@@ -126,6 +126,7 @@ export function plugin(options: FarmPluginOptions = {}) {
           params.resolvedPath,
           buildMeta,
           buildMeta.extract ? null : null,
+          sourcemapSidecar?.getBaseUrl(),
         );
 
         if (content == null) return null;

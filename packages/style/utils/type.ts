@@ -3,6 +3,8 @@ export declare const UniqueSymbol: unique symbol;
 export type RecursiveArray<T> = readonly (T | RecursiveArray<T>)[];
 export type MaybeArray<T> = T | readonly T[];
 
+export type OmitProps<T, K extends keyof T> = Omit<T, K>;
+
 export type Collapse = {
   readonly [UniqueSymbol]?: never;
 };

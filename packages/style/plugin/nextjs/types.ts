@@ -1,8 +1,9 @@
 import type { NextConfig } from 'next';
 import type { PHASE_TYPE } from 'next/constants';
+import type { OmitProps } from '../../utils/type';
 import type { PluginOptions as BasePluginOptions } from '../utils';
 
-export type PluginOptions = Omit<BasePluginOptions, 'devSourcemap'>;
+export type PluginOptions = OmitProps<BasePluginOptions, 'devSourcemap'>;
 
 export type MaybePromise<T> = Promise<T> | T;
 

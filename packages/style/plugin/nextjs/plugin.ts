@@ -14,7 +14,7 @@ import {
   PLUGIN_CACHE_DIR,
   PLUGIN_NAME,
 } from '../utils';
-import { getRuntimeImportAliases } from '../utils/bundler';
+import { getRuntimeImportAliases, getServerRuntimeImportAliases } from '../utils/bundler';
 import { writeCacheFile, writePluginCacheFile } from '../utils/cache';
 import { formatError } from '../utils/misc';
 import { getSourcemapSidecar, type SourcemapSidecar } from '../utils/sidecar';
@@ -52,6 +52,7 @@ const CACHE_FOLDER = 'nextjs';
 
 const CSS_ENTRY_FILE = CACHE_FOLDER + '/bundle.css';
 const BUILD_META_ENV = 'FLUENTIC_STYLE_NEXT_BUILD_META';
+const SIDECAR_URL_ENV = 'FLUENTIC_STYLE_NEXT_SIDECAR_URL';
 
 export const CSS_MARKER = getExtractedCssMarker();
 
@@ -155,7 +156,7 @@ function createFluenticNextConfigResolved(
   const turbopackCssAliases = createCssAliases({
     writeFile: (fileName, content) => writeCacheFile(getImportableCssCacheDir(projectDir), fileName, content),
   });
-  const turbopackRuntimeAliases = getRuntimeImportAliases(phaseBuildMeta);
+  const turbopackRuntimeAliases = getTurbopackRuntimeImportAliases(phaseBuildMeta);
 
   nextRegistry.setEntry<NextLoaderState>(turbopackCompilerId, {
     compiler: turbopackState.compiler,
@@ -173,6 +174,7 @@ function createFluenticNextConfigResolved(
     env: {
       ...nextConfig.env,
       [BUILD_META_ENV]: JSON.stringify(phaseBuildMeta),
+      [SIDECAR_URL_ENV]: dev && sidecar ? sidecar.getBaseUrl() ?? '' : '',
     },
     compiler: {
       ...originalCompiler,
@@ -234,7 +236,9 @@ function createFluenticNextConfigResolved(
 
       addAliases(config, {
         ...cssAliases,
-        ...(context.isServer ? {} : getRuntimeImportAliases(buildMeta)),
+        ...(context.isServer
+          ? getWebpackServerRuntimeImportAliases(buildMeta)
+          : getRuntimeImportAliases(buildMeta)),
       });
 
       addTransformLoader(config, options, compilerId);
@@ -254,6 +258,37 @@ function createFluenticNextConfigResolved(
       return config;
     },
   };
+}
+
+export function getTurbopackRuntimeImportAliases(
+  buildMeta: ReturnType<typeof createNextBuildMeta>,
+) {
+  const serverAliases = getServerRuntimeImportAliases(buildMeta);
+  const aliases = {
+    ...getRuntimeImportAliases(buildMeta),
+    ...serverAliases,
+  };
+
+  // Turbopack resolve aliases are shared by client and server graphs, so keep
+  // the package root target-neutral and let exact import rewriting handle it.
+  delete aliases['@fluentic/style'];
+
+  return aliases;
+}
+
+function getWebpackServerRuntimeImportAliases(
+  buildMeta: ReturnType<typeof createNextBuildMeta>,
+) {
+  const aliases = getServerRuntimeImportAliases(buildMeta);
+  const rootAlias = aliases['@fluentic/style'];
+
+  if (!rootAlias) return aliases;
+
+  const exactAliases = { ...aliases };
+  delete exactAliases['@fluentic/style'];
+  exactAliases['@fluentic/style$'] = rootAlias;
+
+  return exactAliases;
 }
 
 function createCssAliases(args: {

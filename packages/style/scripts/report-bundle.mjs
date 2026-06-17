@@ -62,7 +62,7 @@ const entries = [
   {
     name: 'production runtime',
     imports: [
-      ['jsx-runtime/index.js', ['Fragment', 'createElement', 'jsx', 'jsxs']],
+      ['jsx-runtime/prod.js', ['Fragment', 'createElement', 'jsx', 'jsxs']],
       [
         'index.js',
         [
@@ -82,11 +82,33 @@ const entries = [
     ],
   },
   {
-    name: 'server production runtime',
+    name: 'server dev rsc runtime',
     imports: [
       ['jsx-runtime/server.js', ['Fragment', 'createElement', 'jsx', 'jsxs']],
       [
         'server.js',
+        [
+          'bindScope',
+          'combineScope',
+          'combineStyle',
+          'createStyleFn',
+          'createTheme',
+          'createToken',
+          'createTokens',
+          'createValues',
+          'getClassName',
+          'getToken',
+          'style',
+        ],
+      ],
+    ],
+  },
+  {
+    name: 'server extracted production runtime',
+    imports: [
+      ['jsx-runtime/server-extracted.js', ['Fragment', 'createElement', 'jsx', 'jsxs']],
+      [
+        'server/extracted.js',
         [
           'bindScope',
           'combineScope',

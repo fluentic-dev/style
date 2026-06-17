@@ -39,6 +39,14 @@ export function setPriorityMode(mode: PriorityMode) {
   applyRuntimeConfig();
 }
 
+export function setDebugElementClassName(enabled: boolean) {
+  devRuntimeOptions = {
+    ...devRuntimeOptions,
+    debugElementClassName: enabled,
+  };
+  applyRuntimeConfig();
+}
+
 export function setDevRuntimeOptions(options: DevRuntimeOptions | null) {
   devRuntimeOptions = options;
   applyRuntimeConfig();
@@ -104,6 +112,13 @@ function applyRuntimeConfig() {
 
   config.localClassName = options.localClassName ?? dev;
   config.debugClassName = options.debugClassName ?? dev;
+
+  config.debugElementClassName = devRuntimeOptions?.debugElementClassName ??
+    options.debugElementClassName ??
+    dev;
+
+  config.debugElementClassNamePrefix = options.debugElementClassNamePrefix ??
+    config.debugElementClassNamePrefix;
 
   config.debugPropertyLength = options.debugPropertyLength ??
     config.debugPropertyLength;

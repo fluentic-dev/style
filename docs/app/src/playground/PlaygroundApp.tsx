@@ -182,8 +182,9 @@ export default function PlaygroundApp() {
     (config: CssOptionsState, runtimeLayer: boolean, runtimePriorityMode: PriorityModeState) => {
       const worker = runtimeWorker.current;
       if (!worker) return;
+
       const id = ++runId.current;
-      // oxlint-disable-next-line unicorn/require-post-message-target-origin
+
       worker.postMessage({
         kind: 'run',
         id,
@@ -193,6 +194,7 @@ export default function PlaygroundApp() {
           layer: runtimeLayer,
           priorityMode: runtimePriorityMode,
         },
+        // oxlint-disable-next-line unicorn/require-post-message-target-origin
       });
     },
     [files],

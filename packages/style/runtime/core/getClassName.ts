@@ -1,18 +1,11 @@
 import { RUNTIME_CONFIG } from '../../config';
-import { STYLE_RUNTIME_MODE } from '../mode';
-import { getClassNameRSC } from '../rsc/getClassName';
+import { isServerRSC } from '../env';
 import { getGlobalSheet } from '../sheet/global';
 import { insertStylePropRuntimeItems } from '../sheet/insert';
 import { type StyleProp } from '../types';
-import { resolveStylePropRuntime } from './cache/prop';
-import {
-  type ClassNameProps,
-  type ClassNameResult,
-  createClassNameResult,
-  finishClassNameResult,
-  mergeResolvedClassName,
-  mergeResolvedStyle,
-} from './className';
+import { type ClassNameProps, type ClassNameResult } from './className';
+import { createElementMarkerClassName, splitElementMarkerStyleProp } from './elementMarker';
+import { resolveClassNameRuntime } from './resolveClassNameRuntime';
 
 export {
   //
@@ -26,39 +19,29 @@ export function getClassName(
   styleProp: StyleProp,
   props: ClassNameProps = {},
 ): ClassNameResult {
-  const result = createClassNameResult(props);
-  const resolved = resolveStylePropRuntime(styleProp);
+  const marker = splitElementMarkerStyleProp(styleProp);
+  const resolved = resolveClassNameRuntime(marker.styleProp as StyleProp, props);
 
-  if (resolved) {
-    if (
-      STYLE_RUNTIME_MODE === 'prod' ||
-      (
-        STYLE_RUNTIME_MODE === 'full' &&
-        !RUNTIME_CONFIG.isCssExtracted &&
-        !RUNTIME_CONFIG.isRSC
-      )
-    ) {
+  if (resolved.items.length) {
+    if (!RUNTIME_CONFIG.isCssExtracted && !isServerRSC()) {
       const sheet = getGlobalSheet();
       insertStylePropRuntimeItems(sheet, resolved.items);
       sheet.flush();
     }
-
-    mergeResolvedClassName(result, resolved.result.className);
-    mergeResolvedStyle(result, resolved.result.style);
   }
 
-  const finished = finishClassNameResult(result);
+  prependClassName(resolved.result, createElementMarkerClassName(marker.debug));
 
-  if (
-    STYLE_RUNTIME_MODE === 'rsc' ||
-    (
-      STYLE_RUNTIME_MODE === 'full' &&
-      RUNTIME_CONFIG.isDev &&
-      RUNTIME_CONFIG.isRSC
-    )
-  ) {
-    return getClassNameRSC(finished, resolved?.items ?? []);
-  }
+  return resolved.result;
+}
 
-  return finished;
+function prependClassName(
+  result: ClassNameResult,
+  className: string | null,
+) {
+  if (!className) return;
+
+  result.className = result.className
+    ? `${className} ${result.className}`
+    : className;
 }

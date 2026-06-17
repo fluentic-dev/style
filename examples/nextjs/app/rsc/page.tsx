@@ -12,9 +12,13 @@ const tokenDefaults = {
 
 const tokens = createTokens(tokenDefaults);
 
+const heading = style.raw({
+  color: tokens.tone,
+});
+
 const styles = {
   heading: style({
-    color: tokens.tone,
+    ...heading,
     textDecorationColor: tokens.ring,
     textDecorationLine: 'underline',
     textDecorationThickness: 3,
@@ -76,7 +80,9 @@ export default function RscPage() {
     minute: '2-digit',
     second: '2-digit',
   });
+
   const css = combineStyle(page);
+
   const rscCss = combineStyle(
     styles,
     tokens.tone('#7c2d12'),

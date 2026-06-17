@@ -10,6 +10,7 @@ export type FnCreateElement = typeof createElement;
 export type TransformElementArgs = {
   type: ElementType;
   props: unknown;
+  source?: unknown;
 };
 
 export type TransformElement = {
@@ -40,7 +41,7 @@ export function createJsxDEV(
   transformElement: TransformElement,
 ): FnJsxDEV {
   return (type, props, key, isStatic, source, self) => {
-    const result = transformElement({ type, props });
+    const result = transformElement({ type, props, source });
 
     return fn(result.type, result.props, key, isStatic, source, self);
   };

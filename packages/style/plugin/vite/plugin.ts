@@ -122,6 +122,7 @@ export function plugin(options: PluginOptions = {}): Plugin {
         return createRuntimeModuleSource(
           getBuildMeta(getState().dev, options),
           CSS_MODULE_ID,
+          sourcemapSidecar?.getBaseUrl(),
         );
       }
 

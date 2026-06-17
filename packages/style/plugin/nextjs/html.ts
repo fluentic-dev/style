@@ -28,7 +28,7 @@ function createDevCssLinkPlugin(cssUrl: string, markInserted: () => void) {
       JSXElement(path: NodePath<BabelTypes.JSXElement>) {
         if (!isHtmlJsxElement(path.node)) return;
 
-        path.node.children.unshift(createDevCssLinkElement(t, cssUrl));
+        path.node.children.push(createDevCssLinkElement(t, cssUrl));
         markInserted();
         path.stop();
       },

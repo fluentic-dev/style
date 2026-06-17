@@ -5,9 +5,9 @@ const StoragePrefix = '@fluentic/style.dev';
 export const DefaultUtilsName = 'StyleDevUtils';
 
 export const StorageKeys = {
-  persistent: StoragePrefix + '.persistent',
   priorityMode: StoragePrefix + '.priorityMode',
   sourcemapTrace: StoragePrefix + '.sourcemapTrace',
+  elementMarker: StoragePrefix + '.elementMarker',
   startupMessage: StoragePrefix + '.startupMessage',
 };
 

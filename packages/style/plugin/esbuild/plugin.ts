@@ -94,6 +94,7 @@ export function plugin(options: EsbuildPluginOptions = {}): EsbuildPlugin {
           args.path,
           buildMeta,
           buildMeta.extract ? `${RUNTIME_MODULE_ID}.css` : null,
+          sourcemapSidecar?.getBaseUrl(),
         );
 
         if (contents == null) return null;

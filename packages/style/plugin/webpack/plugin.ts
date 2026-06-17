@@ -75,7 +75,7 @@ class WebpackPlugin implements WebpackPluginInstance {
     const runtimeFilePath = writePluginCacheFile(
       state,
       WEBPACK_RUNTIME_FILE,
-      createWebpackRuntimeModuleSource(buildMeta, cssFilePath),
+      createWebpackRuntimeModuleSource(buildMeta, cssFilePath, sourcemapSidecar?.getBaseUrl()),
     );
 
     const compilerId = createCompilerId();
@@ -102,10 +102,20 @@ class WebpackPlugin implements WebpackPluginInstance {
 
     compiler.hooks.beforeRun.tapPromise(PLUGIN_NAME, async () => {
       await sourcemapSidecar?.ensureStarted();
+      writePluginCacheFile(
+        state,
+        WEBPACK_RUNTIME_FILE,
+        createWebpackRuntimeModuleSource(buildMeta, cssFilePath, sourcemapSidecar?.getBaseUrl()),
+      );
     });
 
     compiler.hooks.watchRun.tapPromise(PLUGIN_NAME, async (watchCompiler) => {
       await sourcemapSidecar?.ensureStarted();
+      writePluginCacheFile(
+        state,
+        WEBPACK_RUNTIME_FILE,
+        createWebpackRuntimeModuleSource(buildMeta, cssFilePath, sourcemapSidecar?.getBaseUrl()),
+      );
 
       const files = watchCompiler.modifiedFiles;
       if (!files || !files.size) return;

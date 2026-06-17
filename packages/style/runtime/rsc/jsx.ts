@@ -1,4 +1,4 @@
 import { createTransformElement } from '../core/createTransformElement';
-import { getClassName } from '../core/getClassName';
+import { getClassName } from './getClassName';
 
 export const transformElement = createTransformElement(getClassName);

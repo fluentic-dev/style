@@ -11,7 +11,7 @@ import {
   ELEMENT_CSS_DATA_ATTR,
   equal,
   fileURLToPath,
-  getClassName,
+  getRscClassName,
   getToken,
   includes,
   notEqual,
@@ -123,7 +123,7 @@ test('invariant: rsc style prop serialization removes functions and emits dev pa
       },
     });
     const props = result.props as Record<string, unknown>;
-    const manual = getClassName(rscStyles.root) as Record<string, unknown>;
+    const manual = getRscClassName(rscStyles.root) as Record<string, unknown>;
 
     equal(props.id, 'rsc-target');
     equal('css' in props, false);

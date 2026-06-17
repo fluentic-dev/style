@@ -1,5 +1,12 @@
-import { RUNTIME_CONFIG, setDevRuntimeOptions, setPriorityMode, setSourcemapTraceMode } from '../config';
+import {
+  RUNTIME_CONFIG,
+  setDebugElementClassName,
+  setDevRuntimeOptions,
+  setPriorityMode,
+  setSourcemapTraceMode,
+} from '../config';
 import type { PriorityMode, SourcemapTraceMode } from '../config';
+import { clearElementMarkers } from '../runtime/core/elementMarker';
 import { refreshDevSourcemapTags, refreshDevStyleTags } from '../sheet/dev';
 import {
   createDevUtilsObject,
@@ -49,6 +56,30 @@ function getUtils(displayName: string) {
     },
   });
 
+  const setSourcemapTraceUtils = createDevUtilsObject({
+    toStyle() {
+      setSourcemapTrace('style');
+      return null;
+    },
+
+    toValue() {
+      setSourcemapTrace('value');
+      return null;
+    },
+  });
+
+  const setElementMarkerUtils = createDevUtilsObject({
+    toOn() {
+      setElementMarkerMode(true);
+      return null;
+    },
+
+    toOff() {
+      setElementMarkerMode(false);
+      return null;
+    },
+  });
+
   const baseUtils = createDevUtilsObject({
     usage() {
       logUsage(displayName);
@@ -65,17 +96,10 @@ function getUtils(displayName: string) {
       return null;
     },
 
-    persistent: createDevUtilsObject({
-      on() {
-        setPersistentMode(true);
-        return null;
-      },
-
-      off() {
-        setPersistentMode(false);
-        return null;
-      },
-    }),
+    reset() {
+      resetDevUtils();
+      return null;
+    },
 
     startupMessage: createDevUtilsObject({
       on() {
@@ -90,21 +114,13 @@ function getUtils(displayName: string) {
     }),
 
     setPriorityMode: setPriorityModeUtils,
+
+    setElementMarker: setElementMarkerUtils,
   });
 
   const pluginUtils = createDevUtilsObject({
     ...baseUtils,
-    setSourcemapTrace: createDevUtilsObject({
-      toStyle() {
-        setSourcemapTrace('style');
-        return null;
-      },
-
-      toValue() {
-        setSourcemapTrace('value');
-        return null;
-      },
-    }),
+    setSourcemapTrace: setSourcemapTraceUtils,
   });
 
   if (!RUNTIME_CONFIG.buildMeta) {
@@ -122,7 +138,7 @@ function getUtils(displayName: string) {
 
 function setSourcemapTrace(mode: SourcemapTraceMode) {
   setSourcemapTraceMode(mode);
-  savePersistentDevConfig();
+  saveDevConfig();
   refreshDevSourcemapTags();
 
   logSourcemapTraceMode(mode);
@@ -131,39 +147,18 @@ function setSourcemapTrace(mode: SourcemapTraceMode) {
 
 function setRuntimePriorityMode(mode: PriorityMode) {
   setPriorityMode(mode);
-  savePersistentDevConfig();
+  saveDevConfig();
   refreshDevStyleTags();
 
   logPriorityMode(mode);
 }
 
-function setPersistentMode(enabled: boolean) {
-  const storage = getStorage();
+function setElementMarkerMode(enabled: boolean) {
+  setDebugElementClassName(enabled);
+  if (!enabled) clearElementMarkers();
+  saveDevConfig();
 
-  if (!storage) {
-    logPersistentUnavailable();
-    return;
-  }
-
-  if (!enabled) {
-    if (!removeStoredDevConfig(storage)) {
-      logPersistentUnavailable();
-      return;
-    }
-
-    logPersistentMode(false);
-    return;
-  }
-
-  if (
-    !setStoredItem(storage, StorageKeys.persistent, '1') ||
-    !writeStoredDevConfig(storage)
-  ) {
-    logPersistentUnavailable();
-    return;
-  }
-
-  logPersistentMode(true);
+  logElementMarkerMode(enabled);
 }
 
 function setStartupMessageMode(enabled: boolean) {
@@ -188,40 +183,59 @@ function setStartupMessageMode(enabled: boolean) {
 
 function applyPersistentDevConfig() {
   const storage = getStorage();
-  if (!storage || getStoredItem(storage, StorageKeys.persistent) !== '1') return;
+  if (!storage) return;
 
   const priorityMode = parsePriorityMode(getStoredItem(storage, StorageKeys.priorityMode));
   const sourcemapTrace = parseSourcemapTrace(getStoredItem(storage, StorageKeys.sourcemapTrace));
+  const savedElementMarker = getStoredItem(storage, StorageKeys.elementMarker);
+  const elementMarker = savedElementMarker === null ? undefined : savedElementMarker === 'true';
 
-  if (!priorityMode && !sourcemapTrace) return;
+  if (!priorityMode && !sourcemapTrace && elementMarker === undefined) return;
 
   setDevRuntimeOptions({
     priorityMode: priorityMode ?? undefined,
     sourcemapTrace: sourcemapTrace ?? undefined,
+    debugElementClassName: elementMarker,
   });
+
+  if (elementMarker === false) clearElementMarkers();
 }
 
-function savePersistentDevConfig() {
+function saveDevConfig() {
   const storage = getStorage();
-  if (!storage || getStoredItem(storage, StorageKeys.persistent) !== '1') return;
+  if (!storage) return;
 
-  writeStoredDevConfig(storage);
+  if (!writeStoredDevConfig(storage)) logPersistentUnavailable();
 }
 
 function writeStoredDevConfig(storage: Storage) {
   return setStoredItem(storage, StorageKeys.priorityMode, RUNTIME_CONFIG.priorityMode) &&
-    setStoredItem(storage, StorageKeys.sourcemapTrace, RUNTIME_CONFIG.sourcemapTrace);
+    setStoredItem(storage, StorageKeys.sourcemapTrace, RUNTIME_CONFIG.sourcemapTrace) &&
+    setStoredItem(
+      storage,
+      StorageKeys.elementMarker,
+      RUNTIME_CONFIG.debugElementClassName ? 'true' : 'false',
+    );
 }
 
 function removeStoredDevConfig(storage: Storage) {
-  return removeStoredItem(storage, StorageKeys.persistent) &&
-    removeStoredItem(storage, StorageKeys.priorityMode) &&
-    removeStoredItem(storage, StorageKeys.sourcemapTrace);
+  return removeStoredItem(storage, StorageKeys.priorityMode) &&
+    removeStoredItem(storage, StorageKeys.sourcemapTrace) &&
+    removeStoredItem(storage, StorageKeys.elementMarker);
 }
 
-function isPersistentModeEnabled() {
+function resetDevUtils() {
   const storage = getStorage();
-  return storage ? getStoredItem(storage, StorageKeys.persistent) === '1' : false;
+  if (!storage || !removeStoredDevConfig(storage)) {
+    logPersistentUnavailable();
+    return;
+  }
+
+  setDevRuntimeOptions(null);
+  refreshDevStyleTags();
+  refreshDevSourcemapTags();
+  clearElementMarkers();
+  logReset();
 }
 
 function isStartupMessageEnabled() {
@@ -271,19 +285,21 @@ function logPriorityMode(mode: PriorityMode) {
   );
 }
 
-function logPersistentMode(enabled: boolean) {
-  const detail = enabled
-    ? `on priority=${RUNTIME_CONFIG.priorityMode} sourcemap=${RUNTIME_CONFIG.sourcemapTrace}`
-    : 'off';
-
+function logElementMarkerMode(enabled: boolean) {
   console.log(
-    `\x1b[32m✔\x1b[0m \x1b[1m\x1b[36m[persistent]\x1b[0m ${detail}`,
+    `\x1b[32m✔\x1b[0m \x1b[1m\x1b[36m[element-marker]\x1b[0m ${enabled ? 'on' : 'off'}`,
+  );
+}
+
+function logReset() {
+  console.log(
+    '\x1b[32m✔\x1b[0m \x1b[1m\x1b[36m[dev-utils]\x1b[0m reset saved preferences',
   );
 }
 
 function logPersistentUnavailable() {
   console.log(
-    '\x1b[33m!\x1b[0m \x1b[1m\x1b[36m[persistent]\x1b[0m localStorage is unavailable',
+    '\x1b[33m!\x1b[0m \x1b[1m\x1b[36m[dev-utils]\x1b[0m localStorage is unavailable',
   );
 }
 
@@ -314,20 +330,15 @@ function logUsageRows(displayName: string) {
 }
 
 function logInfoRows() {
-  const rows: string[][] = [];
-
-  if (isPersistentModeEnabled()) {
-    rows.push(['Persistent', getPersistentLabel(), getPersistentDetail()]);
-  }
-
-  rows.push(
+  const rows: string[][] = [
     ['Priority', getPriorityModeValue(), getPriorityModeDetail()],
     ['Sourcemap', getSourcemapLabel(), getSourcemapDetail()],
     ['ClassNames', getClassNameLabel(), getClassNameDetail()],
+    ['ElementMark', getElementMarkerLabel(), getElementMarkerDetail()],
     ['CSS', getCssModeLabel(), getCssModeDetail()],
     ['Runtime', getRuntimeModeLabel(), getRuntimeDetail()],
     ['Plugin', getPluginLabel(), getPluginDetail()],
-  );
+  ];
 
   for (const [label, value, detail] of rows) {
     console.log(
@@ -408,18 +419,6 @@ function getSourcemapDetail() {
     : 'Spread values trace to the value source.';
 }
 
-function getPersistentLabel() {
-  return isPersistentModeEnabled() ? 'on' : 'off';
-}
-
-function getPersistentDetail() {
-  if (!isPersistentModeEnabled()) {
-    return 'Local debug preferences are not saved.';
-  }
-
-  return `Saving priority=${RUNTIME_CONFIG.priorityMode} and sourcemap=${RUNTIME_CONFIG.sourcemapTrace}.`;
-}
-
 function getClassNameLabel() {
   const labels = [
     RUNTIME_CONFIG.debugClassName ? 'debug' : '',
@@ -436,15 +435,26 @@ function getClassNameDetail() {
   ].join(' / ');
 }
 
+function getElementMarkerLabel() {
+  return RUNTIME_CONFIG.debugElementClassName ? 'on' : 'off';
+}
+
+function getElementMarkerDetail() {
+  return RUNTIME_CONFIG.debugElementClassName
+    ? `Prefix ${RUNTIME_CONFIG.debugElementClassNamePrefix} is enabled.`
+    : 'Element marker classes are disabled.';
+}
+
 function getUsageCommands(displayName: string) {
   const commands = [
     [`${displayName}.usage()`, 'Print this help text'],
     [`${displayName}.info()`, 'Print current debug status'],
     [`${displayName}.getConfig()`, 'Print current runtime config'],
-    [`${displayName}.persistent.on()`, 'Save local priority and sourcemap trace modes'],
-    [`${displayName}.persistent.off()`, 'Stop saving local debug modes'],
+    [`${displayName}.reset()`, 'Reset saved local debug preferences'],
     [`${displayName}.startupMessage.on()`, 'Show the initial helper message'],
     [`${displayName}.startupMessage.off()`, 'Hide the initial helper message'],
+    [`${displayName}.setElementMarker.on()`, 'Add element source marker classes'],
+    [`${displayName}.setElementMarker.off()`, 'Stop adding element source marker classes'],
     [`${displayName}.setPriorityMode.toLayer()`, 'Use layer priority mode'],
     [`${displayName}.setPriorityMode.toSort()`, 'Use sorted priority mode'],
   ];
@@ -463,13 +473,15 @@ function getUsageCommands(displayName: string) {
 
 function logCssDevUtilsEnabled(displayName: string) {
   console.groupCollapsed(
-    `%c✨ %c[${displayName}] %cpriority=%c${RUNTIME_CONFIG.priorityMode}%c sourcemap=%c${RUNTIME_CONFIG.sourcemapTrace}%c │ %cFor usage run %c${displayName}.usage()`,
+    `%c✨ %c[${displayName}] %cpriority=%c${RUNTIME_CONFIG.priorityMode}%c sourcemap=%c${RUNTIME_CONFIG.sourcemapTrace}%c marker=%c${getElementMarkerLabel()}%c │ %cFor usage run %c${displayName}.usage()`,
     'color:#eab308',
     'font-weight:700;color:#a21caf',
     'font-weight:700;color:#475569',
     'font-weight:800;color:#d97706',
     'font-weight:700;color:#475569',
     'font-weight:800;color:#059669',
+    'font-weight:700;color:#475569',
+    'font-weight:800;color:#0f766e',
     'color:#94a3b8',
     'font-weight:700;color:#475569',
     'font-weight:800;color:#0891b2',

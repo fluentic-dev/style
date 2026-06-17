@@ -39,7 +39,15 @@ import {
 } from '../css';
 import { traceDevSourcemaps } from '../dev/trace';
 import { enableStyleDevUtils } from '../dev/utils';
-import { createPluginCompiler, createTransformFilter, getRuntimeImportAliases } from '../plugin/utils';
+import { injectDevCssLink } from '../plugin/nextjs/html';
+import { rewriteServerDevStyleImports, rewriteServerStyleImports } from '../plugin/nextjs/loader';
+import { getTurbopackRuntimeImportAliases } from '../plugin/nextjs/plugin';
+import {
+  createPluginCompiler,
+  createTransformFilter,
+  getRuntimeImportAliases,
+  getServerRuntimeImportAliases,
+} from '../plugin/utils';
 import { normalizeSidecarRoutePath } from '../plugin/utils/sidecar/utils';
 import { plugin as viteStylePlugin } from '../plugin/vite';
 import { prependWebpackRuntimeEntry } from '../plugin/webpack/utils';
@@ -50,8 +58,9 @@ import { getClassName } from '../runtime/core/getClassName';
 import { getSheetRules } from '../runtime/core/getSheetRules';
 import { transformElement } from '../runtime/core/jsx';
 import { ELEMENT_CSS_DATA_ATTR } from '../runtime/rsc/constants';
+import { createRscStylePayload, getClassName as getRscClassName } from '../runtime/rsc/getClassName';
 import { transformElement as transformRscElement } from '../runtime/rsc/jsx';
-import { getRscDevInitialStyleSelector } from '../runtime/rsc/observer';
+import { getRscDevInitialStyleSelector, parseRscStylePayload } from '../runtime/rsc/observer';
 import { clearRscStyleStore, getRscStyleCss } from '../runtime/rsc/styleStore';
 import { createThemeRule, getGlobalSheet, setGlobalSheet } from '../runtime/sheet';
 import { bindScope, type CombinedStyleFor, combineStyle, getToken } from '../runtime/style';
@@ -83,6 +92,7 @@ export {
   createPositionTry,
   createProdSheet,
   createProperty,
+  createRscStylePayload,
   createScopeBuilder,
   createScrollTimeline,
   createSlotBuilder,
@@ -101,19 +111,26 @@ export {
   getClassName,
   getCombinedStyleScopes,
   getGlobalSheet,
+  getRscClassName,
   getRscDevInitialStyleSelector,
   getRscStyleCss,
   getRuleCallsite,
   getRuntimeImportAliases,
   getScopeParentClassName,
+  getServerRuntimeImportAliases,
   getSheetRules,
   getToken,
+  getTurbopackRuntimeImportAliases,
+  injectDevCssLink,
   isSlotOverrideData,
   ITEM_VALUE_NUMBER_PX,
   normalizeSidecarRoutePath,
+  parseRscStylePayload,
   prependWebpackRuntimeEntry,
   readFileSync,
   resolveStyleProp,
+  rewriteServerDevStyleImports,
+  rewriteServerStyleImports,
   RUNTIME_CONFIG,
   selector,
   setBuildMeta,
@@ -325,7 +342,7 @@ export function injectStyleDebugData(
       ...compilerOptions,
       getSourcemapFilePath(info) {
         if (getSourcemapFilePath) {
-          return getSourcemapFilePath({ ...info, sourceUrl: sourceUrl ?? info.sourceUrl });
+          return getSourcemapFilePath(info);
         }
 
         return sourceUrl ?? info.sourceUrl;

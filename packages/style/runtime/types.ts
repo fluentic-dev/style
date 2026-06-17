@@ -28,6 +28,14 @@ export type RuntimeStyleAttributes = {
   css?: StyleProp;
 };
 
+export type ElementDebugData = {
+  $$elementDebug: true;
+  loc: [line: number, column: number];
+  label: string;
+  sourceUrl: string;
+  code?: string;
+};
+
 export type DomElementProps = {
   className?: string;
   style?: CSSProperties;

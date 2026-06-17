@@ -29,10 +29,11 @@ export function getStylePackageDistPath() {
 export function createWebpackRuntimeModuleSource(
   meta: BuildMeta,
   cssFilePath: string | null,
+  sidecarUrl?: string | null,
 ) {
   return [
     meta.extract && cssFilePath && `import ${JSON.stringify(normalizePath(cssFilePath))};`,
-    createBuildMetaSnippet(meta),
+    createBuildMetaSnippet(meta, { sidecarUrl }),
     '',
   ].filter(Boolean).join('\n');
 }

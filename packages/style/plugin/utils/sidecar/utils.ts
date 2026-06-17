@@ -12,8 +12,7 @@ export type GetRoutePathArgs = {
 };
 
 export type CreateSourceUrlArgs = {
-  host: string;
-  port: number;
+  baseUrl: string;
   routePath: string;
 };
 
@@ -60,7 +59,7 @@ export function normalizeSidecarRoutePath(args: NormalizeRoutePathArgs) {
 }
 
 export function createSourceUrl(args: CreateSourceUrlArgs) {
-  return `http://${args.host}:${args.port}${encodeURI(args.routePath)}`;
+  return `${args.baseUrl.replace(/\/+$/, '')}${encodeURI(args.routePath)}`;
 }
 
 export function getRequestPathname(url: string | undefined) {

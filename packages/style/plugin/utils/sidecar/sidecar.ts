@@ -21,6 +21,7 @@ export type SourcemapSidecar = {
   cacheDir: string;
   projectDir: string;
   ensureStarted(): Promise<void>;
+  getBaseUrl(): string | null;
   getRouteUrl(routePath: string): string;
   getSourceUrl(filePath: string, relativePath?: string | null): string;
   registerSource(filePath: string, routePath: string): string;
@@ -55,6 +56,9 @@ export function getSourcemapSidecar(args: SourcemapSidecarArgs): SourcemapSideca
     ensureStarted() {
       return state.startPromise;
     },
+    getBaseUrl() {
+      return createSidecarBaseUrl(state);
+    },
     getRouteUrl(routePath) {
       return createSidecarSourceUrl(
         state,
@@ -88,6 +92,12 @@ export function getSourcemapSidecar(args: SourcemapSidecarArgs): SourcemapSideca
   };
 }
 
+function createSidecarBaseUrl(state: SidecarServer) {
+  if (state.startError || state.port === null) return null;
+
+  return `http://${SIDECAR_HOST}:${state.port}`;
+}
+
 function createSidecarSourceUrl(state: SidecarServer, routePath: string) {
   if (state.startError) {
     throw new Error(formatError(
@@ -101,9 +111,16 @@ function createSidecarSourceUrl(state: SidecarServer, routePath: string) {
     ));
   }
 
+  const baseUrl = createSidecarBaseUrl(state);
+
+  if (baseUrl === null) {
+    throw new Error(formatError(
+      'The sourcemap dev server is not ready yet. Try rebuilding after the dev server finishes starting.',
+    ));
+  }
+
   return createSourceUrl({
-    host: SIDECAR_HOST,
-    port: state.port,
+    baseUrl,
     routePath,
   });
 }
@@ -124,7 +141,7 @@ function getOrCreateServer(projectDir: string, cacheDir: string) {
     port: null,
     portFilePath: getPortFilePath({ cacheDir }),
     routes,
-    server: createSidecarServer({ routes, handlers }),
+    server: createSidecarServer({ projectDir, routes, handlers }),
     startError: null,
     startPromise: Promise.resolve(),
   };

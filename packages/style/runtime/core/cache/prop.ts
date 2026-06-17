@@ -12,6 +12,7 @@ import { getExtractedTokenBoundData, isExtractedTokenBoundData } from '../../../
 import { RUNTIME_CONFIG } from '../../../config';
 import { isStyleTokenOverrideData } from '../../../style/token';
 import type { StyleProp } from '../../types';
+import { isElementDebugData, splitElementMarkerStyleProp } from '../elementMarker';
 import {
   createResolvedStyleItem,
   createResolvedStyleItemFromItems,
@@ -47,6 +48,9 @@ export function resolveStyleProp(styleProp: StyleProp | undefined): ResolvedStyl
 }
 
 export function resolveStylePropRuntime(styleProp: StyleProp | undefined): ResolvedStylePropRuntime | null {
+  if (!styleProp) return null;
+
+  styleProp = splitElementMarkerStyleProp(styleProp).styleProp;
   if (!styleProp) return null;
 
   if (RUNTIME_CONFIG.runtimeCacheTTL === 0) {
@@ -102,6 +106,8 @@ export function resolveStylePropRuntime(styleProp: StyleProp | undefined): Resol
     onUnsupported: () => void,
   ) {
     walkRecursiveItems(styleProp, (item) => {
+      if (isElementDebugData(item)) return;
+
       const key = getStylePropCacheKey(item, tokenBindings);
 
       if (key) {
@@ -120,6 +126,8 @@ export function walkStyleProp(
   options?: StylePropWalkOptions,
 ) {
   walkRecursiveItems(styleProp, (item) => {
+    if (isElementDebugData(item)) return;
+
     const styleItem = normalizeStylePropItem(item, options?.stableTokenBound ?? false);
 
     if (styleItem) {
@@ -152,6 +160,7 @@ function collectStylePropItems(
 
 function warnUnsupportedStylePropItem(item: unknown) {
   if (!RUNTIME_CONFIG.isDev) return;
+  if (isElementDebugData(item)) return;
 
   if (
     isSlotOverrideData(item) ||
@@ -178,6 +187,8 @@ function normalizeStylePropItem(
   item: unknown,
   stableTokenBound: boolean,
 ): StylePropItem | null {
+  if (isElementDebugData(item)) return null;
+
   if (RUNTIME_CONFIG.isHoistEnabled && isExtractedTokenBoundData(item)) {
     const bound = getExtractedTokenBoundData(item);
     if (stableTokenBound) return normalizeStylePropItem(bound.data, true);

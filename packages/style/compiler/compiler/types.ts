@@ -14,9 +14,13 @@ export const Constants = CompilerConstants;
 
 export type CompilerCssOptions = BuildCssConfig;
 
+export type DevSourcemapMode = 'sourceUrl' | 'sidecarServer' | 'sourceContent';
+
 export type CompilerOptions = {
   styleFn?: StyleFn;
   css?: CompilerCssOptions;
+  debugElementClassName?: boolean;
+  debugElementClassNamePrefix?: string;
   layer?: boolean;
   priorityMode?: PriorityMode;
   hoist?: boolean;
@@ -24,7 +28,7 @@ export type CompilerOptions = {
   importSources?: ImportSource[];
 
   getSourcemapFilePath?: GetSourcemapFilePathFn;
-  devSourcemap?: 'sourceUrl' | 'sidecarServer' | 'sourceContent';
+  devSourcemap?: DevSourcemapMode;
   sourcemapTrace?: SourcemapTraceMode;
   checkSelector?: CheckSelectorMode;
 };

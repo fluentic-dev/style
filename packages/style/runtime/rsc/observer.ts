@@ -1,7 +1,9 @@
+import { isDebugData } from '../../builder/data/debug';
 import { RUNTIME_CONFIG } from '../../config';
 import type { SheetRule } from '../../sheet';
 import { getGlobalSheet } from '../sheet';
 import { ELEMENT_CSS_DATA_ATTR, PRECOLLECT_LINK_TAG_ATTR, SEED_STYLE_TAG_ATTR, SEED_STYLE_TAG_HREF } from './constants';
+import type { RscStylePayloadRule } from './getClassName';
 
 let observer: MutationObserver | null = null;
 let scheduled = false;
@@ -106,7 +108,7 @@ function flush() {
   pending.clear();
 
   for (const element of elements) {
-    const payload = parsePayload(element.getAttribute(ELEMENT_CSS_DATA_ATTR));
+    const payload = parseRscStylePayload(element.getAttribute(ELEMENT_CSS_DATA_ATTR));
 
     for (const rule of payload) {
       if (!rule.key || !rule.css || inserted.has(rule.key)) continue;
@@ -143,7 +145,7 @@ export function getRscDevInitialStyleSelector() {
   ].join(', ');
 }
 
-function parsePayload(value: string | null): SheetRule[] {
+export function parseRscStylePayload(value: string | null): SheetRule[] {
   if (!value) return [];
 
   try {
@@ -151,29 +153,26 @@ function parsePayload(value: string | null): SheetRule[] {
 
     if (!Array.isArray(parsed)) return [];
 
-    return parsed.filter(isPayloadItem);
+    return parsed.map(normalizePayloadItem).filter((item) => item !== null);
   } catch {
     return [];
   }
 }
 
-function isPayloadItem(value: unknown): value is SheetRule {
-  if (!value || typeof value !== 'object') return false;
+function normalizePayloadItem(value: unknown): SheetRule | null {
+  if (!value || typeof value !== 'object') return null;
 
-  const rule = value as SheetRule;
+  const rule = value as RscStylePayloadRule;
 
-  if (typeof rule.key !== 'string' || typeof rule.css !== 'string') return false;
+  if (typeof rule.key !== 'string' || typeof rule.css !== 'string') return null;
+  if (rule.debug !== undefined && rule.debug !== null && !isDebugData(rule.debug)) return null;
+  if (rule.debugField !== undefined && rule.debugField !== null && typeof rule.debugField !== 'string') return null;
 
-  if (!rule.callsite) return true;
-
-  return (
-    typeof rule.callsite === 'object' &&
-    typeof rule.callsite.filePath === 'string' &&
-    (
-      rule.callsite.sourceUrl === undefined ||
-      typeof rule.callsite.sourceUrl === 'string'
-    ) &&
-    typeof rule.callsite.line === 'number' &&
-    typeof rule.callsite.column === 'number'
-  );
+  return {
+    key: rule.key,
+    css: rule.css,
+    priority: rule.priority,
+    debug: rule.debug,
+    debugField: rule.debugField,
+  };
 }

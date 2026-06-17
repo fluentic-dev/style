@@ -2,10 +2,19 @@ import type { BuildMeta } from '../../config';
 import {
   getStyleJsxDevRuntimeImportPath,
   getStyleJsxRuntimeImportPath,
+  getStyleJsxServerDevRuntimeImportPath,
+  getStyleJsxServerRuntimeImportPath,
+  STYLE_IMPORT_PATH,
   STYLE_JSX_DEV_RUNTIME_COMPAT_IMPORT_PATH,
   STYLE_JSX_DEV_RUNTIME_IMPORT_PATH,
   STYLE_JSX_RUNTIME_COMPAT_IMPORT_PATH,
   STYLE_JSX_RUNTIME_IMPORT_PATH,
+  STYLE_JSX_SERVER_DEV_RUNTIME_COMPAT_IMPORT_PATH,
+  STYLE_JSX_SERVER_DEV_RUNTIME_IMPORT_PATH,
+  STYLE_JSX_SERVER_RUNTIME_COMPAT_IMPORT_PATH,
+  STYLE_JSX_SERVER_RUNTIME_IMPORT_PATH,
+  STYLE_SERVER_EXTRACTED_IMPORT_PATH,
+  STYLE_SERVER_IMPORT_PATH,
   type StyleClientRuntimeMode,
 } from '../../utils/imports';
 import type { PluginCompiler, PluginOptions } from './compiler';
@@ -19,9 +28,13 @@ export const RESOLVED_CSS_MODULE_ID = `\0${CSS_MODULE_ID}`;
 
 export const VIRTUAL_MODULE_REQUEST_PATTERN = '^virtual:fluentic-style(?:\\.css)?$';
 export const RUNTIME_IMPORT_ALIAS_PATTERN = '^@fluentic/style/jsx(?:-runtime|-dev-runtime|/runtime|/dev-runtime)$';
+export const SERVER_RUNTIME_IMPORT_ALIAS_PATTERN =
+  '^@fluentic/style/jsx(?:-runtime|-dev-runtime|/runtime|/dev-runtime)/server$';
 
 export const VIRTUAL_MODULE_REQUEST_RE = /^virtual:fluentic-style(?:\.css)?$/;
 export const RUNTIME_IMPORT_ALIAS_RE = /^@fluentic\/style\/jsx(?:-runtime|-dev-runtime|\/runtime|\/dev-runtime)$/;
+export const SERVER_RUNTIME_IMPORT_ALIAS_RE =
+  /^@fluentic\/style\/jsx(?:-runtime|-dev-runtime|\/runtime|\/dev-runtime)\/server$/;
 
 export const CSS_MARKER = getExtractedCssMarker();
 
@@ -37,7 +50,23 @@ const JSX_DEV_RUNTIME_IMPORTS = [
   STYLE_JSX_DEV_RUNTIME_COMPAT_IMPORT_PATH,
 ];
 
+const JSX_SERVER_RUNTIME_IMPORTS = [
+  STYLE_JSX_SERVER_RUNTIME_IMPORT_PATH,
+  STYLE_JSX_SERVER_RUNTIME_COMPAT_IMPORT_PATH,
+];
+
+const JSX_SERVER_DEV_RUNTIME_IMPORTS = [
+  STYLE_JSX_SERVER_DEV_RUNTIME_IMPORT_PATH,
+  STYLE_JSX_SERVER_DEV_RUNTIME_COMPAT_IMPORT_PATH,
+];
+
 export function getBuildMeta(dev: boolean, options: PluginOptions): BuildMeta {
+  const css = {
+    ...options.css,
+    debugElementClassName: options.css?.debugElementClassName ?? options.debugElementClassName,
+    debugElementClassNamePrefix: options.css?.debugElementClassNamePrefix ?? options.debugElementClassNamePrefix,
+  };
+
   return {
     dev,
     extract: !dev,
@@ -47,17 +76,26 @@ export function getBuildMeta(dev: boolean, options: PluginOptions): BuildMeta {
     priorityMode: options.priorityMode,
     sourcemapTrace: options.sourcemapTrace,
     checkSelector: options.checkSelector,
-    css: options.css ?? null,
+    css: hasCssBuildMeta(css) ? css : null,
   };
+}
+
+function hasCssBuildMeta(css: NonNullable<BuildMeta['css']>) {
+  for (const key in css) {
+    if (css[key as keyof typeof css] !== undefined) return true;
+  }
+
+  return false;
 }
 
 export function createRuntimeModuleSource(
   meta: BuildMeta,
   cssModuleId?: string | null,
+  sidecarUrl?: string | null,
 ) {
   return [
     meta.extract && cssModuleId && `import ${JSON.stringify(cssModuleId)};`,
-    createBuildMetaSnippet(meta),
+    createBuildMetaSnippet(meta, { sidecarUrl }),
     '',
   ].filter(Boolean).join('\n');
 }
@@ -83,6 +121,32 @@ export function getRuntimeImportAliases(meta: BuildMeta) {
 
   for (const id of JSX_DEV_RUNTIME_IMPORTS) {
     aliases[id] = getStyleJsxDevRuntimeImportPath(mode);
+  }
+
+  return aliases;
+}
+
+export function getServerRuntimeImportAliases(meta: BuildMeta) {
+  if (meta.dev) {
+    return {
+      [STYLE_IMPORT_PATH]: STYLE_SERVER_IMPORT_PATH,
+    };
+  }
+
+  const mode: StyleClientRuntimeMode = meta.extract ? 'extracted' : 'prod';
+  const aliases: Record<string, string> = meta.extract
+    ? {
+      [STYLE_IMPORT_PATH]: STYLE_SERVER_EXTRACTED_IMPORT_PATH,
+      [STYLE_SERVER_IMPORT_PATH]: STYLE_SERVER_EXTRACTED_IMPORT_PATH,
+    }
+    : {};
+
+  for (const id of JSX_SERVER_RUNTIME_IMPORTS) {
+    aliases[id] = getStyleJsxServerRuntimeImportPath(mode);
+  }
+
+  for (const id of JSX_SERVER_DEV_RUNTIME_IMPORTS) {
+    aliases[id] = getStyleJsxServerDevRuntimeImportPath(mode);
   }
 
   return aliases;
@@ -117,9 +181,10 @@ export function loadVirtualModule(
   id: string,
   meta: BuildMeta,
   cssModuleId: string | null,
+  sidecarUrl?: string | null,
 ) {
   if (isVirtualModuleRequest(id, RUNTIME_MODULE_ID)) {
-    return createRuntimeModuleSource(meta, cssModuleId);
+    return createRuntimeModuleSource(meta, cssModuleId, sidecarUrl);
   }
 
   if (isVirtualModuleRequest(id, CSS_MODULE_ID)) {

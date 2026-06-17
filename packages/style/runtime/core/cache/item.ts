@@ -20,6 +20,12 @@ import {
   getCombinedStyleTokens,
   isCombinedStyle,
 } from '../combinedStyle';
+import {
+  getResolvedStyleItemTokenValues,
+  isResolvedStyleItem as isResolvedStyleItemMarked,
+  markResolvedStyleItem,
+  setResolvedStyleItemTokenValues,
+} from './resolvedItem';
 import type { StyleTokenValues } from './tokenValues';
 
 export type ResolvedStyleItem<Data = unknown> = {
@@ -32,18 +38,8 @@ const directStyleItemCache = globalData(
   () => new WeakMap<StyleData | SlotData, ResolvedStyleItem>(),
 );
 
-const resolvedStyleItems = globalData(
-  'runtime.resolvedStyleItems',
-  () => new WeakSet<object>(),
-);
-
-const styleItemTokenValues = globalData(
-  'runtime.styleItemTokenValues',
-  () => new WeakMap<object, StyleTokenValues | null>(),
-);
-
 export function isResolvedStyleItem<T>(value: unknown): value is ResolvedStyleItem<T> {
-  return !!value && typeof value === 'object' && resolvedStyleItems.has(value);
+  return isResolvedStyleItemMarked(value);
 }
 
 export function createResolvedStyleItem<Data extends StyleData | SlotData>(
@@ -81,7 +77,7 @@ export function getDirectStyleItem(item: StyleData | SlotData) {
 export function getStyleTokenValues(value: CombinedStyle | ResolvedStyleItem) {
   if (isCombinedStyle(value)) return getCombinedStyleTokens(value);
 
-  return styleItemTokenValues.get(value) ?? null;
+  return getResolvedStyleItemTokenValues(value);
 }
 
 export function createCombinedStyleFacade<T extends object>(
@@ -149,8 +145,8 @@ function createStyleItem<Data>(
   item: ResolvedStyleItem<Data>,
   tokens: StyleTokenValues | null = null,
 ): ResolvedStyleItem<Data> {
-  resolvedStyleItems.add(item);
-  if (tokens) styleItemTokenValues.set(item, tokens);
+  markResolvedStyleItem(item);
+  if (tokens) setResolvedStyleItemTokenValues(item, tokens);
   return item;
 }
 

@@ -267,6 +267,9 @@ importers:
       '@fluentic/style':
         specifier: workspace:*
         version: link:../../packages/style
+      '@stylexjs/stylex':
+        specifier: ^0.18.3
+        version: 0.18.3
       benchmark:
         specifier: ^2.1.4
         version: 2.1.4
@@ -283,6 +286,12 @@ importers:
         specifier: latest
         version: 6.4.2(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
     devDependencies:
+      '@babel/core':
+        specifier: ^7.29.7
+        version: 7.29.7
+      '@stylexjs/babel-plugin':
+        specifier: ^0.18.3
+        version: 0.18.3
       playwright-core:
         specifier: ^1.54.2
         version: 1.60.0

@@ -16,6 +16,15 @@ export function writeCacheFile(
 ) {
   const filePath = path.join(cacheDir, fileName);
 
+  if (fs.existsSync(filePath)) {
+    const size = Buffer.byteLength(content);
+    const stat = fs.statSync(filePath);
+
+    if (stat.size === size && fs.readFileSync(filePath, 'utf8') === content) {
+      return filePath;
+    }
+  }
+
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, content, 'utf8');
 

@@ -1,36 +1,17 @@
-import type { CompilerOptions } from '../../compiler';
+import type { CompilerOptions, DevSourcemapMode } from '../../compiler';
 import type { BabelTransformSourceMap } from '../../compiler/transform';
-import {
-  type GetSourcemapFilePathFn,
-  normalizeSourcemapSourcePath,
-  type SourcemapFilePathInfo,
-} from '../../compiler/utils/sourcemap';
+import { getDefaultSourcemapUrl, type GetSourcemapFilePathFn } from '../../compiler/utils/sourcemap';
 import type { SourcemapSidecar } from './sidecar';
 
 export type BundlerSourceMap = BabelTransformSourceMap | undefined;
-export type DevSourcemapMode = NonNullable<CompilerOptions['devSourcemap']>;
-
-export type DefaultSourcemapUrlInput =
-  | string
-  | Pick<SourcemapFilePathInfo, 'absolutePath' | 'relativePath' | 'sourcePath'>;
 
 export function parseBundlerSourceMap(map: string | null | undefined): any {
   if (!map) return null;
   return JSON.parse(map) as Exclude<BabelTransformSourceMap, string | null | undefined>;
 }
 
-export function getDefaultSourcemapUrl(input: DefaultSourcemapUrlInput) {
-  const sourcePath = typeof input === 'string'
-    ? input
-    : input.sourcePath || input.relativePath || input.absolutePath;
-
-  const resourcePath = normalizeSourcemapSourcePath(sourcePath);
-
-  return `source:///${resourcePath}`;
-}
-
 export function resolveDevSourcemapMode(
-  mode: CompilerOptions['devSourcemap'],
+  mode: DevSourcemapMode,
   dev: boolean,
 ): DevSourcemapMode {
   return mode ?? (dev ? 'sidecarServer' : 'sourceUrl');
@@ -41,9 +22,7 @@ export function resolvePluginSourcemapFilePath(
   sourcemapSidecar: SourcemapSidecar | null,
 ): GetSourcemapFilePathFn {
   return (info) => {
-    const defaultSourceUrl = sourcemapSidecar
-      ? sourcemapSidecar.getSourceUrl(info.absolutePath, info.relativePath)
-      : getDefaultSourcemapUrl(info);
+    const defaultSourceUrl = getDefaultSourcemapUrl(info);
 
     const sourcePath = getSourcemapFilePath?.({
       ...info,
@@ -51,12 +30,11 @@ export function resolvePluginSourcemapFilePath(
       sourceUrl: defaultSourceUrl,
     });
 
-    if (!sourcemapSidecar) return sourcePath || defaultSourceUrl;
+    const resolvedSourceUrl = sourcePath || defaultSourceUrl;
 
-    return sourcemapSidecar.registerSource(
-      info.absolutePath,
-      sourcePath || defaultSourceUrl,
-    );
+    sourcemapSidecar?.registerSource(info.absolutePath, resolvedSourceUrl);
+
+    return resolvedSourceUrl;
   };
 }
 

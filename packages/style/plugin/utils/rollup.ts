@@ -96,7 +96,7 @@ export function createRollupStylePlugin(
     },
 
     load(id) {
-      return loadVirtualModule(id, buildMeta, null);
+      return loadVirtualModule(id, buildMeta, null, sourcemapSidecar?.getBaseUrl());
     },
 
     async transform(this: PluginContext, code, id) {

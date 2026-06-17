@@ -1,7 +1,21 @@
-import { setBuildMeta } from '../../../config/build';
+import { FLUENTIC_SIDECAR_URL_SYMBOL_KEY, setBuildMeta } from '../../../config/build';
 import type { BuildMeta } from '../../../config/build';
 
-setBuildMeta(getBuildMeta());
+export function setupNextRuntime(options: {
+  rsc: boolean;
+}) {
+  const sidecarUrl = process.env.FLUENTIC_STYLE_NEXT_SIDECAR_URL;
+  if (sidecarUrl) {
+    (globalThis as Record<symbol, unknown>)[
+      Symbol.for(FLUENTIC_SIDECAR_URL_SYMBOL_KEY)
+    ] = sidecarUrl;
+  }
+
+  setBuildMeta({
+    ...getBuildMeta(),
+    rsc: options.rsc,
+  });
+}
 
 function getBuildMeta(): BuildMeta {
   const raw = process.env.FLUENTIC_STYLE_NEXT_BUILD_META;

@@ -42,6 +42,10 @@
       "types": "./server.ts",
       "import": "./dist/server.js"
     },
+    "./server/extracted": {
+      "types": "./server.ts",
+      "import": "./dist/server/extracted.js"
+    },
     "./compiler": {
       "types": "./compiler/index.ts",
       "import": "./dist/compiler/index.mjs",
@@ -148,6 +152,14 @@
       "types": "./jsx/jsx-runtime.ts",
       "import": "./dist/jsx-runtime/prod.js"
     },
+    "./jsx-runtime/server": {
+      "types": "./jsx/jsx-runtime.ts",
+      "import": "./dist/jsx-runtime/server.js"
+    },
+    "./jsx-runtime/server/extracted": {
+      "types": "./jsx/jsx-runtime.ts",
+      "import": "./dist/jsx-runtime/server-extracted.js"
+    },
     "./jsx-dev-runtime": {
       "types": "./jsx/jsx-dev-runtime.ts",
       "react-server": "./dist/jsx-dev-runtime/server.js",
@@ -160,6 +172,14 @@
     "./jsx-dev-runtime/prod": {
       "types": "./jsx/jsx-dev-runtime.ts",
       "import": "./dist/jsx-dev-runtime/prod.js"
+    },
+    "./jsx-dev-runtime/server": {
+      "types": "./jsx/jsx-dev-runtime.ts",
+      "import": "./dist/jsx-dev-runtime/server.js"
+    },
+    "./jsx-dev-runtime/server/extracted": {
+      "types": "./jsx/jsx-dev-runtime.ts",
+      "import": "./dist/jsx-dev-runtime/server-extracted.js"
     },
     "./jsx/runtime": {
       "types": "./jsx/jsx-runtime.ts",
@@ -174,6 +194,14 @@
       "types": "./jsx/jsx-runtime.ts",
       "import": "./dist/jsx-runtime/prod.js"
     },
+    "./jsx/runtime/server": {
+      "types": "./jsx/jsx-runtime.ts",
+      "import": "./dist/jsx-runtime/server.js"
+    },
+    "./jsx/runtime/server/extracted": {
+      "types": "./jsx/jsx-runtime.ts",
+      "import": "./dist/jsx-runtime/server-extracted.js"
+    },
     "./jsx/dev-runtime": {
       "types": "./jsx/jsx-dev-runtime.ts",
       "react-server": "./dist/jsx-dev-runtime/server.js",
@@ -186,6 +214,14 @@
     "./jsx/dev-runtime/prod": {
       "types": "./jsx/jsx-dev-runtime.ts",
       "import": "./dist/jsx-dev-runtime/prod.js"
+    },
+    "./jsx/dev-runtime/server": {
+      "types": "./jsx/jsx-dev-runtime.ts",
+      "import": "./dist/jsx-dev-runtime/server.js"
+    },
+    "./jsx/dev-runtime/server/extracted": {
+      "types": "./jsx/jsx-dev-runtime.ts",
+      "import": "./dist/jsx-dev-runtime/server-extracted.js"
     },
     "./plugin/compiler": {
       "types": "./compiler/index.ts",
