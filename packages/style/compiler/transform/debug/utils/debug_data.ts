@@ -1,23 +1,24 @@
-import type { types } from '@babel/core';
+import type { BabelTypes } from '../../utils/babel';
 import { basename } from 'node:path';
-import { getLocalVarName } from '../../../../atomic/token';
+import { getLocalVarName } from '../../../../atomic/var';
 import { TRACE_STYLE, TRACE_VALUE } from '../../../../builder/data/debug';
+import type { TokenNameFormat } from '../../../../config/types';
 import { DEFAULT_CONFIG } from '../../../utils/constants';
 import { getCallLabel, getObjectPropertyKey, isStaticStyleValue } from '../../syntax';
 import type { CallArg, CallArgs } from '../../syntax/types';
 
-export type DebugTraceProperty = types.ObjectProperty & {
-  __styleSourcemapStyleLoc?: types.SourceLocation['start'];
-  __styleSourcemapValueLoc?: types.SourceLocation['start'];
+export type DebugTraceProperty = BabelTypes.ObjectProperty & {
+  __styleSourcemapStyleLoc?: BabelTypes.SourceLocation['start'];
+  __styleSourcemapValueLoc?: BabelTypes.SourceLocation['start'];
 };
 
 export function buildDebugDataObject(
-  t: typeof types,
-  node: types.CallExpression,
+  t: typeof BabelTypes,
+  node: BabelTypes.CallExpression,
   fileId: string,
-  sourceUrlRef: types.Expression,
-  sourceContentRef: types.Expression | null,
-  tokenVarPrefix: string = DEFAULT_CONFIG.tokenVarPrefix,
+  sourceUrlRef: BabelTypes.Expression,
+  sourceContentRef: BabelTypes.Expression | null,
+  tokenNameFormat: TokenNameFormat = DEFAULT_CONFIG.tokenNameFormat!,
   styleArg: CallArg = node.arguments[0],
 ) {
   const loc = node.loc?.start;
@@ -26,7 +27,7 @@ export function buildDebugDataObject(
   const longLabel = getCallLabel(node.callee);
   const shortLabel = getShortLabel(longLabel);
 
-  const properties: types.ObjectProperty[] = [
+  const properties: BabelTypes.ObjectProperty[] = [
     t.objectProperty(
       t.identifier('$$debug'),
       t.booleanLiteral(true),
@@ -49,7 +50,7 @@ export function buildDebugDataObject(
     ),
     t.objectProperty(
       t.identifier('vars'),
-      buildVars(t, styleArg, fileId, tokenVarPrefix),
+      buildVars(t, styleArg, fileId, tokenNameFormat),
     ),
   ];
 
@@ -85,7 +86,7 @@ export function hasDebugArgument(args: CallArgs) {
 }
 
 function buildLoc(
-  t: typeof types,
+  t: typeof BabelTypes,
   line: number,
   column: number,
 ) {
@@ -96,12 +97,12 @@ function buildLoc(
 }
 
 function buildFields(
-  t: typeof types,
+  t: typeof BabelTypes,
   arg: CallArg,
 ) {
   if (!arg || arg.type !== 'ObjectExpression') return t.objectExpression([]);
 
-  const fields: types.ObjectProperty[] = [];
+  const fields: BabelTypes.ObjectProperty[] = [];
   for (const property of arg.properties) {
     if (property.type !== 'ObjectProperty' || property.computed) continue;
 
@@ -119,9 +120,9 @@ function buildFields(
 }
 
 function buildFieldLoc(
-  t: typeof types,
+  t: typeof BabelTypes,
   property: DebugTraceProperty,
-  loc: types.SourceLocation['start'],
+  loc: BabelTypes.SourceLocation['start'],
 ) {
   const styleLoc = property.__styleSourcemapStyleLoc;
   const valueLoc = property.__styleSourcemapValueLoc;
@@ -143,14 +144,14 @@ function buildFieldLoc(
 }
 
 function buildVars(
-  t: typeof types,
+  t: typeof BabelTypes,
   arg: CallArg | undefined,
   fileId: string,
-  tokenVarPrefix: string,
+  tokenNameFormat: TokenNameFormat,
 ) {
   if (!arg || arg.type !== 'ObjectExpression') return t.objectExpression([]);
 
-  const fields: types.ObjectProperty[] = [];
+  const fields: BabelTypes.ObjectProperty[] = [];
 
   for (const property of arg.properties) {
     if (property.type !== 'ObjectProperty' || property.computed) continue;
@@ -166,7 +167,7 @@ function buildVars(
         fileId,
         loc.line,
         loc.column + 1,
-        tokenVarPrefix,
+        tokenNameFormat,
       )),
     ));
   }

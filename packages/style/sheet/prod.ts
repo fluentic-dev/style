@@ -1,5 +1,5 @@
 import { getLayerBlockCss, getLayerOrderCss } from '../atomic/layer';
-import { RUNTIME_CONFIG } from '../config';
+import { CSS_CONFIG, CSS_CONFIG_DEFAULT } from '../config/config/css';
 import type { SheetOptions, StyleSheet } from './types';
 import {
   createNoopSheet,
@@ -19,7 +19,7 @@ export function createProdSheet(options: SheetOptions = {}): StyleSheet {
   const inserted = new Set<string>();
   const layerState = createSheetLayerState();
 
-  let activeLayers: readonly string[] = RUNTIME_CONFIG.layers;
+  let activeLayers: readonly string[] = CSS_CONFIG.layers ?? CSS_CONFIG_DEFAULT.layers ?? [];
 
   let layerText = '';
   let layerTag: HTMLStyleElement | null = null;

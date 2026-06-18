@@ -1,4 +1,5 @@
-import { RUNTIME_CONFIG } from '../../config';
+import { LayerDefaultLayers } from '../../atomic/layer';
+import { CSS_CONFIG } from '../../config/config/css';
 import type { StyleSheet } from '../../sheet/types';
 import type { StylePropItem } from '../core/cache/prop';
 import type { StyleProp } from '../types';
@@ -11,7 +12,7 @@ export function insertStylePropRuntimeRules(
 ) {
   if (!styleProp) return;
 
-  sheet.updateLayers(RUNTIME_CONFIG.layers);
+  sheet.updateLayers(CSS_CONFIG.layers || LayerDefaultLayers);
 
   walkStylePropSheetRules(
     styleProp,
@@ -26,7 +27,7 @@ export function insertStylePropRuntimeItems(
 ) {
   if (!items.length) return;
 
-  sheet.updateLayers(RUNTIME_CONFIG.layers);
+  sheet.updateLayers(CSS_CONFIG.layers || LayerDefaultLayers);
 
   walkStylePropItemsSheetRules(
     items,

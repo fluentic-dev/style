@@ -1,17 +1,16 @@
-import type * as BabelTypes from '@babel/types';
-import { buildCounterStyleCss } from '../../../atomic/atRule/counterStyle';
-import { buildFontFaceCss, type FontFaceObject } from '../../../atomic/atRule/fontFace';
-import { buildFontPaletteValuesCss } from '../../../atomic/atRule/fontPaletteValues';
+import type { BabelTypes } from '../utils/babel';
+import { buildCounterStyleCss, formatCounterStyleName } from '../../../atomic/atRule/counterStyle';
+import { buildFontFaceCss, type FontFaceObject, formatFontFaceName } from '../../../atomic/atRule/fontFace';
+import { buildFontPaletteValuesCss, formatFontPaletteValuesName } from '../../../atomic/atRule/fontPaletteValues';
 import { fontSrc } from '../../../atomic/atRule/fontSrc';
-import { buildKeyframesCss, type KeyframesObject } from '../../../atomic/atRule/keyframes';
-import { buildPositionTryCss } from '../../../atomic/atRule/positionTry';
-import { buildPropertyCss, type PropertyObject } from '../../../atomic/atRule/property';
-import { buildScrollTimelineCss } from '../../../atomic/atRule/scrollTimeline';
-import { type AtRuleCssOptions, createAtRuleName } from '../../../atomic/atRule/utils';
-import { buildViewTimelineCss } from '../../../atomic/atRule/viewTimeline';
+import { buildKeyframesCss, formatKeyFramesName, type KeyframesObject } from '../../../atomic/atRule/keyframes';
+import { buildPositionTryCss, formatPositionTryName } from '../../../atomic/atRule/positionTry';
+import { buildPropertyCss, formatPropertyName, type PropertyObject } from '../../../atomic/atRule/property';
 import { TRACE_STYLE, TRACE_VALUE } from '../../../builder/data/debug';
 import { createExtractedScope, createExtractedSlot, createExtractedStyle } from '../../../builder/extract';
-import { RUNTIME_CONFIG } from '../../../config';
+import { CSS_CONFIG } from '../../../config/config/css';
+import { CSS_EXTRA_CONFIG } from '../../../config/config/css_extra';
+import type { NamedAtRuleFormat, TokenNameFormat } from '../../../config/types';
 import { transformKeyframes } from '../../../style/keyframes';
 import {
   getStyleTokenId,
@@ -22,20 +21,10 @@ import {
   TOKEN_OVERRIDE,
 } from '../../../style/token';
 import type { StyleTransform } from '../../../style/transform';
-import {
-  AT_RULE_REF_TYPE_COUNTER_STYLE,
-  AT_RULE_REF_TYPE_FONT_FACE,
-  AT_RULE_REF_TYPE_FONT_PALETTE_VALUES,
-  AT_RULE_REF_TYPE_KEYFRAMES,
-  AT_RULE_REF_TYPE_POSITION_TRY,
-  AT_RULE_REF_TYPE_PROPERTY,
-  AT_RULE_REF_TYPE_SCROLL_TIMELINE,
-  AT_RULE_REF_TYPE_VIEW_TIMELINE,
-  type AtRuleRef,
-  type AtRuleRefType,
-  createAtRuleRef,
-} from '../../../style/valueRef';
+import type { StyleFnMeta } from '../../../style/style';
+import { type AtRuleRef, createAtRuleRef } from '../../../style/valueRef';
 import { hashString } from '../../../utils/hash';
+import type { StableId } from '../../../utils/id';
 import {
   FN_CREATE_COUNTER_STYLE,
   FN_CREATE_EXTRACTED_SCOPE,
@@ -46,11 +35,9 @@ import {
   FN_CREATE_KEYFRAMES,
   FN_CREATE_POSITION_TRY,
   FN_CREATE_PROPERTY,
-  FN_CREATE_SCROLL_TIMELINE,
   FN_CREATE_TOKEN,
   FN_CREATE_TOKENS,
   FN_CREATE_VALUES,
-  FN_CREATE_VIEW_TIMELINE,
   FN_FONT_SRC,
   FN_STYLE_KEYFRAMES,
   FN_STYLE_PLAIN,
@@ -102,6 +89,7 @@ export type EvalScope = {
   filePath: string;
   styleFilePath?: string;
   styleNames?: Set<string>;
+  styleMetas?: Map<string, StyleFnMeta>;
   styleTransform?: StyleTransform | null;
   sourcemapTrace?: 'style' | 'value';
 };
@@ -367,8 +355,6 @@ function isRequiredStaticStyleValueFail(reason: string) {
     reason.includes('createFontPaletteValues') ||
     reason.includes('createPositionTry') ||
     reason.includes('createProperty') ||
-    reason.includes('createScrollTimeline') ||
-    reason.includes('createViewTimeline') ||
     reason.includes('fontSrc');
 }
 
@@ -419,27 +405,31 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
       const frames = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
       if (!frames.ok) return frames;
 
-      const debugId = evaluateOptionalDebugId(node.arguments[1] as BabelTypes.Node, scope);
-      if (!debugId.ok) return debugId;
+      const stableId = evaluateOptionalStableId(node.arguments[1] as BabelTypes.Node, scope);
+      if (!stableId.ok) return stableId;
 
-      const id = debugId.value ?? createCompiledAtRuleId(scope, node.loc?.start, frames.value);
-
+      const stable = stableId.value ?? createCompiledAtRuleStableId(scope, node.loc?.start, frames.value);
+      const format = CSS_EXTRA_CONFIG.namedRuleFormat.keyframes ?? null;
       return evalOk(createCompiledAtRuleRef({
-        type: AT_RULE_REF_TYPE_KEYFRAMES,
-        keyPrefix: 'keyframes',
-        value: createAtRuleName(id, 'kf', false, RUNTIME_CONFIG.classNamePrefix),
-        buildCss: (name, tokens, tokenLookup, options) =>
-          buildKeyframesCss(name, frames.value as KeyframesObject, tokens, tokenLookup, options),
+        value: formatKeyFramesName(format, stable.id, { name: stable.name }),
+        buildCss: (_name, tokens, tokenLookup, options) =>
+          buildKeyframesCss(
+            format,
+            stable.name,
+            stable.id,
+            frames.value as KeyframesObject,
+            tokens,
+            tokenLookup,
+            options,
+          ),
       }));
     }
 
     if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_POSITION_TRY) {
       return evaluateDebugNamedAtRuleCall(node, scope, {
         label: 'createPositionTry',
-        type: AT_RULE_REF_TYPE_POSITION_TRY,
-        keyPrefix: 'position-try',
-        namePrefix: 'pt',
-        dashedName: true,
+        format: CSS_EXTRA_CONFIG.namedRuleFormat.positionTry ?? null,
+        formatName: formatPositionTryName,
         buildCss: buildPositionTryCss as NamedAtRuleCssBuilder,
       });
     }
@@ -447,42 +437,17 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
     if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_COUNTER_STYLE) {
       return evaluateDebugNamedAtRuleCall(node, scope, {
         label: 'createCounterStyle',
-        type: AT_RULE_REF_TYPE_COUNTER_STYLE,
-        keyPrefix: 'counter-style',
-        namePrefix: 'cs',
+        format: CSS_EXTRA_CONFIG.namedRuleFormat.counterStyle ?? null,
+        formatName: formatCounterStyleName,
         buildCss: buildCounterStyleCss as NamedAtRuleCssBuilder,
-      });
-    }
-
-    if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_SCROLL_TIMELINE) {
-      return evaluateDebugNamedAtRuleCall(node, scope, {
-        label: 'createScrollTimeline',
-        type: AT_RULE_REF_TYPE_SCROLL_TIMELINE,
-        keyPrefix: 'scroll-timeline',
-        namePrefix: 'st',
-        dashedName: true,
-        buildCss: buildScrollTimelineCss as NamedAtRuleCssBuilder,
-      });
-    }
-
-    if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_VIEW_TIMELINE) {
-      return evaluateDebugNamedAtRuleCall(node, scope, {
-        label: 'createViewTimeline',
-        type: AT_RULE_REF_TYPE_VIEW_TIMELINE,
-        keyPrefix: 'view-timeline',
-        namePrefix: 'vtl',
-        dashedName: true,
-        buildCss: buildViewTimelineCss as NamedAtRuleCssBuilder,
       });
     }
 
     if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_FONT_PALETTE_VALUES) {
       return evaluateDebugNamedAtRuleCall(node, scope, {
         label: 'createFontPaletteValues',
-        type: AT_RULE_REF_TYPE_FONT_PALETTE_VALUES,
-        keyPrefix: 'font-palette-values',
-        namePrefix: 'fp',
-        dashedName: true,
+        format: CSS_EXTRA_CONFIG.namedRuleFormat.fontPaletteValues ?? null,
+        formatName: formatFontPaletteValuesName,
         buildCss: buildFontPaletteValuesCss as NamedAtRuleCssBuilder,
       });
     }
@@ -502,14 +467,16 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
 
       const cssName = name.value as `--${string}`;
       if (!cssName.startsWith('--')) return evalFail('createProperty name must be a custom property name');
+      const format = CSS_EXTRA_CONFIG.namedRuleFormat.property ?? null;
+      const formattedName = formatPropertyName(format, cssName, { name: cssName });
 
       return evalOk(createCompiledAtRuleRef({
-        type: AT_RULE_REF_TYPE_PROPERTY,
-        keyPrefix: 'property',
-        value: cssName,
-        buildCss: (atRuleName, tokens, tokenLookup, options) =>
+        value: formattedName,
+        buildCss: (_atRuleName, tokens, tokenLookup, options) =>
           buildPropertyCss(
-            atRuleName as `--${string}`,
+            format,
+            cssName,
+            cssName,
             descriptors.value as PropertyObject,
             tokens,
             tokenLookup,
@@ -530,22 +497,20 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
         return evalFail('createFontFace src must be a static string');
       }
 
-      const debugId = evaluateOptionalDebugId(node.arguments[1] as BabelTypes.Node, scope);
-      if (!debugId.ok) return debugId;
-
-      const id = debugId.value ?? createCompiledAtRuleId(scope, node.loc?.start, descriptors.value);
+      const stableId = evaluateOptionalStableId(node.arguments[1] as BabelTypes.Node, scope);
+      if (!stableId.ok) return stableId;
 
       const fontFaceDescriptors = descriptors.value as FontFaceObject;
       if (typeof fontFaceDescriptors.src !== 'string') {
         return evalFail('createFontFace src must be a static string');
       }
 
+      const stable = stableId.value ?? createCompiledAtRuleStableId(scope, node.loc?.start, descriptors.value);
+      const format = CSS_EXTRA_CONFIG.namedRuleFormat.fontFace ?? null;
       return evalOk(createCompiledAtRuleRef({
-        type: AT_RULE_REF_TYPE_FONT_FACE,
-        keyPrefix: 'font-face',
-        value: createAtRuleName(id, 'ff', false, RUNTIME_CONFIG.classNamePrefix),
-        buildCss: (name, tokens, tokenLookup, options) =>
-          buildFontFaceCss(name, fontFaceDescriptors, tokens, tokenLookup, options),
+        value: formatFontFaceName(format, stable.id, { name: stable.name }),
+        buildCss: (_name, tokens, tokenLookup, options) =>
+          buildFontFaceCss(format, stable.name, stable.id, fontFaceDescriptors, tokens, tokenLookup, options),
       }));
     }
 
@@ -641,18 +606,21 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
     const frames = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
     if (!frames.ok) return frames;
 
-    const debugId = evaluateOptionalDebugId(node.arguments[1] as BabelTypes.Node, scope);
-    if (!debugId.ok) return debugId;
+    const stableId = evaluateOptionalStableId(node.arguments[1] as BabelTypes.Node, scope);
+    if (!stableId.ok) return stableId;
 
-    const id = debugId.value ?? createCompiledAtRuleId(scope, node.loc?.start, frames.value);
-    const transformedFrames = transformKeyframes(frames.value as KeyframesObject, scope.styleTransform ?? null);
+    const stable = stableId.value ?? createCompiledAtRuleStableId(scope, node.loc?.start, frames.value);
+    const meta = scope.styleMetas?.get(node.callee.object.name);
+    const transformedFrames = transformKeyframes(
+      frames.value as KeyframesObject,
+      meta?.transform ?? scope.styleTransform ?? null,
+    );
+    const format = CSS_EXTRA_CONFIG.namedRuleFormat.keyframes ?? null;
 
     return evalOk(createCompiledAtRuleRef({
-      type: AT_RULE_REF_TYPE_KEYFRAMES,
-      keyPrefix: 'keyframes',
-      value: createAtRuleName(id, 'kf', false, RUNTIME_CONFIG.classNamePrefix),
-      buildCss: (name, tokens, tokenLookup, options) =>
-        buildKeyframesCss(name, transformedFrames, tokens, tokenLookup, options),
+      value: formatKeyFramesName(format, stable.id, { name: stable.name }),
+      buildCss: (_name, tokens, tokenLookup, options) =>
+        buildKeyframesCss(format, stable.name, stable.id, transformedFrames, tokens, tokenLookup, options),
     }));
   }
 
@@ -692,19 +660,30 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
 }
 
 type NamedAtRuleCssBuilder = (
-  name: string,
+  format: NamedAtRuleFormat | null,
+  name: string | null,
+  id: string,
   descriptors: object,
   tokens: StyleTokenData[],
   tokenLookup: Set<string>,
-  options?: AtRuleCssOptions,
+  tokenNameFormat: TokenNameFormat | null,
+) => BuiltAtRuleCss;
+
+type NamedAtRuleNameFormatter = (
+  format: NamedAtRuleFormat | null,
+  hash: string,
+  info: { name: string | null; },
 ) => string;
+
+type BuiltAtRuleCss = {
+  name: string;
+  css: string;
+};
 
 type NamedAtRuleConfig = {
   label: string;
-  type: AtRuleRefType;
-  keyPrefix: string;
-  namePrefix: string;
-  dashedName?: boolean;
+  format: NamedAtRuleFormat | null;
+  formatName: NamedAtRuleNameFormatter;
   buildCss: NamedAtRuleCssBuilder;
 };
 
@@ -723,22 +702,28 @@ function evaluateDebugNamedAtRuleCall(
     return evalFail(`${config.label} descriptors must be a static object`);
   }
 
-  const debugId = evaluateOptionalDebugId(node.arguments[1] as BabelTypes.Node, scope);
+  const stableId = evaluateOptionalStableId(node.arguments[1] as BabelTypes.Node, scope);
 
-  if (!debugId.ok) {
-    return evalFail(`${config.label} debugId must be statically analyzable: ${debugId.reason}`);
+  if (!stableId.ok) {
+    return evalFail(`${config.label} stableId must be statically analyzable: ${stableId.reason}`);
   }
 
-  const id = debugId.value ?? createCompiledAtRuleId(scope, node.loc?.start, descriptors.value);
-  const name = createAtRuleName(id, config.namePrefix, config.dashedName, RUNTIME_CONFIG.classNamePrefix);
+  const stable = stableId.value ?? createCompiledAtRuleStableId(scope, node.loc?.start, descriptors.value);
+  const name = config.formatName(config.format, stable.id, { name: stable.name });
 
   try {
     return evalOk(createCompiledAtRuleRef({
-      type: config.type,
-      keyPrefix: config.keyPrefix,
       value: name,
-      buildCss: (atRuleName, tokens, tokenLookup, options) =>
-        config.buildCss(atRuleName, descriptors.value as object, tokens, tokenLookup, options),
+      buildCss: (_atRuleName, tokens, tokenLookup, options) =>
+        config.buildCss(
+          config.format,
+          stable.name,
+          stable.id,
+          descriptors.value as object,
+          tokens,
+          tokenLookup,
+          options,
+        ),
     }));
   } catch (error) {
     return evalFail(error instanceof Error ? error.message : String(error));
@@ -746,28 +731,30 @@ function evaluateDebugNamedAtRuleCall(
 }
 
 function createCompiledAtRuleRef(config: {
-  type: AtRuleRefType;
-  keyPrefix: string;
   value: string;
-  buildCss: (name: string, tokens: StyleTokenData[], tokenLookup: Set<string>, options?: AtRuleCssOptions) => string;
+  buildCss: (
+    name: string,
+    tokens: StyleTokenData[],
+    tokenLookup: Set<string>,
+    tokenNameFormat: TokenNameFormat | null,
+  ) => BuiltAtRuleCss;
 }): AtRuleRef {
   const tokens: StyleTokenData[] = [];
   const tokenLookup = new Set<string>();
-  const css = config.buildCss(config.value, tokens, tokenLookup, createCompiledAtRuleCssOptions());
+
+  const css = config.buildCss(
+    config.value,
+    tokens,
+    tokenLookup,
+    CSS_CONFIG.tokenNameFormat || null,
+  );
 
   return createAtRuleRef({
-    type: config.type,
-    key: config.keyPrefix + ':' + config.value,
-    value: config.value,
-    css,
+    key: css.name,
+    value: css.name,
+    css: css.css,
     tokens: tokens.length ? tokens : undefined,
   });
-}
-
-function createCompiledAtRuleCssOptions(): AtRuleCssOptions {
-  return {
-    tokenVarPrefix: RUNTIME_CONFIG.tokenVarPrefix,
-  };
 }
 
 function createCompiledTokenOverride(
@@ -870,15 +857,16 @@ function createCompiledTokenGroupId(
   return hashString(hash);
 }
 
-function createCompiledAtRuleId(
+function createCompiledAtRuleStableId(
   scope: EvalScope,
   loc: { line: number; column: number; } | null | undefined,
   value: unknown,
-) {
-  const hash = (scope.styleFilePath ?? scope.filePath) + '\n' +
-    (loc ? loc.line + ':' + loc.column : String(value));
-
-  return hashString(hash);
+): StableId {
+  return {
+    name: null,
+    id: (scope.styleFilePath ?? scope.filePath) + '\n' +
+      (loc ? loc.line + ':' + loc.column : String(value)),
+  };
 }
 
 function assignCompiledTokenRecord(
@@ -969,6 +957,38 @@ function evaluateOptionalDebugId(
   if (!value.ok) return value;
 
   return evalOk(value.value === undefined ? undefined : String(value.value)) as EvalResult & { value?: string; };
+}
+
+function evaluateOptionalStableId(
+  node: BabelTypes.Node | null | undefined,
+  scope: EvalScope,
+): EvalResult & { value?: StableId; } {
+  if (!node) return evalOk(undefined) as EvalResult & { value?: StableId; };
+
+  const value = evaluateNode(node, scope);
+  if (!value.ok) return value;
+  if (value.value === undefined) return evalOk(undefined) as EvalResult & { value?: StableId; };
+
+  if (typeof value.value === 'string') {
+    return evalOk({ name: value.value, id: value.value }) as EvalResult & { value?: StableId; };
+  }
+
+  if (!value.value || typeof value.value !== 'object') {
+    return evalFail('stableId must be a string or { name, id } object') as EvalResult & { value?: StableId; };
+  }
+
+  const stableId = value.value as { name?: unknown; id?: unknown; };
+  if (stableId.name !== null && stableId.name !== undefined && typeof stableId.name !== 'string') {
+    return evalFail('stableId.name must be a string, null, or undefined') as EvalResult & { value?: StableId; };
+  }
+  if (typeof stableId.id !== 'string') {
+    return evalFail('stableId.id must be a string') as EvalResult & { value?: StableId; };
+  }
+
+  return evalOk({
+    name: stableId.name ?? null,
+    id: stableId.id,
+  }) as EvalResult & { value?: StableId; };
 }
 
 function getChildDebugId(

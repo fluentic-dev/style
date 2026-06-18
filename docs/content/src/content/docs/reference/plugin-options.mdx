@@ -1,37 +1,19 @@
 ---
 title: Plugin Options
-description: Configure compiler behavior, virtual modules, and transform filters.
+description: Configure compiler behavior and transform filters.
 ---
 
-Bundler plugins accept compiler options, transform filter options, and virtual
-module options.
+Bundler plugins accept compiler options and transform filter options.
 
 ```ts
 stylePlugin({
-  extract: true,
   hoist: true,
   include: /\.[jt]sx?$/,
   exclude: /node_modules/,
-  runtimeModuleId: 'virtual:fluentic-style',
-  cssModuleId: 'virtual:fluentic-style.css',
-  importSources: [
-    {
-      source: '@my/design-system',
-      name: 'style',
-    },
-  ],
   getSourcemapFilePath({ relativePath }) {
     return `/src/${relativePath}`;
   },
 });
-```
-
-## `extract`
-
-Controls whether supported static chains are extracted.
-
-```ts
-extract?: boolean
 ```
 
 ## `hoist`
@@ -57,40 +39,6 @@ exclude?: RegExp | string | string[]
 
 The default include is JavaScript and TypeScript files. The default exclude is
 `node_modules`.
-
-## `runtimeModuleId`
-
-Virtual runtime module ID. Default:
-
-```txt
-virtual:fluentic-style
-```
-
-## `cssModuleId`
-
-Virtual CSS module ID. Default:
-
-```txt
-virtual:fluentic-style.css
-```
-
-Vite, Rollup, and Rolldown import this CSS module automatically from the runtime
-virtual module. Import it explicitly only when a bundler setup cannot turn CSS
-side-effect imports from virtual modules into CSS assets.
-
-## `importSources`
-
-Teach the compiler about additional style builder imports.
-
-```ts
-importSources?: Array<{
-  source?: string | string[];
-  name?: string | string[];
-  check?: (args: { name: string; source: string }) => boolean;
-}>
-```
-
-Use this if your design system re-exports `style` from another package.
 
 ## `getSourcemapFilePath`
 
@@ -119,6 +67,34 @@ stylePlugin({
 ```
 
 Return `null` or `undefined` to keep the integration default.
+
+## `importSources`
+
+Register style functions that the compiler should extract.
+
+```ts
+importSources?: {
+  source?: string | RegExp | (string | RegExp)[];
+  name?: string | string[];
+  styleFn: StyleFn;
+  check?: (info: { source: string; name: string }) => boolean;
+}[]
+```
+
+`source` accepts exact import sources, glob patterns, regular expressions, or an
+array of patterns. Use this when an app has multiple style functions:
+
+```ts
+stylePlugin({
+  importSources: [
+    { source: './style', name: 'style', styleFn: style },
+    { source: './sx-*', name: 'sx', styleFn: sx },
+    { source: /ui-style$/, name: 'ui', styleFn: ui },
+  ],
+});
+```
+
+Each imported builder keeps its own selectors and transform during extraction.
 
 ## `css`
 

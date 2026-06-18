@@ -9,7 +9,8 @@ import {
 } from '../../../builder/data/is';
 import type { StateItem } from '../../../builder/data/state';
 import { getExtractedTokenBoundData, isExtractedTokenBoundData } from '../../../builder/extract/withTokens';
-import { RUNTIME_CONFIG } from '../../../config';
+import { DEV_CONFIG } from '../../../config/config/dev';
+import { RUNTIME_CONFIG } from '../../../config/config/runtime';
 import { isStyleTokenOverrideData } from '../../../style/token';
 import type { StyleProp } from '../../types';
 import { isElementDebugData, splitElementMarkerStyleProp } from '../elementMarker';
@@ -70,9 +71,7 @@ export function resolveStylePropRuntime(styleProp: StyleProp | undefined): Resol
     () => warnUnsupportedStylePropItem(unsupportedItem),
   );
 
-  const configVersion = RUNTIME_CONFIG.configVersion;
-
-  if (cache?.data?.configVersion === configVersion) {
+  if (cache?.data) {
     if (!tokenBindings.length) return cache.data;
 
     return {
@@ -86,7 +85,7 @@ export function resolveStylePropRuntime(styleProp: StyleProp | undefined): Resol
 
   const items = collectStylePropItems(styleProp, tokenBindings.length > 0);
   const result = createStylePropResult(items, getThemeClassName);
-  const data = { configVersion, items, result };
+  const data = { items, result };
 
   if (cache) cache.data = data;
 
@@ -159,7 +158,7 @@ function collectStylePropItems(
 }
 
 function warnUnsupportedStylePropItem(item: unknown) {
-  if (!RUNTIME_CONFIG.isDev) return;
+  if (!DEV_CONFIG.isDev) return;
   if (isElementDebugData(item)) return;
 
   if (
@@ -189,7 +188,7 @@ function normalizeStylePropItem(
 ): StylePropItem | null {
   if (isElementDebugData(item)) return null;
 
-  if (RUNTIME_CONFIG.isHoistEnabled && isExtractedTokenBoundData(item)) {
+  if (RUNTIME_CONFIG.isHoist && isExtractedTokenBoundData(item)) {
     const bound = getExtractedTokenBoundData(item);
     if (stableTokenBound) return normalizeStylePropItem(bound.data, true);
 
@@ -217,7 +216,7 @@ function getStylePropCacheKey(
   item: unknown,
   tokenBindings: StylePropTokenBinding[],
 ): object | null {
-  if (RUNTIME_CONFIG.isHoistEnabled && isExtractedTokenBoundData(item)) {
+  if (RUNTIME_CONFIG.isHoist && isExtractedTokenBoundData(item)) {
     const bound = getExtractedTokenBoundData(item);
     const key = getStylePropCacheKey(bound.data, tokenBindings);
     const tokens = mergeTokenOverrides(null, bound.tokens);

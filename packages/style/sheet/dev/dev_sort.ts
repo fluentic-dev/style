@@ -1,5 +1,6 @@
 import { compareLayerPriority, getLayerOrderCss, type LayerPriority } from '../../atomic/layer';
-import { RUNTIME_CONFIG } from '../../config';
+import { CSS_CONFIG, CSS_CONFIG_DEFAULT } from '../../config/config/css';
+import { DEV_CONFIG } from '../../config/config/dev';
 import type { SheetOptions, SheetRule, StyleSheet } from '../types';
 import {
   createNoopSheet,
@@ -29,15 +30,15 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
 
   if (!document) return createNoopSheet();
 
-  const maxRules = Math.max(options.maxRules ?? RUNTIME_CONFIG.sheetMaxRules, 1);
-  const sourcemap = options.sourcemap ?? RUNTIME_CONFIG.isSourcemapEnabled;
+  const maxRules = Math.max(options.maxRules ?? DEV_CONFIG.sheetMaxRules, 1);
+  const sourcemap = options.sourcemap ?? DEV_CONFIG.isSourcemapEnabled;
   const inserted = new Set<string>();
   const queued: QueuedRule[] = [];
   const groups: SortGroup[] = [];
-  const shouldLayer = RUNTIME_CONFIG.layer !== false;
+  const shouldLayer = CSS_CONFIG.layer !== false;
   const layerName = getStyleLayerName();
   const layerTag = shouldLayer ? createStyleTag(document, 'layers', options.nonce) : null;
-  let activeLayers: readonly string[] = RUNTIME_CONFIG.layers;
+  let activeLayers: readonly string[] = CSS_CONFIG.layers ?? CSS_CONFIG_DEFAULT.layers ?? [];
   let layerText = '';
 
   if (layerTag) {

@@ -1,6 +1,5 @@
 import type { ScopeTargetData } from '../../builder/data';
 import type { SlotData, StyleData } from '../../builder/data';
-import { RUNTIME_CONFIG } from '../../config';
 import { globalData } from '../../utils/global';
 import { hasOwn } from '../../utils/object';
 import type { ResolvedStyleItem } from './cache/item';
@@ -21,7 +20,6 @@ export type CombinedStyleFieldGetter = (
 
 type CombinedStyleTarget = CombinedStyleMeta & {
   cache: Record<PropertyKey, unknown>;
-  configVersion: number;
   getField: CombinedStyleFieldGetter;
 };
 
@@ -37,7 +35,6 @@ export function createCombinedStyle<Styles extends object>(
   const target: CombinedStyleTarget = {
     ...meta,
     cache: Object.create(null),
-    configVersion: RUNTIME_CONFIG.configVersion,
     getField,
   };
 
@@ -70,11 +67,6 @@ export function getCombinedStyleTokens(style: CombinedStyle) {
 const handlers: ProxyHandler<object> = {
   get(proxy, prop) {
     const target = getTarget(proxy);
-
-    if (target.configVersion !== RUNTIME_CONFIG.configVersion) {
-      target.cache = Object.create(null);
-      target.configVersion = RUNTIME_CONFIG.configVersion;
-    }
 
     if (hasOwn(target.cache, prop)) {
       return target.cache[prop];

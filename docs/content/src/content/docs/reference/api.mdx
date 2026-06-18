@@ -1,6 +1,6 @@
 ---
 title: API Reference
-description: Public runtime, style, selector, and sheet APIs.
+description: Public runtime, style, and sheet APIs.
 ---
 
 ## Main import
@@ -13,8 +13,6 @@ import {
   createStyleSheet,
   createStyleToken,
   bindScope,
-  selector,
-  selectorPriority,
   setGlobalSheet,
   style,
   type,
@@ -74,6 +72,8 @@ const darkAccent = accent('#60a5fa');
 Create and prioritize selector methods for custom style functions.
 
 ```ts
+import { selector, selectorPriority } from '@fluentic/style/selector';
+
 const selectors = selectorPriority({
   hover: selector(':hover'),
   pressed: selector('[aria-pressed="true"]'),

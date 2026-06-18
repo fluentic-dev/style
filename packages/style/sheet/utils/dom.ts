@@ -1,4 +1,4 @@
-import { RUNTIME_CONFIG } from '../../config';
+import { DEV_CONFIG } from '../../config/config/dev';
 
 export function resolveDocument(documentOverride?: Document | null) {
   if (documentOverride !== undefined) return documentOverride;
@@ -10,7 +10,7 @@ export function resolveDocument(documentOverride?: Document | null) {
 export function createStyleTag(
   document: Document,
   name: string,
-  nonce = RUNTIME_CONFIG.sheetStyleTagNonce,
+  nonce = DEV_CONFIG.sheetStyleTagNonce,
 ) {
   const tag = document.createElement('style');
 

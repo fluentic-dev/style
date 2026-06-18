@@ -9,7 +9,8 @@ import {
   ITEM_VALUE_TYPE_VARIABLE,
 } from '../../../builder/data/const';
 import type { StateItem } from '../../../builder/data/state';
-import { RUNTIME_CONFIG } from '../../../config';
+import { RUNTIME_CONFIG } from '../../../config/config/runtime';
+import { CSS_CONFIG } from '../../../config/config/css';
 import { getStyleTokenId, isStyleTokenData, isStyleTokenOverrideData, type StyleTokenData } from '../../../style/token';
 import type { AtRuleRefData } from '../../../style/valueRef';
 import { hasOwn } from '../../../utils/object';
@@ -88,7 +89,7 @@ export function getStateItemVariableValue(
     if (!hasOwn(tokens.lookup, id)) return null;
 
     return [
-      getTokenVarName(item.token, RUNTIME_CONFIG.tokenVarPrefix),
+      getTokenVarName(item.token, CSS_CONFIG.tokenNameFormat ?? null),
       tokens.lookup[id],
     ];
   }
@@ -150,7 +151,7 @@ export function getStateItemAtRuleRefVariables(
     if (!hasOwn(tokens.lookup, id)) continue;
 
     values.push([
-      getTokenVarName(token, RUNTIME_CONFIG.tokenVarPrefix),
+      getTokenVarName(token, CSS_CONFIG.tokenNameFormat ?? null),
       tokens.lookup[id],
     ]);
   }
@@ -200,5 +201,5 @@ function resolveTokenValue<T>(
     }
   }
 
-  return getTokenVar(token, RUNTIME_CONFIG.tokenVarPrefix) as T;
+  return getTokenVar(token, CSS_CONFIG.tokenNameFormat ?? null) as T;
 }

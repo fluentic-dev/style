@@ -1,4 +1,4 @@
-import { FLUENTIC_SIDECAR_URL_SYMBOL_KEY } from '../../config';
+import { SIDECAR_URL_GLOBAL_SYMBOL } from '../../config/utils';
 import { normalizeCallsiteSourceUrl } from '../../utils/trace';
 
 export type SourceMapSource = {
@@ -25,6 +25,8 @@ const VLQ_BASE = 1 << VLQ_BASE_SHIFT;
 const VLQ_BASE_MASK = VLQ_BASE - 1;
 const VLQ_CONTINUATION_BIT = VLQ_BASE;
 const BASE64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+const SOURCE_URL_PREFIX = 'source://';
 
 export function createSourceMapComment(
   rules: SourceMapRule[],
@@ -111,7 +113,10 @@ function getSource(
   let source = sourceLookup[filePath];
 
   if (source) {
-    if (source.sourceContent === undefined) source.sourceContent = sourceContent;
+    if (source.sourceContent === undefined) {
+      source.sourceContent = sourceContent;
+    }
+
     return source;
   }
 
@@ -159,15 +164,15 @@ function resolveSidecarSourceUrl(sourceUrl: string) {
 
 function getSidecarUrl() {
   const value = (globalThis as Record<symbol, unknown>)[
-    Symbol.for(FLUENTIC_SIDECAR_URL_SYMBOL_KEY)
+    Symbol.for(SIDECAR_URL_GLOBAL_SYMBOL)
   ];
 
   return typeof value === 'string' && value ? value : null;
 }
 
 function getSourceUrlPath(sourceUrl: string) {
-  if (sourceUrl.startsWith('source://')) {
-    return sourceUrl.slice('source://'.length).replace(/^\/+/, '');
+  if (sourceUrl.startsWith(SOURCE_URL_PREFIX)) {
+    return sourceUrl.slice(SOURCE_URL_PREFIX.length).replace(/^\/+/, '');
   }
 
   try {

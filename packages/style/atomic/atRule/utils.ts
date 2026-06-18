@@ -1,37 +1,54 @@
+import { type NamedAtRuleFormat, type NamedAtRuleInfo, type TokenNameFormat } from '../../config/types';
 import { getStyleTokenId, isStyleTokenData, type StyleTokenData } from '../../style/token';
-import { hashString } from '../../utils/hash';
 import { getCssPropertyName } from '../property';
 import { getTokenVar } from '../token';
-import { sanitizeCssIdentName } from '../utils/css';
+import { getIdentifierSafeHash } from '../utils/css';
+import { createNameFormatter } from '../utils/format';
 import { getCssPropertyValue } from '../value';
 
-export type AtRuleCssOptions = {
-  rawValue?: boolean;
-  tokenVarPrefix?: string;
-};
+export function createAtRuleNameFormatter(defaultFormat: NamedAtRuleFormat, prefix?: string) {
+  const formatter = createNameFormatter<NamedAtRuleInfo>(['name']);
 
-export function createAtRuleName(
-  id: string,
-  prefix: string,
-  dashed: boolean = false,
-  classNamePrefix: string = '',
+  return (
+    format: NamedAtRuleFormat | null,
+    id: string,
+    info: NamedAtRuleInfo,
+  ) => {
+    const hash = getIdentifierSafeHash(id);
+    const name = formatter(format || defaultFormat, hash, info);
+
+    if (!prefix) return name;
+
+    return name.startsWith(prefix) ? name : prefix + name;
+  };
+}
+
+export function buildNamedAtRuleCss(
+  atRule: string,
+  name: string,
+  descriptors: object,
+  tokens: StyleTokenData[],
+  tokenLookup: Set<string>,
+  tokenNameFormat: TokenNameFormat | null,
 ) {
-  const debug = sanitizeCssIdentName(id);
-  const hash = hashString(id);
-  const base = debug ? `${prefix}-${debug}-${hash}` : `${prefix}-${hash}`;
-  const name = dashed ? `--${base}` : base;
-
-  return classNamePrefix
-    ? `${dashed ? '--' : ''}${classNamePrefix}-${base}`
-    : name;
+  return `@${atRule} ${name} {${
+    buildAtRuleDeclarationCss(
+      descriptors,
+      tokens,
+      tokenLookup,
+      tokenNameFormat,
+      true,
+    )
+  }}`;
 }
 
 export function buildAtRuleDeclarationCss(
   style: Record<string, any>,
   tokens: StyleTokenData[],
   tokenLookup: Set<string>,
+  tokenNameFormat: TokenNameFormat | null,
+  rawValue: boolean,
   shouldInclude?: (property: string) => boolean,
-  options?: AtRuleCssOptions,
 ) {
   let css = '';
 
@@ -51,35 +68,14 @@ export function buildAtRuleDeclarationCss(
         tokens.push(value);
       }
 
-      css += `${getCssPropertyName(property)}: ${getTokenVar(value, options?.tokenVarPrefix ?? '')};`;
+      css += `${getCssPropertyName(property)}: ${getTokenVar(value, tokenNameFormat)};`;
       continue;
     }
 
     const valueString = String(value ?? '');
 
-    css += `${getCssPropertyName(property)}: ${
-      options?.rawValue ? valueString : getCssPropertyValue(property, valueString)
-    };`;
+    css += `${getCssPropertyName(property)}: ${rawValue ? valueString : getCssPropertyValue(property, valueString)};`;
   }
 
   return css;
-}
-
-export function buildNamedAtRuleCss(
-  atRule: string,
-  name: string,
-  descriptors: object,
-  tokens: StyleTokenData[],
-  tokenLookup: Set<string>,
-  options?: AtRuleCssOptions,
-) {
-  return `@${atRule} ${name} {${
-    buildAtRuleDeclarationCss(
-      descriptors,
-      tokens,
-      tokenLookup,
-      undefined,
-      { ...options, rawValue: true },
-    )
-  }}`;
 }

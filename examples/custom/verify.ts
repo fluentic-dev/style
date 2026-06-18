@@ -1,53 +1,83 @@
-import { createCompiler } from '@fluentic/style/compiler';
-import { style } from './src/style.ts';
+import { createCompiler } from '../../packages/style/compiler';
+import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { style, sx, ui } from './src/style.ts';
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const compiler = createCompiler({
-  styleFn: style,
-  importSources: [{ source: './src/style', name: 'style' }],
+  projectDir: __dirname,
+  cacheDir: __dirname + '/.verify-cache',
+}, {
+  css: { debugClassName: true },
+  importSources: [
+    { source: './src/style', name: 'style', styleFn: style },
+    { source: './src/style', name: 'sx', styleFn: sx },
+    { source: './src/style', name: 'ui', styleFn: ui },
+  ],
 });
 
 const source = `
-import { style } from './src/style';
-const s1 = style({ display: 'flex', row: true, gap: 8 });
-const s2 = style({ display: 'flex', column: true, gap: 12 });
-const s3 = style({ row: true }).onHover({ column: true });
+import { style, sx, ui } from './src/style';
+
+const button = style.merge(
+  style.slot({ color: 'black' }).pressed({ transform: 'translateY(1px)' }),
+  sx({ row: true, center: true, gapX: 8 }),
+  sx().md({ gapX: 12 }),
+  ui({ elevated: true, pill: true }),
+  ui().hover({ color: 'teal' }),
+  ui().tone('brand', { backgroundColor: '#dff7ed' }),
+  ui().tone('danger', { backgroundColor: '#ffe4e6', color: '#be123c' }),
+);
 `;
 
-const result = compiler.transform(source, '/custom/verify.tsx');
+const result = compiler.compileExtract({
+  code: source,
+  filePath: '/custom/verify.tsx',
+  sourcemap: null,
+});
 if (!result) {
   console.error('FAIL: compiler returned null');
   process.exit(1);
 }
 
-const css = result.css?.join('\n') ?? '';
+const css = compiler.getExtractedCss();
 const compiled = result.code ?? '';
 
 type Check = { description: string; pass: boolean; };
 
 const checks: Check[] = [
   {
-    description: 'flex-direction:row emitted (row:true transformed)',
-    pass: css.includes('flex-direction:row'),
+    description: 'style.merge is fully extracted',
+    pass: !compiled.includes('style.merge('),
   },
   {
-    description: 'flex-direction:column emitted (column:true transformed)',
-    pass: css.includes('flex-direction:column'),
+    description: 'layout transform emits flex row',
+    pass: css.includes('display: flex') && css.includes('flex-direction: row'),
   },
   {
-    description: ':hover with flex-direction:column (onHover transform)',
-    pass: /flex-direction:column/.test(css) && /:hover/.test(css),
+    description: 'layout transform emits centering declarations',
+    pass: css.includes('align-items: center') && css.includes('justify-content: center'),
   },
   {
-    description: 'no raw "row:" property in CSS (custom prop removed)',
-    pass: !/\brow:[^/]/.test(css),
+    description: 'fixed md selector emits media query',
+    pass: css.includes('@media (768px <= width < 1024px)'),
   },
   {
-    description: 'no raw "column:" property in CSS (custom prop removed)',
-    pass: !/\bcolumn:[^/]/.test(css),
+    description: 'ui transform emits elevation and pill radius',
+    pass: css.includes('box-shadow: 0 18px 44px rgba(15, 23, 42, 0.12)') && css.includes('border-radius: 999px'),
   },
   {
-    description: 'compiled output uses createPrecompiledStyle (build-time)',
-    pass: compiled.includes('createPrecompiledStyle'),
+    description: 'custom ui selectors emit hover and data tone selectors',
+    pass: css.includes(':hover') && css.includes('[data-tone="brand"]') && css.includes('[data-tone="danger"]'),
+  },
+  {
+    description: 'app selector priority emits pressed selector',
+    pass: css.includes('[aria-pressed="true"]') && css.includes('translateY(1px)'),
+  },
+  {
+    description: 'custom shorthand props are removed',
+    pass: !/\brow:[^/]/.test(css) && !/\bcenter:[^/]/.test(css) && !/\belevated:[^/]/.test(css),
   },
 ];
 
@@ -63,6 +93,7 @@ for (const c of checks) {
 
 if (failed) {
   console.error('\nVerify FAILED.');
+  console.error('\nCompiled output:\n' + compiled);
   console.error('\nGenerated CSS:\n' + css);
   process.exit(1);
 }

@@ -1,28 +1,30 @@
 import { createThemeClassName } from '../atomic/theme';
 import { createThemeData } from '../builder/data/create';
 import type { ThemeData } from '../builder/data/data';
-import { RUNTIME_CONFIG } from '../config';
-import { globalData } from '../utils/global';
+import { CSS_CONFIG } from '../config/config/css';
+import { createIdCounter, getId, type StableId } from '../utils/id';
 import type { StyleTokenOverride } from './token';
 
-type IdCounter = { value: number; };
-
-let themeIdCounter: IdCounter | null = null;
-
-function getThemeIdCounter() {
-  return themeIdCounter ??= globalData('style.theme.idCounter', () => ({ value: 0 }));
-}
+const idCounter = createIdCounter('theme');
 
 export function resetStyleThemeIdCounter() {
-  getThemeIdCounter().value = 0;
+  idCounter.value = 0;
 }
 
 export function createTheme(
   tokens: readonly StyleTokenOverride[],
-  debugId?: string,
+  stableId?: StableId | string,
 ): ThemeData {
-  const id = debugId || (getThemeIdCounter().value++).toString();
-  const className = createThemeClassName(id, RUNTIME_CONFIG);
+  const normalizedStableId = typeof stableId === 'string'
+    ? { name: stableId, id: stableId }
+    : stableId;
+  const { name, id } = getId(idCounter, normalizedStableId || null);
+
+  const className = createThemeClassName(
+    name,
+    id,
+    CSS_CONFIG.themeNameFormat || null,
+  );
 
   return createThemeData(null, id, className, tokens);
 }

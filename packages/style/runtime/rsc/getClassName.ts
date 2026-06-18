@@ -1,6 +1,6 @@
 import type { LayerPriority } from '../../atomic/layer';
 import type { DebugData } from '../../builder/data/debug';
-import { RUNTIME_CONFIG } from '../../config';
+import { DEV_CONFIG } from '../../config/config/dev';
 import type { SheetRule } from '../../sheet';
 import type { StylePropItem } from '../core/cache/prop';
 import type { ClassNameProps, ClassNameResult } from '../core/className';
@@ -28,7 +28,7 @@ export function getClassName(
 ): ClassNameResultRSC {
   const resolved = resolveClassNameRuntime(styleProp, props);
 
-  return RUNTIME_CONFIG.isDev
+  return DEV_CONFIG.isDev
     ? getClassNameRSC(resolved.result, resolved.items)
     : resolved.result;
 }

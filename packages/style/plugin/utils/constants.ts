@@ -1,25 +1,7 @@
-import {
-  STYLE_CONFIG_BUILD_IMPORT_PATH,
-  STYLE_IMPORT_PATH,
-  STYLE_PLUGIN_IMPORT_PATH,
-  STYLE_SERVER_EXTRACTED_IMPORT_PATH,
-  STYLE_SERVER_IMPORT_PATH,
-} from '../../utils/imports';
-
 export const PLUGIN_NAME = 'fluentic-style';
 
 export const PLUGIN_CACHE_DIR = 'node_modules/.cache/fluentic-style';
 
-export const PLUGIN_IMPORT_PATH = STYLE_PLUGIN_IMPORT_PATH;
+export const EXTRACTED_CSS_MARKER = '.__fluentic_style_css_marker__{--fluentic-style:0}';
 
-export const BUILD_META_IMPORT_PATH = STYLE_CONFIG_BUILD_IMPORT_PATH;
-
-export const STYLE_ROOT_IMPORT_PATH = STYLE_IMPORT_PATH;
-
-export const STYLE_SERVER_RUNTIME_IMPORT_PATH = STYLE_SERVER_IMPORT_PATH;
-
-export const STYLE_SERVER_EXTRACTED_RUNTIME_IMPORT_PATH = STYLE_SERVER_EXTRACTED_IMPORT_PATH;
-
-export const BUILD_META_FN_SET = 'setBuildMeta';
-
-export const SIDECAR_URL_SYMBOL_KEY_EXPORT = 'FLUENTIC_SIDECAR_URL_SYMBOL_KEY';
+export const BUNDLE_CSS_FILE = 'bundle.css';

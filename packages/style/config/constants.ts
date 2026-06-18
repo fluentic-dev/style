@@ -1,1 +1,1 @@
-export const FLUENTIC_SIDECAR_URL_SYMBOL_KEY = '__FLUENTIC_SIDECAR_URL_';
+export const LayerPlaceholder = '$layer';

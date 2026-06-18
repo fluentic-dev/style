@@ -1,7 +1,9 @@
 import picomatch from 'picomatch';
 import { normalizePath } from '../../compiler/utils/path';
 
-export const DEFAULT_TRANSFORM_INCLUDE = /\.[cm]?[jt]sx?$/;
+export const DEFAULT_TRANSFORM_INCLUDE_PATTERN = '\\.[cm]?[jt]sx?$';
+
+export const DEFAULT_TRANSFORM_INCLUDE = new RegExp(DEFAULT_TRANSFORM_INCLUDE_PATTERN);
 
 export const DEFAULT_TRANSFORM_EXCLUDE = /node_modules/;
 

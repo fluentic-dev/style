@@ -1,28 +1,34 @@
-import type { CssConfig } from '../config/types';
+import type { ThemeNameFormat, ThemeNameInfo, TokenNameFormat } from '../config/types';
 import type { StyleTokenOverride } from '../style/token';
-import { hashString } from '../utils/hash';
 import { getTokenOverrideValue, getTokenVarName } from './token';
 import { escapeCssIdent, escapeCssValue, getIdentifierSafeHash } from './utils/css';
+import { createNameFormatter } from './utils/format';
 
-export type ThemeClassNameConfig = Pick<CssConfig, 'classNamePrefix' | 'themeNamePrefix'>;
+export const THEME_NAME_FORMAT = 'theme[-(name)]-$hash';
+
+export const formatThemeName = createNameFormatter<ThemeNameInfo>(['name']);
 
 export function createThemeClassName(
+  name: string | null,
   id: string,
-  config: ThemeClassNameConfig,
+  themeNameFormat: ThemeNameFormat | null,
 ) {
-  return config.classNamePrefix + config.themeNamePrefix +
-    getIdentifierSafeHash(hashString(id));
+  return formatThemeName(
+    themeNameFormat || THEME_NAME_FORMAT,
+    getIdentifierSafeHash(id),
+    { name },
+  );
 }
 
 export function getThemeRuleCss(
   className: string,
   tokens: readonly StyleTokenOverride[],
-  tokenVarPrefix: string,
+  tokenNameFormat: TokenNameFormat | null,
 ) {
   const declarations: string[] = [];
 
   for (let i = 0, len = tokens.length; i < len; i++) {
-    declarations.push(getThemeDeclaration(tokens[i], tokenVarPrefix));
+    declarations.push(getThemeDeclaration(tokens[i], tokenNameFormat));
   }
 
   return '.' + escapeCssIdent(className) + '{' + declarations.join(';') + '}';
@@ -30,11 +36,12 @@ export function getThemeRuleCss(
 
 function getThemeDeclaration(
   token: StyleTokenOverride,
-  tokenVarPrefix: string,
+  tokenNameFormat: TokenNameFormat | null,
 ) {
-  const name = getTokenVarName(token, tokenVarPrefix);
+  const name = getTokenVarName(token, tokenNameFormat);
+
   const value = token.ref
-    ? getTokenOverrideValue(token, tokenVarPrefix)
+    ? getTokenOverrideValue(token, tokenNameFormat)
     : escapeCssValue(String(token.value ?? ''));
 
   return name + ':' + value;

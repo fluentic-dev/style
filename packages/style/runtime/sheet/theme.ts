@@ -1,14 +1,15 @@
+import { LayerDefaultLayers } from '../../atomic/layer';
 import { getThemeRuleCss } from '../../atomic/theme';
 import { BUILDER_CALLSITE } from '../../builder/data/const';
 import type { ThemeData } from '../../builder/data/data';
-import { RUNTIME_CONFIG } from '../../config';
+import { CSS_CONFIG } from '../../config/config/css';
 import type { StyleSheet } from '../../sheet';
 
 export function insertRuntimeTheme(
   sheet: StyleSheet,
   theme: ThemeData,
 ) {
-  sheet.updateLayers(RUNTIME_CONFIG.layers);
+  sheet.updateLayers(CSS_CONFIG.layers || LayerDefaultLayers);
 
   insertRuntimeThemeRule(sheet, theme);
 }
@@ -28,6 +29,6 @@ export function createThemeRule(theme: ThemeData) {
   return getThemeRuleCss(
     theme.className,
     theme.tokens,
-    RUNTIME_CONFIG.tokenVarPrefix,
+    CSS_CONFIG.tokenNameFormat || null,
   );
 }

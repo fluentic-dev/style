@@ -1,18 +1,22 @@
-import type { Selector, SelectorAssert } from './types';
+import type { Selector, SelectorAssert, SelectorAssertFn } from './types';
 
-export function selector<const T extends string>(
+type SelectorArgs =
+  | []
+  | [SelectorAssert | null]
+  | [number]
+  | [number, SelectorAssert | null];
+
+type SelectorAssertArg<Assert> = Assert extends SelectorAssertFn<infer Arg> ? Arg extends string ? Arg : string
+  : string;
+
+type SelectorArg<Args extends SelectorArgs> = Args extends [infer Assert] ? SelectorAssertArg<Assert>
+  : Args extends [number, infer Assert] ? SelectorAssertArg<Assert>
+  : string;
+
+export function selector<const T extends string, const Args extends SelectorArgs>(
   selector: T,
-  assert?: SelectorAssert | null,
-): Selector<T>;
-export function selector<const T extends string>(
-  selector: T,
-  priority: number,
-  assert?: SelectorAssert | null,
-): Selector<T>;
-export function selector<const T extends string>(
-  selector: T,
-  ...args: Partial<[number | SelectorAssert | null, SelectorAssert | null]>
-): Selector<T> {
+  ...args: Args
+) {
   let priority: number | null = null;
   let assert: SelectorAssert | null = null;
 
@@ -23,7 +27,7 @@ export function selector<const T extends string>(
     assert = args[0] || null;
   }
 
-  return { selector, priority, assert };
+  return { selector, priority, assert } as Selector<T, SelectorArg<Args>>;
 }
 
 type SelectorString<T extends Selector> = T extends Selector<infer T> ? T : unknown;

@@ -1,6 +1,6 @@
 import type { ScopeTargetData } from '../../../builder/data/data';
 import { getScopeTargetScope, getScopeTargetSlotId, isScopeTargetData } from '../../../builder/data/is';
-import { RUNTIME_CONFIG } from '../../../config';
+import { RUNTIME_CONFIG } from '../../../config/config/runtime';
 import type { Falsy, StyleItem } from '../../types';
 import type { CombinedStyle } from '../combinedStyle';
 import { createCombinedStyleFacade } from './item';
@@ -34,20 +34,16 @@ const DEFAULT_TTL = 1000 * 60 * 5;
 
 let configuredPool: CombinedStylePool | null = null;
 let configuredPoolTTL = -1;
-let configuredPoolConfigVersion = -1;
 
 export function getCombinedStylePool() {
   const ttl = RUNTIME_CONFIG.runtimeCacheTTL;
-  const configVersion = RUNTIME_CONFIG.configVersion;
 
   if (
     !configuredPool ||
-    configuredPoolTTL !== ttl ||
-    configuredPoolConfigVersion !== configVersion
+    configuredPoolTTL !== ttl
   ) {
     configuredPool = createCombinedStylePool(ttl);
     configuredPoolTTL = ttl;
-    configuredPoolConfigVersion = configVersion;
   }
 
   return configuredPool;

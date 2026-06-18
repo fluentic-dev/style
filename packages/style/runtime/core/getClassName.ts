@@ -1,4 +1,4 @@
-import { RUNTIME_CONFIG } from '../../config';
+import { RUNTIME_CONFIG } from '../../config/config/runtime';
 import { isServerRSC } from '../env';
 import { getGlobalSheet } from '../sheet/global';
 import { insertStylePropRuntimeItems } from '../sheet/insert';
@@ -23,7 +23,7 @@ export function getClassName(
   const resolved = resolveClassNameRuntime(marker.styleProp as StyleProp, props);
 
   if (resolved.items.length) {
-    if (!RUNTIME_CONFIG.isCssExtracted && !isServerRSC()) {
+    if (!RUNTIME_CONFIG.isExtracted && !isServerRSC()) {
       const sheet = getGlobalSheet();
       insertStylePropRuntimeItems(sheet, resolved.items);
       sheet.flush();

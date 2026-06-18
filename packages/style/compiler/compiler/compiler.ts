@@ -58,7 +58,7 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
       ...debugResult,
       css: extractCss(rules, {
         ...options.css,
-        layer: options.layer,
+        layer: options.css?.layer,
       }),
       rules,
     };
@@ -83,7 +83,7 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
   const getExtractedCss = () => {
     return extractCss(collector.getItems(), {
       ...options.css,
-      layer: options.layer,
+      layer: options.css?.layer,
     });
   };
 

@@ -1,5 +1,6 @@
 import type { KeyframeSelector, KeyframesObject } from '../atomic/atRule/keyframes';
-import { createKeyframes } from '../css/keyframes';
+import { createKeyframes } from '../css';
+import type { StableId } from '../utils/id';
 import type { StyleTransform } from './transform';
 import type { CSSProperties, StyleObject } from './types';
 
@@ -28,9 +29,9 @@ export function transformKeyframes<Style>(
 export function createStyleKeyframes<Style>(
   frames: StyleKeyframesObject<Style>,
   transform: StyleTransform<Style> | null,
-  stableId?: string,
+  stableId?: StableId,
 ): ReturnType<typeof createKeyframes> {
-  const create = createKeyframes as (frames: KeyframesObject, stableId?: string) => ReturnType<typeof createKeyframes>;
+  const create = createKeyframes as (frames: KeyframesObject, stableId?: StableId) => ReturnType<typeof createKeyframes>;
 
   return create(transformKeyframes(frames, transform), stableId);
 }

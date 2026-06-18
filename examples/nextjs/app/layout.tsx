@@ -1,4 +1,4 @@
-import { StyleDev } from '@fluentic/style/runtime/rsc';
+import { StyleDev } from '@fluentic/style/dev/rsc';
 import type { Metadata } from 'next';
 import { type ReactNode } from 'react';
 

@@ -6,6 +6,7 @@ import type { ScopeSelectorFns, ScopeSelfFn, SlotOverrideSelectorFns, SlotSelect
 export type { ScopeSelfFn };
 
 export type MergeRuleStyleData<Style = unknown> = StyleData<Style> | StyleData<Style>[];
+
 export type AtRuleStyleData<Style = unknown> = StyleObject<Style> | StyleData<Style>;
 
 export type SelectorsRecord = Record<string, Selector>;

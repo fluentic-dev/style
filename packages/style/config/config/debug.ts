@@ -1,0 +1,26 @@
+import { globalData } from '../../utils/global';
+
+export type DebugConfig = {
+  isDebugClassNameEnabled: boolean;
+
+  maxPropertyLength: number;
+  maxValueLength: number;
+  maxSelectorLength: number;
+  maxParentSelectorLength: number;
+  maxAtRuleLength: number;
+};
+
+export const DEFAULT_DEBUG_CONFIG: DebugConfig = {
+  isDebugClassNameEnabled: true,
+
+  maxPropertyLength: 24,
+  maxValueLength: 8,
+  maxSelectorLength: 8,
+  maxParentSelectorLength: 8,
+  maxAtRuleLength: 10,
+};
+
+export const DEBUG_CONFIG = globalData<DebugConfig>(
+  'config.debug',
+  () => ({ ...DEFAULT_DEBUG_CONFIG }),
+);

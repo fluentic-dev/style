@@ -4,10 +4,7 @@ export type DebugValueName = {
 };
 
 export function getDebugValueName(
-  property: string,
   value: string,
-  maxLength: number,
-  valueMaxLength: number,
 ): DebugValueName {
   if (!value) {
     return { value: null, arbitraryValue: null };
@@ -15,7 +12,7 @@ export function getDebugValueName(
 
   const normalized = value.trim().toLowerCase();
 
-  if (!normalized || normalized.length > valueMaxLength) {
+  if (!normalized) {
     return { value: null, arbitraryValue: null };
   }
 
@@ -33,10 +30,6 @@ export function getDebugValueName(
   }
 
   if (/^[a-z][a-z0-9-]*$/.test(normalized)) {
-    if (property.length + 1 + normalized.length > maxLength) {
-      return { value: null, arbitraryValue: null };
-    }
-
     return { value: normalized, arbitraryValue: null };
   }
 
@@ -52,11 +45,7 @@ export function getDebugValueName(
     .replace(/[-_]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-  if (
-    !name ||
-    name.length > valueMaxLength ||
-    property.length + 1 + name.length > maxLength
-  ) {
+  if (!name) {
     return { value: null, arbitraryValue: null };
   }
 

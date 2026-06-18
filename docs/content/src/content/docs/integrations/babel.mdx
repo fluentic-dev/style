@@ -26,7 +26,6 @@ The Babel plugin accepts compiler options:
 ```ts
 type CompilerOptions = {
   importSources?: ImportSource[];
-  selectors?: Record<string, Selector>;
   css?: CompilerCssOptions;
   extract?: boolean;
 };
@@ -34,3 +33,35 @@ type CompilerOptions = {
 
 Use `importSources` if you re-export or rename the `style` builder from your own
 package.
+
+```ts
+import { style } from './style';
+import { sx } from './sx-style';
+import { ui } from './ui-style';
+
+fluenticBabel({
+  extract: true,
+  importSources: [
+    {
+      source: './style',
+      name: 'style',
+      styleFn: style,
+    },
+    {
+      source: './sx-*',
+      name: 'sx',
+      styleFn: sx,
+    },
+    {
+      source: /ui-style$/,
+      name: 'ui',
+      styleFn: ui,
+    },
+  ],
+});
+```
+
+`source` can be an exact import source, a glob pattern, a regular expression, or
+an array of those. Each entry carries the style function meta for that imported
+builder, so one file can use multiple typed style functions and the compiler can
+extract each chain with the correct selectors and transform.

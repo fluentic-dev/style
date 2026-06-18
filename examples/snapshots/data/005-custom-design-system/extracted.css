@@ -1,0 +1,31 @@
+@layer reset, css, override;
+@layer css {
+.border-bxcbv2j{border: 1px solid #d7e4df}
+.radius-bjuhzn7{border-radius: 8px}
+.color-g4qkdr0{color: #12201b}
+.padding-hp87sf0{padding: 24px}
+.display-flex-fruelm0{display: flex}
+.box-shadow-bwkz73g{box-shadow: 0 18px 44px rgba(15, 23, 42, 0.12)}
+.color-cgy4ny0{color: #0f766e}
+.padding-b8wxl4j{padding: 4px 10px}
+.radius-bydd33m{border-radius: 999px}
+.border-rnjwww0{border: 0px}
+.color-b4fq16k{color: #ffffff}
+.padding-ad02to0{padding: 10px 16px}
+.background-color-ytqgsj0{background-color: #ffffff}
+.flex-column-oez5rp0{flex-direction: column}
+.row-gap-lljp0o0{row-gap: 14px}
+.flex-row-s4ciid0{flex-direction: row}
+.items-center-i8h0vn0{align-items: center}
+.justify-center-b3ihqkd{justify-content: center}
+.column-gap-bi3gqc0{column-gap: 10px}
+.font-size-kf4r8s0{font-size: 12px}
+.font-800-lpxmx30{font-weight: 800}
+.background-color-ba3wgvp{background-color: #0f766e}
+@media (768px <= width < 1024px){.\37 68px-lte-width-lt-1024px-padding-bu59zhw{padding: 28px}}
+@media (1024px <= width < 1280px){.\31 024px-lte-width-lt-1280px-column-gap-bxdjbts{column-gap: 14px}}
+.background-color-data-tone-brand-b8m588o[data-tone="brand"]{background-color: #dff7ed}
+.background-color-hover-xco3ay0:hover{background-color: #115e59}
+.transform-aria-pressed-true-bw9jzo5[aria-pressed="true"]{transform: translateY(1px)}
+.transform-aria-pressed-true-leycbx0[aria-pressed="true"]{transform: translateY(1px)}
+}

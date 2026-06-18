@@ -1,16 +1,20 @@
 import { createScopeBuilder, createSlotBuilder, createStyleBuilder, type SelectorsRecord } from '../builder';
+import { isStyleData } from '../builder/data';
+import { mergeStyleData } from '../builder/style_data';
+import { createDefaultFnResult } from '../builder/style_fns';
 import type { typeAliases } from '../builder/types/alias';
 import { PrioritySelectors } from '../selector/presets';
-import { symbol } from '../utils/const';
+import { symbol } from '../utils/global';
 import { type } from '../utils/type';
 import type { Type } from '../utils/type';
+import type { StableIdInput } from '../css/utils';
 import { createStyleKeyframes } from './keyframes';
 import type { StyleTransform } from './transform';
 import type { CSSProperties } from './types';
 
 const META: unique symbol = symbol('style.fn:meta');
 
-type StyleFnMeta = {
+export type StyleFnMeta = {
   selectors: SelectorsRecord;
   transform: StyleTransform | null;
 };
@@ -46,7 +50,16 @@ export function createStyleFn<
   const fnRaw: Types['RawFn'] = (style) => style;
   const fnPlain: Types['PlainFn'] = (style) => style;
   const fnKeyframes: Types['KeyframesFn'] =
-    ((frames, stableId?: string) => createStyleKeyframes(frames, transform ?? null, stableId)) as Types['KeyframesFn'];
+    ((frames, stableId?: StableIdInput) => createStyleKeyframes(frames, transform ?? null, stableId)) as Types['KeyframesFn'];
+  const fnMerge: Types['MergeFn'] = ((target: unknown, ...styles: unknown[]) => {
+    let result = target;
+
+    for (let i = 0; i < styles.length; i++) {
+      result = mergeStyleResult(result, styles[i]);
+    }
+
+    return result;
+  }) as Types['MergeFn'];
 
   const style = fnStyle as unknown as Types['StyleFn'];
 
@@ -56,6 +69,7 @@ export function createStyleFn<
   style.raw = fnRaw;
   style.plain = fnPlain;
   style.keyframes = fnKeyframes;
+  style.merge = fnMerge;
 
   const meta: StyleFnMeta = {
     selectors,
@@ -65,6 +79,30 @@ export function createStyleFn<
   Object.assign(style, { [META]: meta });
 
   return { style };
+}
+
+function mergeStyleResult(
+  target: unknown,
+  style: unknown,
+) {
+  if (isStyleData(target)) {
+    return createDefaultFnResult(
+      mergeStyleData(
+        target,
+        null,
+        isStyleData(style) ? style : null,
+        null,
+        null,
+        null,
+      ),
+      Object.getPrototypeOf(target),
+    );
+  }
+
+  const chainMerge = (target as { merge?: unknown; } | null)?.merge;
+  if (typeof chainMerge === 'function') return chainMerge.call(target, style);
+
+  return target;
 }
 
 export function getStyleFnMeta(styleFn: StyleFn) {

@@ -1,3 +1,5 @@
+import { hashString } from '../../utils/hash';
+
 export function getCssVar(varName: string, value: string) {
   return 'var(' + varName + ', ' + escapeCssValue(value) + ')';
 }
@@ -36,7 +38,9 @@ export function sanitizeCssIdentName(value: string, fallback: string = '') {
   return value.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || fallback;
 }
 
-export function getIdentifierSafeHash(hash: string) {
+export function getIdentifierSafeHash(value: string) {
+  const hash = hashString(value);
+
   const first = hash.charCodeAt(0);
 
   if (first < 48 || first > 57) return hash;

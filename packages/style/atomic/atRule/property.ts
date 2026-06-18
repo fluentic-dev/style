@@ -1,5 +1,6 @@
+import type { NamedAtRuleFormat, TokenNameFormat } from '../../config/types';
 import type { StyleTokenData } from '../../style/token';
-import { type AtRuleCssOptions, buildNamedAtRuleCss } from './utils';
+import { buildNamedAtRuleCss, createAtRuleNameFormatter } from './utils';
 
 export type PropertyObject = {
   syntax: string;
@@ -7,19 +8,32 @@ export type PropertyObject = {
   initialValue: string | number;
 };
 
+export const PROPERTY_AT_RULE = 'property';
+
+export const formatPropertyName = createAtRuleNameFormatter(
+  '[-(name)]-$hash',
+  '--',
+);
+
 export function buildPropertyCss(
-  name: `--${string}`,
+  format: NamedAtRuleFormat | null,
+  name: string | null,
+  id: string,
   descriptors: PropertyObject,
   tokens: StyleTokenData[],
   tokenLookup: Set<string>,
-  options?: AtRuleCssOptions,
+  tokenNameFormat: TokenNameFormat | null,
 ) {
-  return buildNamedAtRuleCss(
-    'property',
+  name = formatPropertyName(format, id, { name });
+
+  const css = buildNamedAtRuleCss(
+    PROPERTY_AT_RULE,
     name,
     descriptors,
     tokens,
     tokenLookup,
-    options,
+    tokenNameFormat,
   );
+
+  return { css, name };
 }

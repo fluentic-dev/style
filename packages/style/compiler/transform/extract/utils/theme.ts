@@ -1,9 +1,10 @@
-import type { NodePath, types as BabelTypes } from '@babel/core';
+import type { BabelTypes, NodePath } from '../../utils/babel';
 import { getThemeRuleCss } from '../../../../atomic/theme';
+import { CSS_CONFIG } from '../../../../config/config/css';
 import { isStyleTokenOverrideData, type StyleTokenOverride } from '../../../../style/token';
 import type { CompilerOptions } from '../../../compiler/types';
 import type { CssExtractRule } from '../../../extract/types';
-import { DEFAULT_CONFIG, FN_CREATE_THEME, IMPORT_PATHS } from '../../../utils/constants';
+import { FN_CREATE_THEME, IMPORT_PATHS } from '../../../utils/constants';
 import { evaluateNode } from '../../evaluator/evaluator';
 import { getStableThemeClassName, getStableThemeId } from '../../syntax/static_ids';
 import { type ExtractPluginState, getEvalScope } from './state';
@@ -59,20 +60,27 @@ export function compileThemeCall(
 
   const id = debugId;
 
-  const className = getStableThemeClassName(id, {
-    classNamePrefix: opts.css?.classNamePrefix ?? DEFAULT_CONFIG.classNamePrefix,
-    themeNamePrefix: opts.css?.themeNamePrefix ?? DEFAULT_CONFIG.themeNamePrefix,
-  });
+  const themeNameFormat = opts.css?.themeNameFormat || CSS_CONFIG.themeNameFormat || null;
+
+  const className = getStableThemeClassName(
+    id,
+    themeNameFormat,
+  );
 
   const css = getThemeRuleCss(
     className,
     tokens,
-    opts.css?.tokenVarPrefix ?? DEFAULT_CONFIG.tokenVarPrefix,
+    themeNameFormat,
   );
 
   return {
     id,
     className,
-    rule: { dedupe: className, className, css, priority: [0, 0, 0, 0, 0, 0, 0] },
+    rule: {
+      dedupe: className,
+      className,
+      css,
+      priority: [0, 0, 0, 0, 0, 0, 0],
+    },
   };
 }

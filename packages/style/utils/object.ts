@@ -55,6 +55,12 @@ export function get(
   return (target as any)[field] ?? null;
 }
 
+export function unsetAll(obj: object) {
+  for (const key of Object.keys(obj)) {
+    delete (obj as any)[key];
+  }
+}
+
 export function hasOwn(
   target: object,
   field: PropertyKey,

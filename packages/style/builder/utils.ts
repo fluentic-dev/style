@@ -1,4 +1,4 @@
-import { RUNTIME_CONFIG } from '../config';
+import { DEV_CONFIG } from '../config/config/dev';
 import type { StyleObject, StyleTransform } from '../style';
 import { traceCallsite } from '../utils/trace';
 import { type DebugData, getDebugCallsite } from './data/debug';
@@ -8,8 +8,6 @@ export const FnPrefixSlot = 'slot.';
 export const FnPrefixScope = 'scope.';
 
 export function runtimeCallsite() {
-  if (!RUNTIME_CONFIG.isTraceEnabled) return null;
-
   return traceCallsite();
 }
 

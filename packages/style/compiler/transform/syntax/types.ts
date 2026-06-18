@@ -1,7 +1,7 @@
-import type { types } from '@babel/core';
+import type { BabelTypes } from '../utils/babel';
 
-export type Callee = types.Expression | types.V8IntrinsicIdentifier | types.Super;
+export type Callee = BabelTypes.Expression | BabelTypes.V8IntrinsicIdentifier | BabelTypes.Super;
 
-export type CallArgs = types.CallExpression['arguments'];
+export type CallArgs = BabelTypes.CallExpression['arguments'];
 
 export type CallArg = CallArgs[number];

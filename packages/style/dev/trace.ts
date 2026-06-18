@@ -160,7 +160,7 @@ function createDisplayCallsite(callsite: SheetCallsite): SheetCallsite {
 }
 
 function isDisplaySourceUrl(sourceUrl: string) {
-  return sourceUrl.startsWith('source://');
+  return sourceUrl.match(SOURCE_MAPPING_URL_REGEX);
 }
 
 async function fetchSourceMap(

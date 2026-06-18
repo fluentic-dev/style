@@ -1,4 +1,4 @@
-import { createCompiler } from '@fluentic/style/compiler';
+import { createCompiler } from '../../../packages/style/compiler';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { cases } from '../src/selector-cases.ts';

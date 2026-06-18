@@ -1,4 +1,5 @@
 import {
+  assertEnum,
   assertCompileError,
   assertRunTestsCallsite,
   bindScope,
@@ -6,12 +7,14 @@ import {
   BUILDER_STATE,
   type BuilderData,
   combineStyle,
-  configureRuntime,
+  configureTestRuntime,
   createCombinedStylePool,
   createCompiler,
   createDebugSlot,
   createDebugStyle,
   createStyleFn,
+  CSS_CONFIG,
+  DEV_CONFIG,
   type DebugData,
   deepEqual,
   equal,
@@ -151,14 +154,14 @@ const bad = style.slot({ color: 'blue' })();
 });
 
 test('builder callables are trace-marked for runtime callsites', () => {
-  configureRuntime({ dev: true });
+  configureTestRuntime({ dev: true });
 
   const tracedStyle = style({ color: 'purple' });
   const tracedStyleHover = style({ color: 'purple' }).hover({ color: 'violet' });
   const tracedSlot = style.slot({ color: 'purple' });
   const tracedOverride = tracedSlot({ color: 'violet' });
 
-  configureRuntime({ dev: false });
+  configureTestRuntime({ dev: false });
 
   assertRunTestsCallsite(getRuntimeCallsite(tracedStyle));
   assertRunTestsCallsite(getRuntimeCallsite(tracedStyleHover, 1));
@@ -180,7 +183,7 @@ test('builder callables prefer injected debug callsites over runtime traces', ()
   const OriginalError = globalThis.Error;
   let debugStyle: BuilderData | null = null;
 
-  configureRuntime({ dev: true });
+  configureTestRuntime({ dev: true });
   globalThis.Error = function() {
     throw new OriginalError('runtime trace should not run for injected debug data');
   } as unknown as ErrorConstructor;
@@ -189,7 +192,7 @@ test('builder callables prefer injected debug callsites over runtime traces', ()
     debugStyle = createDebugStyle({ color: 'purple', backgroundColor: 'blue' }, debug);
   } finally {
     globalThis.Error = OriginalError;
-    configureRuntime({ dev: false });
+    configureTestRuntime({ dev: false });
   }
 
   if (!debugStyle) throw new Error('expected debug style data');
@@ -290,7 +293,7 @@ const pageStyles = {
   includes(result.code, `"padding": { 0: [17, 5], 1: [8, 3] }`);
   includes(result.code, `"fontSize": { 0: [18, 5], 1: [12, 3] }`);
   includes(result.code, `"color": [19, 5]`);
-  includes(result.code, `"padding": "--token-`);
+  includes(result.code, `"padding": "--var-`);
 });
 
 test('dev debug transform can trace raw and plain spreads to value sources', () => {
@@ -467,7 +470,13 @@ import { style } from '@fluentic/style';
 const rule = style({ color: 'red' }).invalidState({ color: 'blue' });
 `,
       '/tmp/debug-invalid-selector-definition.ts',
-      { styleFn: custom },
+      {
+        importSources: [{
+          source: '@fluentic/style',
+          name: 'style',
+          styleFn: custom,
+        }],
+      },
     );
   } catch (err: unknown) {
     error = err;
@@ -475,6 +484,59 @@ const rule = style({ color: 'red' }).invalidState({ color: 'blue' });
 
   assertCompileError(error, 'Invalid selector definition\n\nstyle.invalidState: ".parent .child"');
   assertCompileError(error, 'Selector must target the current element only');
+});
+
+test('custom selector assert can carry typed enum args', () => {
+  const toneAssert = assertEnum(['brand', 'danger'] as const);
+  const stateAssert = assertEnum(['open', 'closed'] as const);
+  const custom = createStyleFn({
+    style: null as any,
+    selectors: {
+      tone: selector('[data-tone="$"]', toneAssert),
+      state: selector('[data-state="$$"]', stateAssert),
+    },
+  }).style;
+
+  custom().tone('brand', { color: 'blue' });
+  custom().state(['open', 'closed'], { opacity: 1 });
+
+  if (false) {
+    // @ts-expect-error enum assert narrows single selector arg
+    custom().tone('neutral', { color: 'gray' });
+    // @ts-expect-error enum assert narrows array selector args
+    custom().state(['open', 'pending'], { opacity: 0.5 });
+  }
+
+  let error: unknown = null;
+
+  try {
+    toneAssert('neutral');
+  } catch (err: unknown) {
+    error = err;
+  }
+
+  assertCompileError(error, 'value must be one of: brand, danger');
+});
+
+test('custom builders support fixed media selector helpers', () => {
+  const custom = createStyleFn({
+    style: null as any,
+    selectors: {
+      md: selector('@media (min-width: 768px) and (max-width: 1023.98px)', 'media'),
+      lg: selector('@media (min-width: 1024px)', 'media'),
+    },
+  }).style;
+
+  const rule = custom({ color: 'black' })
+    .md({ color: 'blue' })
+    .lg(2, { color: 'red' });
+  const css = getSheetRules(rule).map((item) => item.css).join('\n');
+
+  includes(css, '@media (min-width: 768px) and (max-width: 1023.98px)');
+  includes(css, '@media (min-width: 1024px)');
+  includes(css, 'color: black');
+  includes(css, 'color: blue');
+  includes(css, 'color: red');
 });
 
 test('dev debug transform traces imported selector constants', () => {
@@ -641,21 +703,21 @@ const rule = style({ color: 'red' });
 });
 
 test('runtime selector checks stay on in dev unless plugin selector checking is forced', () => {
-  configureRuntime({ dev: true });
-  equal(RUNTIME_CONFIG.isCheckSelectorEnabled, true);
+  configureTestRuntime({ dev: true });
+  equal(DEV_CONFIG.isCheckSelectorEnabled, true);
 
   setBuildMeta({ dev: true, extract: false, hoist: false, rsc: false, css: null });
-  equal(RUNTIME_CONFIG.isCheckSelectorEnabled, true);
+  equal(DEV_CONFIG.isCheckSelectorEnabled, true);
 
   setBuildMeta({ dev: true, extract: false, hoist: false, rsc: false, checkSelector: 'force', css: null });
-  equal(RUNTIME_CONFIG.isCheckSelectorEnabled, false);
+  equal(DEV_CONFIG.isCheckSelectorEnabled, false);
 
   setBuildMeta(null);
-  configureRuntime({ dev: false });
+  configureTestRuntime({ dev: false });
 });
 
 test('runtime dev defaults enable local class name hashing', () => {
-  configureRuntime({ dev: true });
+  configureTestRuntime({ dev: true });
 
   const first = createDebugStyle({ color: 'purple' }, {
     $$debug: true,
@@ -670,13 +732,14 @@ test('runtime dev defaults enable local class name hashing', () => {
     sourceUrl: '/src/two.ts',
   });
 
-  configureRuntime({ dev: false });
+  configureTestRuntime({ dev: false });
 
   notEqual(getRuntimeClassName(first), getRuntimeClassName(second));
 });
 
 test('runtime local class name can be disabled in dev', () => {
-  configureRuntime({ dev: true, localClassName: false });
+  configureTestRuntime({ dev: true });
+  DEV_CONFIG.isLocalClassNameEnabled = false;
 
   const first = createDebugStyle({ color: 'purple' }, {
     $$debug: true,
@@ -691,13 +754,13 @@ test('runtime local class name can be disabled in dev', () => {
     sourceUrl: '/src/two.ts',
   });
 
-  configureRuntime({ dev: false });
+  configureTestRuntime({ dev: false });
 
   equal(getRuntimeClassName(first), getRuntimeClassName(second));
 });
 
 test('runtime local class name does not affect dedupe key', () => {
-  configureRuntime({ dev: true });
+  configureTestRuntime({ dev: true });
 
   const first = createDebugStyle({ backgroundColor: 'red' }, {
     $$debug: true,
@@ -712,34 +775,36 @@ test('runtime local class name does not affect dedupe key', () => {
     sourceUrl: '/src/two.ts',
   });
 
-  configureRuntime({ dev: false });
+  configureTestRuntime({ dev: false });
 
   notEqual(getRuntimeClassName(first), getRuntimeClassName(second));
   equal(getRuntimeDedupe(first), getRuntimeDedupe(second));
 });
 
 test('runtime config resets scope target prefix to default when omitted', () => {
-  configureRuntime({ scopeTargetPrefix: 'scope-' });
-  equal(RUNTIME_CONFIG.scopeTargetPrefix, 'scope-');
+  configureTestRuntime({ css: { scopeClassNameFormat: 'scope-(className)' } });
+  equal(CSS_CONFIG.scopeClassNameFormat, 'scope-(className)');
 
-  configureRuntime({ dev: false });
-  equal(RUNTIME_CONFIG.scopeTargetPrefix, '-');
+  configureTestRuntime({ dev: false });
+  equal(CSS_CONFIG.scopeClassNameFormat, undefined);
   equal(getScopeParentClassName('hover-bg'), '-hover-bg');
 });
 
 test('runtime config preserves layer placeholder for priority expansion', () => {
-  configureRuntime({
-    layers: ['reset', '$layer', 'overrides'],
-    layerNamespace: 'app',
+  configureTestRuntime({
+    css: {
+      layers: ['reset', '$layer', 'overrides'],
+      layerNamespace: 'app',
+    },
   });
-  equal(RUNTIME_CONFIG.layers.join(','), 'reset,$layer,overrides');
+  equal(CSS_CONFIG.layers?.join(','), 'reset,$layer,overrides');
 
-  configureRuntime({ dev: false });
-  equal(RUNTIME_CONFIG.layers.join(','), '$layer');
+  configureTestRuntime({ dev: false });
+  equal(CSS_CONFIG.layers?.join(','), '$layer');
 });
 
 test('style prop sheet rules dedupe by declaration identity without callsite', () => {
-  configureRuntime({ dev: true });
+  configureTestRuntime({ dev: true });
 
   const first = createDebugStyle({ backgroundColor: 'red' }, {
     $$debug: true,
@@ -754,7 +819,7 @@ test('style prop sheet rules dedupe by declaration identity without callsite', (
     sourceUrl: '/src/two.ts',
   });
 
-  configureRuntime({ dev: false });
+  configureTestRuntime({ dev: false });
 
   const css = combineStyle({ first, second });
   const rules = getSheetRules([css.first, css.second]);

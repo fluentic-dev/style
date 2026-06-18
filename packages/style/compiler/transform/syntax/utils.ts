@@ -1,4 +1,4 @@
-import type { types } from '@babel/core';
+import type { BabelTypes } from '../utils/babel';
 import type { Callee } from './types';
 
 export function getCallLabel(callee: Callee): string {
@@ -16,7 +16,7 @@ export function getCallLabel(callee: Callee): string {
   return 'style';
 }
 
-export function getObjectPropertyKey(node: types.ObjectProperty) {
+export function getObjectPropertyKey(node: BabelTypes.ObjectProperty) {
   if (node.computed) return null;
   if (node.key.type === 'Identifier') return node.key.name;
   if (node.key.type === 'StringLiteral') return node.key.value;
@@ -24,7 +24,7 @@ export function getObjectPropertyKey(node: types.ObjectProperty) {
   return null;
 }
 
-export function getImportedName(spec: types.ImportSpecifier) {
+export function getImportedName(spec: BabelTypes.ImportSpecifier) {
   return spec.imported.type === 'Identifier'
     ? spec.imported.name
     : spec.imported.value;

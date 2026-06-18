@@ -1,20 +1,18 @@
-import type { types as BabelTypes } from '@babel/core';
+import type { BabelTypes } from '../utils/babel';
 import { createThemeClassName } from '../../../atomic/theme';
 import { sanitizeCssIdentName } from '../../../atomic/utils/css';
+import type { ThemeNameFormat } from '../../../config/types';
 import { hashString } from '../../../utils/hash';
 import {
-  DEFAULT_CONFIG,
   FN_CREATE_COUNTER_STYLE,
   FN_CREATE_FONT_FACE,
   FN_CREATE_FONT_PALETTE_VALUES,
   FN_CREATE_KEYFRAMES,
   FN_CREATE_POSITION_TRY,
-  FN_CREATE_SCROLL_TIMELINE,
   FN_CREATE_THEME,
   FN_CREATE_TOKEN,
   FN_CREATE_TOKENS,
   FN_CREATE_VALUES,
-  FN_CREATE_VIEW_TIMELINE,
   FN_STYLE_KEYFRAMES,
   IMPORT_PATHS,
 } from '../../utils/constants';
@@ -82,15 +80,9 @@ export function getStableThemeId(fileId: string, locId: string) {
 
 export function getStableThemeClassName(
   id: string,
-  config: {
-    classNamePrefix?: string;
-    themeNamePrefix?: string;
-  },
+  themeNameFormat: ThemeNameFormat | null,
 ) {
-  return createThemeClassName(id, {
-    classNamePrefix: config.classNamePrefix ?? DEFAULT_CONFIG.classNamePrefix,
-    themeNamePrefix: config.themeNamePrefix ?? DEFAULT_CONFIG.themeNamePrefix,
-  });
+  return createThemeClassName(id, id, themeNameFormat);
 }
 
 function annotateTokenExpression(
@@ -153,7 +145,7 @@ function annotateAtRuleFactoryCall(
     node.callee.property.type === 'Identifier' &&
     node.callee.property.name === FN_STYLE_KEYFRAMES
   ) {
-    setStringArgWithStableId(node, 1, getStableTokenId(state.fileId, pathName), state.fileId, pathName, t);
+    setAtRuleArgWithStableId(node, 1, state.fileId, pathName, t);
     return;
   }
 
@@ -163,7 +155,7 @@ function annotateAtRuleFactoryCall(
   if (!imp || !IMPORT_PATHS.includes(imp.source)) return;
   if (!AT_RULE_FACTORY_NAMES.has(imp.name)) return;
 
-  setStringArgWithStableId(node, 1, getStableTokenId(state.fileId, pathName), state.fileId, pathName, t);
+  setAtRuleArgWithStableId(node, 1, state.fileId, pathName, t);
 }
 
 const AT_RULE_FACTORY_NAMES = new Set([
@@ -172,8 +164,6 @@ const AT_RULE_FACTORY_NAMES = new Set([
   FN_CREATE_FONT_PALETTE_VALUES,
   FN_CREATE_KEYFRAMES,
   FN_CREATE_POSITION_TRY,
-  FN_CREATE_SCROLL_TIMELINE,
-  FN_CREATE_VIEW_TIMELINE,
 ]);
 
 function annotateTokenFactoryCall(
@@ -234,6 +224,42 @@ function setStringArgWithStableId(
   }
 
   node.arguments.push(t.stringLiteral(value));
+}
+
+function setAtRuleArgWithStableId(
+  node: BabelTypes.CallExpression,
+  index: number,
+  fileId: string,
+  pathName: string,
+  t: typeof BabelTypes,
+) {
+  const existing = node.arguments[index];
+  const id = fileId + '\n' + pathName;
+
+  if (existing) {
+    if (existing.type === 'StringLiteral') {
+      node.arguments[index] = createStableIdObject(sanitizeTokenId(existing.value), id, t);
+    }
+
+    return;
+  }
+
+  while (node.arguments.length < index) {
+    node.arguments.push(t.identifier('undefined'));
+  }
+
+  node.arguments.push(createStableIdObject(sanitizeTokenId(pathName), id, t));
+}
+
+function createStableIdObject(
+  name: string | null,
+  id: string,
+  t: typeof BabelTypes,
+) {
+  return t.objectExpression([
+    t.objectProperty(t.identifier('name'), name === null ? t.nullLiteral() : t.stringLiteral(name)),
+    t.objectProperty(t.identifier('id'), t.stringLiteral(id)),
+  ]);
 }
 
 function getStableTokenId(

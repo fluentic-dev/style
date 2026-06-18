@@ -1,12 +1,11 @@
-import type * as BabelCore from '@babel/core';
+import type { BabelCore, BabelTypes } from '../utils/babel';
 import * as crypto from 'node:crypto';
 import { BUILDER_TYPE_SCOPE } from '../../../builder/data';
 import { createExtractedScope, createExtractedStyle } from '../../../builder/extract';
 import type { ExtractedStyleTuple } from '../../../builder/extract';
-import { getStyleFnMeta } from '../../../style/style';
 import type { CompilerInternal } from '../../compiler';
 import type { CompilerOptions } from '../../compiler/types';
-import { FN_STYLE, IMPORT_PATHS } from '../../utils/constants';
+import { createImportSourceMatcher } from '../../utils/import_source';
 import { resolveFile } from '../../utils/file_resolver';
 import {
   compileChain,
@@ -105,14 +104,14 @@ function parseAndExtractModule(
   resolveImport: ResolveImportFn,
   options: CompilerOptions,
 ): EvalModuleBindings | null {
-  let ast: BabelCore.types.File | null = null;
+  let ast: BabelTypes.File | null = null;
 
   try {
     const parsed = babel.parseSync(content, {
       ...babelTransformOptions(),
       filename: filePath,
     });
-    ast = parsed as BabelCore.types.File;
+    ast = parsed as BabelTypes.File;
   } catch {
     return null;
   }
@@ -120,10 +119,12 @@ function parseAndExtractModule(
   if (!ast) return null;
 
   const imports: ImportMap = new Map();
-  const rawBindings: Map<string, BabelCore.types.Node> = new Map();
+  const rawBindings: Map<string, BabelTypes.Node> = new Map();
   const bindings: EvalModuleBindings = new Map();
   const styleNames = new Set<string>();
+  const styleMetas = new Map();
   const fileId = getProjectFileId(projectDir, filePath);
+  const importSourceMatcher = createImportSourceMatcher(options.importSources ?? null);
 
   for (const stmt of ast.program.body) {
     if (stmt.type === 'ImportDeclaration') {
@@ -137,8 +138,10 @@ function parseAndExtractModule(
 
           imports.set(spec.local.name, { source, name: imported });
 
-          if (IMPORT_PATHS.includes(source) && imported === FN_STYLE) {
+          const meta = importSourceMatcher({ source, name: imported });
+          if (meta) {
             styleNames.add(spec.local.name);
+            styleMetas.set(spec.local.name, meta);
           }
         } else if (spec.type === 'ImportDefaultSpecifier') {
           imports.set(spec.local.name, { source, name: 'default' });
@@ -189,14 +192,13 @@ function parseAndExtractModule(
     }
   }
 
-  const meta = options.styleFn ? getStyleFnMeta(options.styleFn) : null;
   const scope: EvalScope = {
     bindings,
     imports,
     styleNames,
+    styleMetas,
     filePath,
-    sourcemapTrace: options.sourcemapTrace ?? 'style',
-    styleTransform: meta?.transform ?? null,
+    sourcemapTrace: options.dev?.sourcemapMode ?? 'style',
     resolveImport,
   };
 
@@ -208,8 +210,8 @@ function parseAndExtractModule(
 }
 
 function collectVariableBindings(
-  bindings: Map<string, BabelCore.types.Node>,
-  declaration: BabelCore.types.VariableDeclaration,
+  bindings: Map<string, BabelTypes.Node>,
+  declaration: BabelTypes.VariableDeclaration,
 ) {
   for (const decl of declaration.declarations) {
     if (decl.id.type === 'Identifier' && decl.init) {
@@ -219,7 +221,7 @@ function collectVariableBindings(
 }
 
 function evaluateResolvedNode(
-  node: BabelCore.types.Node,
+  node: BabelTypes.Node,
   scope: EvalScope,
   styleNames: Set<string>,
   fileId: string,
@@ -234,7 +236,10 @@ function evaluateResolvedNode(
 
     if (chain?.kind === 'style' || chain?.kind === 'scope') {
       try {
-        const result = compileChain(chain, fileId, node.loc?.start, scope, options, styleNames);
+        const meta = scope.styleMetas?.get(chain.rootName);
+        if (!meta) return evalFail('Cannot resolve imported style function');
+
+        const result = compileChain(chain, fileId, node.loc?.start, scope, options, meta, styleNames);
         if (!result) return evalFail('Cannot compile imported style chain');
 
         const extracted = createExtractedChainValue(result);
@@ -255,7 +260,7 @@ function evaluateResolvedNode(
 }
 
 function evaluateResolvedObject(
-  node: BabelCore.types.ObjectExpression,
+  node: BabelTypes.ObjectExpression,
   scope: EvalScope,
   styleNames: Set<string>,
   fileId: string,
@@ -280,7 +285,7 @@ function evaluateResolvedObject(
     const key = getObjectPropertyKey(prop, scope);
     if (!key.ok) return key;
 
-    const value = evaluateResolvedNode(prop.value as BabelCore.types.Node, scope, styleNames, fileId, options);
+    const value = evaluateResolvedNode(prop.value as BabelTypes.Node, scope, styleNames, fileId, options);
     if (!value.ok && value.reason !== 'slot-ref') return value;
 
     result[String(key.value)] = value.ok ? value.value : value;
@@ -344,10 +349,10 @@ function toExtractedScopeTuple(item: CompiledCssItem) {
 }
 
 function getObjectPropertyKey(
-  prop: BabelCore.types.ObjectProperty,
+  prop: BabelTypes.ObjectProperty,
   scope: EvalScope,
 ): EvalResult {
-  if (prop.computed) return evaluateNode(prop.key as BabelCore.types.Node, scope);
+  if (prop.computed) return evaluateNode(prop.key as BabelTypes.Node, scope);
   if (prop.key.type === 'Identifier') return evalOk(prop.key.name);
   if (prop.key.type === 'StringLiteral') return evalOk(prop.key.value);
   if (prop.key.type === 'NumericLiteral') return evalOk(prop.key.value);

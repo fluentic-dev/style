@@ -5,20 +5,19 @@ description: Public subpath exports and when to use them.
 
 | Import | Use |
 | --- | --- |
-| `@fluentic/style` | Runtime API, default style builder, selectors, sheet utilities, React hooks and types. |
-| `@fluentic/style/jsx/runtime` | Production JSX runtime. |
-| `@fluentic/style/jsx/dev-runtime` | Development JSX runtime. |
+| `@fluentic/style` | Runtime API, default style builder, sheet utilities, React hooks and types. |
+| `@fluentic/style/css` | CSS helper APIs for keyframes, font faces, and at-rules. |
+| `@fluentic/style/selector` | Selector constructors, validators, presets, and priority helpers. |
+| `@fluentic/style/config` | Runtime configuration helpers. |
+| `@fluentic/style/dev` | Development utilities. |
+| `@fluentic/style/dev/rsc` | React Server Component dev client boundary. |
+| `@fluentic/style/jsx` | JSX import source for runtime-only apps. |
+| `@fluentic/style/plugin/jsx` | JSX import source for plugin-managed builds. |
 | `@fluentic/style/plugin/nextjs` | Next.js App Router adapter. |
 | `@fluentic/style/plugin/vite` | Vite adapter. |
-| `@fluentic/style/plugin/rollup` | Rollup adapter. |
 | `@fluentic/style/plugin/webpack` | Webpack adapter. |
 | `@fluentic/style/plugin/rspack` | Rspack adapter. |
-| `@fluentic/style/plugin/rolldown` | Rolldown adapter. |
-| `@fluentic/style/plugin/esbuild` | esbuild adapter. |
-| `@fluentic/style/babel` | Babel plugin. |
-| `@fluentic/style/compiler` | Low-level compiler API. |
-| `@fluentic/style/precompile` | Low-level precompiled helpers. |
-| `@fluentic/style/config` | Runtime/config helpers. |
+| `@fluentic/style/plugin/farm` | Farm adapter. |
 
 Prefer the root import for app and component code. Use subpaths for tooling and
 build configuration.

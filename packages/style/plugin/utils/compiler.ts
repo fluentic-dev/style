@@ -3,6 +3,7 @@ import { createCompiler } from '../../compiler';
 import type { Compiler, CompilerCssOptions, CompilerOptions } from '../../compiler';
 import { PLUGIN_CACHE_DIR } from './constants';
 import { createTransformFilter, normalizeModuleId, type TransformFilterOptions } from './filter';
+import { rewriteStyleRuntimeImports, type StyleRuntimeMode } from './runtimeEntry';
 import type { BundlerSourceMap } from './sourcemap';
 
 export type PluginCssOptions = CompilerCssOptions;
@@ -18,6 +19,7 @@ export type PluginCompilerArgs = {
   projectDir: string;
   cacheDir?: string;
   options?: PluginOptions;
+  runtimeMode?: StyleRuntimeMode | null;
 };
 
 export function getPluginCacheDir(projectDir: string, cacheDir?: string) {
@@ -54,7 +56,7 @@ export function createPluginCompiler(args: PluginCompilerArgs) {
     if (!result) return null;
 
     return {
-      code: result.code,
+      code: rewriteStyleRuntimeImports(result.code, args.runtimeMode, filePath),
       map: result.sourcemap,
     };
   };

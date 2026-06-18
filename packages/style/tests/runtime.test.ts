@@ -8,7 +8,7 @@ import {
   BUILDER_TYPE_SCOPE,
   clearRscStyleStore,
   combineStyle,
-  configureRuntime,
+  configureTestRuntime,
   createCombinedStylePool,
   createCounterStyle,
   createDevSheet,
@@ -24,13 +24,11 @@ import {
   createProperty,
   createRscStylePayload,
   createScopeBuilder,
-  createScrollTimeline,
   createStyleFn,
   createTheme,
   createThemeRule,
   createToken,
   createTokens,
-  createViewTimeline,
   type DebugData,
   ELEMENT_CSS_DATA_ATTR,
   equal,
@@ -50,6 +48,7 @@ import {
   notIncludes,
   parseRscStylePayload,
   resolveStyleProp,
+  selector,
   setBuildMeta,
   setGlobalSheet,
   style,
@@ -133,6 +132,28 @@ test('style prop resolver accepts direct raw style and slot data', () => {
   equal(result, cached);
 });
 
+test('static merge helper uses selector spread primitive at runtime', () => {
+  const custom = createStyleFn({
+    style: null as any,
+    selectors: {
+      hover: selector(':hover'),
+    },
+    transform: {
+      transform(style: Record<string, unknown>) {
+        return style.row === true ? { display: 'flex', flexDirection: 'row' } : style;
+      },
+    },
+  }).style;
+
+  const rule = custom.merge(
+    custom({ color: 'black' }),
+    custom({ row: true }),
+    custom().hover({ color: 'blue' }),
+  );
+
+  equal(rule[BUILDER_STATE].items.length, 4);
+});
+
 test('style prop resolver strips debug element marker before walking css items', () => {
   const direct = style({
     color: 'orchid',
@@ -190,7 +211,7 @@ test('style prop resolver skips result cache when cache is disabled', () => {
   };
 
   try {
-    configureRuntime({ cache: false });
+    configureTestRuntime({ cacheTTL: false });
 
     const first = resolveStyleProp(directStyles.container);
     const second = resolveStyleProp(directStyles.container);
@@ -198,7 +219,7 @@ test('style prop resolver skips result cache when cache is disabled', () => {
     equal(first.className, second.className);
     notEqual(first, second);
   } finally {
-    configureRuntime({ dev: false });
+    configureTestRuntime({ dev: false });
   }
 });
 
@@ -278,7 +299,7 @@ test('jsx style prop prepends debug element marker class in dev', () => {
       rsc: false,
       css: {
         debugElementClassName: true,
-        debugElementClassNamePrefix: 'elm-',
+        elementClassNameFormat: 'elm-(name)',
       },
     });
 
@@ -462,14 +483,6 @@ test('style value ref inserts additional at-rules when consumed', () => {
     inherits: false,
     initialValue: '0deg',
   });
-  const scrollTimeline = createScrollTimeline({
-    source: 'auto',
-    orientation: 'block',
-  });
-  const viewTimeline = createViewTimeline({
-    subject: 'auto',
-    axis: 'block',
-  });
   const palette = createFontPaletteValues({
     fontFamily: 'system-ui',
     basePalette: 1,
@@ -478,11 +491,7 @@ test('style value ref inserts additional at-rules when consumed', () => {
     positionTryFallbacks: positionTry,
     listStyleType: counterStyle,
     transitionProperty: property,
-    animationTimeline: scrollTimeline,
     fontPalette: palette,
-  });
-  const viewTimelineStyle = style({
-    animationTimeline: viewTimeline,
   });
   const previousSheet = getGlobalSheet();
 
@@ -490,7 +499,6 @@ test('style value ref inserts additional at-rules when consumed', () => {
 
   try {
     getClassName(direct);
-    getClassName(viewTimelineStyle);
 
     const text = document.head.textContent;
 
@@ -498,16 +506,12 @@ test('style value ref inserts additional at-rules when consumed', () => {
     includes(text, 'inset-area: bottom;');
     includes(text, '@counter-style');
     includes(text, 'symbols: "*";');
-    includes(text, '@property --spin-angle');
+    includes(text, '@property ---spin-angle-');
     includes(text, 'inherits: false;');
-    includes(text, '@scroll-timeline');
-    includes(text, '@view-timeline');
     includes(text, '@font-palette-values');
     includes(text, 'base-palette: 1;');
     includes(text, positionTry.value);
     includes(text, counterStyle.value);
-    includes(text, scrollTimeline.value);
-    includes(text, viewTimeline.value);
     includes(text, palette.value);
   } finally {
     setGlobalSheet(previousSheet);
@@ -547,7 +551,7 @@ test('direct raw style prop keeps token defaults theme-overridable', () => {
 });
 
 test('style prop warns for composition values in dev', () => {
-  configureRuntime({ dev: true });
+  configureTestRuntime({ dev: true });
 
   const token = createToken('blue', 'unsupported-css-token');
   const warnings: unknown[][] = [];
@@ -564,7 +568,7 @@ test('style prop warns for composition values in dev', () => {
     includes(String(warnings[0][0]), 'Unsupported style prop value');
   } finally {
     console.warn = warn;
-    configureRuntime({ dev: false });
+    configureTestRuntime({ dev: false });
   }
 });
 
@@ -778,8 +782,10 @@ test('static getToken resolves token values to css variable fallbacks', () => {
   equal(getToken(10), 10);
   equal(getToken(null), null);
   equal(getToken(false), false);
-  equal(getToken(base), 'var(--token-static-base, blue)');
-  equal(getToken(alias), 'var(--token-static-alias, var(--token-static-base, blue))');
+  includes(String(getToken(base)), 'var(--token-static-base-');
+  includes(String(getToken(base)), ', blue)');
+  includes(String(getToken(alias)), 'var(--token-static-alias-');
+  includes(String(getToken(alias)), 'var(--token-static-base-');
 });
 
 test('generated id counters are shared across duplicate module instances', async () => {
@@ -787,15 +793,15 @@ test('generated id counters are shared across duplicate module instances', async
   const tokenBPath = '../style/token.ts?counter-b';
   const themeAPath = '../style/theme.ts?counter-a';
   const themeBPath = '../style/theme.ts?counter-b';
-  const keyframesAPath = '../css/keyframes.ts?counter-a';
-  const keyframesBPath = '../css/keyframes.ts?counter-b';
+  const keyframesAPath = '../css/index.ts?counter-a';
+  const keyframesBPath = '../css/index.ts?counter-b';
 
   const tokenA = await import(tokenAPath) as typeof import('../style/token');
   const tokenB = await import(tokenBPath) as typeof import('../style/token');
   const themeA = await import(themeAPath) as typeof import('../style/theme');
   const themeB = await import(themeBPath) as typeof import('../style/theme');
-  const keyframesA = await import(keyframesAPath) as typeof import('../css/keyframes');
-  const keyframesB = await import(keyframesBPath) as typeof import('../css/keyframes');
+  const keyframesA = await import(keyframesAPath) as typeof import('../css');
+  const keyframesB = await import(keyframesBPath) as typeof import('../css');
 
   tokenA.resetStyleTokenIdCounter();
   themeA.resetStyleThemeIdCounter();
@@ -824,9 +830,12 @@ test('createTokens supports nested object token groups', () => {
     },
   }, 'nested');
 
-  equal(getToken(tokens.color.text), 'var(--token-nested--color--text, blue)');
-  equal(getToken(tokens.color.accent), 'var(--token-nested--color--accent, green)');
-  equal(getToken(tokens.space.sm), 'var(--token-nested--space--sm, 8)');
+  includes(String(getToken(tokens.color.text)), 'var(--token-nested--color--text-');
+  includes(String(getToken(tokens.color.text)), ', blue)');
+  includes(String(getToken(tokens.color.accent)), 'var(--token-nested--color--accent-');
+  includes(String(getToken(tokens.color.accent)), ', green)');
+  includes(String(getToken(tokens.space.sm)), 'var(--token-nested--space--sm-');
+  includes(String(getToken(tokens.space.sm)), ', 8)');
 });
 
 test('createTokens treats nested arrays as one token value', () => {
@@ -835,7 +844,8 @@ test('createTokens treats nested arrays as one token value', () => {
   }, 'array-leaf');
   const override = tokens.shadow([0, 10, 30]);
 
-  equal(getToken(tokens.shadow), 'var(--token-array-leaf--shadow, 0,8,24)');
+  includes(String(getToken(tokens.shadow)), 'var(--token-array-leaf--shadow-');
+  includes(String(getToken(tokens.shadow)), ', 0,8,24)');
   equal(override.value.join(','), '0,10,30');
 });
 
@@ -893,7 +903,8 @@ test('theme style prop contributes class and token declarations stay theme-overr
 
   const rule = createThemeRule(theme);
   includes(rule, '.' + theme.className);
-  includes(rule, '--token-theme-text:red');
+  includes(rule, '--token-theme-text-');
+  includes(rule, ':red');
 });
 
 test('local token overrides beat theme class via inline variable', () => {
@@ -909,7 +920,9 @@ test('local token overrides beat theme class via inline variable', () => {
 
   if (!result.style) throw new Error('expected local token variable style');
 
-  equal((result.style as Record<string, unknown>)['--token-theme-local'], 'green');
+  const varName = Object.keys(result.style as Record<string, unknown>).find((key) => key.startsWith('--token-theme-local-'));
+  if (!varName) throw new Error('expected local theme token variable');
+  equal((result.style as Record<string, unknown>)[varName], 'green');
 });
 
 test('theme token aliases emit nested css variable fallbacks', () => {
@@ -918,11 +931,13 @@ test('theme token aliases emit nested css variable fallbacks', () => {
   const theme = createTheme([alias(base)], 'runtime-theme-alias');
   const rule = createThemeRule(theme);
 
-  includes(rule, '--token-theme-alias:var(--token-theme-base, blue)');
+  includes(rule, '--token-theme-alias-');
+  includes(rule, ':var(--token-theme-base-');
+  includes(rule, ', blue)');
 });
 
 test('runtime debug variables make tokens use property-local inline styles', () => {
-  configureRuntime({ dev: true, localClassName: true, debugClassName: true });
+  configureTestRuntime({ dev: true });
 
   const token = createToken('blue');
   const debug: DebugData = {
@@ -1104,7 +1119,9 @@ test('style value ref token deps resolve from direct token bindings', () => {
       enterTransform('translateY(24px)'),
     ] as never));
 
-    equal(result.style?.['--token-enter-transform' as never], 'translateY(24px)');
+    const varName = Object.keys(result.style ?? {}).find((key) => key.startsWith('--token-enter-transform-'));
+    if (!varName) throw new Error('expected enter transform token variable');
+    equal(result.style?.[varName as never], 'translateY(24px)');
   } finally {
     setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
   }
@@ -1181,7 +1198,7 @@ test('style prop resolver resolves extracted token variable refs', () => {
   includes(String((result.style as Record<string, unknown>)['--token-value']), 'blue');
 });
 
-test('style prop cache invalidates on runtime config change', () => {
+test('style prop cache assumes runtime config is settled before resolution', () => {
   const baseToken = createToken('blue');
   const tokenRef = createToken(baseToken);
   const css = createExtractedSlot('config-cache-token-slot', [
@@ -1189,19 +1206,19 @@ test('style prop cache invalidates on runtime config change', () => {
   ]);
 
   try {
-    configureRuntime({ tokenVarPrefix: 'first-token-' });
+    configureTestRuntime({ css: { tokenNameFormat: 'first-token[-(name)]-$hash' } });
 
     const first = resolveStyleProp(css as any);
 
     includes(String((first.style as Record<string, unknown>)['--token-value']), 'var(--first-token-');
 
-    configureRuntime({ tokenVarPrefix: 'next-token-' });
+    configureTestRuntime({ css: { tokenNameFormat: 'next-token[-(name)]-$hash' } });
 
     const next = resolveStyleProp(css as any);
 
-    includes(String((next.style as Record<string, unknown>)['--token-value']), 'var(--next-token-');
+    includes(String((next.style as Record<string, unknown>)['--token-value']), 'var(--first-token-');
   } finally {
-    configureRuntime({ dev: false });
+    configureTestRuntime({ dev: false });
   }
 });
 
@@ -1224,7 +1241,7 @@ test('rsc dev payload is emitted by getClassName', () => {
   const storeCss = getRscStyleCss();
 
   setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
-  configureRuntime({ dev: false });
+  configureTestRuntime({ dev: false });
 
   equal(props.id, 'target');
   equal(typeof manual.className, 'string');
@@ -1388,7 +1405,7 @@ test('rsc prod style prop omits dev payload', () => {
   const storeCss = getRscStyleCss();
 
   setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
-  configureRuntime({ dev: false });
+  configureTestRuntime({ dev: false });
 
   equal(props.id, 'target');
   equal(typeof manual.className, 'string');
@@ -1416,7 +1433,7 @@ test('rsc getClassName omits dev payload without css rules', () => {
   const storeCss = getRscStyleCss();
 
   setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
-  configureRuntime({ dev: false });
+  configureTestRuntime({ dev: false });
   clearRscStyleStore();
 
   equal(manual.className, 'external');
@@ -1463,7 +1480,7 @@ test('rsc dev style store wraps parent selector priority rules in layers', () =>
   const redLayer = getLayerNameForRule(storeCss, 'background: red');
 
   setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
-  configureRuntime({ dev: false });
+  configureTestRuntime({ dev: false });
   clearRscStyleStore();
 
   includes(storeCss, '@layer css.');

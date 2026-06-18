@@ -1,4 +1,4 @@
-import type { types as BabelTypes } from '@babel/core';
+import type { BabelTypes } from './babel';
 import {
   SELECTOR_ARG,
   SELECTOR_ARGS,
@@ -7,7 +7,7 @@ import {
   SELECTOR_MEDIA,
   SELECTOR_MERGE,
 } from '../../../builder/data';
-import type { CheckSelectorMode } from '../../../config';
+import type { CheckSelectorMode } from '../../../config/types';
 import { assertLocalSelector, assertSelector } from '../../../selector/assert';
 import type { Selector } from '../../../selector/types';
 import type { EvalResult } from '../evaluator/types';
@@ -32,6 +32,10 @@ export function getSelectorArgIndex(
   const selectorText = selector.selector.trim();
 
   if (selectorText.startsWith(SELECTOR_AT_RULE)) {
+    if (!selectorText.includes(SELECTOR_ARGS) && !selectorText.includes(SELECTOR_ARG)) {
+      return null;
+    }
+
     const isMedia = selectorText.startsWith(SELECTOR_MEDIA) ||
       selectorText.startsWith(SELECTOR_CONTAINER);
 

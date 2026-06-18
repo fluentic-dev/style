@@ -1,0 +1,25 @@
+@layer reset, css, override;
+@layer css {
+.width-rb3ea60{width: 20px}
+.display-none-bu9x92t{display: none}
+.color-red-edc9wv0{color: red}
+.opacity-b6dkdy0{opacity: 0.5}
+.font-family-times-bk33r00{font-family: Times}
+.background-color-coral-gncb830{background-color: coral}
+.background-image-bfbvbk7{background-image: var(--var-nu9tao0)}
+.color-pink-b12pukf{color: pink}
+.border-pink-bpl0n30{border: pink}
+.background-color-pink-vr50690{background-color: pink}
+@media (max-width: 600px){.max-600px-width-jp9itr0{width: 16px}}
+@media (max-width: 600px){.max-600px-color-green-bhrg44d{color: green}}
+@media (max-width: 600px){.max-600px-opacity-baxdw2g{opacity: 0.3}}
+.hover-width-bhkn4c2:where(.-hover-width-bhkn4c2:hover),:where(.-hover-width-bhkn4c2:hover) .hover-width-bhkn4c2{width: 20px}
+.hover-color-blue-hvsmdy0:where(.-hover-color-blue-hvsmdy0:hover),:where(.-hover-color-blue-hvsmdy0:hover) .hover-color-blue-hvsmdy0{color: blue}
+.hover-opacity-bp5k2nd:where(.-hover-opacity-bp5k2nd:hover),:where(.-hover-opacity-bp5k2nd:hover) .hover-opacity-bp5k2nd{opacity: 0.8}
+.width-hover-iypmcb0:hover{width: 20px}
+.width-hover-bxsbosn:hover{width: 22px}
+.background-color-hover-xwndrc0:hover{background-color: var(--var-brjxzfr, var(--token-token-1jb1zmc-v95nzv0, blue))}
+.hover-outline-color-active-yellow-jvtcnq0:where(.-hover-outline-color-active-yellow-jvtcnq0:hover):active,:where(.-hover-outline-color-active-yellow-jvtcnq0:hover) .hover-outline-color-active-yellow-jvtcnq0:active{outline-color: yellow}
+.width-d3rssn0{width: 18px}
+.display-flex-b4d2b3w{display: flex}
+}

@@ -1,83 +1,243 @@
-import { combineStyle } from '@fluentic/style';
-import { style } from './style';
+import { style, sx, ui } from './style';
 
 const styles = {
-  page: style({
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
-    boxSizing: 'border-box',
-    color: '#0f172a',
-    display: 'flex',
-    column: true,
-    fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
-    justifyContent: 'center',
-    minHeight: '100vh',
-    padding: 32,
+  page: style.merge(
+    style({
+      backgroundColor: '#edf4f1',
+      boxSizing: 'border-box',
+      color: '#12201b',
+      fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+      minHeight: '100vh',
+      padding: 32,
+    }),
+    sx({
+      column: true,
+      center: true,
+      gapY: 18,
+    }).sm({
+      padding: 20,
+    }),
+  ),
+
+  card: style.merge(
+    style.slot({
+      backgroundColor: '#ffffff',
+      border: '1px solid #c9d8d3',
+      borderRadius: 8,
+      boxSizing: 'border-box',
+      maxWidth: 720,
+      padding: 26,
+      width: '100%',
+    }),
+    sx({ column: true, gapY: 22 }).sm({ padding: 20 }),
+    ui({ elevated: true }),
+  ),
+
+  toolbar: style.merge(
+    style.slot(),
+    sx({ row: true, gapX: 18 }),
+    sx().sm({ column: true, gapY: 14 }),
+  ),
+
+  intro: style.merge(
+    style.slot({
+      flex: 1,
+      minWidth: 0,
+    }),
+    sx({ column: true, gapY: 10 }),
+  ),
+
+  eyebrow: style.slot({
+    color: '#0f766e',
+    fontSize: 12,
+    fontWeight: 800,
+    letterSpacing: 0,
+    margin: 0,
+    textTransform: 'uppercase',
   }),
-  card: style({
-    backgroundColor: '#ffffff',
-    border: '1px solid #dbe3ef',
-    borderRadius: 8,
-    boxShadow: '0 18px 44px rgba(15, 23, 42, 0.10)',
-    boxSizing: 'border-box',
-    display: 'flex',
-    column: true,
-    gap: 16,
-    padding: 28,
-  }).media('(max-width: 640px)', {
-    padding: 20,
-  }),
-  row: style({
-    display: 'flex',
-    row: true,
-    gap: 8,
-    alignItems: 'center',
-  }),
-  title: style({
-    fontSize: 28,
-    fontWeight: 700,
-    lineHeight: 1.1,
+
+  title: style.slot({
+    fontSize: 34,
+    fontWeight: 800,
+    lineHeight: 1,
     margin: 0,
   }),
-  badge: style({
-    backgroundColor: '#dbeafe',
-    borderRadius: 4,
-    color: '#1d4ed8',
-    fontSize: 12,
-    fontWeight: 600,
-    padding: '2px 8px',
+
+  badgeList: style.merge(
+    style.slot({
+      alignSelf: 'start',
+      flexWrap: 'wrap',
+      justifyContent: 'flex-end',
+      minWidth: 190,
+    }),
+    sx({ row: true, gapX: 8 }),
+    sx().sm({ gapY: 8 }),
+  ),
+
+  badge: style.merge(
+    style.slot({
+      backgroundColor: '#dff7ed',
+      color: '#0f766e',
+      fontSize: 12,
+      fontWeight: 800,
+      lineHeight: 1,
+      padding: '7px 10px',
+      whiteSpace: 'nowrap',
+    }),
+    ui({ pill: true }),
+    ui().tone('brand', {
+      backgroundColor: '#dff7ed',
+    }),
+    ui().tone('success', {
+      backgroundColor: '#e6f4d7',
+      color: '#3f6212',
+    }),
+    ui().tone('danger', {
+      backgroundColor: '#ffe4e6',
+      color: '#be123c',
+    }),
+  ),
+
+  body: style.slot({
+    color: '#5a6b64',
+    fontSize: 16,
+    lineHeight: 1.6,
+    margin: 0,
+    maxWidth: 560,
   }),
-  button: style({
-    backgroundColor: '#2563eb',
-    border: 0,
-    borderRadius: 8,
-    color: '#ffffff',
-    cursor: 'pointer',
-    fontSize: 15,
-    fontWeight: 700,
-    padding: '10px 14px',
-    transition: 'transform 160ms ease, background-color 160ms ease',
-  }).onHover({
-    backgroundColor: '#1d4ed8',
-    transform: 'translateY(-1px)',
+
+  grid: style.merge(
+    style.slot({
+      border: '1px solid #dce7e3',
+      borderRadius: 8,
+      overflow: 'hidden',
+    }),
+    sx({ column: true }),
+  ),
+
+  row: style.merge(
+    style.slot({
+      backgroundColor: '#fbfdfc',
+      borderBottom: '1px solid #e6efeb',
+      boxSizing: 'border-box',
+      minHeight: 58,
+      padding: '12px 14px',
+    }),
+    sx({ row: true, center: true, gapX: 14 }),
+    sx().sm({ column: true, gapY: 6 }),
+  ),
+
+  rowLast: style.slot({
+    borderBottom: 0,
   }),
+
+  rowName: style.slot({
+    color: '#12201b',
+    fontSize: 14,
+    fontWeight: 800,
+    minWidth: 58,
+  }),
+
+  rowText: style.slot({
+    color: '#63746d',
+    flex: 1,
+    fontSize: 14,
+    lineHeight: 1.4,
+    margin: 0,
+  }),
+
+  action: style.merge(
+    style.slot({
+      backgroundColor: '#0f766e',
+      border: 0,
+      color: '#ffffff',
+      cursor: 'pointer',
+      fontSize: 15,
+      fontWeight: 800,
+      padding: '10px 18px',
+      transition: 'background-color 160ms ease, transform 160ms ease',
+    }).pressed({
+      transform: 'translateY(1px)',
+    }),
+    ui({ pill: true }),
+    ui().hover({
+      backgroundColor: '#115e59',
+      transform: 'translateY(-1px)',
+    }),
+    ui().focusVisible({
+      outline: '3px solid #99f6e4',
+      outlineOffset: 2,
+    }),
+  ),
+
+  actions: style.merge(
+    style.slot({
+      flexWrap: 'wrap',
+    }),
+    sx({ row: true, gapX: 10 }),
+  ),
+
+  secondaryAction: style.merge(
+    style.slot({
+      backgroundColor: '#eff7f4',
+      border: '1px solid #cfe2dc',
+      color: '#0f766e',
+      cursor: 'pointer',
+      fontSize: 15,
+      fontWeight: 800,
+      padding: '9px 16px',
+      transition: 'background-color 160ms ease, transform 160ms ease',
+    }).pressed({
+      transform: 'translateY(1px)',
+    }),
+    ui({ pill: true }),
+    ui().hover({
+      backgroundColor: '#dff7ed',
+      transform: 'translateY(-1px)',
+    }),
+    ui().focusVisible({
+      outline: '3px solid #99f6e4',
+      outlineOffset: 2,
+    }),
+  ),
 };
 
 export function App() {
-  const css = combineStyle(styles);
-
   return (
-    <main css={css.page}>
-      <section css={css.card}>
-        <div css={css.row}>
-          <h1 css={css.title}>Custom createStyleFn</h1>
-          <span css={css.badge}>transform</span>
+    <main css={styles.page}>
+      <section css={styles.card}>
+        <div css={styles.toolbar}>
+          <div css={styles.intro}>
+            <p css={styles.eyebrow}>Custom builder stack</p>
+            <h1 css={styles.title}>Design-system builders</h1>
+          </div>
+          <div css={styles.badgeList}>
+            <span css={styles.badge} data-tone='brand'>style.merge</span>
+            <span css={styles.badge} data-tone='success'>sx</span>
+            <span css={styles.badge} data-tone='danger'>typed tone</span>
+          </div>
         </div>
-        <p style={{ margin: 0, color: '#64748b', fontSize: 14 }}>
-          <code>row: true</code> and <code>column: true</code> are custom shorthand props transformed to{' '}
-          <code>flexDirection</code> at build &amp; runtime.
+        <p css={styles.body}>
+          Compose slots, layout shorthands, responsive rules, and semantic selector tones without handwritten selector strings.
         </p>
-        <button css={css.button}>Hover me</button>
+        <div css={styles.grid}>
+          <div css={styles.row}>
+            <strong css={styles.rowName}>style</strong>
+            <p css={styles.rowText}>Owns slots, scope targets, and the base component surface.</p>
+          </div>
+          <div css={styles.row}>
+            <strong css={styles.rowName}>sx</strong>
+            <p css={styles.rowText}>Adds row, column, center, and fixed responsive shortcuts.</p>
+          </div>
+          <div css={[styles.row, styles.rowLast]}>
+            <strong css={styles.rowName}>ui</strong>
+            <p css={styles.rowText}>Adds enum tones plus hover, pressed, and focus-visible states.</p>
+          </div>
+        </div>
+        <div css={styles.actions}>
+          <button css={styles.action} aria-pressed='false'>Compose builders</button>
+          <button css={styles.secondaryAction} aria-pressed='false'>Preview tones</button>
+        </div>
       </section>
     </main>
   );

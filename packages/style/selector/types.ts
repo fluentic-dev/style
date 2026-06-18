@@ -1,11 +1,17 @@
-export type Selector<T extends string = string> = {
+export declare const SelectorAssertArgSymbol: unique symbol;
+
+export type Selector<T extends string = string, Arg extends string = string> = {
   selector: T;
   priority: number | null;
-  assert: SelectorType | SelectorAssertFn | null;
+  assert: SelectorType | SelectorAssertFn<Arg> | null;
 };
 
-export type SelectorAssert = SelectorType | SelectorAssertFn;
-export type SelectorAssertFn = (arg: string) => void;
+export type SelectorAssert<Arg extends string = string> = SelectorType | SelectorAssertFn<Arg>;
+
+export type SelectorAssertFn<Arg extends string = string> = {
+  (arg: string): void;
+  readonly [SelectorAssertArgSymbol]?: Arg;
+};
 
 export type SelectorType =
   | 'local'

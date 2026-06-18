@@ -4,11 +4,8 @@
     "overview",
     "nextjs",
     "vite",
-    "rollup",
     "webpack",
     "rspack",
-    "rolldown",
-    "esbuild",
     "babel",
     "custom-compiler"
   ]

@@ -1,5 +1,6 @@
+import { LayerDefaultLayers } from '../../atomic/layer';
 import { isDebugData } from '../../builder/data/debug';
-import { RUNTIME_CONFIG } from '../../config';
+import { CSS_CONFIG } from '../../config/config/css';
 import type { SheetRule } from '../../sheet';
 import { getGlobalSheet } from '../sheet';
 import { ELEMENT_CSS_DATA_ATTR, PRECOLLECT_LINK_TAG_ATTR, SEED_STYLE_TAG_ATTR, SEED_STYLE_TAG_HREF } from './constants';
@@ -102,7 +103,7 @@ function flush() {
   if (!pending.size) return;
 
   const sheet = getGlobalSheet();
-  sheet.updateLayers(RUNTIME_CONFIG.layers);
+  sheet.updateLayers(CSS_CONFIG.layers || LayerDefaultLayers);
 
   const elements = Array.from(pending);
   pending.clear();

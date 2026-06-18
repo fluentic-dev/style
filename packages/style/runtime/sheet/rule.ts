@@ -1,6 +1,7 @@
 import { buildAtomicRule, getAtomicRuleLayerPriority } from '../../atomic/rule';
 import { BUILDER_TYPE_SCOPE } from '../../builder/data/const';
 import type { RuntimeItem, StateItem } from '../../builder/data/state';
+import { CSS_CONFIG } from '../../config/config/css';
 import type { SheetRule } from '../../sheet';
 import { isStyleTokenOverrideData } from '../../style/token';
 import { getStateItemAtRuleRef } from '../core/cache/stateItem';
@@ -43,6 +44,7 @@ export function createRuntimeSheetRules(item: StateItem): RuntimeSheetRule[] | n
     runtimeItem.selector,
     parentSelector,
     runtimeItem.atRule,
+    CSS_CONFIG.scopeClassNameFormat || null,
   );
 
   const rule = {

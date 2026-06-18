@@ -4,6 +4,7 @@ export function fontSrc(url: string, format?: string) {
   }
 
   const src = `url("${escapeFontSrcPart(url)}")`;
+
   return format ? `${src} format("${escapeFontSrcPart(format)}")` : src;
 }
 

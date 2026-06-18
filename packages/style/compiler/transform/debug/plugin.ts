@@ -1,15 +1,13 @@
-import type * as BabelCore from '@babel/core';
-import type { NodePath, types as BabelTypes } from '@babel/core';
-import type { SelectorsRecord } from '../../../builder';
-import type { CheckSelectorMode } from '../../../config';
-import { PrioritySelectors } from '../../../selector/presets';
-import { getStyleFnMeta } from '../../../style/style';
+import type { BabelCore, BabelTypes, NodePath } from '../utils/babel';
+import type { CheckSelectorMode, SourcemapLocationMode } from '../../../config/types';
+import type { StyleFnMeta } from '../../../style/style';
 import type { CompilerOptions } from '../../compiler/types';
 import {
   DEBUG_SOURCE_CONTENT_VAR,
   DEBUG_SOURCE_URL_VAR,
   DEFAULT_CONFIG,
   FN_STYLE_KEYFRAMES,
+  FN_STYLE_MERGE,
   FN_STYLE_PLAIN,
   FN_STYLE_RAW,
   FN_STYLE_SCOPE,
@@ -32,11 +30,11 @@ import { buildDebugDataObject, type DebugTraceProperty, hasDebugArgument } from 
 
 type PluginState = BabelCore.PluginPass & {
   styleNames: Set<string>;
+  styleMetas: Map<string, StyleFnMeta>;
   bindings: EvalModuleBindings;
   imports: ImportMap;
   resolveImport: ResolveImportFn;
   importSourceMatcher: ImportSourceMatcher;
-  selectors: SelectorsRecord;
   checkSelector: CheckSelectorMode | undefined;
   filePath: string;
   fileId: string;
@@ -54,7 +52,7 @@ type PluginArgs = {
   tracer: ExtractTracer;
 };
 
-type SourcemapTrace = NonNullable<CompilerOptions['sourcemapTrace']>;
+type SourcemapTrace = SourcemapLocationMode;
 
 type BabelBinding = {
   identifier: BabelTypes.Identifier;
@@ -70,17 +68,15 @@ export function createDebugPlugin(args: PluginArgs) {
     return {
       pre(this: PluginState) {
         this.styleNames = new Set();
+        this.styleMetas = new Map();
         this.bindings = new Map();
         this.imports = new Map();
         this.resolveImport = (source, fromFile) => args.tracer.resolveImport(babel, source, fromFile);
         this.importSourceMatcher = createImportSourceMatcher(options.importSources ?? null);
-        this.selectors = options.styleFn
-          ? getStyleFnMeta(options.styleFn).selectors
-          : PrioritySelectors;
-        this.checkSelector = options.checkSelector;
+        this.checkSelector = options.dev?.checkSelector;
         this.filePath = this.file?.opts?.filename ?? 'unknown';
         this.fileId = getProjectFileId(projectDir, this.file?.opts?.filename);
-        this.sourcemapTrace = options.sourcemapTrace ?? 'style';
+        this.sourcemapTrace = options.dev?.sourcemapMode ?? 'style';
         this.programPath = null;
         this.sourceUrlId = null;
         this.sourceContentId = null;
@@ -117,8 +113,10 @@ export function createDebugPlugin(args: PluginArgs) {
               ? getImportedName(spec)
               : 'default';
 
-            if (state.importSourceMatcher({ source, name: imported })) {
+            const meta = state.importSourceMatcher({ source, name: imported });
+            if (meta) {
               state.styleNames.add(spec.local.name);
+              state.styleMetas.set(spec.local.name, meta);
             }
           });
         },
@@ -167,8 +165,8 @@ export function createDebugPlugin(args: PluginArgs) {
               state.fileId,
               sourceUrlRef,
               sourceContentRef,
-              options.css?.tokenVarPrefix ?? DEFAULT_CONFIG.tokenVarPrefix,
-              getDebugStyleArg(t, path, state, options.sourcemapTrace ?? 'style'),
+              options.css?.tokenNameFormat ?? DEFAULT_CONFIG.tokenNameFormat,
+              getDebugStyleArg(t, path, state, options.dev?.sourcemapMode ?? 'style'),
             ),
           );
         },
@@ -344,7 +342,7 @@ function getShortFileLabel(filePath: string) {
 }
 
 function isElementDebugEnabled(options: CompilerOptions) {
-  return options.css?.debugElementClassName ?? options.debugElementClassName ?? false;
+  return options.dev?.elementClassName ?? false;
 }
 
 function validateStaticSelectorArg(
@@ -354,7 +352,10 @@ function validateStaticSelectorArg(
   const methodName = getSelectorMethodName(path.node.callee);
   if (!methodName) return;
 
-  const selector = state.selectors[methodName];
+  const rootName = getStyleChainRootName(path.node.callee, state.styleNames);
+  if (!rootName) return;
+
+  const selector = state.styleMetas.get(rootName)?.selectors[methodName];
   if (!selector) return;
   if (!isStyleChainCall(path.node.callee, state.styleNames) && !isScopeItemCall(path, state)) return;
 
@@ -401,7 +402,35 @@ function getDebugEvalScope(state: PluginState): EvalScope {
     styleFilePath: state.filePath,
     sourcemapTrace: state.sourcemapTrace,
     styleNames: state.styleNames,
+    styleMetas: state.styleMetas,
   };
+}
+
+function getStyleChainRootName(
+  callee: BabelTypes.CallExpression['callee'],
+  styleNames: Set<string>,
+): string | null {
+  if (callee.type === 'Identifier') {
+    return styleNames.has(callee.name) ? callee.name : null;
+  }
+
+  if (callee.type !== 'MemberExpression' || callee.computed) return null;
+
+  const object = callee.object;
+
+  if (object.type === 'Identifier') {
+    return styleNames.has(object.name) ? object.name : null;
+  }
+
+  if (object.type === 'CallExpression') {
+    return getStyleChainRootName(object.callee, styleNames);
+  }
+
+  if (object.type === 'MemberExpression') {
+    return getStyleChainRootName(object, styleNames);
+  }
+
+  return null;
 }
 
 function getSelectorMethodName(
@@ -565,7 +594,8 @@ function isStyleUtilityCall(
 
   return callee.property.name === FN_STYLE_RAW ||
     callee.property.name === FN_STYLE_PLAIN ||
-    callee.property.name === FN_STYLE_KEYFRAMES;
+    callee.property.name === FN_STYLE_KEYFRAMES ||
+    callee.property.name === FN_STYLE_MERGE;
 }
 
 function isScopeItemCall(

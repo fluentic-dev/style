@@ -1,0 +1,204 @@
+---
+title: Custom Style Functions
+description: Build design-system style functions with custom style types, transforms, selectors, and selector priority.
+---
+
+`createStyleFn` lets a design system define its own styling vocabulary. You can
+choose the accepted style type, normalize it with a transform, expose only the
+selectors you want, and decide the priority order of state selectors.
+
+The default `style` export is created this way internally.
+
+Use this page as the overview. For deeper detail, see
+[Style Transforms](./style-transforms) and
+[Advanced Selectors](./advanced-selectors).
+
+## Custom Style Type
+
+Start with a style type for your design system. It can extend CSS properties
+with design-system shortcuts.
+
+```ts
+import type { CSSProperties } from '@fluentic/style';
+
+type StackStyle = CSSProperties & {
+  row?: boolean;
+  column?: boolean;
+  gapX?: CSSProperties['columnGap'];
+  gapY?: CSSProperties['rowGap'];
+};
+```
+
+## Transform
+
+Use `styleTransform(...)` to turn your design-system shape into normal CSS.
+
+```ts
+import { styleTransform } from '@fluentic/style';
+
+const stackTransform = styleTransform<StackStyle>({
+  transform(style) {
+    const { row, column, gapX, gapY, ...css } = style;
+
+    if (row || column) {
+      css.display = 'flex';
+      css.flexDirection = row ? 'row' : 'column';
+    }
+
+    if (gapX !== undefined) css.columnGap = gapX;
+    if (gapY !== undefined) css.rowGap = gapY;
+
+    return css;
+  },
+});
+```
+
+Transforms also apply to slots, scopes, raw style data, and keyframes created by
+the custom style function. See [Style Transforms](./style-transforms) for the
+full transform workflow.
+
+## Selectors
+
+Selectors define which chain methods your style function exposes.
+
+```ts
+import { Selectors, selector } from '@fluentic/style/selector';
+
+const stackSelectors = {
+  hover: Selectors.hover,
+  active: Selectors.active,
+  focusVisible: Selectors.focusVisible,
+  pressed: selector('[aria-pressed="true"]'),
+  media: Selectors.media,
+};
+```
+
+The built-in presets are useful starting points:
+
+- `Selectors` includes the full default selector set.
+- `PrioritySelectors` is the full default selector set with default state priority.
+- `MinimalSelectors` includes a smaller practical selector set.
+- `MinimalPrioritySelectors` is the minimal set with default state priority.
+
+See [Advanced Selectors](./advanced-selectors) for `$`, `$$`, `...`,
+validators, presets, and design-system selector patterns.
+
+## Selector Priority
+
+Use `selectorPriority(...)` to decide which states win when multiple states
+match at the same time. The list is ordered from lower to higher priority.
+
+```ts
+import { selectorPriority } from '@fluentic/style/selector';
+
+const prioritySelectors = selectorPriority(stackSelectors, [
+  'hover',
+  'focusVisible',
+  'pressed',
+  'active',
+]);
+```
+
+Here `active` wins over `pressed`, `pressed` wins over `focusVisible`, and
+`focusVisible` wins over `hover`.
+
+This is how you customize behavior such as active winning over hover, disabled
+winning over active, or a design-system state like pressed winning over focus.
+Selector priority participates in the priority model described in
+[Priority](./priority): media can override inside the same selector
+bucket, but media cannot jump across selector-priority buckets.
+
+## Create The Function
+
+Pass the style type, selectors, and transform to `createStyleFn`.
+
+```ts
+import { createStyleFn, type } from '@fluentic/style';
+
+export const { style: stackStyle } = createStyleFn({
+  style: type<StackStyle>,
+  selectors: prioritySelectors,
+  transform: stackTransform,
+});
+```
+
+Now `stackStyle` has the same shape as the default `style` export:
+
+```ts
+const button = stackStyle({
+  row: true,
+  gapX: 8,
+  alignItems: 'center',
+}).hover({
+  opacity: 0.9,
+}).active({
+  opacity: 0.75,
+}).pressed({
+  transform: 'translateY(1px)',
+});
+```
+
+You also get design-system-aware slots, scopes, values, raw styles, plain
+styles, and keyframes:
+
+```ts
+const parts = {
+  root: stackStyle.slot({ column: true, gapY: 12 }),
+  button: stackStyle.slot({ row: true, gapX: 8 }),
+};
+
+const compact = stackStyle.scope().media('(max-width: 700px)', [
+  parts.root({ gapY: 8 }),
+  parts.button({ gapX: 6 }),
+]);
+```
+
+## Multiple Style Functions
+
+An app can register more than one style function with the compiler. This is
+useful when the app has a full `style` function for component structure and
+smaller builders for design-system utilities.
+
+```ts
+import { style } from './style';
+import { sx } from './sx-style';
+import { ui } from './ui-style';
+
+stylePlugin({
+  importSources: [
+    { source: './style', name: 'style', styleFn: style },
+    { source: './sx-*', name: 'sx', styleFn: sx },
+    { source: /ui-style$/, name: 'ui', styleFn: ui },
+  ],
+});
+```
+
+Each chain is compiled with the meta of the function it starts from:
+
+```ts
+const button = style.merge(
+  style.slot({ color: 'black' }),
+  sx({ row: true, gapX: 8 }),
+  ui().pressed({ opacity: 0.8 }),
+);
+```
+
+The target is `style.slot(...)`, but `sx(...)` still uses the `sx` transform and
+`ui().pressed(...)` still uses the `ui` selector map. Both runtime CSS and
+static CSS extraction follow that same model.
+
+## Pattern
+
+For component libraries, a good pattern is:
+
+```txt
+1. Define a small style type for your design-system shortcuts.
+2. Transform that type into CSSProperties.
+3. Start from Selectors or MinimalSelectors.
+4. Add product states with selector(...).
+5. Apply selectorPriority(...) in the order your components expect.
+6. Export the custom style function and use it everywhere in the system.
+```
+
+This keeps component code terse while keeping selector and priority behavior
+centralized.

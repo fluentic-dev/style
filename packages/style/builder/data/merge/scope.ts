@@ -1,5 +1,7 @@
-import { getAtomicClassName, getClassNameDedupe } from '../../../atomic/classname';
-import { RUNTIME_CONFIG } from '../../../config';
+import { getAtomicClassName, getClassNameDedupe } from '../../../atomic/className';
+import { CSS_CONFIG } from '../../../config/config/css';
+import { DEBUG_CONFIG } from '../../../config/config/debug';
+import { DEV_CONFIG } from '../../../config/config/dev';
 import { getStyleTokenId, isStyleTokenOverrideData, type StyleTokenOverride } from '../../../style/token';
 import { BUILDER_SLOT_ID, BUILDER_STATE, BUILDER_TYPE_SCOPE, BUILDER_TYPE_SLOT_OVERRIDE } from '../const';
 import type { BuilderCallsite, ScopeData, SlotOverrideData } from '../data';
@@ -108,14 +110,9 @@ export function mergeScopeData<Style>(
           scopeItem.parentSelector,
           scopeItem.atRule,
           scopeItem.callsite ?? callsite,
-          RUNTIME_CONFIG.classNamePrefix,
-          RUNTIME_CONFIG.localClassName,
-          RUNTIME_CONFIG.debugClassName,
-          RUNTIME_CONFIG.debugPropertyLength,
-          RUNTIME_CONFIG.debugValueLength,
-          RUNTIME_CONFIG.debugSelectorLength,
-          RUNTIME_CONFIG.debugParentSelectorLength,
-          RUNTIME_CONFIG.debugAtRuleLength,
+          DEV_CONFIG.isLocalClassNameEnabled,
+          DEBUG_CONFIG.isDebugClassNameEnabled,
+          CSS_CONFIG.classNameFormat ?? null,
         );
 
         scopeItem.dedupe = dedupe;
@@ -197,14 +194,9 @@ export function mergeScopeData<Style>(
         parentSelector,
         scopeItem.atRule,
         scopeItem.callsite,
-        RUNTIME_CONFIG.classNamePrefix,
-        RUNTIME_CONFIG.localClassName,
-        RUNTIME_CONFIG.debugClassName,
-        RUNTIME_CONFIG.debugPropertyLength,
-        RUNTIME_CONFIG.debugValueLength,
-        RUNTIME_CONFIG.debugSelectorLength,
-        RUNTIME_CONFIG.debugParentSelectorLength,
-        RUNTIME_CONFIG.debugAtRuleLength,
+        DEV_CONFIG.isLocalClassNameEnabled,
+        DEBUG_CONFIG.isDebugClassNameEnabled,
+        CSS_CONFIG.classNameFormat ?? null,
       );
 
       scopeItem.dedupe = dedupe;

@@ -1,11 +1,12 @@
-import { RUNTIME_CONFIG } from '../../config';
+import { CSS_CONFIG, CSS_CONFIG_DEFAULT } from '../../config/config/css';
+import { DEV_CONFIG } from '../../config/config/dev';
 import { globalData } from '../../utils/global';
 import type { SheetOptions, SheetRule, StyleSheet } from '../types';
 import { createDevLayerSheet } from './dev_layer';
 import { createDevSortSheet } from './dev_sort';
 import { pruneDevSourcemapTags } from './utils';
 
-type DevPriorityMode = typeof RUNTIME_CONFIG.priorityMode;
+type DevPriorityMode = typeof DEV_CONFIG.stylePriorityMode;
 
 type DevSheetState = {
   rebuild(): void;
@@ -21,9 +22,9 @@ export { createDevLayerSheet, getDevSourcemapTags, refreshDevSourcemapTags } fro
 export { createDevSortSheet } from './dev_sort';
 
 export function createDevSheet(options: SheetOptions = {}): StyleSheet {
-  let activeMode = RUNTIME_CONFIG.priorityMode;
+  let activeMode = DEV_CONFIG.stylePriorityMode;
   let active = createDevSheetForMode(activeMode, options);
-  let activeLayers: readonly string[] = RUNTIME_CONFIG.layers;
+  let activeLayers: readonly string[] = CSS_CONFIG.layers ?? CSS_CONFIG_DEFAULT.layers ?? [];
   const rules: Array<SheetRule | string> = [];
   const inserted = new Set<string>();
   const state: DevSheetState = {
@@ -55,13 +56,13 @@ export function createDevSheet(options: SheetOptions = {}): StyleSheet {
   };
 
   function ensureActiveMode() {
-    if (activeMode === RUNTIME_CONFIG.priorityMode) return;
+    if (activeMode === DEV_CONFIG.stylePriorityMode) return;
 
     rebuild();
   }
 
   function rebuild() {
-    activeMode = RUNTIME_CONFIG.priorityMode;
+    activeMode = DEV_CONFIG.stylePriorityMode;
     removeDevSheetTags(options.document);
     active = createDevSheetForMode(activeMode, options);
     active.updateLayers(activeLayers);

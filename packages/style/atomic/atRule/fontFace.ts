@@ -1,23 +1,37 @@
+import type { NamedAtRuleFormat, TokenNameFormat } from '../../config/types';
 import type { StyleTokenData } from '../../style/token';
 import type { CSS } from '../utils/types';
-import { type AtRuleCssOptions, buildAtRuleDeclarationCss } from './utils';
+import { buildAtRuleDeclarationCss, createAtRuleNameFormatter } from './utils';
 
 export type FontFaceObject = CSS.AtRule.FontFace;
 
+export const FONT_FACE_AT_RULE = 'font-face';
+
+export const formatFontFaceName = createAtRuleNameFormatter(
+  'font[-(name)]-$hash',
+);
+
 export function buildFontFaceCss(
-  name: string,
+  format: NamedAtRuleFormat | null,
+  name: string | null,
+  id: string,
   descriptors: FontFaceObject,
   tokens: StyleTokenData[],
   tokenLookup: Set<string>,
-  options?: AtRuleCssOptions,
+  tokenNameFormat: TokenNameFormat | null,
 ) {
-  const css = buildAtRuleDeclarationCss(
+  name = formatFontFaceName(format, id, { name });
+
+  let css = buildAtRuleDeclarationCss(
     descriptors,
     tokens,
     tokenLookup,
+    tokenNameFormat,
+    true,
     (property) => property !== 'fontFamily',
-    { ...options, rawValue: true },
   );
 
-  return `@font-face {font-family: ${name};${css}}`;
+  css = `@${FONT_FACE_AT_RULE} { font-family: ${name}; ${css} }`;
+
+  return { name, css };
 }

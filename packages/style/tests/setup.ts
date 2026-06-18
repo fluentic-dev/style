@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { getScopeParentClassName } from '../atomic/scope';
+import { getScopeClassName } from '../atomic/className';
 import { createScopeBuilder, createSlotBuilder, createStyleBuilder } from '../builder';
 import {
   BUILDER_SLOT_ID,
@@ -23,9 +23,10 @@ import {
   withTokens,
 } from '../builder/extract';
 import type { CompilerOptions } from '../compiler';
-import { configureRuntime, RUNTIME_CONFIG } from '../config';
-import { setBuildMeta } from '../config/build';
-import { setDevRuntimeOptions } from '../config/config';
+import { configureStyleRuntime, type ConfigureStyleRuntimeOptions } from '../config';
+import { CSS_CONFIG, CSS_CONFIG_DEFAULT } from '../config/config/css';
+import { DEV_CONFIG, DEV_CONFIG_DEFAULT, type DevRuntimeOptions, setDevRuntimeOptions } from '../config/config/dev';
+import { RUNTIME_CONFIG, RUNTIME_CONFIG_DEFAULT } from '../config/config/runtime';
 import {
   createCounterStyle,
   createFontFace,
@@ -33,15 +34,14 @@ import {
   createKeyframes,
   createPositionTry,
   createProperty,
-  createScrollTimeline,
-  createViewTimeline,
   fontSrc,
 } from '../css';
 import { traceDevSourcemaps } from '../dev/trace';
 import { enableStyleDevUtils } from '../dev/utils';
+import { plugin as viteStylePlugin } from '../plugin/bundler/vite';
+import { prependWebpackRuntimeEntry } from '../plugin/bundler/webpack/utils';
 import { injectDevCssLink } from '../plugin/nextjs/html';
 import { rewriteServerDevStyleImports, rewriteServerStyleImports } from '../plugin/nextjs/loader';
-import { getTurbopackRuntimeImportAliases } from '../plugin/nextjs/plugin';
 import {
   createPluginCompiler,
   createTransformFilter,
@@ -49,8 +49,6 @@ import {
   getServerRuntimeImportAliases,
 } from '../plugin/utils';
 import { normalizeSidecarRoutePath } from '../plugin/utils/sidecar/utils';
-import { plugin as viteStylePlugin } from '../plugin/vite';
-import { prependWebpackRuntimeEntry } from '../plugin/webpack/utils';
 import { createCombinedStylePool } from '../runtime/core/cache/pool';
 import { resolveStyleProp } from '../runtime/core/cache/prop';
 import { getCombinedStyleScopes } from '../runtime/core/combinedStyle';
@@ -64,6 +62,7 @@ import { getRscDevInitialStyleSelector, parseRscStylePayload } from '../runtime/
 import { clearRscStyleStore, getRscStyleCss } from '../runtime/rsc/styleStore';
 import { createThemeRule, getGlobalSheet, setGlobalSheet } from '../runtime/sheet';
 import { bindScope, type CombinedStyleFor, combineStyle, getToken } from '../runtime/style';
+import { assertEnumSelector } from '../selector/assert';
 import { selector } from '../selector/selector';
 import { createDevSheet, createProdSheet } from '../sheet';
 import { getRuleCallsite } from '../sheet/sourcemap';
@@ -71,13 +70,14 @@ import { createStyleFn, createTheme, createToken, createTokens } from '../style'
 import { traceCallsite } from '../utils/trace';
 
 export {
+  assertEnumSelector as assertEnum,
   bindScope,
   BUILDER_SLOT_ID,
   BUILDER_STATE,
   BUILDER_TYPE_SCOPE,
   clearRscStyleStore,
   combineStyle,
-  configureRuntime,
+  configureStyleRuntime,
   createCombinedStylePool,
   createCounterStyle,
   createDevSheet,
@@ -94,7 +94,6 @@ export {
   createProperty,
   createRscStylePayload,
   createScopeBuilder,
-  createScrollTimeline,
   createSlotBuilder,
   createStyleBuilder,
   createStyleFn,
@@ -103,7 +102,8 @@ export {
   createToken,
   createTokens,
   createTransformFilter,
-  createViewTimeline,
+  CSS_CONFIG,
+  DEV_CONFIG,
   ELEMENT_CSS_DATA_ATTR,
   enableStyleDevUtils,
   fileURLToPath,
@@ -120,7 +120,6 @@ export {
   getServerRuntimeImportAliases,
   getSheetRules,
   getToken,
-  getTurbopackRuntimeImportAliases,
   injectDevCssLink,
   isSlotOverrideData,
   ITEM_VALUE_NUMBER_PX,
@@ -149,14 +148,78 @@ export type { BuilderData, DebugData, StyleData };
 export const tests: [name: string, fn: () => void | Promise<void>][] = [];
 export const testDir = fileURLToPath(new URL('.', import.meta.url));
 
+type TestBuildMeta = {
+  dev: boolean;
+  extract: boolean;
+  hoist: boolean;
+  rsc: boolean;
+  layer?: boolean;
+  priorityMode?: NonNullable<CompilerOptions['dev']>['priorityMode'];
+  sourcemapTrace?: NonNullable<CompilerOptions['dev']>['sourcemapMode'];
+  checkSelector?: boolean | 'force';
+  css: TestCompilerCssOptions | null;
+};
+
+type TestCompilerCssOptions =
+  | Partial<typeof CSS_CONFIG> & {
+    classNamePrefix?: string;
+    debugClassName?: boolean;
+    debugElementClassName?: boolean;
+    debugElementClassNamePrefix?: string;
+    localClassName?: boolean;
+    scopeTargetPrefix?: string;
+    themeNamePrefix?: string;
+  }
+  | null;
+
+function setBuildMeta(config: TestBuildMeta | null) {
+  const css = config?.css as
+    | (TestBuildMeta['css'] & {
+      debugElementClassName?: boolean;
+      debugElementClassNamePrefix?: string;
+    })
+    | null
+    | undefined;
+
+  RUNTIME_CONFIG.isPlugin = Boolean(config);
+  DEV_CONFIG.isDev = config?.dev ?? false;
+  DEV_CONFIG.isCheckSelectorEnabled = DEV_CONFIG.isDev && config?.checkSelector !== 'force';
+  DEV_CONFIG.isElementClassNameEnabled = css?.debugElementClassName ?? DEV_CONFIG.isElementClassNameEnabled;
+
+  if (config?.css) {
+    Object.assign(CSS_CONFIG, config.css);
+  }
+
+  RUNTIME_CONFIG.isExtracted = config?.extract ?? false;
+  RUNTIME_CONFIG.isHoist = config?.hoist ?? false;
+  RUNTIME_CONFIG.isRSC = config?.rsc ?? false;
+}
+
+function getScopeParentClassName(className: string) {
+  return getScopeClassName(className, CSS_CONFIG.scopeClassNameFormat || null);
+}
+
 type TestCompilerTransformResult = {
   code: string;
   map: string | null;
   css: string[];
 };
 
-type DebugTransformOptions = CompilerOptions & {
+type TestCompilerOptions = CompilerOptions & {
+  checkSelector?: NonNullable<CompilerOptions['dev']>['checkSelector'];
+  css?: TestCompilerCssOptions;
+  debugElementClassName?: boolean;
+  layer?: NonNullable<CompilerOptions['css']>['layer'];
+  priorityMode?: NonNullable<CompilerOptions['dev']>['priorityMode'];
+  sourcemapTrace?: NonNullable<CompilerOptions['dev']>['sourcemapMode'];
+};
+
+type DebugTransformOptions = TestCompilerOptions & {
   rootDir?: string;
+};
+
+type TestRuntimeOptions = ConfigureStyleRuntimeOptions & DevRuntimeOptions & {
+  dev?: boolean;
 };
 
 export const selectors = {
@@ -195,6 +258,26 @@ function assertCombineStyleTypes() {
 }
 
 void assertCombineStyleTypes;
+
+export function configureTestRuntime(options: TestRuntimeOptions = {}) {
+  const { dev, priorityMode, sourcemapMode, elementClassName, checkSelector, ...runtimeOptions } = options;
+
+  resetTestConfig(CSS_CONFIG, CSS_CONFIG_DEFAULT);
+  resetTestConfig(DEV_CONFIG, DEV_CONFIG_DEFAULT);
+  resetTestConfig(RUNTIME_CONFIG, RUNTIME_CONFIG_DEFAULT);
+  configureStyleRuntime(runtimeOptions);
+
+  setDevRuntimeOptions({ priorityMode, sourcemapMode, elementClassName, checkSelector });
+  if (typeof dev === 'boolean') DEV_CONFIG.isDev = dev;
+}
+
+function resetTestConfig<T extends object>(target: T, defaults: T) {
+  for (const key of Object.keys(target)) {
+    delete (target as Record<string, unknown>)[key];
+  }
+
+  Object.assign(target, defaults);
+}
 
 export const theme = style.scope([
   styles.container({
@@ -299,12 +382,43 @@ export function getCssClassNames(rules: string[]) {
     .filter((className) => typeof className === 'string');
 }
 
-export function createCompiler(options: CompilerOptions = {}) {
+function normalizeTestCompilerOptions(options: TestCompilerOptions): CompilerOptions {
+  const {
+    checkSelector,
+    debugElementClassName,
+    layer,
+    priorityMode,
+    sourcemapTrace,
+    ...next
+  } = options;
+  const css = options.css as
+    | (NonNullable<CompilerOptions['css']> & {
+      debugElementClassName?: boolean;
+    })
+    | undefined;
+
+  return {
+    ...next,
+    css: {
+      ...css,
+      layer: css?.layer ?? layer,
+    },
+    dev: {
+      ...options.dev,
+      checkSelector: options.dev?.checkSelector ?? checkSelector,
+      elementClassName: options.dev?.elementClassName ?? css?.debugElementClassName ?? debugElementClassName,
+      priorityMode: options.dev?.priorityMode ?? priorityMode,
+      sourcemapMode: options.dev?.sourcemapMode ?? sourcemapTrace,
+    },
+  };
+}
+
+export function createCompiler(options: TestCompilerOptions = {}) {
   const compiler = createPluginCompiler({
     dev: false,
     projectDir: testDir,
     cacheDir: testDir + '.test-cache',
-    options,
+    options: normalizeTestCompilerOptions(options),
   });
 
   return {
@@ -333,13 +447,14 @@ export function injectStyleDebugData(
 ) {
   const { rootDir, getSourcemapFilePath, ...compilerOptions } = options;
   const projectDir = rootDir ?? '/';
+  const normalizedOptions = normalizeTestCompilerOptions(compilerOptions);
 
   const compiler = createPluginCompiler({
     dev: true,
     projectDir,
     cacheDir: testDir + '.test-cache',
     options: {
-      ...compilerOptions,
+      ...normalizedOptions,
       getSourcemapFilePath(info) {
         if (getSourcemapFilePath) {
           return getSourcemapFilePath(info);

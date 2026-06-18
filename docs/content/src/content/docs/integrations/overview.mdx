@@ -10,41 +10,19 @@ and compiler integrations.
 | --- | --- |
 | `@fluentic/style/plugin/nextjs` | Next.js App Router integration |
 | `@fluentic/style/plugin/vite` | Vite plugin |
-| `@fluentic/style/plugin/rollup` | Rollup plugin |
 | `@fluentic/style/plugin/webpack` | Webpack plugin |
 | `@fluentic/style/plugin/rspack` | Rspack plugin |
-| `@fluentic/style/plugin/rolldown` | Rolldown plugin |
-| `@fluentic/style/plugin/esbuild` | esbuild plugin |
-| `@fluentic/style/babel` | Babel plugin factory |
-| `@fluentic/style/compiler` | Low-level compiler API |
+| `@fluentic/style/plugin/farm` | Farm plugin |
 
-Most bundler adapters are built from the same unplugin implementation. Next.js
-uses a dedicated adapter for App Router, RSC development CSS, production
-extraction, and static export.
-
-## Virtual module
-
-The default entry import is:
-
-```ts
-import 'virtual:fluentic-style';
-```
-
-Vite, Rollup, and Rolldown import the paired CSS virtual module automatically
-from the runtime virtual module. Other bundlers may need an explicit CSS import
-or adapter-specific CSS handling.
-
-You can customize those IDs with `runtimeModuleId` and `cssModuleId`.
+Bundler adapters are intended for final app builds. Component libraries should
+ship Fluentic source and let the consuming app plugin transform the package.
 
 ## Plugin options
 
 ```ts
 stylePlugin({
-  extract: true,
   include: /\.[jt]sx?$/,
   exclude: /node_modules/,
-  runtimeModuleId: 'virtual:fluentic-style',
-  cssModuleId: 'virtual:fluentic-style.css',
 });
 ```
 

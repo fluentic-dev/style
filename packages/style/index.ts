@@ -1,5 +1,4 @@
 export * from './config';
-export * from './selector';
 export * from './style';
 export { type } from './utils/type';
 
@@ -33,5 +32,5 @@ export type {
   CSSValueExclude,
 } from './atomic/utils/types';
 
-export { createElement } from './jsx/jsx-runtime';
+export { createElement } from './jsx/jsx_runtime';
 export * from './jsx/types';

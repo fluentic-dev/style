@@ -1,7 +1,7 @@
-import type { types } from '@babel/core';
+import type { BabelTypes } from '../utils/babel';
 import { FN_STYLE_VALUE } from '../../utils/constants';
 
-export function isStaticStyleValue(value: types.Node): boolean {
+export function isStaticStyleValue(value: BabelTypes.Node): boolean {
   if (
     value.type === 'StringLiteral' ||
     value.type === 'NumericLiteral' ||

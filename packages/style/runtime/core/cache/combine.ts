@@ -2,7 +2,7 @@ import { BUILDER_STATE } from '../../../builder/data/const';
 import type { ScopeTargetData } from '../../../builder/data/data';
 import { getScopeTargetScope, isScopeTargetData } from '../../../builder/data/is';
 import { getExtractedTokenBoundData, isExtractedTokenBoundData } from '../../../builder/extract/withTokens';
-import { RUNTIME_CONFIG } from '../../../config';
+import { RUNTIME_CONFIG } from '../../../config/config/runtime';
 import type { Falsy, StyleItem } from '../../types';
 import { type CombinedStyle, getCombinedStyleScopes, getCombinedStyleStyles, isCombinedStyle } from '../combinedStyle';
 import { createCombinedStyleTokenWrapper, getStyleTokenValues } from './item';
@@ -77,9 +77,11 @@ function collectStyleArg<T extends object>(
     return;
   }
 
-  if (RUNTIME_CONFIG.isHoistEnabled && isExtractedTokenBoundData(arg)) {
+  if (RUNTIME_CONFIG.isHoist && isExtractedTokenBoundData(arg)) {
     const bound = getExtractedTokenBoundData(arg);
+
     result.tokens = mergeTokenOverrides(result.tokens, bound.tokens);
+
     collectStyleArg(styles, bound.data as CombinedStyleArg<T>, result);
     return;
   }

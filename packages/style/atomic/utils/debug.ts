@@ -1,6 +1,18 @@
+import { sanitizeCssIdentName } from './css';
+
 export function normalizeDebugKeywordValue(value: string) {
   const normalized = value.trim().toLowerCase();
   return /^[a-z][a-z0-9-]*$/.test(normalized) ? normalized : null;
+}
+
+export function sanitizeDebugName(value: string | undefined) {
+  if (!value) return '';
+
+  const normalized = value
+    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
+    .toLowerCase();
+
+  return sanitizeCssIdentName(normalized, '');
 }
 
 export function normalizePropertyName(property: string) {

@@ -1,7 +1,7 @@
 import {
   clearRscStyleStore,
   combineStyle,
-  configureRuntime,
+  configureTestRuntime,
   createCompiler,
   createExtractedSlot,
   createTheme,
@@ -33,10 +33,14 @@ test('invariant: runtime token identity uses stable ids for nested tokens and al
     },
   }, 'invariant-tokens');
 
-  equal(getToken(base), 'var(--token-invariant-base, blue)');
-  equal(getToken(alias), 'var(--token-invariant-alias, var(--token-invariant-base, blue))');
-  equal(getToken(tokens.color.text), 'var(--token-invariant-tokens--color--text, black)');
-  equal(getToken(tokens.color.surface), 'var(--token-invariant-tokens--color--surface, white)');
+  includes(String(getToken(base)), 'var(--token-invariant-base-');
+  includes(String(getToken(base)), ', blue)');
+  includes(String(getToken(alias)), 'var(--token-invariant-alias-');
+  includes(String(getToken(alias)), 'var(--token-invariant-base-');
+  includes(String(getToken(tokens.color.text)), 'var(--token-invariant-tokens--color--text-');
+  includes(String(getToken(tokens.color.text)), ', black)');
+  includes(String(getToken(tokens.color.surface)), 'var(--token-invariant-tokens--color--surface-');
+  includes(String(getToken(tokens.color.surface)), ', white)');
 });
 
 test('invariant: extracted theme and style modules share imported token ids', () => {
@@ -51,12 +55,12 @@ test('invariant: extracted theme and style modules share imported token ids', ()
   if (!stylesResult) throw new Error('expected styles compiler transform result');
 
   const css = stylesResult.css.join('\n');
-  const themeTextVar = css.match(/(--token-[^:;{]+--color--text):#0f172a/)?.[1];
-  const themeSurfaceVar = css.match(/(--token-[^:;{]+--color--surface):var\(--token-/)?.[1];
-  const themeSpaceVar = css.match(/(--token-[^:;{]+--space--panel):32/)?.[1];
-  const styleTextVar = css.match(/color: var\(--token-[^,]+, var\((--token-[^,)]+)/)?.[1];
-  const styleSurfaceVar = css.match(/background-color: var\(--token-[^,]+, var\((--token-[^,)]+)/)?.[1];
-  const styleSpaceVar = css.match(/padding: var\(--token-[^,]+, var\((--token-[^,)]+)/)?.[1];
+  const themeTextVar = css.match(/(--token-[^:;{]+--color--text[^:;{]*):#0f172a/)?.[1];
+  const themeSurfaceVar = css.match(/(--token-[^:;{]+--color--surface[^:;{]*):var\(--token-/)?.[1];
+  const themeSpaceVar = css.match(/(--token-[^:;{]+--space--panel[^:;{]*):32/)?.[1];
+  const styleTextVar = css.match(/color: var\(--var-[^,]+, var\((--token-[^,)]+)/)?.[1];
+  const styleSurfaceVar = css.match(/background-color: var\(--var-[^,]+, var\((--token-[^,)]+)/)?.[1];
+  const styleSpaceVar = css.match(/padding: var\(--var-[^,]+, var\((--token-[^,)]+)/)?.[1];
 
   equal(styleTextVar, themeTextVar);
   equal(styleSurfaceVar, themeSurfaceVar);
@@ -82,8 +86,13 @@ test('invariant: theme override class stays overridable by local dynamic token v
   if (!result.style) throw new Error('expected local token variable style');
 
   includes(result.className, theme.className);
-  includes(rule, '--token-invariant-theme-local:red');
-  equal((result.style as Record<string, unknown>)['--token-invariant-theme-local'], 'green');
+  includes(rule, '--token-invariant-theme-local-');
+  includes(rule, ':red');
+  const varName = Object.keys(result.style as Record<string, unknown>).find((key) =>
+    key.startsWith('--token-invariant-theme-local-')
+  );
+  if (!varName) throw new Error('expected invariant local theme token variable');
+  equal((result.style as Record<string, unknown>)[varName], 'green');
 });
 
 test('invariant: extracted dynamic variables preserve token fallback chain', () => {
@@ -98,9 +107,9 @@ test('invariant: extracted dynamic variables preserve token fallback chain', () 
   const result = resolveStyleProp(css as any);
 
   equal(result.className, 'invariant-class');
-  equal(
-    (result.style as Record<string, unknown>)['--invariant-local'],
-    'var(--token-invariant-extracted-token, blue)',
+  includes(
+    String((result.style as Record<string, unknown>)['--invariant-local']),
+    'var(--token-invariant-extracted-token-',
   );
 });
 
@@ -132,7 +141,7 @@ test('invariant: rsc style prop serialization removes functions and emits dev pa
     equal(typeof manual[ELEMENT_CSS_DATA_ATTR], 'string');
   } finally {
     setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
-    configureRuntime({ dev: false });
+    configureTestRuntime({ dev: false });
     clearRscStyleStore();
   }
 });

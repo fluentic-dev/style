@@ -1,36 +1,29 @@
-import { LayerPlaceholder } from '../../atomic/layer';
-import type { BuildCssConfig, CheckSelectorMode, PriorityMode, SourcemapTraceMode } from '../../config';
-import type { StyleFn } from '../../style';
+import type { CssConfig } from '../../config/config/css';
+import type { DevRuntimeOptions } from '../../config/config/dev';
+import type { CheckSelectorMode } from '../../config/types';
+import type { ReplaceProps } from '../../utils/type';
 import type { CssExtractRule } from '../extract';
 import type { BabelTransformSourceMap } from '../transform/utils/babel';
 import type { ImportSource } from '../utils/import_source';
 import type { GetSourcemapFilePathFn } from '../utils/sourcemap';
 
-export const CompilerConstants = {
-  LayerPlaceholder,
-};
+export type CompilerCssOptions = Partial<CssConfig>;
 
-export const Constants = CompilerConstants;
+export type CompilerDevOptions = ReplaceProps<DevRuntimeOptions, {
+  checkSelector?: CheckSelectorMode;
+}>;
 
-export type CompilerCssOptions = BuildCssConfig;
-
-export type DevSourcemapMode = 'sourceUrl' | 'sidecarServer' | 'sourceContent';
+export type DevSourcemapMode = 'sourceUrl' | 'sourceContent' | 'sidecarServer';
 
 export type CompilerOptions = {
-  styleFn?: StyleFn;
-  css?: CompilerCssOptions;
-  debugElementClassName?: boolean;
-  debugElementClassNamePrefix?: string;
-  layer?: boolean;
-  priorityMode?: PriorityMode;
   hoist?: boolean;
+  css?: CompilerCssOptions;
+  dev?: CompilerDevOptions;
 
   importSources?: ImportSource[];
 
   getSourcemapFilePath?: GetSourcemapFilePathFn;
   devSourcemap?: DevSourcemapMode;
-  sourcemapTrace?: SourcemapTraceMode;
-  checkSelector?: CheckSelectorMode;
 };
 
 export type TransformDebugArgs = {

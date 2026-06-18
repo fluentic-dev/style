@@ -157,6 +157,6 @@ The runtime virtual module tells Fluentic Style whether the build is handled by
 the plugin and whether CSS was extracted.
 
 Other bundler adapters follow the same idea: configure the adapter, keep the JSX
-runtime, and import the virtual runtime module once. Some adapters need explicit
-CSS handling. See [Integrations](../../integrations/overview/) for Vite, Rollup,
-Rolldown, Rspack, Webpack, esbuild, and Babel.
+runtime, and let the app bundler own final CSS output. See
+[Integrations](../../integrations/overview/) for Vite, Rspack, Webpack, Farm,
+and Next.js.

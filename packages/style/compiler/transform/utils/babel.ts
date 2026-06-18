@@ -1,4 +1,7 @@
-import * as babel from '@babel/core';
+import * as BabelCore from '@babel/core';
+
+export { BabelCore };
+export type { NodePath, types as BabelTypes } from '@babel/core';
 
 export type BabelTransformArgs = {
   code: string;
@@ -15,18 +18,18 @@ export type BabelTransformResult = {
 };
 
 export type BabelTransformPlugins = NonNullable<
-  babel.TransformOptions['plugins']
+  BabelCore.TransformOptions['plugins']
 >;
 
-export type BabelTransformInputSourceMap = NonNullable<babel.TransformOptions['inputSourceMap']>;
+export type BabelTransformInputSourceMap = NonNullable<BabelCore.TransformOptions['inputSourceMap']>;
 
 export type BabelTransformSourceMap =
   | BabelTransformInputSourceMap
   | string
   | null;
 
-export function babelPlugin<State extends babel.PluginPass>(
-  factory: (api: typeof babel) => babel.PluginObj<State>,
+export function babelPlugin<State extends BabelCore.PluginPass>(
+  factory: (api: typeof BabelCore) => BabelCore.PluginObj<State>,
 ) {
   return factory;
 }
@@ -37,7 +40,7 @@ export function babelTransform(args: BabelTransformArgs): BabelTransformResult |
   try {
     const inputSourceMap = parseInputSourceMap(args.sourcemap);
 
-    result = babel.transformSync(args.code, {
+    result = BabelCore.transformSync(args.code, {
       ...babelTransformOptions(),
       inputSourceMap,
       filename: args.filePath,
@@ -65,7 +68,7 @@ export function babelTransform(args: BabelTransformArgs): BabelTransformResult |
   };
 }
 
-export function babelTransformOptions(): babel.TransformOptions {
+export function babelTransformOptions(): BabelCore.TransformOptions {
   return {
     configFile: false,
     babelrc: false,

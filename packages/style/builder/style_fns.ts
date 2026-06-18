@@ -1,4 +1,4 @@
-import { RUNTIME_CONFIG } from '../config';
+import { DEV_CONFIG } from '../config/config/dev';
 import type { Selector } from '../selector';
 import type { StyleTransform } from '../style';
 import type { StyleObject } from '../style/types';
@@ -158,6 +158,7 @@ function createAtRuleFn<Data extends BuilderData>(
 ) {
   const isMedia = fnSelector.selector.startsWith(SELECTOR_MEDIA) ||
     fnSelector.selector.startsWith(SELECTOR_CONTAINER);
+  const hasArg = fnSelector.selector.includes(SELECTOR_ARGS);
 
   const [before, after] = fnSelector.selector.split(SELECTOR_ARGS);
 
@@ -168,25 +169,38 @@ function createAtRuleFn<Data extends BuilderData>(
   ];
 
   type PriorityParams = [priority: number, ...Params];
+  type SelfParams = [style: AtRuleStyleData, debug?: DebugData];
+  type PrioritySelfParams = [priority: number, ...SelfParams];
 
   return function(
     this: Data,
-    ...params: Params | PriorityParams
+    ...params: Params | PriorityParams | SelfParams | PrioritySelfParams
   ) {
     let arg: Params[0];
     let style: Params[1];
     let debug: Params[2];
     let priority: number | null = null;
 
-    if (isMedia && typeof params[0] === 'number') {
-      priority = (params as PriorityParams)[0];
-      arg = (params as PriorityParams)[1];
-      style = (params as PriorityParams)[2];
-      debug = (params as PriorityParams)[3];
+    if (hasArg) {
+      if (isMedia && typeof params[0] === 'number') {
+        priority = (params as PriorityParams)[0];
+        arg = (params as PriorityParams)[1];
+        style = (params as PriorityParams)[2];
+        debug = (params as PriorityParams)[3];
+      } else {
+        arg = (params as Params)[0];
+        style = (params as Params)[1];
+        debug = (params as Params)[2];
+      }
+    } else if (isMedia && typeof params[0] === 'number') {
+      priority = (params as PrioritySelfParams)[0];
+      arg = fnSelector.selector;
+      style = (params as PrioritySelfParams)[1];
+      debug = (params as PrioritySelfParams)[2];
     } else {
-      arg = (params as Params)[0];
-      style = (params as Params)[1];
-      debug = (params as Params)[2];
+      arg = fnSelector.selector;
+      style = (params as SelfParams)[0];
+      debug = (params as SelfParams)[1];
     }
 
     const callsite = resolveCallsite(debug);
@@ -200,11 +214,13 @@ function createAtRuleFn<Data extends BuilderData>(
     for (let i = 0, len = args.length; i < len; i++) {
       selector = args[i];
 
-      if (RUNTIME_CONFIG.isCheckSelectorEnabled) {
+      if (hasArg && DEV_CONFIG.isCheckSelectorEnabled) {
         checkSelector(fnPrefix, fnName, fnSelector, selector);
       }
 
-      selector = before + normalizeSelectorArg(selector) + after;
+      selector = hasArg
+        ? before + normalizeSelectorArg(selector) + after
+        : selector;
 
       for (let j = 0, len = items.length; j < len; j++) {
         const item = items[j];
@@ -251,7 +267,7 @@ function createArgsFn<Data extends BuilderData>(
     for (let i = 0, len = args.length; i < len; i++) {
       selector = args[i];
 
-      if (RUNTIME_CONFIG.isCheckSelectorEnabled) {
+      if (DEV_CONFIG.isCheckSelectorEnabled) {
         checkSelector(fnPrefix, fnName, fnSelector, selector);
       }
 
@@ -291,7 +307,7 @@ function createArgFn<Data extends BuilderData>(
   ) {
     const callsite = resolveCallsite(debug);
 
-    if (RUNTIME_CONFIG.isCheckSelectorEnabled) {
+    if (DEV_CONFIG.isCheckSelectorEnabled) {
       checkSelector(fnPrefix, fnName, fnSelector, arg);
     }
 
@@ -399,6 +415,7 @@ function createScopeAtRuleFn<Style>(
 ) {
   const isMedia = fnSelector.selector.startsWith(SELECTOR_MEDIA) ||
     fnSelector.selector.startsWith(SELECTOR_CONTAINER);
+  const hasArg = fnSelector.selector.includes(SELECTOR_ARGS);
 
   const [before, after] = fnSelector.selector.split(SELECTOR_ARGS);
 
@@ -409,25 +426,38 @@ function createScopeAtRuleFn<Style>(
   ];
 
   type PriorityParams = [priority: number, ...Params];
+  type SelfParams = [data: ScopeItems<Style>, debug?: DebugData];
+  type PrioritySelfParams = [priority: number, ...SelfParams];
 
   return function(
     this: ScopeData<Style>,
-    ...params: Params | PriorityParams
+    ...params: Params | PriorityParams | SelfParams | PrioritySelfParams
   ) {
     let arg: Params[0];
     let data: Params[1];
     let debug: Params[2];
     let priority: number | null = null;
 
-    if (isMedia && typeof params[0] === 'number') {
-      priority = (params as PriorityParams)[0];
-      arg = (params as PriorityParams)[1];
-      data = (params as PriorityParams)[2];
-      debug = (params as PriorityParams)[3];
+    if (hasArg) {
+      if (isMedia && typeof params[0] === 'number') {
+        priority = (params as PriorityParams)[0];
+        arg = (params as PriorityParams)[1];
+        data = (params as PriorityParams)[2];
+        debug = (params as PriorityParams)[3];
+      } else {
+        arg = (params as Params)[0];
+        data = (params as Params)[1];
+        debug = (params as Params)[2];
+      }
+    } else if (isMedia && typeof params[0] === 'number') {
+      priority = (params as PrioritySelfParams)[0];
+      arg = fnSelector.selector;
+      data = (params as PrioritySelfParams)[1];
+      debug = (params as PrioritySelfParams)[2];
     } else {
-      arg = (params as Params)[0];
-      data = (params as Params)[1];
-      debug = (params as Params)[2];
+      arg = fnSelector.selector;
+      data = (params as SelfParams)[0];
+      debug = (params as SelfParams)[1];
     }
 
     const args = Array.isArray(arg) ? arg : [arg];
@@ -439,11 +469,13 @@ function createScopeAtRuleFn<Style>(
     for (let i = 0, len = args.length; i < len; i++) {
       selector = args[i];
 
-      if (RUNTIME_CONFIG.isCheckSelectorEnabled) {
+      if (hasArg && DEV_CONFIG.isCheckSelectorEnabled) {
         checkSelector(fnPrefix, fnName, fnSelector, selector);
       }
 
-      selector = before + normalizeSelectorArg(selector) + after;
+      selector = hasArg
+        ? before + normalizeSelectorArg(selector) + after
+        : selector;
 
       result = mergeScopeItems(
         result,
@@ -484,7 +516,7 @@ function createScopeArgsFn<Style>(
     for (let i = 0, len = args.length; i < len; i++) {
       selector = args[i];
 
-      if (RUNTIME_CONFIG.isCheckSelectorEnabled) {
+      if (DEV_CONFIG.isCheckSelectorEnabled) {
         checkSelector(fnPrefix, fnName, fnSelector, selector);
       }
 
@@ -522,7 +554,7 @@ function createScopeArgFn<Style>(
   ) {
     const callsite = resolveCallsite(debug);
 
-    if (RUNTIME_CONFIG.isCheckSelectorEnabled) {
+    if (DEV_CONFIG.isCheckSelectorEnabled) {
       checkSelector(fnPrefix, fnName, fnSelector, arg);
     }
 

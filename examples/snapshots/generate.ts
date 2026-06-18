@@ -1,5 +1,6 @@
-import type { StyleFn } from '@fluentic/style';
-import { type CompilerCssOptions, type CompilerOptions, Constants, createCompiler } from '@fluentic/style/compiler';
+import { LayerPlaceholder } from '../../packages/style/config';
+import { type CompilerCssOptions, type CompilerOptions, createCompiler } from '../../packages/style/compiler';
+import type { ImportSource } from '../../packages/style/compiler/utils/import_source';
 import { constants } from 'node:fs';
 import { access, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
@@ -13,7 +14,7 @@ const snapshotsDir = path.join(__dirname, 'data');
 const requestedId = process.argv[2];
 
 const cssOptions: CompilerCssOptions = {
-  layers: ['reset', Constants.LayerPlaceholder, 'override'],
+  layers: ['reset', LayerPlaceholder, 'override'],
 };
 
 const generatedJsHeader = '/* eslint-disable */\n';
@@ -46,12 +47,18 @@ function getPaths(itemId: string) {
   };
 }
 
-async function getSnapshotStyleFn(snapshotDir: string): Promise<StyleFn | null> {
+async function getSnapshotImportSources(snapshotDir: string): Promise<ImportSource[] | null> {
   const stylePath = path.join(snapshotDir, 'style.ts');
   try {
     await access(stylePath, constants.F_OK);
     const mod = await import(pathToFileURL(stylePath).href);
-    return mod.style ?? null;
+    if (Array.isArray(mod.snapshotImportSources)) {
+      return mod.snapshotImportSources;
+    }
+    if (mod.style) {
+      return [{ source: './style', name: 'style', styleFn: mod.style }];
+    }
+    return null;
   } catch {
     return null;
   }
@@ -68,7 +75,7 @@ async function runForId(itemId: string) {
     return;
   }
 
-  const styleFn = await getSnapshotStyleFn(snapshotDir);
+  const importSources = await getSnapshotImportSources(snapshotDir);
 
   let compilerOptions: CompilerOptions = {
     layer: true,
@@ -79,12 +86,11 @@ async function runForId(itemId: string) {
     css: { ...cssOptions, debugClassName: true },
   };
 
-  if (styleFn) {
+  if (importSources) {
     compilerOptions = {
       layer: true,
       css: { ...cssOptions },
-      styleFn,
-      importSources: [{ source: './style', name: 'style' }],
+      importSources,
     };
     debugCompilerOptions = {
       ...compilerOptions,
@@ -126,7 +132,7 @@ async function runForId(itemId: string) {
   await writeFile(cssPath, snapshotCompiler.getExtractedCss(), 'utf8');
   await writeFile(cssDebugPath, snapshotDebugCompiler.getExtractedCss(), 'utf8');
 
-  console.log(`Generated snapshot ${itemId}${styleFn ? ' (with transform)' : ''}`);
+  console.log(`Generated snapshot ${itemId}${importSources ? ' (with custom import sources)' : ''}`);
   console.log(`- source.tsx:          ${sourcePath}`);
   console.log(`- compiled.js:         ${compiledPath}`);
   console.log(`- compiled.debug.js:   ${compiledDebugPath}`);

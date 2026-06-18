@@ -1,5 +1,4 @@
-import type { NodePath, types as BabelTypes } from '@babel/core';
-import { STYLE_EXTRACT_RUNTIME_IMPORT_PATH, STYLE_IMPORT_PATH } from '../../../../utils/imports';
+import type { BabelTypes, NodePath } from '../../utils/babel';
 import {
   FN_BIND_SCOPE,
   FN_COMBINE_SCOPE,
@@ -8,6 +7,8 @@ import {
   FN_GET_CLASS_NAME,
   FN_GET_TOKEN,
   IMPORT_PATHS,
+  STYLE_EXTRACT_RUNTIME_IMPORT_PATH,
+  STYLE_IMPORT_PATH,
 } from '../../../utils/constants';
 import { getImportedName } from '../../syntax';
 import type { ExtractPluginState } from './state';

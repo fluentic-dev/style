@@ -1,0 +1,547 @@
+---
+title: Advanced Selectors
+description: Build type-safe selector methods with placeholders, validation, presets, and priority.
+---
+
+Selectors are how Fluentic turns a selector map into chainable style methods.
+They are useful for design systems because authors call typed methods instead
+of writing selector strings throughout component code.
+
+```ts
+button.hover({ opacity: 0.9 });
+button.active({ opacity: 0.75 });
+button.media('(max-width: 700px)', { padding: 8 });
+```
+
+The default `style` builder is not special syntax. It is a style function
+created from a predefined selector map. Methods like `.hover(...)`,
+`.active(...)`, `.media(...)`, `.not(...)`, and `.select(...)` exist because
+the default builder was given selectors with those names.
+
+You can create the same kind of builder with your own selector set. This is the
+recommended path for utilities and design systems: define the selectors once,
+give them names that match your conventions, and let TypeScript expose those
+names as chain methods everywhere.
+
+## Selector Definitions
+
+Use `selector(...)` to define a method.
+
+```ts
+import { selector } from '@fluentic/style/selector';
+
+const selectors = {
+  hover: selector(':hover'),
+  pressed: selector('[aria-pressed="true"]'),
+  media: selector('@media $$', 'media'),
+};
+```
+
+The selector string describes how the generated class selector is modified. The
+optional assert type validates arguments for selector methods that accept input.
+
+The object key becomes the chain method name:
+
+```ts
+const selectors = {
+  raised: selector('[data-elevation="raised"]'),
+};
+
+const card = style().raised({
+  boxShadow: '0 8px 24px rgb(0 0 0 / 0.16)',
+});
+```
+
+That is the same mechanism used by the default builder.
+
+## Placeholders
+
+Fluentic supports three selector templates.
+
+```txt
+$    one argument
+$$   one argument, or an array that expands into multiple rules
+...  merge another style data object
+```
+
+Use `$` when a method accepts one value:
+
+```ts
+const selectors = {
+  nthChild: selector(':nth-child($)', 'value'),
+};
+
+const item = style().nthChild('2n + 1', {
+  backgroundColor: 'Canvas',
+});
+```
+
+The `$` placeholder receives exactly one argument and inserts it into the
+selector template.
+
+Use `$$` when a method can accept one value or many values. An array means
+"write this once for each item." It is not an AND condition.
+
+```ts
+const selectors = {
+  media: selector('@media $$', 'media'),
+};
+
+const panel = style().media(
+  ['(max-width: 700px)', '(prefers-reduced-motion: reduce)'],
+  { transition: 'none' },
+);
+```
+
+That is equivalent to:
+
+```ts
+const panel = style()
+  .media('(max-width: 700px)', { transition: 'none' })
+  .media('(prefers-reduced-motion: reduce)', { transition: 'none' });
+```
+
+The same expansion applies to pseudo selector helpers:
+
+```ts
+const item = style().is(['.selected', '.highlighted'], {
+  fontWeight: 700,
+});
+```
+
+That is equivalent to:
+
+```ts
+const item = style()
+  .is('.selected', { fontWeight: 700 })
+  .is('.highlighted', { fontWeight: 700 });
+```
+
+Use `$$` arrays for "or, write multiple rules" behavior. This is useful for
+media, container, supports, and pseudo selectors like `:is(...)`, `:where(...)`,
+and `:not(...)`.
+
+Use `...` for a typed chain merge method:
+
+```ts
+const selectors = {
+  merge: selector('...'),
+};
+
+const interactive = style().hover({ opacity: 0.9 });
+const button = style({ border: 0 }).merge(interactive);
+```
+
+`...` does not create a CSS selector. It creates a chain method that merges
+existing style data into the current builder. The method name is user-land:
+`merge`, `mix`, `use`, or any other key works the same way when its selector is
+`selector('...')`.
+
+Separately, every full style function has a fixed static `style.merge(...)`
+helper, like `style.keyframes(...)`. It does not depend on selector names:
+
+```ts
+const button = style.merge(
+  style.slot({ color: 'black' }),
+  sx({ row: true }),
+  ui().pressed({ opacity: 0.8 }),
+);
+```
+
+The first argument is the target. Every later argument is a complete style chain
+result. Each merged chain keeps its own selectors, transform, and priority
+meaning; static `style.merge(...)` only appends the resulting style data into
+the target. Internally it follows the same spread behavior as chaining a
+`...` selector method.
+
+That means selector context is not borrowed across builders:
+
+```ts
+style.merge(
+  style.slot(),
+  sx().hover({ gap: 12 }),
+  ui().pressed({ opacity: 0.8 }),
+);
+```
+
+Here `.hover(...)` belongs to `sx`, and `.pressed(...)` belongs to `ui`. The
+compiler and runtime both follow the same `...` primitive.
+
+## Built-In Presets
+
+The presets are good starting points for custom style functions.
+
+```ts
+import {
+  MinimalPrioritySelectors,
+  MinimalSelectors,
+  PrioritySelectors,
+  Selectors,
+} from '@fluentic/style/selector';
+```
+
+```txt
+Selectors
+  Full selector set.
+
+PrioritySelectors
+  Full selector set plus default priority for common states.
+
+MinimalSelectors
+  Smaller practical set for design systems and utilities.
+
+MinimalPrioritySelectors
+  Minimal set plus default state priority.
+```
+
+The default priority order is:
+
+```txt
+link -> visited -> hover -> focusWithin -> focus -> focusVisible -> active -> disabled
+```
+
+Later states win earlier states when both match.
+
+The default `style` export uses `PrioritySelectors`. A minimal utility builder
+can start from `MinimalPrioritySelectors`, and a design-system builder can copy
+only the selectors it wants.
+
+## Custom Priority
+
+Use `selectorPriority(...)` to define your own state order. The list is lower to
+higher priority.
+
+```ts
+import { selectorPriority } from '@fluentic/style/selector';
+
+const prioritySelectors = selectorPriority(selectors, [
+  'hover',
+  'focusVisible',
+  'pressed',
+  'active',
+]);
+```
+
+In this order, `active` wins over `pressed`, and `pressed` wins over
+`focusVisible`.
+
+Priority participates in the layer model. Media can override inside the same
+selector bucket, but media cannot jump over a higher-priority selector bucket.
+
+## Validators
+
+Selector validators catch unsafe or malformed selector strings in development
+and during extraction.
+
+```ts
+const selectors = {
+  select: selector('$$', 'local'),
+  attr: selector('$', 'attr'),
+  nthChild: selector(':nth-child($)', 'value'),
+  media: selector('@media $$', 'media'),
+  supports: selector('@supports $$', 'supports'),
+};
+```
+
+Validator types:
+
+```txt
+local      current-element selector only
+arg        pseudo selector argument
+tag        single tag selector
+attr       attribute name/value without "[" or "]"
+value      raw CSS value without "{" or "}"
+media      media query without "{" or "}"
+supports   supports query without "{" or "}"
+container  container query without "{" or "}"
+```
+
+For example, `local` allows a selector that targets the current generated class
+and rejects descendant or multi-selector strings.
+
+```ts
+const selected = style().select('.is-selected', {
+  color: 'CanvasText',
+});
+```
+
+For attributes, expose an attribute helper instead of asking authors to write
+brackets by hand:
+
+```ts
+const selectors = {
+  data: selector('[data-$]', 'attr'),
+};
+
+const item = style().data('selected', {
+  fontWeight: 600,
+});
+```
+
+Use `assertEnumSelector(...)` when the selector argument should be restricted to
+a known design-system vocabulary. The validator still runs at runtime and during
+static extraction, and TypeScript narrows the builder method argument to the
+same literal union.
+
+```ts
+import { createStyleFn } from '@fluentic/style';
+import { assertEnumSelector, selector } from '@fluentic/style/selector';
+
+const selectors = {
+  tone: selector('[data-tone="$"]', assertEnumSelector(['brand', 'danger'] as const)),
+  state: selector('[data-state="$$"]', assertEnumSelector('open', 'closed')),
+};
+
+const { style } = createStyleFn({
+  style: null as any,
+  selectors,
+});
+
+style().tone('brand', {
+  color: 'blue',
+});
+
+style().state(['open', 'closed'], {
+  opacity: 1,
+});
+```
+
+## Design-System Selectors
+
+A design system can expose semantic states instead of raw selector strings.
+
+```ts
+import {
+  createStyleFn,
+  type,
+} from '@fluentic/style';
+import { MinimalSelectors, selector, selectorPriority } from '@fluentic/style/selector';
+import type { CSSProperties } from '@fluentic/style';
+
+const dsSelectors = {
+  ...MinimalSelectors,
+  pressed: selector('[aria-pressed="true"]'),
+  selected: selector('[aria-selected="true"]'),
+  tone: selector('[data-tone="$"]', 'value'),
+};
+
+const dsPrioritySelectors = selectorPriority(dsSelectors, [
+  'hover',
+  'focusVisible',
+  'pressed',
+  'selected',
+  'active',
+  'disabled',
+]);
+
+export const { style: ds } = createStyleFn({
+  style: type<CSSProperties>,
+  selectors: dsPrioritySelectors,
+});
+```
+
+Now component code uses typed methods:
+
+```ts
+const tab = ds({
+  color: 'CanvasText',
+}).hover({
+  backgroundColor: 'ButtonFace',
+}).selected({
+  fontWeight: 700,
+}).tone('danger', {
+  color: 'red',
+});
+```
+
+This keeps selector strings centralized in the design-system layer and keeps
+priority behavior consistent across components.
+
+## Custom Builder Chains
+
+A custom builder chain is just `createStyleFn(...)` plus your selector map.
+
+```ts
+import {
+  createStyleFn,
+  type,
+} from '@fluentic/style';
+import { selector, selectorPriority } from '@fluentic/style/selector';
+import type { CSSProperties } from '@fluentic/style';
+
+const utilitySelectors = {
+  hover: selector(':hover'),
+  pressed: selector('[aria-pressed="true"]'),
+  selected: selector('[aria-selected="true"]'),
+  invalid: selector('[aria-invalid="true"]'),
+  tone: selector('[data-tone="$"]', 'value'),
+  below: selector('@media (max-width: $$)', 'media'),
+  above: selector('@media (min-width: $$)', 'media'),
+  supports: selector('@supports $$', 'supports'),
+  merge: selector('...'),
+};
+
+const utilityPrioritySelectors = selectorPriority(utilitySelectors, [
+  'hover',
+  'pressed',
+  'selected',
+  'invalid',
+]);
+
+export const { style: ui } = createStyleFn({
+  style: type<CSSProperties>,
+  selectors: utilityPrioritySelectors,
+});
+```
+
+Now the selector contract is typed:
+
+```ts
+const button = ui({
+  color: 'CanvasText',
+}).hover({
+  backgroundColor: 'ButtonFace',
+}).pressed({
+  transform: 'translateY(1px)',
+}).selected({
+  fontWeight: 700,
+}).tone('danger', {
+  color: 'red',
+}).below('700px', {
+  padding: 8,
+});
+```
+
+Component authors do not need to remember raw strings like
+`[aria-pressed="true"]` or `@media (max-width: ...)`. They use project methods
+such as `.pressed(...)`, `.selected(...)`, `.tone(...)`, and `.below(...)`.
+
+This works in both runtime CSS and static CSS extraction. The same selector map
+is used by the runtime builder and by the compiler transform, so the chain
+syntax, validation, class generation, and priority model stay aligned in both
+modes.
+
+## Responsive Shortcuts
+
+Responsive selector helpers let a design system hide media-query syntax behind
+typed chain methods. Fixed at-rule selectors become no-argument methods, so
+teams can encode exclusive breakpoint ranges once.
+
+```ts
+import { createStyleFn, type } from '@fluentic/style';
+import { selector } from '@fluentic/style/selector';
+import type { CSSProperties } from '@fluentic/style';
+
+const responsiveSelectors = {
+  sm: selector('@media (480px <= width < 768px)', 'media'),
+  md: selector('@media (768px <= width < 1024px)', 'media'),
+  lg: selector('@media (1024px <= width < 1280px)', 'media'),
+  xl: selector('@media (min-width: 1280px)', 'media'),
+};
+
+export const { style: sx } = createStyleFn({
+  style: type<CSSProperties>,
+  selectors: responsiveSelectors,
+});
+```
+
+Now responsive styling is a typed builder chain:
+
+```ts
+const grid = sx({
+  display: 'grid',
+  gridTemplateColumns: '1fr',
+}).md({
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+}).lg({
+  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+});
+```
+
+You can encode any project convention this way:
+
+```ts
+const responsiveSelectors = {
+  compact: selector('@media (width < 700px)', 'media'),
+  comfortable: selector('@media (700px <= width < 1200px)', 'media'),
+  wide: selector('@media (min-width: 1200px)', 'media'),
+};
+```
+
+Because the builder type is derived from the selector object, the available
+chain methods are the union of your selector keys. If the selector map has
+`compact`, `comfortable`, and `wide`, those are the methods authors can call.
+If a selector is not in the map, TypeScript does not expose it.
+
+Responsive shortcuts can be mixed with state shortcuts too:
+
+```ts
+const selectors = {
+  hover: selector(':hover'),
+  pressed: selector('[aria-pressed="true"]'),
+  md: selector('@media (768px <= width < 1024px)', 'media'),
+  lg: selector('@media (min-width: 1024px)', 'media'),
+  media: selector('@media $$', 'media'),
+};
+
+const { style: sx } = createStyleFn({
+  style: type<CSSProperties>,
+  selectors,
+});
+
+const button = sx({
+  padding: 8,
+}).md({
+  padding: 10,
+}).hover({
+  opacity: 0.9,
+}).lg({
+  padding: 12,
+}).media(
+  '(min-width: 1024px)',
+  sx().hover({
+    opacity: 0.85,
+  }),
+);
+```
+
+This lets utilities and design systems replace scattered media strings with a
+small, typed, conventional API.
+
+## Selector Format Reference
+
+Selector definitions are string templates:
+
+```txt
+':hover'                 no argument, creates .hover(...)
+'[aria-pressed="true"]'  no argument, creates .pressed(...)
+'[data-tone="$"]'        one argument, creates .tone(value, style)
+':not($$)'               one or many arguments, creates .not(value, style)
+'@media (min-width: 768px)' no argument, creates .md(style)
+'@media $$'              one or many at-rule arguments
+'@media (max-width: $$)' one media argument embedded into a media query
+'...'                    merge style data
+```
+
+Use a validator whenever the selector accepts user input:
+
+```ts
+selector('[data-tone="$"]', 'value')
+selector('@media (max-width: $$)', 'media')
+selector(':not($$)', 'arg')
+selector('$$', 'local')
+```
+
+Validators make the API safer without losing flexibility. They also make
+compiler extraction safer because invalid static selector arguments can be
+reported during the build.
+
+## Compiler Checks
+
+The compiler can check selectors while extracting CSS. Non-static selector
+arguments are allowed by default, but `checkSelector: 'force'` requires selector
+arguments to be statically analyzable so invalid selectors can fail at build
+time.
+
+Use `checkSelector: false` only when a project intentionally owns selector
+validation somewhere else.

@@ -3,19 +3,20 @@ import path from 'node:path';
 import type { Compilation, Compiler, WebpackPluginInstance } from 'webpack';
 import type { Compiler as PluginCompiler } from '../../compiler';
 import { normalizePath } from '../../compiler/utils/path';
-import type { BuildMeta } from '../../config';
+import type { BuildConfig, BuildDevConfig } from '../../config/build';
 import type { FileCssCache } from '../utils/cache';
 import type { PluginOptions as BasePluginOptions } from '../utils/compiler';
 import type { TransformFilter } from '../utils/filter';
 import type { SourcemapSidecar } from '../utils/sidecar';
 import { resolvePluginSourcemapOptions } from '../utils/sourcemap';
-import { createWebpackRegistry } from '../utils/webpack/registry';
+import { getPluginBuildConfig, getPluginBuildDevConfig } from '../utils/runtimeEntry';
+import { createWebpackRegistry } from '../bundler/webpack/shared/registry';
 import { LOADER_IMPORT_PATH } from './constants';
 import type { PluginOptions, WebpackConfiguration } from './types';
 
 export const nextRegistry = createWebpackRegistry('nextjs.registry');
 
-export const PRECOLLECT_NAMESPACE = 'nextjs/precollect';
+export const PRECOLLECT_CACHE_DIR = 'nextjs/precollect';
 
 export type { PluginCompiler };
 
@@ -43,49 +44,47 @@ export function getNextCacheDir(rootDir: string, cacheDir?: string) {
   return cacheDir ?? path.join(rootDir, '.next/cache/fluentic-style');
 }
 
-export function createNextBuildMeta(
+export function createNextBuildConfig(options: PluginOptions): BuildConfig {
+  return getPluginBuildConfig(options);
+}
+
+export function createNextBuildDevConfig(options: PluginOptions): BuildDevConfig | null {
+  return getPluginBuildDevConfig(options);
+}
+
+export function createNextConfigHash(
+  buildConfig: BuildConfig,
+  buildDevConfig: BuildDevConfig | null,
   dev: boolean,
-  options: {
-    css?: BuildMeta['css'];
-    hoist?: boolean;
-    layer?: BuildMeta['layer'];
-    priorityMode?: BuildMeta['priorityMode'];
-    sourcemapTrace?: BuildMeta['sourcemapTrace'];
-    checkSelector?: BuildMeta['checkSelector'];
-  },
-): BuildMeta {
+) {
   return {
+    buildConfig,
+    buildDevConfig,
     dev,
-    extract: !dev,
-    hoist: options.hoist !== false,
-    rsc: true,
-    layer: options.layer,
-    priorityMode: options.priorityMode,
-    sourcemapTrace: options.sourcemapTrace,
-    checkSelector: options.checkSelector,
-    css: {
-      ...options.css,
-      localClassName: options.css?.localClassName ?? dev,
-      debugClassName: options.css?.debugClassName ?? dev,
-    },
   };
 }
 
 export function resolveNextCompilerOptions(
   options: PluginOptions,
   sidecar: SourcemapSidecar | null,
-  buildMeta: BuildMeta,
+  buildConfig: BuildConfig,
+  buildDevConfig: BuildDevConfig | null,
+  dev: boolean,
 ): BasePluginOptions {
   const resolved = resolvePluginSourcemapOptions({
     ...options,
-    devSourcemap: buildMeta.dev ? 'sidecarServer' : 'sourceUrl',
+    devSourcemap: dev ? 'sidecarServer' : 'sourceUrl',
   }, sidecar);
 
   return {
     ...resolved,
     css: {
       ...resolved.css,
-      ...buildMeta.css,
+      ...buildConfig.css,
+    },
+    dev: {
+      ...resolved.dev,
+      ...buildDevConfig,
     },
   };
 }

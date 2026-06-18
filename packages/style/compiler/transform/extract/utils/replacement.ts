@@ -1,4 +1,4 @@
-import type { types } from '@babel/core';
+import type { BabelTypes } from '../../utils/babel';
 import {
   BUILDER_TYPE_SCOPE,
   BUILDER_TYPE_SLOT,
@@ -21,16 +21,16 @@ import type { CompiledChainData, CompiledCssItem, CompiledItem, CompiledTokenIte
 import type { ExtractPluginState } from './state';
 
 type BuildReplacementOptions = {
-  getRuntimeToken?: (item: CompiledCssItem, valueNode: types.Expression) => types.Expression | null;
+  getRuntimeToken?: (item: CompiledCssItem, valueNode: BabelTypes.Expression) => BabelTypes.Expression | null;
   getTokenOverride?: (item: CompiledTokenItem) => void;
 };
 
 export function buildReplacement(
-  t: typeof types,
+  t: typeof BabelTypes,
   chain: CompiledChainData,
   state: ExtractPluginState,
   options: BuildReplacementOptions = {},
-): types.Expression | null {
+): BabelTypes.Expression | null {
   if (chain.type === 'style') {
     state.usedHelpers.add(FN_CREATE_EXTRACTED_STYLE);
 
@@ -65,14 +65,14 @@ export function buildReplacement(
 }
 
 function buildItemsArray(
-  t: typeof types,
+  t: typeof BabelTypes,
   chain: CompiledChainData,
   defaultType: number,
   state: ExtractPluginState,
   options: BuildReplacementOptions,
-): types.ArrayExpression {
+): BabelTypes.ArrayExpression {
   const emitLegacyShape = defaultType === BUILDER_TYPE_SCOPE;
-  const itemExpressions: types.Expression[] = [];
+  const itemExpressions: BabelTypes.Expression[] = [];
 
   chain.items.forEach((item) => {
     if (isCompiledTokenItem(item)) {
@@ -90,7 +90,7 @@ function buildItemsArray(
     const value = getItemValue(item);
     const slotId = getItemSlotId(item);
 
-    const elements: types.Expression[] = emitLegacyShape
+    const elements: BabelTypes.Expression[] = emitLegacyShape
       ? [t.numericLiteral(type), t.stringLiteral(slotId ?? '')]
       : [];
 
@@ -189,12 +189,12 @@ function getItemValue(item: CompiledCssItem): ExtractedItemValue | undefined {
 }
 
 function buildItemValue(
-  t: typeof types,
+  t: typeof BabelTypes,
   value: ExtractedItemValue,
   state: ExtractPluginState,
   item: CompiledCssItem,
   options: BuildReplacementOptions,
-): types.ArrayExpression {
+): BabelTypes.ArrayExpression {
   if (value[0] === ITEM_VALUE_TYPE_AT_RULE_REF) {
     return buildAtRuleRefExpression(t, value[1], state);
   }
@@ -212,12 +212,11 @@ function buildItemValue(
 }
 
 function buildAtRuleRefExpression(
-  t: typeof types,
+  t: typeof BabelTypes,
   ref: AtRuleRefData,
   state: ExtractPluginState,
-): types.ArrayExpression {
-  const props: types.ObjectProperty[] = [
-    t.objectProperty(t.identifier('type'), t.numericLiteral(ref.type)),
+): BabelTypes.ArrayExpression {
+  const props: BabelTypes.ObjectProperty[] = [
     t.objectProperty(t.identifier('key'), t.stringLiteral(ref.key)),
     t.objectProperty(t.identifier('value'), t.stringLiteral(ref.value)),
     t.objectProperty(t.identifier('css'), ref.css ? t.stringLiteral(ref.css) : t.nullLiteral()),
@@ -237,12 +236,12 @@ function buildAtRuleRefExpression(
 }
 
 function buildVariableValueExpression(
-  t: typeof types,
+  t: typeof BabelTypes,
   value: unknown,
   state: ExtractPluginState,
   item: CompiledCssItem,
   options: BuildReplacementOptions,
-): types.Expression {
+): BabelTypes.Expression {
   if (isStyleTokenData(value)) {
     state.usedHelpers.add(FN_CREATE_EXTRACTED_TOKEN);
     return buildExtractedTokenExpression(t, value, state);
@@ -256,10 +255,10 @@ function buildVariableValueExpression(
 }
 
 function buildExtractedTokenExpression(
-  t: typeof types,
+  t: typeof BabelTypes,
   token: StyleTokenData,
   state: ExtractPluginState,
-): types.Expression {
+): BabelTypes.Expression {
   state.usedHelpers.add(FN_CREATE_EXTRACTED_TOKEN);
 
   return t.callExpression(
@@ -273,9 +272,9 @@ function buildExtractedTokenExpression(
 }
 
 function literalExpression(
-  t: typeof types,
+  t: typeof BabelTypes,
   value: unknown,
-): types.Expression {
+): BabelTypes.Expression {
   if (typeof value === 'string') return t.stringLiteral(value);
   if (typeof value === 'number') return t.numericLiteral(value);
   if (typeof value === 'boolean') return t.booleanLiteral(value);

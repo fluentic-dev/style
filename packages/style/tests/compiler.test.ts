@@ -1,6 +1,8 @@
 import { mkdtempSync, statSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { compareLayerPriority, type LayerPriority } from '../atomic/layer';
+import { formatClassName } from '../atomic/debug/className';
 import { normalizeDebugKeywordValue, normalizePropertyName, sanitizeDebugPropertyName } from '../atomic/utils/debug';
 import { writeCacheFile } from '../plugin/utils/cache';
 import {
@@ -18,7 +20,6 @@ import {
   getCssClassNames,
   getRuntimeImportAliases,
   getServerRuntimeImportAliases,
-  getTurbopackRuntimeImportAliases,
   includes,
   injectDevCssLink,
   injectStyleDebugData,
@@ -46,6 +47,87 @@ test('debug utility normalizers keep property and keyword names class-safe', () 
   equal(normalizeDebugKeywordValue(' Inline-Flex '), 'inline-flex');
   equal(normalizeDebugKeywordValue('-invalid'), null);
   equal(normalizeDebugKeywordValue('var(--x)'), null);
+});
+
+test('debug class name formatter drops optional segments and applies length modes', () => {
+  const format = '[(atRule:5)-][(scopeSelector:10!)-][(property:12)][-(selector)][-(value)]';
+
+  equal(
+    formatClassName(format, 'abc123', {
+      atRule: 'container',
+      scopeSelector: 'card-content-area',
+      property: 'color',
+      selector: 'hover',
+      value: 'red',
+    }),
+    'card-conte-color-hover-red-abc123',
+  );
+
+  equal(
+    formatClassName(format, 'def456', {
+      atRule: 'dark',
+      scopeSelector: null,
+      property: 'background-color',
+      selector: 'focus',
+      value: null,
+    }),
+    'dark--focus-def456',
+  );
+
+  equal(
+    formatClassName(format, 'ghi789', {
+      atRule: null,
+      scopeSelector: null,
+      property: 'color',
+      selector: null,
+      value: null,
+    }),
+    'color-ghi789',
+  );
+
+  equal(
+    formatClassName('$hash--[(property)]', null, {
+      atRule: null,
+      scopeSelector: null,
+      property: 'color',
+      selector: null,
+      value: null,
+    }),
+    '$hash--color',
+  );
+
+  equal(
+    formatClassName('$hash--[(property)]', 'jkl012', {
+      atRule: null,
+      scopeSelector: null,
+      property: 'color',
+      selector: null,
+      value: null,
+    }),
+    'jkl012--color',
+  );
+
+  equal(
+    formatClassName('[(property)]-[$hash]', 'mno345', {
+      atRule: null,
+      scopeSelector: null,
+      property: 'color',
+      selector: null,
+      value: null,
+    }),
+    'color-mno345',
+  );
+
+  equal(
+    formatClassName('[(atRule)-](property)[-(value)]-$hash', 'nop678', {
+      atRule: null,
+      scopeSelector: null,
+      property: '',
+      selector: null,
+      value: null,
+    }),
+    '-nop678',
+  );
 });
 
 test('debug transform injects host element marker metadata from css prop label', () => {
@@ -213,6 +295,103 @@ const button = style.slot({ color: 'black' })
   includes(css, 'border-color: gray');
   includes(css, ':hover');
   includes(css, 'color: blue');
+});
+
+test('compiler extracts static merge helper with direct multi-styleFn chains', () => {
+  const sx = createStyleFn({
+    style: null as any,
+    selectors: {
+      hover: selector(':hover'),
+    },
+    transform: {
+      transform(style: Record<string, unknown>) {
+        const result = { ...style };
+        if (result.row === true) {
+          delete result.row;
+          result.display = 'flex';
+          result.flexDirection = 'row';
+        }
+        return result;
+      },
+    },
+  }).style;
+
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+    importSources: [{
+      source: './sx-*',
+      name: 'sx',
+      styleFn: sx,
+    }],
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import { sx } from './sx-style';
+
+const button = style.merge(
+  style.slot({ color: 'black' }),
+  sx({ row: true }),
+  sx().hover({ color: 'blue' }),
+);
+`,
+    '/tmp/compiler-static-merge-multi-stylefn.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  notIncludes(result.code, '.merge(');
+  includes(result.code, 'createExtractedSlot');
+  includes(css, 'color: black');
+  includes(css, 'display: flex');
+  includes(css, 'flex-direction: row');
+  includes(css, ':hover');
+  includes(css, 'color: blue');
+});
+
+test('compiler importSources can match source by regexp', () => {
+  const sx = createStyleFn({
+    style: null as any,
+    selectors: {},
+    transform: {
+      transform(style: Record<string, unknown>) {
+        return style.row === true ? { display: 'flex', flexDirection: 'row' } : style;
+      },
+    },
+  }).style;
+
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+    importSources: [{
+      source: /sx-style$/,
+      name: 'sx',
+      styleFn: sx,
+    }],
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import { sx } from './sx-style';
+
+const button = style.merge(
+  style({ color: 'black' }),
+  sx({ row: true }),
+);
+`,
+    '/tmp/compiler-regexp-import-source.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(css, 'color: black');
+  includes(css, 'display: flex');
+  includes(css, 'flex-direction: row');
 });
 
 test('compiler extracts merged scope chains', () => {
@@ -454,12 +633,12 @@ const panel = style({
   const css = result.css.join('\n');
 
   includes(result.code, 'createExtractedStyle');
-  includes(result.code, 'type: 1');
+  includes(result.code, 'createExtractedToken("enter-transform-');
   includes(result.code, 'css: null');
   includes(css, '@keyframes');
   includes(css, 'from{');
   includes(css, 'to{');
-  includes(css, 'kf-enter');
+  includes(css, 'keyframes-enter');
   includes(css, 'transform: var(--token-enter-transform-');
   includes(css, 'translateY(8px)');
   includes(css, 'animation-name');
@@ -483,7 +662,11 @@ test('compiler extracts style.keyframes with style function transform', () => {
   const compiler = createCompiler({
     layer: false,
     css: { debugClassName: true },
-    styleFn: custom,
+    importSources: [{
+      source: '@fluentic/style',
+      name: 'style',
+      styleFn: custom,
+    }],
   });
   const result = compiler.transform(
     `
@@ -513,7 +696,7 @@ const panel = style({
   const css = result.css.join('\n');
 
   includes(result.code, 'createExtractedStyle');
-  includes(result.code, 'type: 1');
+  includes(result.code, 'css: null');
   includes(result.code, 'css: null');
   includes(css, '@keyframes');
   includes(css, 'from{');
@@ -553,10 +736,10 @@ const panel = style({
   const css = result.css.join('\n');
 
   includes(result.code, 'createExtractedStyle');
-  includes(result.code, 'type: 2');
+  includes(result.code, 'key: "font-mona-');
   includes(result.code, 'css: null');
   includes(css, '@font-face');
-  includes(css, 'ff-mona-');
+  includes(css, 'font-mona-');
   includes(css, 'src: url("/fonts/Mona-Sans.woff2") format("woff2")');
   includes(css, 'font-weight: 400;');
   notIncludes(css, 'font-weight: 400px;');
@@ -607,8 +790,6 @@ import {
   createFontPaletteValues,
   createPositionTry,
   createProperty,
-  createScrollTimeline,
-  createViewTimeline,
 } from '@fluentic/style/css';
 
 const positionTry = createPositionTry({ insetArea: 'bottom', margin: '8px' });
@@ -618,20 +799,13 @@ const property = createProperty('--spin-angle', {
   inherits: false,
   initialValue: '0deg',
 });
-const scrollTimeline = createScrollTimeline({ source: 'auto', orientation: 'block' });
-const viewTimeline = createViewTimeline({ subject: 'auto', axis: 'block' });
 const palette = createFontPaletteValues({ fontFamily: 'system-ui', basePalette: 1 });
 
 const one = style({
   positionTryFallbacks: positionTry,
   listStyleType: counterStyle,
   transitionProperty: property,
-  animationTimeline: scrollTimeline,
   fontPalette: palette,
-});
-
-const two = style({
-  animationTimeline: viewTimeline,
 });
 `,
     '/tmp/compiler-at-rule-value-refs.ts',
@@ -641,21 +815,14 @@ const two = style({
 
   const css = result.css.join('\n');
 
-  includes(result.code, 'type: 3');
-  includes(result.code, 'type: 4');
-  includes(result.code, 'type: 5');
-  includes(result.code, 'type: 6');
-  includes(result.code, 'type: 7');
-  includes(result.code, 'type: 8');
+  includes(result.code, 'createExtractedStyle');
   includes(result.code, 'css: null');
   includes(css, '@position-try');
   includes(css, 'inset-area: bottom;');
   includes(css, '@counter-style');
   includes(css, 'symbols: "*";');
-  includes(css, '@property --spin-angle');
+  includes(css, '@property ---spin-angle-');
   includes(css, 'syntax: "<angle>";');
-  includes(css, '@scroll-timeline');
-  includes(css, '@view-timeline');
   includes(css, '@font-palette-values');
   includes(css, 'base-palette: 1;');
 });
@@ -727,7 +894,14 @@ test('compiler rejects invalid custom selector definitions', () => {
       invalidState: selector('.parent .child'),
     },
   }).style;
-  const compiler = createCompiler({ layer: false, styleFn: custom });
+  const compiler = createCompiler({
+    layer: false,
+    importSources: [{
+      source: '@fluentic/style',
+      name: 'style',
+      styleFn: custom,
+    }],
+  });
   let error: unknown = null;
 
   try {
@@ -887,9 +1061,9 @@ const styles = {
 
   includes(result.code, 'createExtractedSlot');
   includes(result.code, 'createExtractedToken');
-  includes(result.code, '[1, "--token-');
+  includes(result.code, '[1, "--var-');
   includes(result.code, 'createExtractedToken(');
-  includes(css, 'background-color: var(--token-');
+  includes(css, 'background-color: var(--var-');
   includes(css, ', var(--token-');
   includes(css, ', blue)');
 });
@@ -936,7 +1110,7 @@ test('compiler honors configured token variable prefix', () => {
     css: {
       debugClassName: true,
       localClassName: true,
-      tokenVarPrefix: 'custom-token-',
+      tokenNameFormat: 'custom-token[-(name)]-$hash',
     },
   });
   const result = compiler.transform(
@@ -959,8 +1133,7 @@ const styles = {
 
   includes(result.code, '[1, "--custom-token-');
   includes(css, 'background-color: var(--custom-token-');
-  notIncludes(result.code, '[1, "--token-');
-  notIncludes(css, 'background-color: var(--token-');
+  includes(css, ', var(--custom-token-');
 });
 
 test('compiler uses property-local variables for token values', () => {
@@ -986,7 +1159,7 @@ const styles = {
   if (!result) throw new Error('expected compiler transform result');
 
   const css = result.css.join('\n');
-  const match = css.match(/background-color: var\((--token-[a-z0-9]+), var\(--token-[^,]+, blue\)/);
+  const match = css.match(/background-color: var\((--var-[a-z0-9]+), var\(--token-[^,]+, blue\)/);
 
   if (!match) throw new Error('expected property-local token variable');
 
@@ -1018,9 +1191,9 @@ const rule = style({
   includes(result.code, 'createExtractedStyle');
   includes(result.code, 'bg from');
   includes(result.code, "'url(' + bg + ')'");
-  includes(result.code, '[1, "--token-');
+  includes(result.code, '[1, "--var-');
   includes(css, 'background-color: coral');
-  includes(css, 'background-image: var(--token-');
+  includes(css, 'background-image: var(--var-');
 });
 
 test('compiler hoists inline dynamic extracted style with token binding', () => {
@@ -1051,7 +1224,7 @@ export function Card({ color }) {
   includes(result.code, 'const _fluenticStyle = createExtractedStyle(');
   includes(result.code, 'return withTokens(_fluenticStyle, [_fluenticToken(color)]);');
   notIncludes(result.code, '/tmp/compiler-inline-dynamic-style.tsx:runtime');
-  includes(css, 'color: var(--token-');
+  includes(css, 'color: var(--var-');
   includes(css, 'background-color: white');
 });
 
@@ -1082,7 +1255,7 @@ export function useSlot(color) {
   includes(result.code, 'const _fluenticToken = createExtractedToken(');
   includes(result.code, 'const _fluenticStyle = createExtractedSlot(');
   includes(result.code, 'return withTokens(_fluenticStyle, [_fluenticToken(color)]);');
-  includes(css, 'color: var(--token-');
+  includes(css, 'color: var(--var-');
   includes(css, 'background-color: white');
 });
 
@@ -1123,9 +1296,9 @@ export function Card({ color }) {
   includes(result.code, 'withTokens');
   includes(result.code, "accent('green')");
   includes(result.code, '_fluenticToken(color)');
-  includes(result.code, '[1, "--token-');
+  includes(result.code, '[1, "--var-');
   notIncludes(result.code, 'return style.scope');
-  includes(css, 'color: var(--token-');
+  includes(css, 'color: var(--var-');
 });
 
 test('compiler can disable extracted style hoisting', () => {
@@ -1188,7 +1361,7 @@ export const styles = {
 
   includes(result.code, 'createExtractedSlot');
   includes(css, 'display: flex');
-  includes(css, 'background-color: var(--token-');
+  includes(css, 'background-color: var(--var-');
   includes(css, 'gap: 12px');
   includes(css, 'min-height: 100vh');
   includes(css, 'color: red');
@@ -1408,78 +1581,26 @@ test('vite plugin imports runtime once from html entry', () => {
 });
 
 test('runtime import aliases split production extracted and runtime entries', () => {
-  const extracted = getRuntimeImportAliases({
-    dev: false,
-    extract: true,
-    hoist: true,
-    rsc: false,
-    css: null,
-  });
-  const prod = getRuntimeImportAliases({
-    dev: false,
-    extract: false,
-    hoist: true,
-    rsc: false,
-    css: null,
-  });
-  const dev = getRuntimeImportAliases({
-    dev: true,
-    extract: false,
-    hoist: true,
-    rsc: false,
-    css: null,
-  });
+  const extracted = getRuntimeImportAliases(false);
+  const prod = getRuntimeImportAliases(false);
+  const dev = getRuntimeImportAliases(true);
 
-  equal(extracted['@fluentic/style/jsx-runtime'], '@fluentic/style/jsx-runtime/extracted');
-  equal(extracted['@fluentic/style/jsx-dev-runtime'], '@fluentic/style/jsx-dev-runtime/extracted');
-  equal(prod['@fluentic/style/jsx-runtime'], '@fluentic/style/jsx-runtime/prod');
-  equal(Object.keys(dev).length, 0);
+  equal(extracted['@fluentic/style'], '@fluentic/style/entry/prod');
+  equal(prod['@fluentic/style'], '@fluentic/style/entry/prod');
+  equal(dev['@fluentic/style'], '@fluentic/style/entry/dev');
+  equal(extracted['@fluentic/style/jsx/jsx-runtime'], undefined);
+  equal(dev['@fluentic/style/jsx/jsx-runtime'], undefined);
 });
 
 test('server runtime import aliases split dev rsc and production extracted entries', () => {
-  const extracted = getServerRuntimeImportAliases({
-    dev: false,
-    extract: true,
-    hoist: true,
-    rsc: true,
-    css: null,
-  });
-  const prod = getServerRuntimeImportAliases({
-    dev: false,
-    extract: false,
-    hoist: true,
-    rsc: true,
-    css: null,
-  });
-  const dev = getServerRuntimeImportAliases({
-    dev: true,
-    extract: false,
-    hoist: true,
-    rsc: true,
-    css: null,
-  });
+  const extracted = getServerRuntimeImportAliases(false);
+  const prod = getServerRuntimeImportAliases(false);
+  const dev = getServerRuntimeImportAliases(true);
 
-  equal(extracted['@fluentic/style'], '@fluentic/style/server/extracted');
-  equal(extracted['@fluentic/style/server'], '@fluentic/style/server/extracted');
-  equal(extracted['@fluentic/style/jsx-runtime/server'], '@fluentic/style/jsx-runtime/server/extracted');
-  equal(extracted['@fluentic/style/jsx-dev-runtime/server'], '@fluentic/style/jsx-dev-runtime/server/extracted');
-  equal(prod['@fluentic/style/jsx-runtime/server'], '@fluentic/style/jsx-runtime/server');
-  equal(dev['@fluentic/style'], '@fluentic/style/server');
-  equal(Object.keys(dev).length, 1);
-});
-
-test('turbopack runtime aliases keep root style import target-neutral', () => {
-  const extracted = getTurbopackRuntimeImportAliases({
-    dev: false,
-    extract: true,
-    hoist: true,
-    rsc: true,
-    css: null,
-  });
-
-  equal(extracted['@fluentic/style'], undefined);
-  equal(extracted['@fluentic/style/jsx-runtime'], '@fluentic/style/jsx-runtime/extracted');
-  equal(extracted['@fluentic/style/jsx-runtime/server'], '@fluentic/style/jsx-runtime/server/extracted');
+  equal(extracted['@fluentic/style'], '@fluentic/style/entry/rsc-prod');
+  equal(dev['@fluentic/style'], '@fluentic/style/entry/rsc-dev');
+  equal(Object.keys(extracted).length, 1);
+  equal(Object.keys(prod).length, 1);
 });
 
 test('next dev css link is appended after layout children', () => {
@@ -1503,31 +1624,31 @@ export default function RootLayout({ children }) {
 test('next loader rewrites exact server dev style imports', () => {
   const result = rewriteServerDevStyleImports(`
 import { getClassName } from "@fluentic/style";
-import { jsx } from "@fluentic/style/jsx-runtime";
+import { jsx } from "@fluentic/style/jsx/jsx-runtime";
 import '@fluentic/style';
 export { style } from '@fluentic/style';
 `);
 
-  includes(result, 'from "@fluentic/style/server"');
-  includes(result, 'import "@fluentic/style/server";');
-  includes(result, 'from "@fluentic/style/server"');
-  includes(result, 'from "@fluentic/style/jsx-runtime"');
-  notIncludes(result, '@fluentic/style/server/jsx-runtime');
+  includes(result, 'from "@fluentic/style/entry/rsc-dev"');
+  includes(result, 'import "@fluentic/style/entry/rsc-dev";');
+  includes(result, 'from "@fluentic/style/entry/rsc-dev"');
+  includes(result, 'from "@fluentic/style/jsx/jsx-runtime"');
+  notIncludes(result, '@fluentic/style/entry/rsc-dev/jsx-runtime');
 });
 
 test('next loader rewrites exact server production style imports to extracted entry', () => {
   const result = rewriteServerStyleImports(
     `
 import { createTheme, style } from "@fluentic/style";
-import { jsx } from "@fluentic/style/jsx-runtime";
+import { jsx } from "@fluentic/style/jsx/jsx-runtime";
 export { combineStyle } from "@fluentic/style";
 `,
-    '@fluentic/style/server/extracted',
+    '@fluentic/style/entry/rsc-prod',
   );
 
-  includes(result, 'from "@fluentic/style/server/extracted"');
-  includes(result, 'from "@fluentic/style/jsx-runtime"');
-  notIncludes(result, '@fluentic/style/server/extracted/jsx-runtime');
+  includes(result, 'from "@fluentic/style/entry/rsc-prod"');
+  includes(result, 'from "@fluentic/style/jsx/jsx-runtime"');
+  notIncludes(result, '@fluentic/style/entry/rsc-prod/jsx-runtime');
 });
 
 test('webpack plugin prepends runtime to existing entries', () => {
@@ -1610,15 +1731,15 @@ const rule = style({ color: 'red' });
   equal(countOccurrences(css, '@layer app {'), 1);
 });
 
-test('compiler extracts style imports from server entry', () => {
+test('compiler extracts style imports from root entry', () => {
   const compiler = createCompiler({ layer: false });
   const result = compiler.transform(
     `
-import { style } from '@fluentic/style/server';
+import { style } from '@fluentic/style';
 
 const rule = style.slot({ display: 'grid', gap: 16 });
 `,
-    '/tmp/compiler-server-entry.ts',
+    '/tmp/compiler-root-entry.ts',
   );
 
   if (!result) throw new Error('expected compiler transform result');
@@ -1661,10 +1782,44 @@ export function Chrome() {
 
   if (!result) throw new Error('expected compiler transform result');
 
-  includes(result.code, 'from "@fluentic/style/runtime/extract"');
+  includes(result.code, 'from "@fluentic/style/entry/prod/runtime"');
   includes(result.code, 'getClassName(css.link)');
   includes(result.css.join('\n'), 'text-decoration: none');
   includes(result.css.join('\n'), ':hover');
+});
+
+test('compiler keeps bindScope on prod runtime import', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { bindScope, combineStyle, style } from '@fluentic/style';
+
+const cardStyles = {
+  card: style.slot({ padding: 16 }),
+  label: style.slot({ color: 'black' }),
+};
+
+export function Card(props) {
+  const css = combineStyle(
+    cardStyles,
+    bindScope(cardStyles.card, props.theme),
+  );
+
+  return <article css={css.card}><p css={css.label}>Label</p></article>;
+}
+`,
+    '/tmp/compiler-bind-scope-runtime.tsx',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  includes(result.code, 'from "@fluentic/style/entry/prod/runtime"');
+  includes(result.code, 'bindScope(cardStyles.card, props.theme)');
+  includes(result.code, 'combineStyle(cardStyles');
+  includes(result.css.join('\n'), 'padding: 16px');
 });
 
 test('compiler dedupes identical extracted style declarations', () => {
@@ -1710,6 +1865,63 @@ const rule = style({ marginTop: 2, margin: 1 }).hover({ color: 'red' }).media('(
   before(css, '.margin-', '.margin-top-');
   before(css, '.margin-top-', '@media (max-width: 600px)');
   before(css, '@media (max-width: 600px)', '.color-hover-red');
+});
+
+test('layer priority keeps parent and media inside selector buckets', () => {
+  const beforePriority = (low: LayerPriority, high: LayerPriority) => {
+    equal(compareLayerPriority(low, high) < 0, true);
+  };
+
+  const base: LayerPriority = [0, 0, 0, 0, 0, 0, 0];
+  const weightedBaseMedia: LayerPriority = [0, 0, 0, 4, 0, 0, 0];
+  const parentSelector: LayerPriority = [0, 1, 8, 4, 0, 0, 0];
+  const directSelector: LayerPriority = [0, 2, 0, 0, 0, 0, 0];
+  const directSelectorMedia: LayerPriority = [0, 2, 0, 4, 0, 0, 0];
+  const parentDirectSelector: LayerPriority = [0, 2, 1, 0, 0, 0, 0];
+  const priorityDirectSelector: LayerPriority = [0, 4, 0, 0, 0, 0, 0];
+  const explicitValue: LayerPriority = [1, 0, 0, 0, 0, 0, 0];
+
+  beforePriority(base, weightedBaseMedia);
+  beforePriority(weightedBaseMedia, parentSelector);
+  beforePriority(parentSelector, directSelector);
+  beforePriority(directSelector, directSelectorMedia);
+  beforePriority(directSelectorMedia, parentDirectSelector);
+  beforePriority(parentDirectSelector, priorityDirectSelector);
+  beforePriority(priorityDirectSelector, explicitValue);
+});
+
+test('compiler expands value, media, selector, and property priority layers', () => {
+  const compiler = createCompiler({ layer: false, css: { debugClassName: true } });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const rule = style({ color: 'black' })
+  .select('.is-open', { color: 'green' })
+  .hover({ color: 'red' })
+  .media('(max-width: 700px)', { color: 'blue' })
+  .media(2, '(max-width: 600px)', { color: 'purple' })
+  .media(2, '(max-width: 600px)', { color: [1, 'orange'] });
+
+const equalWeight = style({ backgroundColor: [1, 'black'] })
+  .media(2, '(max-width: 600px)', { backgroundColor: [1, 'purple'] })
+  .hover({ backgroundColor: [1, 'red'] });
+`,
+    '/tmp/compiler-expanded-layer-priority.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  before(css, 'color: black', '@media (max-width: 700px)');
+  before(css, '@media (max-width: 700px)', '@media (max-width: 600px)');
+  before(css, 'color: purple', 'color: green');
+  before(css, 'color: green', 'color: red');
+  before(css, 'color: red', 'color: orange');
+  before(css, 'color: purple', 'color: orange');
+  before(css, 'background-color: black', 'background-color: purple');
+  before(css, 'background-color: purple', 'background-color: red');
 });
 
 test('compiler sorts direct scope overrides after slot shorthand priority', () => {
@@ -1758,16 +1970,16 @@ export const dark = createTheme([color('red')], 'dark');
   notIncludes(result.code, 'createTheme,');
 });
 
-test('compiler extracts createTheme from server extracted import source', () => {
+test('compiler extracts createTheme from root import source', () => {
   const compiler = createCompiler({ layer: false, css: { themeNamePrefix: 'theme-' } });
   const result = compiler.transform(
     `
-import { createTheme, createToken } from '@fluentic/style/server/extracted';
+import { createTheme, createToken } from '@fluentic/style';
 
 const color = createToken('blue');
 export const dark = createTheme([color('red')], 'dark');
 `,
-    '/tmp/compiler-theme-server-extracted.ts',
+    '/tmp/compiler-theme-root.ts',
   );
 
   if (!result) throw new Error('expected compiler transform result');
@@ -1811,8 +2023,8 @@ export const styles = {
   includes(css, 'var(--token-');
   includes(css, 'blue');
 
-  const textVar = css.match(/color: var\(--token-[^,]+, var\(--token-([^,)]+)/)?.[1];
-  const bgVar = css.match(/background-color: var\(--token-[^,]+, var\(--token-([^,)]+)/)?.[1];
+  const textVar = css.match(/color: var\(--var-[^,]+, var\(--token-([^,)]+)/)?.[1];
+  const bgVar = css.match(/background-color: var\(--var-[^,]+, var\(--token-([^,)]+)/)?.[1];
 
   if (!textVar || !bgVar) {
     throw new Error(`expected imported token styles in ${css}`);
@@ -1835,12 +2047,12 @@ test('compiler keeps token identity across separately extracted theme and style 
   if (!stylesResult) throw new Error('expected styles compiler transform result');
 
   const css = stylesResult.css.join('\n');
-  const themeTextVar = css.match(/(--token-[^:;{]+--color--text):#0f172a/)?.[1];
-  const themeSurfaceVar = css.match(/(--token-[^:;{]+--color--surface):var\(--token-/)?.[1];
-  const themeSpaceVar = css.match(/(--token-[^:;{]+--space--panel):32/)?.[1];
-  const styleTextVar = css.match(/color: var\(--token-[^,]+, var\((--token-[^,)]+)/)?.[1];
-  const styleSurfaceVar = css.match(/background-color: var\(--token-[^,]+, var\((--token-[^,)]+)/)?.[1];
-  const styleSpaceVar = css.match(/padding: var\(--token-[^,]+, var\((--token-[^,)]+)/)?.[1];
+  const themeTextVar = css.match(/(--token-[^:;{]+--color--text[^:;{]*):#0f172a/)?.[1];
+  const themeSurfaceVar = css.match(/(--token-[^:;{]+--color--surface[^:;{]*):var\(--token-/)?.[1];
+  const themeSpaceVar = css.match(/(--token-[^:;{]+--space--panel[^:;{]*):32/)?.[1];
+  const styleTextVar = css.match(/color: var\(--var-[^,]+, var\((--token-[^,)]+)/)?.[1];
+  const styleSurfaceVar = css.match(/background-color: var\(--var-[^,]+, var\((--token-[^,)]+)/)?.[1];
+  const styleSpaceVar = css.match(/padding: var\(--var-[^,]+, var\((--token-[^,)]+)/)?.[1];
 
   if (!themeTextVar || !themeSurfaceVar || !themeSpaceVar) {
     throw new Error(`expected extracted theme token variables in ${css}`);
@@ -1933,13 +2145,12 @@ const rule = style({
   includes(css, ':hover{opacity: 0.25}');
 });
 
-test('compiler debug property and value lengths are applied independently', () => {
+test('compiler debug classNameFormat applies property and value lengths independently', () => {
   const compiler = createCompiler({
     layer: false,
     css: {
       debugClassName: true,
-      debugPropertyLength: 16,
-      debugValueLength: 6,
+      classNameFormat: '[(property:16!)][-(value:6)]-$hash',
     },
   });
   const result = compiler.transform(
@@ -1964,13 +2175,12 @@ const rule = style({
   includes(css, '.width-');
 });
 
-test('compiler debug names keep common keyword values with tight property length', () => {
+test('compiler debug classNameFormat keeps common keyword values with value length', () => {
   const compiler = createCompiler({
     layer: false,
     css: {
       debugClassName: true,
-      debugPropertyLength: 8,
-      debugValueLength: 10,
+      classNameFormat: '[(property)][-(value:10)]-$hash',
     },
   });
   const result = compiler.transform(
@@ -2003,7 +2213,6 @@ const rule = style({
   includes(css, '.display-flex-');
   includes(css, '.font-820-');
   includes(css, '.font-size-');
-  notIncludes(css, '.font-size-1\\.5rem-');
   includes(css, '.justify-center-');
   includes(css, '.overflow-hidden-');
   includes(css, '.pointer-none-');

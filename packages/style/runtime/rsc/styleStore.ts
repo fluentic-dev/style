@@ -1,5 +1,6 @@
 import { getLayerBlockCss, getLayerOrderCss, joinLayerCss } from '../../atomic/layer';
-import { RUNTIME_CONFIG } from '../../config';
+import { CSS_CONFIG, CSS_CONFIG_DEFAULT } from '../../config/config/css';
+import { RUNTIME_CONFIG } from '../../config/config/runtime';
 import type { SheetRule } from '../../sheet';
 import { createSheetLayerState, getSheetRulePriority } from '../../sheet/utils';
 import { clearGlobalData, getGlobalData, globalData } from '../../utils/global';
@@ -60,7 +61,7 @@ export function getRscStyleCss(): string {
   });
 
   const layerOrderCss = getLayerOrderCss(
-    RUNTIME_CONFIG.layers,
+    CSS_CONFIG.layers ?? CSS_CONFIG_DEFAULT.layers ?? [],
     layerState.getNames(),
   );
 

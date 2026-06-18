@@ -1,14 +1,8 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'tsdown';
 
-const JSX_RUNTIME_ENTRY = 'jsx/jsx-runtime.ts';
-const JSX_DEV_RUNTIME_ENTRY = 'jsx/jsx-dev-runtime.ts';
-const JSX_RUNTIME_EXTRACTED_ENTRY = 'jsx/jsx-runtime.extracted.ts';
-const JSX_DEV_RUNTIME_EXTRACTED_ENTRY = 'jsx/jsx-dev-runtime.extracted.ts';
-const JSX_RUNTIME_SERVER_ENTRY = 'jsx/jsx-runtime.server.ts';
-const JSX_DEV_RUNTIME_SERVER_ENTRY = 'jsx/jsx-dev-runtime.server.ts';
-const JSX_RUNTIME_SERVER_EXTRACTED_ENTRY = 'jsx/jsx-runtime.server-extracted.ts';
-const JSX_DEV_RUNTIME_SERVER_EXTRACTED_ENTRY = 'jsx/jsx-dev-runtime.server-extracted.ts';
+const JSX_RUNTIME_SERVER_ENTRY = 'jsx/jsx_runtime_server.ts';
+const JSX_DEV_RUNTIME_SERVER_ENTRY = 'jsx/jsx_dev_runtime_server.ts';
 
 export default [
   // Runtime / browser-neutral entries that do not need runtime-mode defines.
@@ -16,14 +10,17 @@ export default [
     entry: {
       'index': 'index.ts',
       'server': 'server.ts',
-      'css/index': 'css/index.ts',
+      'css': 'css/index.ts',
       'config/index': 'config/index.ts',
-      'config/build': 'config/build.ts',
+      'selector/index': 'selector/index.ts',
       'dev': 'dev/index.ts',
-      'runtime/rsc': 'runtime/rsc/index.ts',
-      'runtime/style/index': 'runtime/style/index.ts',
-      'plugin/nextjs/runtime/client': 'plugin/nextjs/runtime/client.ts',
-      'plugin/nextjs/runtime/server': 'plugin/nextjs/runtime/server.ts',
+      'jsx/jsx-runtime': 'jsx/jsx_runtime.ts',
+      'jsx/jsx-dev-runtime': 'jsx/jsx_dev_runtime.ts',
+      'entry/dev': 'entry/dev/index.ts',
+      'entry/dev/css': 'entry/dev/css.ts',
+      'entry/dev/jsx-runtime': 'entry/dev/jsx_runtime.ts',
+      'entry/dev/jsx-dev-runtime': 'entry/dev/jsx_dev_runtime.ts',
+      'dev/rsc': 'runtime/rsc/index.ts',
     },
     dts: false,
     format: ['esm'],
@@ -33,57 +30,46 @@ export default [
   }),
 
   createRuntimeConfig({
-    'jsx-runtime/index': JSX_RUNTIME_ENTRY,
-    'jsx-dev-runtime/index': JSX_DEV_RUNTIME_ENTRY,
-  }),
-
-  createRuntimeConfig({
-    'server/extracted': 'server.extracted.ts',
-    'jsx-runtime/extracted': JSX_RUNTIME_EXTRACTED_ENTRY,
-    'jsx-dev-runtime/extracted': JSX_DEV_RUNTIME_EXTRACTED_ENTRY,
-    'jsx-runtime/server-extracted': JSX_RUNTIME_SERVER_EXTRACTED_ENTRY,
-    'jsx-dev-runtime/server-extracted': JSX_DEV_RUNTIME_SERVER_EXTRACTED_ENTRY,
-    'runtime/extract': 'runtime/extract/index.ts',
-    'builder/extract/index': 'builder/extract/index.ts',
+    'entry/prod': 'entry/prod/index.ts',
+    'entry/prod/css': 'entry/prod/css.ts',
+    'entry/prod/runtime': 'entry/prod/runtime.ts',
+    'entry/prod/extract': 'entry/prod/extract.ts',
+    'entry/prod/jsx-runtime': 'entry/prod/jsx_runtime.ts',
+    'entry/prod/jsx-dev-runtime': 'entry/prod/jsx_dev_runtime.ts',
+    'entry/rsc-prod': 'entry/rsc_prod/index.ts',
+    'entry/rsc-prod/css': 'entry/rsc_prod/css.ts',
+    'entry/rsc-prod/jsx-runtime': 'entry/rsc_prod/jsx_runtime.ts',
+    'entry/rsc-prod/jsx-dev-runtime': 'entry/rsc_prod/jsx_dev_runtime.ts',
   }, {
     checkSelector: false,
   }),
 
   createRuntimeConfig({
-    'jsx-runtime/prod': JSX_RUNTIME_ENTRY,
-    'jsx-dev-runtime/prod': JSX_DEV_RUNTIME_ENTRY,
+    'jsx/jsx-runtime.server': JSX_RUNTIME_SERVER_ENTRY,
+    'jsx/jsx-dev-runtime.server': JSX_DEV_RUNTIME_SERVER_ENTRY,
   }, {
     checkSelector: false,
-    globalSheet: 'prod',
   }),
 
   createRuntimeConfig({
-    'jsx-runtime/server': JSX_RUNTIME_SERVER_ENTRY,
-    'jsx-dev-runtime/server': JSX_DEV_RUNTIME_SERVER_ENTRY,
+    'entry/rsc-dev': 'entry/rsc_dev/index.ts',
+    'entry/rsc-dev/css': 'entry/rsc_dev/css.ts',
+    'entry/rsc-dev/jsx-runtime': 'entry/rsc_dev/jsx_runtime.ts',
+    'entry/rsc-dev/jsx-dev-runtime': 'entry/rsc_dev/jsx_dev_runtime.ts',
   }),
 
   // Build-tool / Node.js entries
   defineConfig({
     entry: {
-      'compiler/index': 'compiler/index.ts',
-      'plugin/vite/index': 'plugin/vite/index.ts',
-      'plugin/sidecar/index': 'plugin/sidecar/index.ts',
-      'plugin/rollup/index': 'plugin/rollup/index.ts',
-      'plugin/webpack/index': 'plugin/webpack/index.ts',
-      'plugin/webpack/loader': 'plugin/webpack/loader.ts',
-      'plugin/esbuild/index': 'plugin/esbuild/index.ts',
-      'plugin/rspack/index': 'plugin/rspack/index.ts',
-      'plugin/rolldown/index': 'plugin/rolldown/index.ts',
-      'plugin/farm/index': 'plugin/farm/index.ts',
+      'plugin/vite/index': 'plugin/bundler/vite/index.ts',
+      'plugin/webpack/index': 'plugin/bundler/webpack/index.ts',
+      'plugin/webpack/loader': 'plugin/bundler/webpack/loader.ts',
+      'plugin/rspack/index': 'plugin/bundler/rspack/index.ts',
+      'plugin/farm/index': 'plugin/bundler/farm/index.ts',
       'plugin/nextjs/index': 'plugin/nextjs/index.ts',
       'plugin/nextjs/loader': 'plugin/nextjs/loader.ts',
     },
     dts: false,
-    deps: {
-      neverBundle: [
-        '@fluentic/style/config/build',
-      ],
-    },
     format: ['esm'],
     clean: false,
     sourcemap: true,
@@ -95,7 +81,6 @@ function createRuntimeConfig(
   entry: Record<string, string>,
   options: {
     checkSelector?: boolean;
-    globalSheet?: 'default' | 'prod';
   } = {},
 ) {
   const checkSelectorAlias = options.checkSelector !== false
@@ -104,10 +89,6 @@ function createRuntimeConfig(
   const alias: Record<string, string> = {
     './data/check_selector': checkSelectorAlias,
   };
-
-  if (options.globalSheet === 'prod') {
-    alias['../sheet/global'] = resolveLocal('runtime/sheet/global-prod.ts');
-  }
 
   return defineConfig({
     entry,

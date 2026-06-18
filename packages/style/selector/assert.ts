@@ -1,4 +1,4 @@
-import type { SelectorAssert } from './types';
+import type { SelectorAssert, SelectorAssertFn } from './types';
 import { isAttrArg, isLocalSelector, isPseudoArgSelector, isRawValue, isTagSelector } from './validate';
 
 export function assertSelector(type: SelectorAssert | null, value: string) {
@@ -38,6 +38,26 @@ export function assertSelector(type: SelectorAssert | null, value: string) {
     default:
       throw new Error('unsupported selector type: ' + value);
   }
+}
+
+export function assertEnumSelector<const Values extends readonly string[]>(
+  values: Values,
+): SelectorAssertFn<Values[number]>;
+export function assertEnumSelector<const Values extends readonly string[]>(
+  ...values: Values
+): SelectorAssertFn<Values[number]>;
+export function assertEnumSelector(
+  ...input: [readonly string[]] | string[]
+) {
+  const values = Array.isArray(input[0]) ? input[0] : input;
+
+  const fn = (arg: string) => {
+    if (!values.includes(arg)) {
+      throw new Error(`value must be one of: ${values.join(', ')}`);
+    }
+  };
+
+  return fn as SelectorAssertFn<string>;
 }
 
 export function assertSelectorNotEmpty(value: string) {

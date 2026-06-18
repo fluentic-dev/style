@@ -66,7 +66,8 @@ const paddedItems = style.scope([
 Use `createStyleFn` when you want your own selector names or a smaller preset.
 
 ```ts
-import { createStyleFn, selector, type } from '@fluentic/style';
+import { createStyleFn, type } from '@fluentic/style';
+import { selector } from '@fluentic/style/selector';
 import type { CSSProperties } from '@fluentic/style';
 
 const { style: ds } = createStyleFn({

@@ -1,26 +1,35 @@
-import {
-  RUNTIME_CONFIG,
-  setDebugElementClassName,
-  setDevRuntimeOptions,
-  setPriorityMode,
-  setSourcemapTraceMode,
-} from '../config';
-import type { PriorityMode, SourcemapTraceMode } from '../config';
+import { CSS_CONFIG } from '../config/config/css';
+import { CSS_EXTRA_CONFIG } from '../config/config/css_extra';
+import { DEBUG_CONFIG } from '../config/config/debug';
+import { DEV_CONFIG, setDevUtilsRuntimeOptions } from '../config/config/dev';
+import { RUNTIME_CONFIG } from '../config/config/runtime';
+import type { SourcemapLocationMode, StylePriorityMode } from '../config/types';
 import { clearElementMarkers } from '../runtime/core/elementMarker';
 import { refreshDevSourcemapTags, refreshDevStyleTags } from '../sheet/dev';
 import {
   createDevUtilsObject,
   DefaultUtilsName,
   getDevUtilsTarget,
-  getStorage,
-  getStoredItem,
   getTraceStartMessage,
+  parseElementMarker,
   parsePriorityMode,
-  parseSourcemapTrace,
-  removeStoredItem,
-  setStoredItem,
+  parseSourcemapTrace as parseSourcemapMode,
   StorageKeys,
 } from './fns';
+
+const noopStorage = {
+  getItem: () => null,
+  removeItem: () => undefined,
+  setItem: () => undefined,
+};
+
+const getStorage = () => {
+  const storage = globalThis.localStorage as Storage | undefined;
+
+  return storage && typeof storage.getItem === 'function'
+    ? storage
+    : noopStorage;
+};
 
 export type StyleDevUtilsOptions = {
   name?: string;
@@ -38,37 +47,45 @@ export function enableStyleDevUtils(options: StyleDevUtilsOptions = {}) {
 
   target[name] = getUtils(name);
 
-  if (!options.silent && isStartupMessageEnabled()) {
-    logCssDevUtilsEnabled(name);
-  }
+  if (!options.silent) logCssDevUtilsEnabled(name);
 }
 
 function getUtils(displayName: string) {
   const setPriorityModeUtils = createDevUtilsObject({
     toLayer() {
-      setRuntimePriorityMode('layer');
+      setPriorityMode('layer');
       return null;
     },
 
     toSort() {
-      setRuntimePriorityMode('sort');
+      setPriorityMode('sort');
       return null;
     },
   });
 
   const setSourcemapTraceUtils = createDevUtilsObject({
     toStyle() {
-      setSourcemapTrace('style');
+      setSourcemapMode('style');
       return null;
     },
 
     toValue() {
-      setSourcemapTrace('value');
+      setSourcemapMode('value');
       return null;
     },
   });
 
   const setElementMarkerUtils = createDevUtilsObject({
+    on() {
+      setElementMarkerMode(true);
+      return null;
+    },
+
+    off() {
+      setElementMarkerMode(false);
+      return null;
+    },
+
     toOn() {
       setElementMarkerMode(true);
       return null;
@@ -76,6 +93,18 @@ function getUtils(displayName: string) {
 
     toOff() {
       setElementMarkerMode(false);
+      return null;
+    },
+  });
+
+  const startupMessageUtils = createDevUtilsObject({
+    on() {
+      getStorage().removeItem(StorageKeys.startupMessage);
+      return null;
+    },
+
+    off() {
+      getStorage().setItem(StorageKeys.startupMessage, 'off');
       return null;
     },
   });
@@ -92,7 +121,15 @@ function getUtils(displayName: string) {
     },
 
     getConfig() {
-      console.log(RUNTIME_CONFIG);
+      const config = {
+        runtime: RUNTIME_CONFIG,
+        dev: DEV_CONFIG,
+        debug: DEBUG_CONFIG,
+        css: CSS_CONFIG,
+        cssExtra: CSS_EXTRA_CONFIG,
+      };
+
+      console.log(config);
       return null;
     },
 
@@ -101,21 +138,11 @@ function getUtils(displayName: string) {
       return null;
     },
 
-    startupMessage: createDevUtilsObject({
-      on() {
-        setStartupMessageMode(true);
-        return null;
-      },
-
-      off() {
-        setStartupMessageMode(false);
-        return null;
-      },
-    }),
-
     setPriorityMode: setPriorityModeUtils,
 
     setElementMarker: setElementMarkerUtils,
+
+    startupMessage: startupMessageUtils,
   });
 
   const pluginUtils = createDevUtilsObject({
@@ -123,7 +150,7 @@ function getUtils(displayName: string) {
     setSourcemapTrace: setSourcemapTraceUtils,
   });
 
-  if (!RUNTIME_CONFIG.buildMeta) {
+  if (typeof globalThis.window === 'undefined') {
     return createDevUtilsObject({
       ...baseUtils,
       traceSourcemap() {
@@ -136,17 +163,18 @@ function getUtils(displayName: string) {
   return pluginUtils;
 }
 
-function setSourcemapTrace(mode: SourcemapTraceMode) {
-  setSourcemapTraceMode(mode);
+function setSourcemapMode(mode: SourcemapLocationMode) {
+  setDevUtilsRuntimeOptions({ sourcemapMode: mode });
+
   saveDevConfig();
   refreshDevSourcemapTags();
 
-  logSourcemapTraceMode(mode);
-  return null;
+  logSourcemapMode(mode);
 }
 
-function setRuntimePriorityMode(mode: PriorityMode) {
-  setPriorityMode(mode);
+function setPriorityMode(mode: StylePriorityMode) {
+  setDevUtilsRuntimeOptions({ priorityMode: mode });
+
   saveDevConfig();
   refreshDevStyleTags();
 
@@ -154,93 +182,75 @@ function setRuntimePriorityMode(mode: PriorityMode) {
 }
 
 function setElementMarkerMode(enabled: boolean) {
-  setDebugElementClassName(enabled);
+  setDevUtilsRuntimeOptions({ elementClassName: enabled });
+
   if (!enabled) clearElementMarkers();
   saveDevConfig();
 
   logElementMarkerMode(enabled);
 }
 
-function setStartupMessageMode(enabled: boolean) {
-  const storage = getStorage();
-
-  if (!storage) {
-    logPersistentUnavailable();
-    return;
-  }
-
-  const saved = enabled
-    ? removeStoredItem(storage, StorageKeys.startupMessage)
-    : setStoredItem(storage, StorageKeys.startupMessage, 'off');
-
-  if (!saved) {
-    logPersistentUnavailable();
-    return;
-  }
-
-  logStartupMessageMode(enabled);
-}
-
 function applyPersistentDevConfig() {
   const storage = getStorage();
-  if (!storage) return;
 
-  const priorityMode = parsePriorityMode(getStoredItem(storage, StorageKeys.priorityMode));
-  const sourcemapTrace = parseSourcemapTrace(getStoredItem(storage, StorageKeys.sourcemapTrace));
-  const savedElementMarker = getStoredItem(storage, StorageKeys.elementMarker);
-  const elementMarker = savedElementMarker === null ? undefined : savedElementMarker === 'true';
+  const priorityMode = parsePriorityMode(storage.getItem(StorageKeys.priorityMode));
+  const sourcemapMode = parseSourcemapMode(storage.getItem(StorageKeys.sourcemapMode));
+  const elementClassName = parseElementMarker(storage.getItem(StorageKeys.elementMarker));
 
-  if (!priorityMode && !sourcemapTrace && elementMarker === undefined) return;
+  if (
+    !priorityMode &&
+    !sourcemapMode &&
+    elementClassName === null
+  ) return;
 
-  setDevRuntimeOptions({
-    priorityMode: priorityMode ?? undefined,
-    sourcemapTrace: sourcemapTrace ?? undefined,
-    debugElementClassName: elementMarker,
+  setDevUtilsRuntimeOptions({
+    priorityMode,
+    sourcemapMode,
+    elementClassName,
   });
 
-  if (elementMarker === false) clearElementMarkers();
+  if (elementClassName === false) clearElementMarkers();
+}
+
+function writeStoredDevConfig() {
+  const storage = getStorage();
+
+  storage.setItem(
+    StorageKeys.priorityMode,
+    DEV_CONFIG.stylePriorityMode,
+  );
+
+  storage.setItem(
+    StorageKeys.sourcemapMode,
+    DEV_CONFIG.sourcemapLocationMode,
+  );
+
+  storage.setItem(
+    StorageKeys.elementMarker,
+    DEV_CONFIG.isElementClassNameEnabled ? 'true' : 'false',
+  );
+}
+
+function removeStoredDevConfig() {
+  const storage = getStorage();
+
+  storage.removeItem(StorageKeys.priorityMode);
+  storage.removeItem(StorageKeys.sourcemapMode);
+  storage.removeItem(StorageKeys.elementMarker);
 }
 
 function saveDevConfig() {
-  const storage = getStorage();
-  if (!storage) return;
-
-  if (!writeStoredDevConfig(storage)) logPersistentUnavailable();
-}
-
-function writeStoredDevConfig(storage: Storage) {
-  return setStoredItem(storage, StorageKeys.priorityMode, RUNTIME_CONFIG.priorityMode) &&
-    setStoredItem(storage, StorageKeys.sourcemapTrace, RUNTIME_CONFIG.sourcemapTrace) &&
-    setStoredItem(
-      storage,
-      StorageKeys.elementMarker,
-      RUNTIME_CONFIG.debugElementClassName ? 'true' : 'false',
-    );
-}
-
-function removeStoredDevConfig(storage: Storage) {
-  return removeStoredItem(storage, StorageKeys.priorityMode) &&
-    removeStoredItem(storage, StorageKeys.sourcemapTrace) &&
-    removeStoredItem(storage, StorageKeys.elementMarker);
+  writeStoredDevConfig();
 }
 
 function resetDevUtils() {
-  const storage = getStorage();
-  if (!storage || !removeStoredDevConfig(storage)) {
-    logPersistentUnavailable();
-    return;
-  }
+  removeStoredDevConfig();
+  setDevUtilsRuntimeOptions(null);
 
-  setDevRuntimeOptions(null);
   refreshDevStyleTags();
   refreshDevSourcemapTags();
   clearElementMarkers();
   logReset();
-}
-
-function isStartupMessageEnabled() {
-  const storage = getStorage();
-  return storage ? getStoredItem(storage, StorageKeys.startupMessage) !== 'off' : true;
 }
 
 async function traceSourcemap() {
@@ -269,7 +279,7 @@ function logTraceCompleted(result: {
   );
 }
 
-function logSourcemapTraceMode(mode: SourcemapTraceMode) {
+function logSourcemapMode(mode: SourcemapLocationMode) {
   const message = `sourcemap trace mode: ${mode}`;
 
   console.log(
@@ -277,7 +287,7 @@ function logSourcemapTraceMode(mode: SourcemapTraceMode) {
   );
 }
 
-function logPriorityMode(mode: PriorityMode) {
+function logPriorityMode(mode: StylePriorityMode) {
   const message = `priority mode: ${mode}`;
 
   console.log(
@@ -294,18 +304,6 @@ function logElementMarkerMode(enabled: boolean) {
 function logReset() {
   console.log(
     '\x1b[32m✔\x1b[0m \x1b[1m\x1b[36m[dev-utils]\x1b[0m reset saved preferences',
-  );
-}
-
-function logPersistentUnavailable() {
-  console.log(
-    '\x1b[33m!\x1b[0m \x1b[1m\x1b[36m[dev-utils]\x1b[0m localStorage is unavailable',
-  );
-}
-
-function logStartupMessageMode(enabled: boolean) {
-  console.log(
-    `\x1b[32m✔\x1b[0m \x1b[1m\x1b[36m[startup]\x1b[0m message: ${enabled ? 'on' : 'off'}`,
   );
 }
 
@@ -351,78 +349,78 @@ function logInfoRows() {
 }
 
 function getRuntimeModeLabel() {
-  return RUNTIME_CONFIG.isDev ? 'dev' : 'prod';
+  return DEV_CONFIG.isDev ? 'dev' : 'prod';
 }
 
 function getRuntimeDetail() {
   const details = [
     RUNTIME_CONFIG.isRSC ? 'RSC runtime.' : 'Client runtime.',
-    RUNTIME_CONFIG.isHoistEnabled ? 'Hoisting is enabled.' : 'Hoisting is disabled.',
+    RUNTIME_CONFIG.isHoist ? 'Hoisting is enabled.' : 'Hoisting is disabled.',
   ];
 
   return details.join(' / ');
 }
 
 function getPluginLabel() {
-  return RUNTIME_CONFIG.buildMeta ? 'active' : 'none';
+  return RUNTIME_CONFIG.isPlugin ? 'active' : 'none';
 }
 
 function getPluginDetail() {
-  return RUNTIME_CONFIG.buildMeta
+  return RUNTIME_CONFIG.isPlugin
     ? 'Build metadata is available.'
     : 'Only runtime helpers are available.';
 }
 
 function getCssModeLabel() {
-  return RUNTIME_CONFIG.isCssExtracted ? 'extracted' : 'runtime';
+  return RUNTIME_CONFIG.isExtracted ? 'extracted' : 'runtime';
 }
 
 function getCssModeDetail() {
-  if (RUNTIME_CONFIG.priorityMode === 'layer') {
-    const layer = RUNTIME_CONFIG.layer
+  if (DEV_CONFIG.stylePriorityMode === 'layer') {
+    const layer = CSS_CONFIG.layer
       ? 'Rules are wrapped in the configured CSS layer.'
       : 'Rules are not wrapped in an output CSS layer.';
 
     return `${layer} Priority sublayers control order.`;
   }
 
-  return RUNTIME_CONFIG.layer
+  return CSS_CONFIG.layer
     ? 'Sorted rules are wrapped in the configured CSS layer.'
     : 'Sorted rules are emitted without an output CSS layer.';
 }
 
 function getPriorityModeValue() {
-  return RUNTIME_CONFIG.priorityMode;
+  return DEV_CONFIG.stylePriorityMode;
 }
 
 function getPriorityModeDetail() {
-  return RUNTIME_CONFIG.priorityMode === 'layer'
+  return DEV_CONFIG.stylePriorityMode === 'layer'
     ? 'Cascade layers control priority.'
     : 'Rules are ordered by priority.';
 }
 
 function getSourcemapLabel() {
-  return RUNTIME_CONFIG.isSourcemapEnabled ? RUNTIME_CONFIG.sourcemapTrace : 'off';
+  return DEV_CONFIG.isSourcemapEnabled ? DEV_CONFIG.sourcemapLocationMode : 'off';
 }
 
 function getSourcemapDetail() {
-  if (!RUNTIME_CONFIG.isSourcemapEnabled) {
+  if (!DEV_CONFIG.isSourcemapEnabled) {
     return 'Sourcemaps are disabled.';
   }
 
-  if (!RUNTIME_CONFIG.buildMeta) {
+  if (!RUNTIME_CONFIG.isPlugin) {
     return 'Run traceSourcemap() to trace runtime callsites.';
   }
 
-  return RUNTIME_CONFIG.sourcemapTrace === 'style'
+  return DEV_CONFIG.sourcemapLocationMode === 'style'
     ? 'Spread values trace to the style site.'
     : 'Spread values trace to the value source.';
 }
 
 function getClassNameLabel() {
   const labels = [
-    RUNTIME_CONFIG.debugClassName ? 'debug' : '',
-    RUNTIME_CONFIG.localClassName ? 'local' : '',
+    DEBUG_CONFIG.isDebugClassNameEnabled ? 'debug' : '',
+    DEV_CONFIG.isLocalClassNameEnabled ? 'local' : '',
   ].filter(Boolean);
 
   return labels.length > 0 ? labels.join(' + ') : 'hashed';
@@ -430,18 +428,18 @@ function getClassNameLabel() {
 
 function getClassNameDetail() {
   return [
-    RUNTIME_CONFIG.debugClassName ? 'Friendly names are enabled.' : 'Compact names are enabled.',
-    RUNTIME_CONFIG.localClassName ? 'Names are file-scoped.' : 'Names use global hashes.',
+    DEBUG_CONFIG.isDebugClassNameEnabled ? 'Friendly names are enabled.' : 'Compact names are enabled.',
+    DEV_CONFIG.isLocalClassNameEnabled ? 'Names are callsite-scoped.' : 'Names use global hashes.',
   ].join(' / ');
 }
 
 function getElementMarkerLabel() {
-  return RUNTIME_CONFIG.debugElementClassName ? 'on' : 'off';
+  return DEV_CONFIG.isElementClassNameEnabled ? 'on' : 'off';
 }
 
 function getElementMarkerDetail() {
-  return RUNTIME_CONFIG.debugElementClassName
-    ? `Prefix ${RUNTIME_CONFIG.debugElementClassNamePrefix} is enabled.`
+  return DEV_CONFIG.isElementClassNameEnabled
+    ? `Format ${CSS_CONFIG.elementClassNameFormat}`
     : 'Element marker classes are disabled.';
 }
 
@@ -459,7 +457,7 @@ function getUsageCommands(displayName: string) {
     [`${displayName}.setPriorityMode.toSort()`, 'Use sorted priority mode'],
   ];
 
-  if (RUNTIME_CONFIG.buildMeta) {
+  if (RUNTIME_CONFIG.isPlugin) {
     commands.push(
       [`${displayName}.setSourcemapTrace.toStyle()`, 'Map spread values to the style site'],
       [`${displayName}.setSourcemapTrace.toValue()`, 'Map spread values to the value source'],
@@ -473,7 +471,7 @@ function getUsageCommands(displayName: string) {
 
 function logCssDevUtilsEnabled(displayName: string) {
   console.groupCollapsed(
-    `%c✨ %c[${displayName}] %cpriority=%c${RUNTIME_CONFIG.priorityMode}%c sourcemap=%c${RUNTIME_CONFIG.sourcemapTrace}%c marker=%c${getElementMarkerLabel()}%c │ %cFor usage run %c${displayName}.usage()`,
+    `%c✨ %c[${displayName}] %cpriority=%c${DEV_CONFIG.stylePriorityMode}%c sourcemap=%c${DEV_CONFIG.sourcemapLocationMode}%c marker=%c${getElementMarkerLabel()}%c │ %cFor usage run %c${displayName}.usage()`,
     'color:#eab308',
     'font-weight:700;color:#a21caf',
     'font-weight:700;color:#475569',

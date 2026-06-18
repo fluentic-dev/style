@@ -5,6 +5,8 @@ export type MaybeArray<T> = T | readonly T[];
 
 export type OmitProps<T, K extends keyof T> = Omit<T, K>;
 
+export type ReplaceProps<T, R extends Partial<Record<keyof T, any>>> = Omit<T, keyof R> & R;
+
 export type Collapse = {
   readonly [UniqueSymbol]?: never;
 };

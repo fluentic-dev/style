@@ -17,18 +17,6 @@ Extraction improves production characteristics:
 - smaller amount of styling work during render;
 - runtime fallback for dynamic or unsupported cases.
 
-## Entry imports
-
-Import the virtual runtime module once near your app entry:
-
-```tsx
-import 'virtual:fluentic-style';
-```
-
-In Vite, Rollup, and Rolldown, the runtime module imports
-`virtual:fluentic-style.css`, which becomes the collected CSS asset. Other
-bundlers may need an explicit CSS import or adapter-specific CSS handling.
-
 ## Vite
 
 ```ts

@@ -1,5 +1,4 @@
-import { type DebugData, LOC_COL, LOC_LINE, TRACE_STYLE, TRACE_VALUE } from '../builder/data/debug';
-import { RUNTIME_CONFIG } from '../config';
+import { type DebugData, getDebugFieldLoc, LOC_COL, LOC_LINE } from '../builder/data/debug';
 import { normalizeCallsiteSourceUrl } from '../utils/trace';
 import type { SheetCallsite } from './types';
 import { createSourceMapComment as createSourceMapCommentBase } from './utils/sourcemap';
@@ -68,19 +67,4 @@ export function createSourceMapComment(
 
 export function getSourcemapRuleCallsite(rule: SourcemapRule) {
   return getRuleCallsite(rule.callsite, rule.debug, rule.debugField);
-}
-
-function getDebugFieldLoc(
-  debug: DebugData,
-  field: string,
-) {
-  const loc = debug.fields?.[field];
-  if (!loc) return null;
-  if (Array.isArray(loc)) return loc;
-
-  const trace = RUNTIME_CONFIG.sourcemapTrace === 'value'
-    ? TRACE_VALUE
-    : TRACE_STYLE;
-
-  return loc[trace] ?? loc[TRACE_STYLE] ?? loc[TRACE_VALUE] ?? null;
 }

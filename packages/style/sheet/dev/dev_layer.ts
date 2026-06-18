@@ -1,5 +1,6 @@
 import { getLayerBlockCss, getLayerOrderCss } from '../../atomic/layer';
-import { RUNTIME_CONFIG } from '../../config';
+import { CSS_CONFIG, CSS_CONFIG_DEFAULT } from '../../config/config/css';
+import { DEV_CONFIG } from '../../config/config/dev';
 import type { SheetOptions, SheetRule, StyleSheet } from '../types';
 import {
   createNoopSheet,
@@ -24,15 +25,15 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
 
   if (!document) return createNoopSheet();
 
-  const maxRules = Math.max(options.maxRules ?? RUNTIME_CONFIG.sheetMaxRules, 1);
-  const sourcemap = options.sourcemap ?? RUNTIME_CONFIG.isSourcemapEnabled;
+  const maxRules = Math.max(options.maxRules ?? DEV_CONFIG.sheetMaxRules, 1);
+  const sourcemap = options.sourcemap ?? DEV_CONFIG.isSourcemapEnabled;
   const inserted = new Set<string>();
   const layerState = createSheetLayerState();
   const layerTag = createStyleTag(document, 'layers', options.nonce);
   const queued: QueuedRule[] = [];
 
   let layerText = '';
-  let activeLayers: readonly string[] = RUNTIME_CONFIG.layers;
+  let activeLayers: readonly string[] = CSS_CONFIG.layers ?? CSS_CONFIG_DEFAULT.layers ?? [];
   let active: DevRuleTag | null = null;
   let lastTag: HTMLStyleElement = layerTag;
 

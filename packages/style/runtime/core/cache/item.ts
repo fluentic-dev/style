@@ -1,4 +1,4 @@
-import { getScopeParentClassName } from '../../../atomic/scope';
+import { getScopeClassName } from '../../../atomic/className';
 import { BUILDER_STATE, BUILDER_TYPE_SCOPE, BUILDER_TYPE_SLOT } from '../../../builder/data/const';
 import type { ScopeTargetData, SlotData, StyleData } from '../../../builder/data/data';
 import {
@@ -9,6 +9,7 @@ import {
   isStyleData,
 } from '../../../builder/data/is';
 import type { StateItem } from '../../../builder/data/state';
+import { CSS_CONFIG } from '../../../config/config/css';
 import { isStyleTokenOverrideData } from '../../../style/token';
 import { globalData } from '../../../utils/global';
 import {
@@ -220,7 +221,7 @@ function resolveItems(
 }
 
 function getScopeParentItem(className: string): StateItem {
-  const parentClassName = getScopeParentClassName(className);
+  const parentClassName = getScopeClassName(className, CSS_CONFIG.scopeClassNameFormat || null);
 
   return [parentClassName, parentClassName];
 }

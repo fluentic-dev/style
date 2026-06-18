@@ -1,4 +1,4 @@
-import type { PriorityMode, SourcemapTraceMode } from '../config';
+import type { SourcemapLocationMode, StylePriorityMode } from '../config/types';
 
 const StoragePrefix = '@fluentic/style.dev';
 
@@ -6,7 +6,7 @@ export const DefaultUtilsName = 'StyleDevUtils';
 
 export const StorageKeys = {
   priorityMode: StoragePrefix + '.priorityMode',
-  sourcemapTrace: StoragePrefix + '.sourcemapTrace',
+  sourcemapMode: StoragePrefix + '.sourcemapTrace',
   elementMarker: StoragePrefix + '.elementMarker',
   startupMessage: StoragePrefix + '.startupMessage',
 };
@@ -21,48 +21,16 @@ export function getDevUtilsTarget(): Record<string, unknown> {
     : globalThis.window as {};
 }
 
-export function getStorage(): Storage | null {
-  try {
-    return typeof globalThis.localStorage === 'undefined'
-      ? null
-      : globalThis.localStorage;
-  } catch {
-    return null;
-  }
-}
-
-export function getStoredItem(storage: Storage, key: string) {
-  try {
-    return storage.getItem(key);
-  } catch {
-    return null;
-  }
-}
-
-export function setStoredItem(storage: Storage, key: string, value: string) {
-  try {
-    storage.setItem(key, value);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function removeStoredItem(storage: Storage, key: string) {
-  try {
-    storage.removeItem(key);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-export function parsePriorityMode(value: string | null): PriorityMode | null {
+export function parsePriorityMode(value: string | null): StylePriorityMode | null {
   return value === 'layer' || value === 'sort' ? value : null;
 }
 
-export function parseSourcemapTrace(value: string | null): SourcemapTraceMode | null {
+export function parseSourcemapTrace(value: string | null): SourcemapLocationMode | null {
   return value === 'style' || value === 'value' ? value : null;
+}
+
+export function parseElementMarker(value: string | null): boolean | null {
+  return value ? value === 'true' : null;
 }
 
 export function getTraceStartMessage() {

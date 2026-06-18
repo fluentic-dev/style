@@ -1,5 +1,5 @@
 import { compareLayerPriority, getLayerBundleCss } from '../../atomic/layer';
-import { type CssConfig } from '../../config';
+import type { CssConfig } from '../../config/config/css';
 import { DEFAULT_CONFIG } from '../utils/constants';
 import type { CssExtractRule } from './types';
 
@@ -40,12 +40,12 @@ function getExtractedCssItems(
 
   const defaults = DEFAULT_CONFIG;
 
-  const layerNamespace = args.layerNamespace ?? defaults.layerNamespace;
-  const layers = args.layers ?? defaults.layers;
+  const layerNamespace = args.layerNamespace ?? defaults.layerNamespace ?? '';
+  const layers = args.layers ?? defaults.layers ?? [];
 
   return getLayerBundleCss(
     layers,
-    layerNamespace || defaults.layerNamespace,
+    layerNamespace,
     css.map((item) => item.css),
   );
 }

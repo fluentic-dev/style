@@ -1,4 +1,4 @@
-import { RUNTIME_CONFIG } from '../../config';
+import { DEV_CONFIG } from '../../config/config/dev';
 import { hashString } from '../../utils/hash';
 import { type TraceCallsite } from '../../utils/trace';
 
@@ -80,6 +80,21 @@ export function getDebugFieldVarName(
   return debug?.vars?.[field] ?? null;
 }
 
+export function getDebugFieldLoc(
+  debug: DebugData | null,
+  field: string,
+) {
+  const loc = debug?.fields?.[field];
+  if (!loc) return null;
+  if (Array.isArray(loc)) return loc;
+
+  const trace = DEV_CONFIG.sourcemapLocationMode === 'value'
+    ? TRACE_VALUE
+    : TRACE_STYLE;
+
+  return loc[trace] ?? loc[TRACE_STYLE] ?? loc[TRACE_VALUE] ?? null;
+}
+
 function createDebugCallsite(loc: DebugLoc, debug: DebugData): TraceCallsite {
   const [line, column] = loc;
 
@@ -91,19 +106,4 @@ function createDebugCallsite(loc: DebugLoc, debug: DebugData): TraceCallsite {
     line,
     column,
   };
-}
-
-function getDebugFieldLoc(
-  debug: DebugData | null,
-  field: string,
-) {
-  const loc = debug?.fields?.[field];
-  if (!loc) return null;
-  if (Array.isArray(loc)) return loc;
-
-  const trace = RUNTIME_CONFIG.sourcemapTrace === 'value'
-    ? TRACE_VALUE
-    : TRACE_STYLE;
-
-  return loc[trace] ?? loc[TRACE_STYLE] ?? loc[TRACE_VALUE] ?? null;
 }

@@ -65,25 +65,3 @@ export function htmlAssetPlugin(title) {
     },
   };
 }
-
-export function esbuildReactPlugin(esbuild) {
-  return {
-    name: 'sample-esbuild-react',
-    async transform(code, id) {
-      if (!/\.[cm]?[jt]sx?$/.test(id)) return null;
-
-      const result = await esbuild.transform(code, {
-        loader: id.endsWith('x') ? 'tsx' : 'ts',
-        jsx: 'automatic',
-        jsxImportSource: '@fluentic/style',
-        sourcemap: true,
-        sourcefile: id,
-      });
-
-      return {
-        code: result.code,
-        map: result.map,
-      };
-    },
-  };
-}

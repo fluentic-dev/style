@@ -2,34 +2,36 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { rewriteImportSources } from '../../compiler/transform/utils/import';
 import { getDefaultSourcemapUrl, type SourcemapFilePathInfo } from '../../compiler/utils/sourcemap';
-import type { BuildMeta } from '../../config';
+import type { BuildConfig, BuildDevConfig } from '../../config/build';
 import {
   createFileCssCache,
   createFileCssConfigHash,
   createFileCssContentHash,
   createPluginCompiler,
+  EXTRACTED_CSS_MARKER,
   type FileCssCache,
-  getExtractedCssMarker,
-  STYLE_ROOT_IMPORT_PATH,
-  STYLE_SERVER_EXTRACTED_RUNTIME_IMPORT_PATH,
-  STYLE_SERVER_RUNTIME_IMPORT_PATH,
 } from '../utils';
+import { getStyleRuntimeImportPath, STYLE_IMPORTS } from '../utils/imports';
+import { getStyleRuntimeMode, StyleRuntimeMode } from '../utils/runtimeEntry';
 import { injectModuleImport } from '../utils/injection';
-import { createWebpackStyleLoader, type WebpackStyleLoaderOptions } from '../utils/webpack/loader';
-import { CLIENT_ENTRY_IMPORT_PATH, CSS_ENTRY_IMPORT_PATH, SERVER_ENTRY_IMPORT_PATH } from './constants';
+import { createWebpackLoader, type WebpackLoaderOptions } from '../bundler/webpack/shared/loader';
+import { CSS_ENTRY_IMPORT_PATH } from './constants';
 import { injectDevCssLink } from './html';
 import {
-  createNextBuildMeta,
+  createNextBuildConfig,
+  createNextBuildDevConfig,
+  createNextConfigHash,
   getNextCacheDir,
   isAppLayoutFile,
   type NextLoaderState,
   nextRegistry,
-  PRECOLLECT_NAMESPACE,
+  PRECOLLECT_CACHE_DIR,
   resolveNextCompilerOptions,
 } from './utils';
 
-type NextTurbopackLoaderOptions = WebpackStyleLoaderOptions & {
-  buildMeta?: BuildMeta;
+type NextTurbopackLoaderOptions = WebpackLoaderOptions & {
+  buildConfig?: BuildConfig;
+  buildDevConfig?: BuildDevConfig | null;
   cacheDir?: string;
   cssEntryImportPath?: string;
   configHash?: string;
@@ -39,7 +41,7 @@ type NextTurbopackLoaderOptions = WebpackStyleLoaderOptions & {
   projectDir?: string;
 };
 
-const loader = createWebpackStyleLoader<NextLoaderState>({
+const loader = createWebpackLoader<NextLoaderState>({
   missingCompilerMessage: 'Next.js compiler is not registered.',
   getEntry(compilerId, options) {
     return nextRegistry.getEntry(compilerId) ??
@@ -110,10 +112,6 @@ function injectNextRuntimeCode(
     nextCode = entry.dev
       ? rewriteServerDevStyleImports(nextCode)
       : rewriteServerStyleImports(nextCode);
-
-    nextCode = injectModuleImport(nextCode, SERVER_ENTRY_IMPORT_PATH);
-  } else {
-    nextCode = injectModuleImport(nextCode, CLIENT_ENTRY_IMPORT_PATH);
   }
 
   if (isAppLayoutFile(filePath)) {
@@ -128,16 +126,16 @@ function injectNextRuntimeCode(
 }
 
 export function rewriteServerDevStyleImports(code: string) {
-  return rewriteServerStyleImports(code, STYLE_SERVER_RUNTIME_IMPORT_PATH);
+  return rewriteServerStyleImports(code, getStyleRuntimeImportPath(StyleRuntimeMode.RscDev));
 }
 
 export function rewriteServerStyleImports(
   code: string,
-  importPath = STYLE_SERVER_EXTRACTED_RUNTIME_IMPORT_PATH,
+  importPath = getStyleRuntimeImportPath(StyleRuntimeMode.RscProd),
 ) {
   return rewriteImportSources(
     code,
-    (source) => source === STYLE_ROOT_IMPORT_PATH ? importPath : null,
+    (source) => source === STYLE_IMPORTS.Root ? importPath : null,
     'fluentic-next-server-style-imports.js',
   );
 }
@@ -148,7 +146,7 @@ function ensureCssEntryImportPath(importPath: string, importerPath: string) {
   fs.mkdirSync(path.dirname(importPath), { recursive: true });
 
   if (!fs.existsSync(importPath)) {
-    fs.writeFileSync(importPath, getExtractedCssMarker(), 'utf8');
+    fs.writeFileSync(importPath, EXTRACTED_CSS_MARKER, 'utf8');
   }
 
   return toRelativeImportPath(path.relative(path.dirname(importerPath), importPath));
@@ -165,8 +163,15 @@ function getTurbopackEntry(options: NextTurbopackLoaderOptions): NextLoaderState
 
   const dev = options.dev ?? false;
 
-  const buildMeta = options.buildMeta ?? createNextBuildMeta(dev, options);
-  const compilerOptions = resolveNextCompilerOptions(options, null, buildMeta);
+  const buildConfig = options.buildConfig ?? createNextBuildConfig(options);
+  const buildDevConfig = options.buildDevConfig ?? createNextBuildDevConfig(options);
+  const compilerOptions = resolveNextCompilerOptions(
+    options,
+    null,
+    buildConfig,
+    buildDevConfig,
+    dev,
+  );
 
   if (dev) {
     compilerOptions.devSourcemap = 'sidecarServer';
@@ -182,13 +187,16 @@ function getTurbopackEntry(options: NextTurbopackLoaderOptions): NextLoaderState
     cacheDir: options.cacheDir,
     dev,
     options: compilerOptions,
+    runtimeMode: getStyleRuntimeMode(dev, options.isServer ?? false),
   });
 
-  const configHash = options.configHash ?? createFileCssConfigHash(buildMeta);
+  const configHash = options.configHash ?? createFileCssConfigHash(
+    createNextConfigHash(buildConfig, buildDevConfig, dev),
+  );
 
   const cssCache: FileCssCache = createFileCssCache({
     cacheDir: getNextCacheDir(options.projectDir, options.cacheDir),
-    namespace: PRECOLLECT_NAMESPACE,
+    cacheSubdir: PRECOLLECT_CACHE_DIR,
   });
 
   return {

@@ -9,8 +9,6 @@ import {
   createKeyframes,
   createPositionTry,
   createProperty,
-  createScrollTimeline,
-  createViewTimeline,
 } from '@fluentic/style/css';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -50,43 +48,6 @@ const cardGlow = createKeyframes({
   },
 });
 
-const progress = createKeyframes({
-  from: {
-    transform: 'scaleX(0.08)',
-  },
-  to: {
-    transform: 'scaleX(1)',
-  },
-});
-
-const scrollRunner = createKeyframes({
-  from: {
-    marginLeft: '0px',
-    transform: 'rotate(-10deg)',
-  },
-  to: {
-    marginLeft: 'calc(100% - 36px)',
-    transform: 'rotate(18deg)',
-  },
-});
-
-const reveal = createKeyframes({
-  from: {
-    backgroundColor: '#eef3ff',
-    opacity: 0.42,
-    filter: 'saturate(0.7)',
-    boxShadow: '0 4px 12px rgba(47, 95, 218, 0.04)',
-    transform: 'translateY(42px) rotate(-7deg) skewY(-3deg)',
-  },
-  to: {
-    backgroundColor: '#dbe8ff',
-    opacity: 1,
-    filter: 'saturate(1.2)',
-    boxShadow: '0 18px 34px rgba(47, 95, 218, 0.24)',
-    transform: 'translateY(0) rotate(0deg) skewY(0deg)',
-  },
-});
-
 const demoFont = createFontFace({
   src: 'local("Georgia")',
   fontDisplay: 'swap',
@@ -109,16 +70,6 @@ const spinAngle = createProperty('--at-rule-spin-angle', {
   syntax: '"<angle>"',
   inherits: false,
   initialValue: '0deg',
-});
-
-const scrollTimeline = createScrollTimeline({
-  source: 'auto',
-  orientation: 'block',
-});
-
-const viewTimeline = createViewTimeline({
-  subject: 'auto',
-  axis: 'block',
 });
 
 const palette = createFontPaletteValues({
@@ -406,176 +357,6 @@ const styles = {
   propertyBoxAlt: style({
     backgroundColor: '#2f5fda',
   }),
-  scrollTimeline: style({
-    scrollTimelineName: scrollTimeline,
-    scrollTimelineAxis: 'block',
-  } as never),
-  scrollBox: style({
-    flex: 1,
-    minHeight: 0,
-    width: '100%',
-    overflowY: 'auto',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12,
-    paddingRight: 4,
-    scrollBehavior: 'smooth',
-  }),
-  scrollSpacer: style({
-    flex: '0 0 520px',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-    gap: 18,
-  }),
-  timelineProgress: style({
-    display: 'block',
-    height: '100%',
-    width: '100%',
-    borderRadius: 999,
-    backgroundColor: '#2f5fda',
-    transformOrigin: 'left center',
-    animationName: progress,
-    animationDuration: '1s',
-    animationFillMode: 'both',
-    animationTimeline: scrollTimeline,
-  }),
-  timelineProgressTrack: style({
-    position: 'sticky',
-    top: 0,
-    zIndex: 1,
-    height: 12,
-    overflow: 'hidden',
-    borderRadius: 999,
-    backgroundColor: '#dbe4f6',
-    border: '1px solid rgba(47, 95, 218, 0.12)',
-  }),
-  scrollControls: style({
-    position: 'sticky',
-    top: 0,
-    zIndex: 2,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
-    paddingBottom: 4,
-    backgroundColor: '#f4f6fa',
-  }),
-  scrollRunnerTrack: style({
-    flex: '0 0 auto',
-    height: 44,
-    borderRadius: 8,
-    backgroundColor: '#ffffff',
-    border: '1px solid #dfe5f0',
-    padding: 4,
-    boxShadow: '0 8px 18px rgba(28, 34, 48, 0.08)',
-  }),
-  scrollRunner: style({
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: '#2f5fda',
-    boxShadow: '0 10px 22px rgba(47, 95, 218, 0.28)',
-    animationName: scrollRunner,
-    animationDuration: '1s',
-    animationFillMode: 'both',
-    animationTimeline: scrollTimeline,
-  }),
-  timelinePreview: style({
-    timelineScope: scrollTimeline,
-    flex: 1,
-    minHeight: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'stretch',
-    overflow: 'hidden',
-  }),
-  timelineStep: style({
-    minHeight: 72,
-    borderRadius: 6,
-    backgroundColor: '#ffffff',
-    border: '1px solid #dfe5f0',
-    color: '#596273',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: 12,
-    fontWeight: 800,
-  }),
-  viewTimeline: style({
-    viewTimelineName: viewTimeline,
-    viewTimelineAxis: 'block',
-  } as never),
-  viewBox: style({
-    timelineScope: viewTimeline,
-    flex: 1,
-    minHeight: 0,
-    width: '100%',
-    overflowY: 'auto',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 12,
-    paddingRight: 4,
-    scrollBehavior: 'smooth',
-  }),
-  viewSpacer: style({
-    flex: '0 0 172px',
-  }),
-  viewMeter: style({
-    position: 'sticky',
-    top: 0,
-    zIndex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    gap: 8,
-    borderRadius: 6,
-    backgroundColor: '#ffffff',
-    border: '1px solid #dfe5f0',
-    padding: 12,
-    boxShadow: '0 8px 18px rgba(28, 34, 48, 0.08)',
-  }),
-  viewMeterLabel: style({
-    color: '#596273',
-    fontSize: 12,
-    fontWeight: 800,
-  }),
-  viewTrack: style({
-    height: 12,
-    overflow: 'hidden',
-    borderRadius: 999,
-    backgroundColor: '#dbe4f6',
-  }),
-  viewSubject: style({
-    boxSizing: 'border-box',
-    minHeight: 112,
-    flex: '0 0 112px',
-    borderRadius: 8,
-    backgroundColor: '#dbe4f6',
-    border: '1px solid #aab8d5',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: '#2f5fda',
-    fontSize: 18,
-    fontWeight: 800,
-    transformOrigin: 'center',
-    animationName: reveal,
-    animationDuration: '1s',
-    animationFillMode: 'both',
-    animationTimeline: viewTimeline,
-    animationRange: 'entry 0% cover 80%',
-  }),
-  viewProgress: style({
-    display: 'block',
-    height: '100%',
-    width: '100%',
-    borderRadius: 999,
-    backgroundColor: '#2f5fda',
-    transformOrigin: 'left center',
-    animationName: progress,
-    animationDuration: '1s',
-    animationFillMode: 'both',
-    animationTimeline: viewTimeline,
-  }),
   palette: style({
     fontPalette: palette,
   }),
@@ -700,51 +481,6 @@ const demos = [
   },
 ];
 
-const timelineDemos = [
-  {
-    title: 'createScrollTimeline',
-    css: null,
-    detail: 'animationTimeline consumes a generated @scroll-timeline name.',
-    value: scrollTimeline.value,
-    preview: (
-      <div css={[styles.preview, styles.timelinePreview]}>
-        <div css={[styles.scrollBox, styles.scrollTimeline]}>
-          <div css={styles.scrollControls}>
-            <span css={styles.timelineProgressTrack}>
-              <span css={styles.timelineProgress} />
-            </span>
-            <span css={styles.scrollRunnerTrack}>
-              <span css={styles.scrollRunner} />
-            </span>
-          </div>
-          <p css={styles.timelineHint}>Scroll this panel. The blue bar is driven by the scroll timeline.</p>
-          <div css={styles.scrollSpacer}>
-            {['start', 'keep scrolling', 'middle', 'almost there', 'end'].map((label) => (
-              <span css={styles.timelineStep} key={label}>{label}</span>
-            ))}
-          </div>
-        </div>
-      </div>
-    ),
-  },
-  {
-    title: 'createViewTimeline',
-    css: null,
-    detail: 'animationTimeline consumes a generated @view-timeline name.',
-    value: viewTimeline.value,
-    preview: (
-      <div css={[styles.preview, styles.timelinePreview]}>
-        <div css={styles.viewBox}>
-          <p css={styles.timelineHint}>Scroll until the subject enters the panel.</p>
-          <span css={styles.viewSpacer} />
-          <span css={[styles.viewSubject, styles.viewTimeline]}>view timeline subject</span>
-          <span css={styles.viewSpacer} />
-        </div>
-      </div>
-    ),
-  },
-];
-
 function App() {
   return (
     <main css={styles.page}>
@@ -759,14 +495,11 @@ function App() {
           </p>
         </header>
         <div css={styles.grid}>
-          {[...demos, ...timelineDemos].map((demo) => (
+          {demos.map((demo) => (
             <article
               css={[
                 styles.item,
                 styles.regularItem,
-                demo.title === 'createScrollTimeline' || demo.title === 'createViewTimeline'
-                  ? styles.timelineItem
-                  : null,
                 demo.css,
               ]}
               key={demo.title}

@@ -29,10 +29,11 @@ function check(id: string, file: string, content: string, checks: Check[]) {
 }
 
 async function verify002() {
-  console.log('\nVerifying snapshot 002 (transform: row/column → flexDirection)');
+  console.log('\nVerifying snapshot 002-transform (transform: row/column -> flexDirection)');
 
-  const css = await readSnapshot('002', 'extracted.css');
-  const compiled = await readSnapshot('002', 'compiled.js');
+  const id = '002-transform';
+  const css = await readSnapshot(id, 'extracted.css');
+  const compiled = await readSnapshot(id, 'compiled.js');
 
   const cssChecks: Check[] = [
     {
@@ -72,17 +73,18 @@ async function verify002() {
     },
   ];
 
-  const cssOk = check('002', 'extracted.css', css, cssChecks);
-  const compiledOk = check('002', 'compiled.js', compiled, compiledChecks);
+  const cssOk = check(id, 'extracted.css', css, cssChecks);
+  const compiledOk = check(id, 'compiled.js', compiled, compiledChecks);
 
   return cssOk && compiledOk;
 }
 
 async function verify003() {
-  console.log('\nVerifying snapshot 003 (explicit scope binding)');
+  console.log('\nVerifying snapshot 003-explicit-scope (explicit scope binding)');
 
-  const css = await readSnapshot('003', 'extracted.css');
-  const compiled = await readSnapshot('003', 'compiled.js');
+  const id = '003-explicit-scope';
+  const css = await readSnapshot(id, 'extracted.css');
+  const compiled = await readSnapshot(id, 'compiled.js');
 
   const cssChecks: Check[] = [
     {
@@ -114,17 +116,18 @@ async function verify003() {
     },
   ];
 
-  const cssOk = check('003', 'extracted.css', css, cssChecks);
-  const compiledOk = check('003', 'compiled.js', compiled, compiledChecks);
+  const cssOk = check(id, 'extracted.css', css, cssChecks);
+  const compiledOk = check(id, 'compiled.js', compiled, compiledChecks);
 
   return cssOk && compiledOk;
 }
 
 async function verify004() {
-  console.log('\nVerifying snapshot 004 (nested tokens and themes)');
+  console.log('\nVerifying snapshot 004-nested-tokens (nested tokens and themes)');
 
-  const css = await readSnapshot('004', 'extracted.css');
-  const compiled = await readSnapshot('004', 'compiled.js');
+  const id = '004-nested-tokens';
+  const css = await readSnapshot(id, 'extracted.css');
+  const compiled = await readSnapshot(id, 'compiled.js');
 
   const cssChecks: Check[] = [
     {
@@ -137,7 +140,10 @@ async function verify004() {
     },
     {
       description: 'component styles read token variables',
-      pass: (s) => s.includes('background-color: var(--token-') && s.includes('box-shadow: var(--token-'),
+      pass: (s) =>
+        s.includes('background-color: var(--var-') &&
+        s.includes('box-shadow: var(--var-') &&
+        s.includes('var(--token-'),
     },
   ];
 
@@ -160,13 +166,56 @@ async function verify004() {
     },
   ];
 
-  const cssOk = check('004', 'extracted.css', css, cssChecks);
-  const compiledOk = check('004', 'compiled.js', compiled, compiledChecks);
+  const cssOk = check(id, 'extracted.css', css, cssChecks);
+  const compiledOk = check(id, 'compiled.js', compiled, compiledChecks);
 
   return cssOk && compiledOk;
 }
 
-const ok = (await verify002()) && (await verify003()) && (await verify004());
+async function verify005() {
+  console.log('\nVerifying snapshot 005-custom-design-system (multi style function composition)');
+
+  const id = '005-custom-design-system';
+  const css = await readSnapshot(id, 'extracted.css');
+  const compiled = await readSnapshot(id, 'compiled.js');
+
+  const cssChecks: Check[] = [
+    {
+      description: 'layout transform emits flex row',
+      pass: (s) => s.includes('display: flex') && s.includes('flex-direction: row'),
+    },
+    {
+      description: 'fixed responsive selector emits md media query',
+      pass: (s) => s.includes('@media (min-width: 768px) and (max-width: 1023.98px)'),
+    },
+    {
+      description: 'ui transform emits elevation and pill radius',
+      pass: (s) => s.includes('box-shadow: 0 18px 44px rgba(15, 23, 42, 0.12)') && s.includes('border-radius: 999px'),
+    },
+    {
+      description: 'custom selectors emit pressed, hover, and tone selectors',
+      pass: (s) => s.includes('[aria-pressed="true"]') && s.includes(':hover') && s.includes('[data-tone="brand"]'),
+    },
+  ];
+
+  const compiledChecks: Check[] = [
+    {
+      description: 'static style.merge calls are extracted',
+      pass: (s) => !s.includes('style.merge('),
+    },
+    {
+      description: 'compiled output has extracted slot helpers',
+      pass: (s) => s.includes('createExtractedSlot'),
+    },
+  ];
+
+  const cssOk = check(id, 'extracted.css', css, cssChecks);
+  const compiledOk = check(id, 'compiled.js', compiled, compiledChecks);
+
+  return cssOk && compiledOk;
+}
+
+const ok = (await verify002()) && (await verify003()) && (await verify004()) && (await verify005());
 
 if (!ok) {
   console.error('\nVerification FAILED. Run "npm run generate" first if files are missing.');

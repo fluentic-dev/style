@@ -11,7 +11,12 @@ import {
 } from '../../builder/data/const';
 import type { StateItem } from '../../builder/data/state';
 import { getExtractedTokenBoundData, isExtractedTokenBoundData } from '../../builder/extract/withTokens';
-import { RUNTIME_CONFIG } from '../../config';
+import { RUNTIME_CONFIG } from '../../config/config/runtime';
+import {
+  getTokenVarName as getAtomicTokenVarName,
+  getTokenVar as getAtomicTokenVar,
+} from '../../atomic/token';
+import { CSS_CONFIG } from '../../config/config/css';
 import {
   getStyleTokenId,
   isStyleTokenData,
@@ -47,7 +52,6 @@ const dedupeRun: Record<string, number> = Object.create(null);
 const dedupeIndex: Record<string, number> = Object.create(null);
 
 const resolvedItemCache = new WeakMap<object, {
-  configVersion: number;
   result: ExtractedStylePropResult | null;
 }>();
 
@@ -90,15 +94,13 @@ function resolveExtractedStyleProp(styleProp: StyleProp | undefined) {
 function resolveDirectCachedExtractedStyleProp(styleProp: StyleProp): ExtractedStylePropResult | null | undefined {
   if (!isResolvedStyleItem(styleProp)) return undefined;
 
-  const configVersion = RUNTIME_CONFIG.configVersion;
   const cached = resolvedItemCache.get(styleProp);
 
-  if (cached?.configVersion === configVersion) return cached.result;
+  if (cached) return cached.result;
 
   const result = resolveExtractedStylePropUncached(styleProp);
 
   resolvedItemCache.set(styleProp, {
-    configVersion,
     result,
   });
 
@@ -118,13 +120,12 @@ function resolveCachedExtractedStyleProp(styleProp: StyleProp): ExtractedStylePr
 
   if (!cache || unsupported) return undefined;
 
-  const configVersion = RUNTIME_CONFIG.configVersion;
-  const data = cache.data as ({ configVersion: number; result: ExtractedStylePropResult | null; } | null);
+  const data = cache.data as ({ result: ExtractedStylePropResult | null; } | null);
 
-  if (data?.configVersion === configVersion) return data.result;
+  if (data) return data.result;
 
   const result = resolveExtractedStylePropUncached(styleProp);
-  cache.data = { configVersion, items: [], result } as any;
+  cache.data = { items: [], result } as any;
 
   return result;
 }
@@ -367,17 +368,11 @@ function mergeResolvedTokenValues(
 }
 
 function getTokenVarName(token: StyleTokenData | StyleTokenOverride) {
-  return '--' + RUNTIME_CONFIG.tokenVarPrefix + getStyleTokenId(token);
+  return getAtomicTokenVarName(token, CSS_CONFIG.tokenNameFormat ?? null);
 }
 
 function getTokenVar(token: StyleTokenData): string {
-  const varName = getTokenVarName(token);
-
-  if (token.ref) {
-    return `var(${varName}, ${getTokenVar(token.ref)})`;
-  }
-
-  return `var(${varName}, ${String(token.value ?? '')})`;
+  return getAtomicTokenVar(token, CSS_CONFIG.tokenNameFormat ?? null);
 }
 
 function setStyleValue(

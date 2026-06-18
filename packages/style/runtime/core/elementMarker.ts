@@ -1,9 +1,12 @@
-import { RUNTIME_CONFIG } from '../../config';
+import { getElementClassName } from '../../atomic/element';
+import { CSS_CONFIG } from '../../config/config/css';
+import { DEV_CONFIG } from '../../config/config/dev';
+import type { ElementClassNameFormat } from '../../config/types';
 import type { SheetCallsite, SheetRule } from '../../sheet';
 import { createSourceMapComment, type SourcemapRule } from '../../sheet/sourcemap';
 import { createStyleTag } from '../../sheet/utils';
 import { globalData } from '../../utils/global';
-import { hashString } from '../../utils/hash';
+import { createElementMarkerRule } from '../sheet/element';
 import type { ElementDebugData, StyleProp } from '../types';
 
 export type ElementMarkerStyleProp = {
@@ -18,9 +21,7 @@ type ElementMarkerSheet = {
   classNames: Set<string>;
 };
 
-const ELEMENT_MARKER_SHEET = globalData<{
-  sheet: ElementMarkerSheet | null;
-}>(
+const ELEMENT_MARKER_SHEET = globalData<{ sheet: ElementMarkerSheet | null; }>(
   'runtime.elementMarkerSheet',
   () => ({ sheet: null }),
 );
@@ -28,15 +29,15 @@ const ELEMENT_MARKER_SHEET = globalData<{
 export function createElementMarkerClassName(
   debug: ElementDebugData | undefined,
 ) {
-  if (!RUNTIME_CONFIG.isDev || !RUNTIME_CONFIG.debugElementClassName) return null;
+  if (!DEV_CONFIG.isDev || !DEV_CONFIG.isElementClassNameEnabled) return null;
 
   const callsite = getElementCallsite(debug);
   if (!callsite) return null;
 
-  const label = sanitizeMarkerLabel(debug?.label) || getFileLabel(callsite.filePath);
-  const hash = hashString(`${callsite.filePath}\n${callsite.line}:${callsite.column}`);
-  const className = sanitizeMarkerClassName(
-    `${RUNTIME_CONFIG.debugElementClassNamePrefix}${label}-${hash}`,
+  const className = getElementClassName(
+    debug?.label,
+    getElementCallsiteId(callsite),
+    CSS_CONFIG.elementClassNameFormat as ElementClassNameFormat | undefined || null,
   );
 
   insertElementMarkerRule(className, callsite);
@@ -62,12 +63,7 @@ export function splitElementMarkerStyleProp(styleProp: StyleProp): ElementMarker
 export function isElementDebugData(value: unknown): value is ElementDebugData {
   if (!value || typeof value !== 'object') return false;
 
-  const data = value as Partial<ElementDebugData>;
-
-  return data.$$elementDebug === true &&
-    Array.isArray(data.loc) &&
-    typeof data.label === 'string' &&
-    typeof data.sourceUrl === 'string';
+  return (value as Partial<ElementDebugData>).$$elementDebug === true;
 }
 
 function insertElementMarkerRule(
@@ -76,21 +72,20 @@ function insertElementMarkerRule(
 ) {
   if (typeof document === 'undefined') return;
 
-  const rule: SheetRule = {
-    key: `element-marker:${className}`,
-    css: `.${escapeCssIdent(className)}{--fluentic-element-marker:0}`,
-    callsite,
-  };
+  const rule: SheetRule = createElementMarkerRule(className, callsite);
+
   const sheet = getElementMarkerSheet(document);
 
   if (rule.key && sheet.inserted.has(rule.key)) return;
   if (rule.key) sheet.inserted.add(rule.key);
+
   sheet.classNames.add(className);
 
   sheet.rules.push({
     css: rule.css,
     callsite,
   });
+
   sheet.tag.textContent = getElementMarkerCss(sheet.rules);
 }
 
@@ -158,7 +153,7 @@ function getFirstCssSheetTag(head: HTMLElement) {
 function getElementMarkerCss(rules: SourcemapRule[]) {
   const css = rules.map((rule) => rule.css).join('\n');
 
-  if (!RUNTIME_CONFIG.isSourcemapEnabled) return css;
+  if (!DEV_CONFIG.isSourcemapEnabled) return css;
 
   return css + '\n' + createSourceMapComment(rules);
 }
@@ -230,44 +225,6 @@ function getElementCallsite(
   return null;
 }
 
-function getFileLabel(filePath: string) {
-  const normalized = filePath.split(/[?#]/, 1)[0] || filePath;
-  const fileName = normalized.split(/[\\/]/).pop() || 'element';
-  const index = fileName.lastIndexOf('.');
-
-  return sanitizeMarkerLabel(index > 0 ? fileName.slice(0, index) : fileName) || 'element';
-}
-
-function sanitizeMarkerLabel(value: string | undefined) {
-  if (!value) return '';
-
-  return value
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-    .replace(/[^_a-zA-Z0-9-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .toLowerCase();
-}
-
-function sanitizeMarkerClassName(value: string) {
-  const normalized = value
-    .replace(/[^_a-zA-Z0-9@-]+/g, '-')
-    .replace(/^-+/, '');
-
-  return /^[a-zA-Z_@-]/.test(normalized) ? normalized : `_${normalized}`;
-}
-
-function escapeCssIdent(value: string) {
-  let escaped = '';
-
-  for (let i = 0; i < value.length; i++) {
-    const char = value[i];
-
-    if (/[_a-zA-Z0-9-]/.test(char)) {
-      escaped += char;
-    } else {
-      escaped += `\\${char}`;
-    }
-  }
-
-  return escaped;
+function getElementCallsiteId(callsite: SheetCallsite) {
+  return `${callsite.filePath}\n${callsite.line}:${callsite.column}`;
 }

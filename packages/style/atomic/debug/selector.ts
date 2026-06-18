@@ -1,6 +1,5 @@
 export function getDebugSelectorName(
   selector: string,
-  maxLength: number,
 ): string | null {
   if (!selector) return null;
 
@@ -16,7 +15,7 @@ export function getDebugSelectorName(
     .replace(/\$\$/g, 'args')
     .replace(/\$/g, 'arg')
     .replace(/\.\.\./g, 'merge')
-    // Compress common pseudo-arguments to maximize our tight 12-char budget
+    // Compress common pseudo-arguments before classNameFormat applies any length policy.
     .replace(/:not\(/g, 'not-')
     .replace(/:(is|where|has)\(/g, '$1-')
     .replace(/:nth-(child|of-type)\(/g, 'nth-')
@@ -30,12 +29,11 @@ export function getDebugSelectorName(
     .replace(/[-_]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-  return validateAndTrim(name, maxLength);
+  return validateName(name);
 }
 
 export function getDebugAtRuleName(
   selector: string | string[],
-  maxLength: number,
 ): string | null {
   if (!selector || (Array.isArray(selector) && selector.length === 0)) return null;
 
@@ -45,7 +43,7 @@ export function getDebugAtRuleName(
     : parseAtRule(selector);
 
   const cleanName = name.replace(/[-_]+/g, '-').replace(/^-+|-+$/g, '');
-  return validateAndTrim(cleanName, maxLength);
+  return validateName(cleanName);
 }
 
 function compressQuery(query: string): string {
@@ -73,9 +71,9 @@ function compressQuery(query: string): string {
     .replace(/^-+|-+$/g, '');
 }
 
-function validateAndTrim(name: string, maxLength: number): string | null {
+function validateName(name: string): string | null {
   if (!name || name === 'selector' || name.length < 2) return null;
-  return name.slice(0, maxLength);
+  return name;
 }
 
 function parseAtRule(rule: string): string {

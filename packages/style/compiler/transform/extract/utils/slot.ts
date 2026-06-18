@@ -1,4 +1,4 @@
-import type { NodePath, types as BabelTypes } from '@babel/core';
+import type { BabelTypes, NodePath } from '../../utils/babel';
 import { BUILDER_TYPE_SCOPE, BUILDER_TYPE_SLOT, BUILDER_TYPE_STYLE } from '../../../../builder/data/const';
 import {
   createExtractedScope,

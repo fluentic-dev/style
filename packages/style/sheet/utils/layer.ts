@@ -1,5 +1,5 @@
 import { createLayerPool, LayerDefaultNamespace, LayerDefaultPriority, type LayerPriority } from '../../atomic/layer';
-import { RUNTIME_CONFIG } from '../../config';
+import { CSS_CONFIG } from '../../config/config/css';
 
 export function createSheetLayerState() {
   return createLayerPool(getStyleLayerName());
@@ -10,5 +10,5 @@ export function getSheetRulePriority(priority: LayerPriority | null | undefined)
 }
 
 export function getStyleLayerName() {
-  return RUNTIME_CONFIG.layerNamespace || LayerDefaultNamespace;
+  return CSS_CONFIG.layerNamespace || LayerDefaultNamespace;
 }

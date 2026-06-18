@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import { tmpdir } from 'node:os';
 import { dirname, extname, join, resolve } from 'node:path';
 import { gzipSync } from 'node:zlib';
-import { build } from 'rolldown';
+import { build } from 'vite';
 
 const packageRoot = resolve(import.meta.dirname, '..');
 const distRoot = join(packageRoot, 'dist');
@@ -12,7 +12,7 @@ const entries = [
   {
     name: 'dev runtime',
     imports: [
-      ['jsx-dev-runtime/index.js', ['Fragment', 'createElement', 'jsxDEV']],
+      ['jsx/jsx-dev-runtime.js', ['Fragment', 'createElement', 'jsxDEV']],
       [
         'index.js',
         [
@@ -34,19 +34,27 @@ const entries = [
   {
     name: 'extracted production runtime',
     imports: [
-      ['jsx-runtime/extracted.js', ['Fragment', 'createElement', 'jsx', 'jsxs']],
       [
-        'runtime/extract.js',
+        'entry/prod/runtime.js',
         [
-          'bindScope',
-          'combineScope',
-          'combineStyle',
           'getClassName',
-          'getToken',
+          'mergeClassName',
+          'mergeStyle',
         ],
       ],
+    ],
+  },
+  {
+    name: 'extracted jsx runtime',
+    imports: [
+      ['entry/prod/jsx-runtime.js', ['Fragment', 'createElement', 'jsx', 'jsxs']],
+    ],
+  },
+  {
+    name: 'extracted generated helpers',
+    imports: [
       [
-        'builder/extract/index.js',
+        'entry/prod/extract.js',
         [
           'createExtractedScope',
           'createExtractedSlot',
@@ -62,7 +70,7 @@ const entries = [
   {
     name: 'production runtime',
     imports: [
-      ['jsx-runtime/prod.js', ['Fragment', 'createElement', 'jsx', 'jsxs']],
+      ['jsx/jsx-runtime.js', ['Fragment', 'createElement', 'jsx', 'jsxs']],
       [
         'index.js',
         [
@@ -84,9 +92,9 @@ const entries = [
   {
     name: 'server dev rsc runtime',
     imports: [
-      ['jsx-runtime/server.js', ['Fragment', 'createElement', 'jsx', 'jsxs']],
+      ['entry/rsc-dev/jsx-runtime.js', ['Fragment', 'createElement', 'jsx', 'jsxs']],
       [
-        'server.js',
+        'entry/rsc-dev.js',
         [
           'bindScope',
           'combineScope',
@@ -106,21 +114,10 @@ const entries = [
   {
     name: 'server extracted production runtime',
     imports: [
-      ['jsx-runtime/server-extracted.js', ['Fragment', 'createElement', 'jsx', 'jsxs']],
       [
-        'server/extracted.js',
+        'entry/rsc-prod.js',
         [
-          'bindScope',
-          'combineScope',
-          'combineStyle',
-          'createStyleFn',
-          'createTheme',
-          'createToken',
-          'createTokens',
-          'createValues',
           'getClassName',
-          'getToken',
-          'style',
         ],
       ],
     ],
@@ -243,24 +240,32 @@ async function minifyBundle(name, imports) {
     entryFile,
     imports.map(([entry, names], index) => {
       const imported = names.map((name) => `${name} as entry${index}_${name}`).join(', ');
-      const exported = names.map((name) => `entry${index}_${name}`).join(', ');
 
-      return `import { ${imported} } from ${JSON.stringify(entry)};\nexport { ${exported} };`;
-    }).join('\n') + '\n',
+      return `import { ${imported} } from ${JSON.stringify(entry)};`;
+    }).join('\n') + '\n' +
+      `globalThis.__fluenticBundleReport = [${
+        imports.flatMap(([, names], index) => names.map((name) => `entry${index}_${name}`)).join(', ')
+      }];\n`,
   );
 
   await build({
-    input: entryFile,
-    external: (id) => externalDeps.has(id),
-    platform: 'browser',
-    treeshake: true,
-    output: {
-      dir: outDir,
-      format: 'esm',
+    configFile: false,
+    logLevel: 'silent',
+    build: {
+      outDir,
+      emptyOutDir: true,
       minify: true,
       sourcemap: false,
-      entryFileNames: 'bundle.js',
-      chunkFileNames: 'chunk-[hash].js',
+      rollupOptions: {
+        input: entryFile,
+        external: (id) => externalDeps.has(id),
+        treeshake: true,
+        output: {
+          format: 'esm',
+          entryFileNames: 'bundle.js',
+          chunkFileNames: 'chunk-[hash].js',
+        },
+      },
     },
   });
 

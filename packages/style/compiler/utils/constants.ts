@@ -1,22 +1,26 @@
-import { DEFAULT_RUNTIME_CONFIG as DEFAULT_CONFIG } from '../../config/default';
-import {
-  STYLE_BUILDER_EXTRACT_IMPORT_PATH,
-  STYLE_CSS_IMPORT_PATH,
-  STYLE_IMPORT_PATH,
-  STYLE_SERVER_EXTRACTED_IMPORT_PATH,
-  STYLE_SERVER_IMPORT_PATH,
-} from '../../utils/imports';
+import { CSS_CONFIG_DEFAULT } from '../../config/config/css';
+import { DEFAULT_DEBUG_CONFIG } from '../../config/config/debug';
+import { DEV_CONFIG_DEFAULT } from '../../config/config/dev';
 
-export { DEFAULT_CONFIG };
+const pkg = '@fluentic/style';
+
+export const STYLE_IMPORT_PATH = pkg;
+export const STYLE_CSS_IMPORT_PATH = pkg + '/css';
+export const STYLE_ENTRY_PROD_EXTRACT_IMPORT_PATH = pkg + '/entry/prod/extract';
+export const STYLE_EXTRACT_RUNTIME_IMPORT_PATH = pkg + '/entry/prod/runtime';
+
+export const DEFAULT_CONFIG = {
+  ...CSS_CONFIG_DEFAULT,
+  localClassName: DEV_CONFIG_DEFAULT.isLocalClassNameEnabled,
+  debugClassName: DEFAULT_DEBUG_CONFIG.isDebugClassNameEnabled,
+};
 
 export const IMPORT_PATHS = [
   STYLE_IMPORT_PATH,
-  STYLE_SERVER_IMPORT_PATH,
-  STYLE_SERVER_EXTRACTED_IMPORT_PATH,
   STYLE_CSS_IMPORT_PATH,
 ];
 
-export const IMPORT_EXTRACT = STYLE_BUILDER_EXTRACT_IMPORT_PATH;
+export const IMPORT_EXTRACT = STYLE_ENTRY_PROD_EXTRACT_IMPORT_PATH;
 
 export const FN_STYLE = 'style';
 
@@ -26,6 +30,7 @@ export const FN_STYLE_VALUE = 'value';
 export const FN_STYLE_RAW = 'raw';
 export const FN_STYLE_PLAIN = 'plain';
 export const FN_STYLE_KEYFRAMES = 'keyframes';
+export const FN_STYLE_MERGE = 'merge';
 
 export const FN_CREATE_TOKEN = 'createToken';
 export const FN_CREATE_TOKENS = 'createTokens';
@@ -43,8 +48,6 @@ export const FN_CREATE_FONT_FACE = 'createFontFace';
 export const FN_CREATE_FONT_PALETTE_VALUES = 'createFontPaletteValues';
 export const FN_CREATE_POSITION_TRY = 'createPositionTry';
 export const FN_CREATE_COUNTER_STYLE = 'createCounterStyle';
-export const FN_CREATE_SCROLL_TIMELINE = 'createScrollTimeline';
-export const FN_CREATE_VIEW_TIMELINE = 'createViewTimeline';
 export const FN_CREATE_PROPERTY = 'createProperty';
 export const FN_FONT_SRC = 'fontSrc';
 

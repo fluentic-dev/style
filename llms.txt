@@ -32,8 +32,8 @@ Core advantages:
   from a shared base.
 - **Type-safe CSS values**: the default style function uses React CSS types and
   accepts typed design tokens.
-- **Bundler coverage**: Vite, Rollup, Rolldown, Webpack, Rspack, esbuild, Babel,
-  and custom compiler integrations are available from one package.
+- **Bundler coverage**: Vite, Webpack, Rspack, Farm, and Next.js app bundler
+  integrations are available from one package.
 - **No required app-wide config file**: ordinary TypeScript modules can define
   styles, slots, scopes, and tokens.
 
@@ -97,19 +97,17 @@ Subpath exports:
 | Import | Purpose |
 |---|---|
 | `@fluentic/style` | Runtime API, default `style`, selectors, sheet utilities, React hooks/types |
-| `@fluentic/style/jsx/runtime` | Production JSX runtime for the `css` prop |
-| `@fluentic/style/jsx/dev-runtime` | Development JSX runtime |
-| `@fluentic/style/babel` | Babel plugin factory |
-| `@fluentic/style/compiler` | `createCompiler()` for custom integrations |
+| `@fluentic/style/css` | CSS helper APIs |
+| `@fluentic/style/config` | Runtime configuration helpers |
+| `@fluentic/style/dev` | Development utilities |
+| `@fluentic/style/dev/rsc` | React Server Component dev client boundary |
+| `@fluentic/style/jsx` | JSX import source for runtime-only apps |
+| `@fluentic/style/plugin/jsx` | JSX import source for plugin-managed builds |
+| `@fluentic/style/plugin/nextjs` | Next.js App Router integration |
 | `@fluentic/style/plugin/vite` | Vite plugin, named export `plugin` |
-| `@fluentic/style/plugin/rollup` | Rollup plugin, named export `plugin` |
-| `@fluentic/style/plugin/rolldown` | Rolldown plugin, named export `plugin` |
 | `@fluentic/style/plugin/webpack` | Webpack plugin, named export `plugin` |
 | `@fluentic/style/plugin/rspack` | Rspack plugin, named export `plugin` |
-| `@fluentic/style/plugin/esbuild` | esbuild plugin, named export `plugin` |
-| `@fluentic/style/precompile` | Low-level precompiled helpers such as `cx` |
-| `@fluentic/style/compiler` | Internal compiler entry used by adapters |
-| `@fluentic/style/plugin/unplugin` | Internal unplugin entry used by adapters |
+| `@fluentic/style/plugin/farm` | Farm plugin, named export `plugin` |
 
 Important: there is no top-level `select` export. Use the chain method
 `.select(...)` on a style or slot builder for custom self selectors only.

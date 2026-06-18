@@ -3,23 +3,26 @@ import { PHASE_DEVELOPMENT_SERVER } from 'next/constants';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Compilation, Compiler, RuleSetRule, WebpackPluginInstance } from 'webpack';
+import type { BuildConfig, BuildDevConfig } from '../../config/build';
 import { isPromiseLike } from '../../utils/object';
 import {
+  BUNDLE_CSS_FILE,
   createFileCssCache,
   createFileCssConfigHash,
   createPluginCompiler,
   DEFAULT_TRANSFORM_EXCLUDE,
-  getExtractedCssMarker,
+  DEFAULT_TRANSFORM_INCLUDE,
+  EXTRACTED_CSS_MARKER,
   invalidateFiles,
   PLUGIN_CACHE_DIR,
   PLUGIN_NAME,
 } from '../utils';
-import { getRuntimeImportAliases, getServerRuntimeImportAliases } from '../utils/bundler';
-import { writeCacheFile, writePluginCacheFile } from '../utils/cache';
+import { writeCacheFile } from '../utils/cache';
 import { formatError } from '../utils/misc';
+import { getStyleEntryDefines, getStyleRuntimeMode } from '../utils/runtimeEntry';
 import { getSourcemapSidecar, type SourcemapSidecar } from '../utils/sidecar';
 import type { SidecarRouteHandler } from '../utils/sidecar/server';
-import { CLIENT_ENTRY_IMPORT_PATH, CSS_ENTRY_IMPORT_PATH, DEV_CSS_ROUTE, LOADER_IMPORT_PATH } from './constants';
+import { CSS_ENTRY_IMPORT_PATH, DEV_CSS_ROUTE, LOADER_IMPORT_PATH } from './constants';
 import type {
   MaybePromise,
   NextConfigFunction,
@@ -35,26 +38,19 @@ import type {
 import {
   addAliases,
   addWebpackPlugin,
-  createNextBuildMeta,
+  createNextBuildConfig,
+  createNextBuildDevConfig,
+  createNextConfigHash,
   getNextCacheDir,
   getTransformLoaderPath,
   type NextLoaderState,
   nextRegistry,
   type PluginCompiler,
-  PRECOLLECT_NAMESPACE,
-  prependClientEntry,
+  PRECOLLECT_CACHE_DIR,
   removeUndefinedValues,
   replaceCssMarkerAsset,
   resolveNextCompilerOptions,
 } from './utils';
-
-const CACHE_FOLDER = 'nextjs';
-
-const CSS_ENTRY_FILE = CACHE_FOLDER + '/bundle.css';
-const BUILD_META_ENV = 'FLUENTIC_STYLE_NEXT_BUILD_META';
-const SIDECAR_URL_ENV = 'FLUENTIC_STYLE_NEXT_SIDECAR_URL';
-
-export const CSS_MARKER = getExtractedCssMarker();
 
 export default plugin;
 
@@ -87,14 +83,17 @@ function createNextConfig(
 
   const cssCache = createFileCssCache({
     cacheDir,
-    namespace: PRECOLLECT_NAMESPACE,
+    cacheSubdir: PRECOLLECT_CACHE_DIR,
   });
 
   let sidecar: SourcemapSidecar | null = null;
 
   if (dev) {
-    const buildMeta = createNextBuildMeta(dev, options);
-    const configHash = createFileCssConfigHash(buildMeta);
+    const buildConfig = createNextBuildConfig(options);
+    const buildDevConfig = createNextBuildDevConfig(options);
+    const configHash = createFileCssConfigHash(
+      createNextConfigHash(buildConfig, buildDevConfig, dev),
+    );
 
     const route: SidecarRouteHandler = () => ({
       contentType: 'text/css; charset=utf-8',
@@ -137,8 +136,11 @@ function createFluenticNextConfigResolved(
   const originalRunAfterProductionCompile = originalCompiler.runAfterProductionCompile;
   const extractCompilers: PluginCompiler[] = [];
   const projectDir = process.cwd();
-  const phaseBuildMeta = createNextBuildMeta(dev, options);
-  const phaseConfigHash = createFileCssConfigHash(phaseBuildMeta);
+  const phaseBuildConfig = createNextBuildConfig(options);
+  const phaseBuildDevConfig = createNextBuildDevConfig(options);
+  const phaseConfigHash = createFileCssConfigHash(
+    createNextConfigHash(phaseBuildConfig, phaseBuildDevConfig, dev),
+  );
 
   const devCssHref = dev && sidecar
     ? sidecar.getRouteUrl(DEV_CSS_ROUTE)
@@ -149,14 +151,25 @@ function createFluenticNextConfigResolved(
   const turbopackState = createPluginCompiler({
     projectDir,
     cacheDir,
-    options: resolveNextCompilerOptions(options, sidecar, phaseBuildMeta),
+    options: resolveNextCompilerOptions(
+      options,
+      sidecar,
+      phaseBuildConfig,
+      phaseBuildDevConfig,
+      dev,
+    ),
     dev,
+    runtimeMode: getStyleRuntimeMode(dev),
   });
 
-  const turbopackCssAliases = createCssAliases({
-    writeFile: (fileName, content) => writeCacheFile(getImportableCssCacheDir(projectDir), fileName, content),
-  });
-  const turbopackRuntimeAliases = getTurbopackRuntimeImportAliases(phaseBuildMeta);
+  const turbopackCssEntryPath = writeCacheFile(
+    getImportableCssCacheDir(projectDir),
+    BUNDLE_CSS_FILE,
+    EXTRACTED_CSS_MARKER,
+  );
+  const turbopackCssAliases = {
+    [CSS_ENTRY_IMPORT_PATH]: turbopackCssEntryPath,
+  };
 
   nextRegistry.setEntry<NextLoaderState>(turbopackCompilerId, {
     compiler: turbopackState.compiler,
@@ -171,13 +184,19 @@ function createFluenticNextConfigResolved(
 
   return {
     ...nextConfig,
-    env: {
-      ...nextConfig.env,
-      [BUILD_META_ENV]: JSON.stringify(phaseBuildMeta),
-      [SIDECAR_URL_ENV]: dev && sidecar ? sidecar.getBaseUrl() ?? '' : '',
-    },
+    env: nextConfig.env,
     compiler: {
       ...originalCompiler,
+      define: {
+        ...originalCompiler.define,
+        ...getStyleEntryDefines(
+          phaseBuildConfig,
+          phaseBuildDevConfig,
+          dev,
+          dev ? sidecar?.getBaseUrl() : '',
+        ),
+      },
+      defineServer: originalCompiler.defineServer,
       async runAfterProductionCompile(metadata) {
         await originalRunAfterProductionCompile?.(metadata);
 
@@ -191,12 +210,12 @@ function createFluenticNextConfigResolved(
       },
     },
     turbopack: createTurbopackConfig(originalTurbopack, {
-      buildMeta: phaseBuildMeta,
+      buildConfig: phaseBuildConfig,
+      buildDevConfig: phaseBuildDevConfig,
       cacheDir,
       compilerId: turbopackCompilerId,
       configHash: phaseConfigHash,
       cssAliases: turbopackCssAliases,
-      runtimeAliases: turbopackRuntimeAliases,
       dev,
       devCssHref,
       projectDir,
@@ -206,27 +225,43 @@ function createFluenticNextConfigResolved(
         config = originalWebpack(config, context);
       }
 
-      const buildMeta = createNextBuildMeta(context.dev, options);
+      const buildConfig = createNextBuildConfig(options);
+      const buildDevConfig = createNextBuildDevConfig(options);
+      const configHash = createFileCssConfigHash(
+        createNextConfigHash(buildConfig, buildDevConfig, context.dev),
+      );
 
       const state = createPluginCompiler({
         projectDir: context.dir ?? process.cwd(),
         cacheDir,
-        options: resolveNextCompilerOptions(options, sidecar, buildMeta),
+        options: resolveNextCompilerOptions(
+          options,
+          sidecar,
+          buildConfig,
+          buildDevConfig,
+          context.dev,
+        ),
         dev: context.dev,
+        runtimeMode: getStyleRuntimeMode(context.dev, context.isServer),
       });
 
       extractCompilers.push(state.compiler);
 
       const compilerId = createCompilerId(context.isServer ? 'server' : 'client');
 
-      const cssAliases = createCssAliases({
-        writeFile: (fileName, content) => writePluginCacheFile(state, fileName, content),
-      });
+      const cssEntryPath = writeCacheFile(
+        state.cacheDir,
+        BUNDLE_CSS_FILE,
+        EXTRACTED_CSS_MARKER,
+      );
+      const cssAliases = {
+        [CSS_ENTRY_IMPORT_PATH]: cssEntryPath,
+      };
 
       nextRegistry.setEntry<NextLoaderState>(compilerId, {
         compiler: state.compiler,
         filter: state.filter,
-        configHash: createFileCssConfigHash(buildMeta),
+        configHash,
         cssCache: context.dev ? cssCache : null,
         cssEntryImportPath: CSS_ENTRY_IMPORT_PATH,
         dev: context.dev,
@@ -234,18 +269,20 @@ function createFluenticNextConfigResolved(
         isServer: context.isServer,
       });
 
-      addAliases(config, {
-        ...cssAliases,
-        ...(context.isServer
-          ? getWebpackServerRuntimeImportAliases(buildMeta)
-          : getRuntimeImportAliases(buildMeta)),
-      });
+      addAliases(config, cssAliases);
 
       addTransformLoader(config, options, compilerId);
+      addWebpackPlugin(
+        config,
+        new context.webpack.DefinePlugin(getStyleEntryDefines(
+          buildConfig,
+          buildDevConfig,
+          context.dev,
+          context.dev ? sidecar?.getBaseUrl() : '',
+        )),
+      );
 
       if (!context.isServer) {
-        config.entry = prependClientEntry(config.entry, CLIENT_ENTRY_IMPORT_PATH);
-
         addCssPatchPlugin(
           config,
           context.dev,
@@ -260,45 +297,6 @@ function createFluenticNextConfigResolved(
   };
 }
 
-export function getTurbopackRuntimeImportAliases(
-  buildMeta: ReturnType<typeof createNextBuildMeta>,
-) {
-  const serverAliases = getServerRuntimeImportAliases(buildMeta);
-  const aliases = {
-    ...getRuntimeImportAliases(buildMeta),
-    ...serverAliases,
-  };
-
-  // Turbopack resolve aliases are shared by client and server graphs, so keep
-  // the package root target-neutral and let exact import rewriting handle it.
-  delete aliases['@fluentic/style'];
-
-  return aliases;
-}
-
-function getWebpackServerRuntimeImportAliases(
-  buildMeta: ReturnType<typeof createNextBuildMeta>,
-) {
-  const aliases = getServerRuntimeImportAliases(buildMeta);
-  const rootAlias = aliases['@fluentic/style'];
-
-  if (!rootAlias) return aliases;
-
-  const exactAliases = { ...aliases };
-  delete exactAliases['@fluentic/style'];
-  exactAliases['@fluentic/style$'] = rootAlias;
-
-  return exactAliases;
-}
-
-function createCssAliases(args: {
-  writeFile: (fileName: string, content: string) => string;
-}): Record<string, string> {
-  return {
-    [CSS_ENTRY_IMPORT_PATH]: args.writeFile(CSS_ENTRY_FILE, CSS_MARKER),
-  };
-}
-
 function getImportableCssCacheDir(projectDir: string) {
   return path.join(projectDir, PLUGIN_CACHE_DIR);
 }
@@ -306,12 +304,12 @@ function getImportableCssCacheDir(projectDir: string) {
 function createTurbopackConfig(
   originalTurbopack: TurbopackConfig,
   args: {
-    buildMeta: ReturnType<typeof createNextBuildMeta>;
+    buildConfig: BuildConfig;
+    buildDevConfig: BuildDevConfig | null;
     cacheDir: string;
     compilerId: string;
     configHash: string;
     cssAliases: Record<string, string>;
-    runtimeAliases: Record<string, string>;
     dev: boolean;
     devCssHref: string | null;
     projectDir: string;
@@ -320,7 +318,6 @@ function createTurbopackConfig(
   const resolveAlias: TurbopackResolveAlias = {
     ...originalTurbopack.resolveAlias,
     ...args.cssAliases,
-    ...args.runtimeAliases,
   };
 
   return {
@@ -336,12 +333,12 @@ function createTurbopackConfig(
 function mergeTurbopackRules(
   existingRules: TurbopackRules,
   args: {
-    buildMeta: ReturnType<typeof createNextBuildMeta>;
+    buildConfig: BuildConfig;
+    buildDevConfig: BuildDevConfig | null;
     cacheDir: string;
     compilerId: string;
     configHash: string;
     cssAliases: Record<string, string>;
-    runtimeAliases: Record<string, string>;
     dev: boolean;
     devCssHref: string | null;
     projectDir: string;
@@ -350,7 +347,8 @@ function mergeTurbopackRules(
   const loaderItem: TurbopackLoaderItem = {
     loader: LOADER_IMPORT_PATH,
     options: removeUndefinedValues({
-      buildMeta: args.buildMeta,
+      buildConfig: args.buildConfig,
+      buildDevConfig: args.buildDevConfig,
       cacheDir: args.cacheDir,
       compilerId: args.compilerId,
       configHash: args.configHash,
@@ -404,7 +402,7 @@ function addTransformLoader(
       options: { ...options, compilerId },
     }],
     enforce: 'pre',
-    test: /\.[cm]?[jt]sx?$/,
+    test: DEFAULT_TRANSFORM_INCLUDE,
     exclude: options.include ? undefined : [
       DEFAULT_TRANSFORM_EXCLUDE,
       /\.next/,
@@ -457,7 +455,7 @@ function patchExtractedCssAsset(
       compiler,
       compilation,
       css,
-      marker: CSS_MARKER,
+      marker: EXTRACTED_CSS_MARKER,
     })
   ) return;
 
@@ -482,9 +480,9 @@ function patchTurbopackExtractedCss(args: {
 
   for (const filePath of findCssFiles(distDir)) {
     const source = fs.readFileSync(filePath, 'utf8');
-    if (!source.includes(CSS_MARKER)) continue;
+    if (!source.includes(EXTRACTED_CSS_MARKER)) continue;
 
-    fs.writeFileSync(filePath, source.split(CSS_MARKER).join(args.css), 'utf8');
+    fs.writeFileSync(filePath, source.split(EXTRACTED_CSS_MARKER).join(args.css), 'utf8');
   }
 }
 

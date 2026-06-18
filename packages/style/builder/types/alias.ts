@@ -1,9 +1,11 @@
 import type { AtRuleRef, PlainStyleObject, StyleKeyframesObject, StyleObject, StyleValueTuple } from '../../style';
 import type { Collapse } from '../../utils/type';
-// oxlint-disable-next-line no-unused-vars
 import type { BUILDER_SLOT_ID } from '../data';
 import type { ScopeSelfFn, SlotSelfFn, StyleSelfFn } from './fns';
+import type { MergeRuleStyleData } from './types';
 import type { ScopeBuilder, SlotBuilder, SlotOverrideBuilder, StyleBuilder } from './types';
+
+type _ = typeof BUILDER_SLOT_ID;
 
 export function styleRule<Style, Selectors>() {
   type StyleRule<Style> = StyleBuilder<Style, Selectors> & Collapse;
@@ -34,18 +36,25 @@ export function typeAliases<Style, Selectors>() {
   type ScopeRule<Style> = ReturnType<typeof scopeRule<Style, Selectors>>;
 
   type StyleFn<Style> = StyleSelfFn<Style, Selectors> & {
+    (style?: StyleObject<Style>): ReturnType<typeof styleRule<Style, Selectors>>;
     slot: SlotFn<Style>;
     scope: ScopeFn<Style>;
     value: ValueFn;
     raw: RawFn<Style>;
     plain: PlainFn<Style>;
     keyframes: KeyframesFn<Style>;
+    merge: MergeFn;
   };
 
   type ValueFn = <const T>(value: T, weight: number) => StyleValueTuple<T>;
+
   type RawFn<Style> = <T extends StyleObject<Style>>(style: T) => T;
+
   type PlainFn<Style> = <T extends PlainStyleObject<Style>>(style: T) => T;
+
   type KeyframesFn<Style> = <T extends StyleKeyframesObject<Style>>(frames: T) => AtRuleRef;
+
+  type MergeFn = <Target>(target: Target, ...styles: MergeRuleStyleData[]) => Target;
 
   type SlotFn<Style> = SlotSelfFn<Style, Selectors>;
 
@@ -67,6 +76,7 @@ export function typeAliases<Style, Selectors>() {
     RawFn: RawFn<Style>;
     PlainFn: PlainFn<Style>;
     KeyframesFn: KeyframesFn<Style>;
+    MergeFn: MergeFn;
   };
 
   return {} as Types<Style>;

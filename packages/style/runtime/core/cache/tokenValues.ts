@@ -1,5 +1,5 @@
 import { getTokenOverrideValue } from '../../../atomic/token';
-import { RUNTIME_CONFIG } from '../../../config';
+import { CSS_CONFIG } from '../../../config/config/css';
 import { getStyleTokenId, isStyleTokenOverrideData, type StyleTokenOverride } from '../../../style/token';
 import { hasOwn } from '../../../utils/object';
 
@@ -29,7 +29,7 @@ export function addTokenOverride(values: MutableTokenValues, item: unknown) {
   if (!isStyleTokenOverrideData(item)) return false;
 
   const id = getStyleTokenId(item);
-  const value = getTokenOverrideValue(item, RUNTIME_CONFIG.tokenVarPrefix);
+  const value = getTokenOverrideValue(item, CSS_CONFIG.tokenNameFormat ?? null);
 
   if (!values.ids) values.ids = [];
   if (!values.values) values.values = [];

@@ -1,25 +1,32 @@
 import { buildPropertyCss, type PropertyObject } from '../atomic/atRule/property';
-import { AT_RULE_REF_TYPE_PROPERTY, type AtRuleRef, createAtRuleRef } from '../style/valueRef';
-import { createAtRuleCssOptions, createAtRuleTokens } from './utils';
+import { CSS_EXTRA_CONFIG } from '../config/config/css_extra';
+import type { AtRuleRef } from '../style/valueRef';
+import { createIdCounter, type StableId } from '../utils/id';
+import { createNamedAtRuleRef } from './utils';
 
 export type { PropertyObject };
 
+const idCounter = createIdCounter('property');
+
+export function createProperty(descriptors: PropertyObject): AtRuleRef;
+export function createProperty(descriptors: PropertyObject, stableId?: StableId): AtRuleRef;
+export function createProperty(name: string, descriptors: PropertyObject): AtRuleRef;
 export function createProperty(
-  name: `--${string}`,
-  descriptors: PropertyObject,
+  nameOrDescriptors: string | PropertyObject,
+  descriptorsOrStableId?: PropertyObject | StableId,
 ): AtRuleRef {
-  if (typeof name !== 'string' || !name.startsWith('--')) {
-    throw new Error('createProperty name must be a custom property name');
-  }
+  const descriptors = typeof nameOrDescriptors === 'string'
+    ? descriptorsOrStableId as PropertyObject
+    : nameOrDescriptors;
+  const stableId = typeof nameOrDescriptors === 'string'
+    ? { name: nameOrDescriptors, id: nameOrDescriptors }
+    : descriptorsOrStableId as StableId | undefined;
 
-  const { tokens, tokenLookup } = createAtRuleTokens();
-  const css = buildPropertyCss(name, descriptors, tokens, tokenLookup, createAtRuleCssOptions());
-
-  return createAtRuleRef({
-    type: AT_RULE_REF_TYPE_PROPERTY,
-    key: 'property:' + name,
-    value: name,
-    css,
-    tokens: tokens.length ? tokens : undefined,
+  return createNamedAtRuleRef({
+    idCounter,
+    stableId,
+    format: CSS_EXTRA_CONFIG.namedRuleFormat.property,
+    value: descriptors,
+    buildCss: buildPropertyCss,
   });
 }

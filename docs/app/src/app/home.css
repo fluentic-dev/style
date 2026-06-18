@@ -290,6 +290,8 @@
     #fbfdff;
   color: #222936;
   font-family: var(--font-mono);
+  font-feature-settings: "liga" 0, "calt" 0;
+  font-variant-ligatures: none;
   font-size: 0.8rem;
   height: 468px;
   line-height: 1.68;

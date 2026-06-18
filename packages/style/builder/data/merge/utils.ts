@@ -1,4 +1,4 @@
-import { RUNTIME_CONFIG } from '../../../config';
+import { DEV_CONFIG } from '../../../config/config/dev';
 import { traceError } from '../../../utils/trace';
 import { BUILDER_STATE, ITEM_RUNTIME_DEV, ITEM_RUNTIME_DEV_PLUGIN, ITEM_RUNTIME_PROD } from '../const';
 import type { BuilderData } from '../data';
@@ -10,7 +10,7 @@ export function cloneData<Data extends BuilderData, Source extends BuilderData>(
   debug: DebugData | null,
   merge = true,
 ) {
-  const runtimeType = RUNTIME_CONFIG.isDev
+  const runtimeType = DEV_CONFIG.isDev
     ? (debug ? ITEM_RUNTIME_DEV_PLUGIN : ITEM_RUNTIME_DEV)
     : ITEM_RUNTIME_PROD;
 

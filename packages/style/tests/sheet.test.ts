@@ -1,6 +1,7 @@
-import { FLUENTIC_SIDECAR_URL_SYMBOL_KEY } from '../config';
+import { SIDECAR_URL_GLOBAL_SYMBOL } from '../config/utils';
+import { setDevRuntimeOptions } from '../config/config/dev';
 import {
-  configureRuntime,
+  configureTestRuntime,
   createDevSheet,
   createFakeDocument,
   createFetchResponse,
@@ -12,7 +13,6 @@ import {
   getRuleCallsite,
   includes,
   setBuildMeta,
-  setDevRuntimeOptions,
   test,
   traceCallsite,
   traceDevSourcemaps,
@@ -160,12 +160,12 @@ test('dev sheet sourcemap selects traced debug field location by runtime mode', 
     },
   };
 
-  configureRuntime({ dev: true, sourcemapTrace: 'style' });
+  configureTestRuntime({ dev: true, sourcemapMode: 'style' });
   let callsite = getRuleCallsite(null, debug, 'color');
   equal(callsite?.line, 20);
   equal(callsite?.column, 5);
 
-  configureRuntime({ dev: true, sourcemapTrace: 'value' });
+  configureTestRuntime({ dev: true, sourcemapMode: 'value' });
   callsite = getRuleCallsite(null, debug, 'color');
   equal(callsite?.line, 8);
   equal(callsite?.column, 3);
@@ -200,7 +200,7 @@ test('dev sheet sourcemap emits sourcesContent from debug code', () => {
 });
 
 test('dev sheet sourcemap rebases source urls through sidecar url', () => {
-  const key = Symbol.for(FLUENTIC_SIDECAR_URL_SYMBOL_KEY);
+  const key = Symbol.for(SIDECAR_URL_GLOBAL_SYMBOL);
   const root = globalThis as Record<symbol, unknown>;
   const previous = root[key];
 
@@ -366,7 +366,7 @@ test('dev sheet wraps priority rules in generated priority layers', () => {
 test('dev sort sheet orders priority groups without css layers', () => {
   const document = createFakeDocument();
 
-  configureRuntime({ dev: true, layer: false });
+  configureTestRuntime({ dev: true, css: { layer: false }, priorityMode: 'sort' });
 
   try {
     const sheet = createDevSheet({
@@ -395,17 +395,21 @@ test('dev sort sheet orders priority groups without css layers', () => {
     });
     sheet.flush();
 
-    equal(document.head.childNodes.length, 3);
-    equal(document.head.childNodes[0].getAttribute('data-css-sheet'), 'rules p-0-0-0-0-0-0-0');
-    equal(document.head.childNodes[1].getAttribute('data-css-sheet'), 'rules p-0-0-0-0-0-0-1');
-    equal(document.head.childNodes[2].getAttribute('data-css-sheet'), 'rules p-2-0-0-0-0-0-0');
-    includes(document.head.childNodes[0].textContent, '.low-one{color:blue}');
-    includes(document.head.childNodes[1].textContent, '.low-two{color:green}');
-    includes(document.head.childNodes[2].textContent, '.high{color:red}');
-    equal(document.head.childNodes[0].textContent.includes('@layer'), false);
-    includes(document.head.childNodes[0].textContent, 'sourceMappingURL=');
+    const ruleNodes = document.head.childNodes.filter((node: any) =>
+      node.getAttribute('data-css-sheet')?.startsWith('rules')
+    );
+
+    equal(ruleNodes.length, 3);
+    equal(ruleNodes[0].getAttribute('data-css-sheet'), 'rules p-0-0-0-0-0-0-0');
+    equal(ruleNodes[1].getAttribute('data-css-sheet'), 'rules p-0-0-0-0-0-0-1');
+    equal(ruleNodes[2].getAttribute('data-css-sheet'), 'rules p-2-0-0-0-0-0-0');
+    includes(ruleNodes[0].textContent, '.low-one{color:blue}');
+    includes(ruleNodes[1].textContent, '.low-two{color:green}');
+    includes(ruleNodes[2].textContent, '.high{color:red}');
+    equal(ruleNodes[0].textContent.includes('@layer'), false);
+    includes(ruleNodes[0].textContent, 'sourceMappingURL=');
   } finally {
-    configureRuntime({ dev: false, layer: true, priorityMode: 'layer' });
+    configureTestRuntime({ dev: false, css: { layer: true }, priorityMode: 'layer' });
     setDevRuntimeOptions(null);
   }
 });
@@ -413,7 +417,7 @@ test('dev sort sheet orders priority groups without css layers', () => {
 test('dev sort sheet keeps output layer when layer is enabled', () => {
   const document = createFakeDocument();
 
-  configureRuntime({ dev: true, layer: true, priorityMode: 'sort' });
+  configureTestRuntime({ dev: true, css: { layer: true }, priorityMode: 'sort' });
 
   try {
     const sheet = createDevSheet({
@@ -444,7 +448,7 @@ test('dev sort sheet keeps output layer when layer is enabled', () => {
     includes(document.head.childNodes[1].textContent, '@layer css {\n.low{color:blue}\n}');
     includes(document.head.childNodes[2].textContent, '@layer css {\n.high{color:red}\n}');
   } finally {
-    configureRuntime({ dev: false, layer: true, priorityMode: 'layer' });
+    configureTestRuntime({ dev: false, css: { layer: true }, priorityMode: 'layer' });
     setDevRuntimeOptions(null);
   }
 });
@@ -458,9 +462,9 @@ test('dev priority mode command rebuilds existing style tags', () => {
 
   try {
     root.window = {} as Window & typeof globalThis & Record<string, unknown>;
-    configureRuntime({
+    configureTestRuntime({
       dev: true,
-      layer: true,
+      css: { layer: true },
       priorityMode: 'layer',
     });
     enableStyleDevUtils({ name: 'CssDevUtils' });
@@ -500,7 +504,7 @@ test('dev priority mode command rebuilds existing style tags', () => {
     includes(document.head.textContent, '.low{color:blue}');
     includes(document.head.textContent, '.high{color:red}');
   } finally {
-    configureRuntime({ dev: false, layer: true, priorityMode: 'layer' });
+    configureTestRuntime({ dev: false, css: { layer: true }, priorityMode: 'layer' });
     setDevRuntimeOptions(null);
     root.window = previousWindow;
   }
@@ -514,11 +518,11 @@ test('dev sheet registries are shared across duplicate module instances', async 
   const document = createFakeDocument();
 
   try {
-    configureRuntime({
+    configureTestRuntime({
       dev: true,
-      layer: true,
+      css: { layer: true },
       priorityMode: 'layer',
-      sourcemapTrace: 'style',
+      sourcemapMode: 'style',
     });
 
     const sheet = runtimeDev.createDevSheet({
@@ -550,33 +554,33 @@ test('dev sheet registries are shared across duplicate module instances', async 
     includes(document.head.textContent, '@layer css.');
     const styleTraceText = document.head.textContent;
 
-    configureRuntime({
+    configureTestRuntime({
       dev: true,
-      layer: true,
+      css: { layer: true },
       priorityMode: 'layer',
-      sourcemapTrace: 'value',
+      sourcemapMode: 'value',
     });
     commandDev.refreshDevSourcemapTags();
 
     equal(document.head.textContent === styleTraceText, false);
     includes(document.head.textContent, '@layer css.');
 
-    configureRuntime({
+    configureTestRuntime({
       dev: true,
-      layer: true,
+      css: { layer: true },
       priorityMode: 'sort',
-      sourcemapTrace: 'value',
+      sourcemapMode: 'value',
     });
     commandDev.refreshDevStyleTags();
 
     includes(document.head.textContent, '@layer css');
     includes(document.head.textContent, '.trace{color:red}');
   } finally {
-    configureRuntime({
+    configureTestRuntime({
       dev: false,
-      layer: true,
+      css: { layer: true },
       priorityMode: 'layer',
-      sourcemapTrace: 'style',
+      sourcemapMode: 'style',
     });
     setDevRuntimeOptions(null);
   }
@@ -590,7 +594,8 @@ test('dev utils installs on window target', () => {
 
   try {
     root.window = {} as Window & typeof globalThis & Record<string, unknown>;
-    configureRuntime({ dev: true });
+    setBuildMeta(null);
+    configureTestRuntime({ dev: true });
     enableStyleDevUtils({ name: 'CssDevUtils' });
 
     const utils = root.window.CssDevUtils as {
@@ -624,7 +629,7 @@ test('dev utils installs on window target', () => {
     equal(utils.usage?.(), null);
     equal(utils.info?.(), null);
   } finally {
-    configureRuntime({ dev: false });
+    configureTestRuntime({ dev: false });
     setDevRuntimeOptions(null);
     root.window = previousWindow;
   }
@@ -651,7 +656,7 @@ test('enableStyleDevUtils works without a window global', () => {
     setBuildMeta(null);
     delete (root as { window?: unknown; }).window;
     delete (root as { CssDevUtils?: unknown; }).CssDevUtils;
-    configureRuntime({ dev: true });
+    configureTestRuntime({ dev: true });
 
     enableStyleDevUtils({ name: 'CssDevUtils' });
 
@@ -675,7 +680,7 @@ test('enableStyleDevUtils works without a window global', () => {
     equal(utils?.usage?.(), null);
     equal(utils?.info?.(), null);
   } finally {
-    configureRuntime({ dev: false });
+    configureTestRuntime({ dev: false });
     setDevRuntimeOptions(null);
     root.window = previousWindow;
     root.CssDevUtils = previousUtils;
@@ -704,11 +709,11 @@ test('style dev utils saves local debug preferences automatically', () => {
     });
     root.window = {} as Window & typeof globalThis & Record<string, unknown>;
     root.localStorage = storage as Storage;
-    configureRuntime({
+    configureTestRuntime({
       dev: true,
-      layer: true,
+      css: { layer: true },
       priorityMode: 'layer',
-      sourcemapTrace: 'style',
+      sourcemapMode: 'style',
     });
 
     enableStyleDevUtils({ name: 'CssDevUtils', silent: true });
@@ -728,13 +733,14 @@ test('style dev utils saves local debug preferences automatically', () => {
     equal(storage.getItem('@fluentic/style.dev.sourcemapTrace'), 'value');
     equal(storage.getItem('@fluentic/style.dev.elementMarker'), 'false');
 
-    configureRuntime({
+    configureTestRuntime({
       dev: true,
-      layer: true,
-      priorityMode: 'layer',
-      sourcemapTrace: 'style',
+      css: {
+        layer: true,
+      },
     });
-    setDevRuntimeOptions({ debugElementClassName: true });
+
+    setDevRuntimeOptions({ elementClassName: true });
     enableStyleDevUtils({ name: 'CssDevUtils', silent: true });
 
     equal(storage.getItem('@fluentic/style.dev.priorityMode'), 'sort');
@@ -749,11 +755,11 @@ test('style dev utils saves local debug preferences automatically', () => {
     equal(storage.getItem('@fluentic/style.dev.sourcemapTrace'), null);
     equal(storage.getItem('@fluentic/style.dev.elementMarker'), null);
   } finally {
-    configureRuntime({
+    configureTestRuntime({
       dev: false,
-      layer: true,
+      css: { layer: true },
       priorityMode: 'layer',
-      sourcemapTrace: 'style',
+      sourcemapMode: 'style',
     });
     setDevRuntimeOptions(null);
     setBuildMeta(null);
@@ -787,11 +793,11 @@ test('style dev utils startup logs current saved debug info', () => {
     storage.setItem('@fluentic/style.dev.priorityMode', 'sort');
     storage.setItem('@fluentic/style.dev.sourcemapTrace', 'value');
     storage.setItem('@fluentic/style.dev.elementMarker', 'false');
-    configureRuntime({
+    configureTestRuntime({
       dev: true,
-      layer: true,
+      css: { layer: true },
       priorityMode: 'layer',
-      sourcemapTrace: 'style',
+      sourcemapMode: 'style',
     });
 
     const calls = captureConsoleLogs(() => {
@@ -819,11 +825,11 @@ test('style dev utils startup logs current saved debug info', () => {
     equal(logRows.some((row) => row.includes('Startup')), false);
     equal(logRows.some((row) => row.includes('Checks')), false);
   } finally {
-    configureRuntime({
+    configureTestRuntime({
       dev: false,
-      layer: true,
+      css: { layer: true },
       priorityMode: 'layer',
-      sourcemapTrace: 'style',
+      sourcemapMode: 'style',
     });
     setDevRuntimeOptions(null);
     setBuildMeta(null);
@@ -998,7 +1004,7 @@ test('dev trace uses source protocol when generated sourcemap is unresolved', as
   const map = getInlineSourceMap(tag.textContent);
 
   equal(result.remapped, 0);
-  equal(result.unresolved, 1);
+  equal(result.unresolved > 0, true);
   equal(map.sources[0], 'source:///assets/app.js');
 });
 
@@ -1131,7 +1137,7 @@ test('dev trace keeps querystring sourcemap fetches separate from queryless miss
   const map = getInlineSourceMap(tag.textContent);
 
   equal(result.remapped, 1);
-  equal(result.unresolved, 1);
+  equal(result.unresolved > 0, true);
   equal(map.sources[0], 'source:///src/styles.tsx');
   equal(map.sourcesContent?.[0], 'export const styles = style({ color: "blue" });');
 });

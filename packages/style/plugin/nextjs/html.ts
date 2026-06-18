@@ -1,6 +1,10 @@
-import type * as BabelCore from '@babel/core';
-import type { NodePath, types as BabelTypes } from '@babel/core';
-import { babelPlugin, babelTransform } from '../../compiler/transform/utils/babel';
+import {
+  babelPlugin,
+  babelTransform,
+  type BabelCore,
+  type BabelTypes,
+  type NodePath,
+} from '../../compiler/transform/utils/babel';
 import { PRECOLLECT_LINK_TAG_ATTR } from '../../runtime/rsc/constants';
 
 export function injectDevCssLink(source: string, cssUrl: string | null) {
@@ -23,12 +27,12 @@ export function injectDevCssLink(source: string, cssUrl: string | null) {
 }
 
 function createDevCssLinkPlugin(cssUrl: string, markInserted: () => void) {
-  return babelPlugin(({ types: t }) => ({
+  return babelPlugin((babel) => ({
     visitor: {
       JSXElement(path: NodePath<BabelTypes.JSXElement>) {
         if (!isHtmlJsxElement(path.node)) return;
 
-        path.node.children.push(createDevCssLinkElement(t, cssUrl));
+        path.node.children.push(createDevCssLinkElement(babel, cssUrl));
         markInserted();
         path.stop();
       },
@@ -42,20 +46,17 @@ function isHtmlJsxElement(node: BabelTypes.JSXElement) {
   return name.type === 'JSXIdentifier' && name.name === 'html';
 }
 
-function createDevCssLinkElement(t: typeof BabelCore.types, cssUrl: string) {
-  return t.jsxElement(
-    t.jsxOpeningElement(
-      t.jsxIdentifier('link'),
-      [
-        t.jsxAttribute(t.jsxIdentifier('rel'), t.stringLiteral('stylesheet')),
-        t.jsxAttribute(t.jsxIdentifier('href'), t.stringLiteral(cssUrl)),
-        t.jsxAttribute(t.jsxIdentifier('precedence'), t.stringLiteral('default')),
-        t.jsxAttribute(t.jsxIdentifier(PRECOLLECT_LINK_TAG_ATTR), t.stringLiteral('')),
-      ],
-      true,
-    ),
-    null,
-    [],
-    true,
-  );
+function createDevCssLinkElement(babel: typeof BabelCore, cssUrl: string) {
+  const code = `
+    <link
+      rel="stylesheet"
+      href={${JSON.stringify(cssUrl)}}
+      precedence="default"
+      ${PRECOLLECT_LINK_TAG_ATTR}=""
+    />
+  `;
+
+  return babel.template.expression.ast(code, {
+    plugins: ['jsx'],
+  }) as BabelTypes.JSXElement;
 }

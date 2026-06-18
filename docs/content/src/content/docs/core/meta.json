@@ -4,10 +4,14 @@
     "concepts",
     "typescript-first",
     "style-builder",
+    "custom-style-functions",
+    "style-transforms",
     "slots",
     "scopes",
+    "priority",
     "tokens",
     "selectors",
+    "advanced-selectors",
     "runtime"
   ]
 }

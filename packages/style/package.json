@@ -38,54 +38,25 @@
       "react-server": "./dist/server.js",
       "import": "./dist/index.js"
     },
-    "./server": {
-      "types": "./server.ts",
-      "import": "./dist/server.js"
-    },
-    "./server/extracted": {
-      "types": "./server.ts",
-      "import": "./dist/server/extracted.js"
-    },
-    "./compiler": {
-      "types": "./compiler/index.ts",
-      "import": "./dist/compiler/index.mjs",
-      "default": "./dist/compiler/index.mjs"
-    },
     "./plugin/vite": {
-      "types": "./plugin/vite/index.ts",
+      "types": "./plugin/bundler/vite/index.ts",
       "import": "./dist/plugin/vite/index.mjs"
     },
-    "./plugin/sidecar": {
-      "types": "./plugin/sidecar/index.ts",
-      "import": "./dist/plugin/sidecar/index.mjs"
-    },
-    "./plugin/rollup": {
-      "types": "./plugin/rollup/index.ts",
-      "import": "./dist/plugin/rollup/index.mjs"
-    },
     "./plugin/webpack": {
-      "types": "./plugin/webpack/index.ts",
+      "types": "./plugin/bundler/webpack/index.ts",
       "import": "./dist/plugin/webpack/index.mjs"
     },
     "./plugin/webpack/loader": {
-      "types": "./plugin/webpack/loader.ts",
+      "types": "./plugin/bundler/webpack/loader.ts",
       "import": "./dist/plugin/webpack/loader.mjs",
       "default": "./dist/plugin/webpack/loader.mjs"
     },
-    "./plugin/esbuild": {
-      "types": "./plugin/esbuild/index.ts",
-      "import": "./dist/plugin/esbuild/index.mjs"
-    },
     "./plugin/rspack": {
-      "types": "./plugin/rspack/index.ts",
+      "types": "./plugin/bundler/rspack/index.ts",
       "import": "./dist/plugin/rspack/index.mjs"
     },
-    "./plugin/rolldown": {
-      "types": "./plugin/rolldown/index.ts",
-      "import": "./dist/plugin/rolldown/index.mjs"
-    },
     "./plugin/farm": {
-      "types": "./plugin/farm/index.ts",
+      "types": "./plugin/bundler/farm/index.ts",
       "import": "./dist/plugin/farm/index.mjs"
     },
     "./plugin/nextjs": {
@@ -98,135 +69,127 @@
       "import": "./dist/plugin/nextjs/loader.mjs",
       "default": "./dist/plugin/nextjs/loader.mjs"
     },
-    "./plugin/nextjs/runtime/client": {
-      "types": "./plugin/nextjs/runtime/client.ts",
-      "import": "./dist/plugin/nextjs/runtime/client.js"
+    "./plugin/jsx/jsx-runtime": {
+      "types": "./entry/prod/jsx_runtime.ts",
+      "react-server": "./dist/entry/rsc-prod/jsx-runtime.js",
+      "import": "./dist/entry/prod/jsx-runtime.js"
     },
-    "./plugin/nextjs/runtime/server": {
-      "types": "./plugin/nextjs/runtime/server.ts",
-      "import": "./dist/plugin/nextjs/runtime/server.js"
-    },
-    "./builder/extract": {
-      "types": "./builder/extract/index.ts",
-      "import": "./dist/builder/extract/index.js"
+    "./plugin/jsx/jsx-dev-runtime": {
+      "types": "./entry/dev/jsx_dev_runtime.ts",
+      "react-server": "./dist/entry/rsc-dev/jsx-dev-runtime.js",
+      "import": "./dist/entry/dev/jsx-dev-runtime.js"
     },
     "./config": {
       "types": "./config/index.ts",
       "import": "./dist/config/index.js"
     },
-    "./config/build": {
-      "types": "./config/build.ts",
-      "import": "./dist/config/build.js",
-      "default": "./dist/config/build.js"
+    "./selector": {
+      "types": "./selector/index.ts",
+      "import": "./dist/selector/index.js"
     },
     "./dev": {
       "types": "./dev/index.ts",
       "import": "./dist/dev.js"
     },
-    "./runtime/rsc": {
+    "./dev/rsc": {
       "types": "./runtime/rsc/index.ts",
-      "import": "./dist/runtime/rsc.js"
+      "import": "./dist/dev/rsc.js"
     },
-    "./runtime/style": {
-      "types": "./runtime/style/index.ts",
-      "import": "./dist/runtime/style/index.js"
+    "./jsx-runtime": {
+      "types": "./jsx/jsx_runtime.ts",
+      "react-server": "./dist/jsx/jsx-runtime.server.js",
+      "import": "./dist/jsx/jsx-runtime.js"
     },
-    "./runtime/extract": {
-      "types": "./runtime/extract/index.ts",
-      "import": "./dist/runtime/extract.js"
+    "./jsx-dev-runtime": {
+      "types": "./jsx/jsx_dev_runtime.ts",
+      "react-server": "./dist/jsx/jsx-dev-runtime.server.js",
+      "import": "./dist/jsx/jsx-dev-runtime.js"
     },
     "./css": {
       "types": "./css/index.ts",
-      "import": "./dist/css/index.js"
+      "import": "./dist/css.js"
     },
-    "./jsx-runtime": {
-      "types": "./jsx/jsx-runtime.ts",
-      "react-server": "./dist/jsx-runtime/server.js",
-      "import": "./dist/jsx-runtime/index.js"
+    "./jsx/jsx-runtime": {
+      "types": "./jsx/jsx_runtime.ts",
+      "react-server": "./dist/jsx/jsx-runtime.server.js",
+      "import": "./dist/jsx/jsx-runtime.js"
     },
-    "./jsx-runtime/extracted": {
-      "types": "./jsx/jsx-runtime.ts",
-      "import": "./dist/jsx-runtime/extracted.js"
+    "./jsx/jsx-dev-runtime": {
+      "types": "./jsx/jsx_dev_runtime.ts",
+      "react-server": "./dist/jsx/jsx-dev-runtime.server.js",
+      "import": "./dist/jsx/jsx-dev-runtime.js"
     },
-    "./jsx-runtime/prod": {
-      "types": "./jsx/jsx-runtime.ts",
-      "import": "./dist/jsx-runtime/prod.js"
+    "./entry/dev": {
+      "types": "./entry/dev/index.ts",
+      "import": "./dist/entry/dev.js"
     },
-    "./jsx-runtime/server": {
-      "types": "./jsx/jsx-runtime.ts",
-      "import": "./dist/jsx-runtime/server.js"
+    "./entry/prod": {
+      "types": "./entry/prod/index.ts",
+      "import": "./dist/entry/prod.js"
     },
-    "./jsx-runtime/server/extracted": {
-      "types": "./jsx/jsx-runtime.ts",
-      "import": "./dist/jsx-runtime/server-extracted.js"
+    "./entry/rsc-dev": {
+      "types": "./entry/rsc_dev/index.ts",
+      "import": "./dist/entry/rsc-dev.js"
     },
-    "./jsx-dev-runtime": {
-      "types": "./jsx/jsx-dev-runtime.ts",
-      "react-server": "./dist/jsx-dev-runtime/server.js",
-      "import": "./dist/jsx-dev-runtime/index.js"
+    "./entry/rsc-prod": {
+      "types": "./entry/rsc_prod/index.ts",
+      "import": "./dist/entry/rsc-prod.js"
     },
-    "./jsx-dev-runtime/extracted": {
-      "types": "./jsx/jsx-dev-runtime.ts",
-      "import": "./dist/jsx-dev-runtime/extracted.js"
+    "./entry/dev/css": {
+      "types": "./entry/dev/css.ts",
+      "import": "./dist/entry/dev/css.js"
     },
-    "./jsx-dev-runtime/prod": {
-      "types": "./jsx/jsx-dev-runtime.ts",
-      "import": "./dist/jsx-dev-runtime/prod.js"
+    "./entry/prod/css": {
+      "types": "./entry/prod/css.ts",
+      "import": "./dist/entry/prod/css.js"
     },
-    "./jsx-dev-runtime/server": {
-      "types": "./jsx/jsx-dev-runtime.ts",
-      "import": "./dist/jsx-dev-runtime/server.js"
+    "./entry/rsc-dev/css": {
+      "types": "./entry/rsc_dev/css.ts",
+      "import": "./dist/entry/rsc-dev/css.js"
     },
-    "./jsx-dev-runtime/server/extracted": {
-      "types": "./jsx/jsx-dev-runtime.ts",
-      "import": "./dist/jsx-dev-runtime/server-extracted.js"
+    "./entry/rsc-prod/css": {
+      "types": "./entry/rsc_prod/css.ts",
+      "import": "./dist/entry/rsc-prod/css.js"
     },
-    "./jsx/runtime": {
-      "types": "./jsx/jsx-runtime.ts",
-      "react-server": "./dist/jsx-runtime/server.js",
-      "import": "./dist/jsx-runtime/index.js"
+    "./entry/prod/runtime": {
+      "types": "./entry/prod/runtime.ts",
+      "import": "./dist/entry/prod/runtime.js"
     },
-    "./jsx/runtime/extracted": {
-      "types": "./jsx/jsx-runtime.ts",
-      "import": "./dist/jsx-runtime/extracted.js"
+    "./entry/prod/extract": {
+      "types": "./entry/prod/extract.ts",
+      "import": "./dist/entry/prod/extract.js"
     },
-    "./jsx/runtime/prod": {
-      "types": "./jsx/jsx-runtime.ts",
-      "import": "./dist/jsx-runtime/prod.js"
+    "./entry/dev/jsx-runtime": {
+      "types": "./entry/dev/jsx_runtime.ts",
+      "import": "./dist/entry/dev/jsx-runtime.js"
     },
-    "./jsx/runtime/server": {
-      "types": "./jsx/jsx-runtime.ts",
-      "import": "./dist/jsx-runtime/server.js"
+    "./entry/dev/jsx-dev-runtime": {
+      "types": "./entry/dev/jsx_dev_runtime.ts",
+      "import": "./dist/entry/dev/jsx-dev-runtime.js"
     },
-    "./jsx/runtime/server/extracted": {
-      "types": "./jsx/jsx-runtime.ts",
-      "import": "./dist/jsx-runtime/server-extracted.js"
+    "./entry/prod/jsx-runtime": {
+      "types": "./entry/prod/jsx_runtime.ts",
+      "import": "./dist/entry/prod/jsx-runtime.js"
     },
-    "./jsx/dev-runtime": {
-      "types": "./jsx/jsx-dev-runtime.ts",
-      "react-server": "./dist/jsx-dev-runtime/server.js",
-      "import": "./dist/jsx-dev-runtime/index.js"
+    "./entry/prod/jsx-dev-runtime": {
+      "types": "./entry/prod/jsx_dev_runtime.ts",
+      "import": "./dist/entry/prod/jsx-dev-runtime.js"
     },
-    "./jsx/dev-runtime/extracted": {
-      "types": "./jsx/jsx-dev-runtime.ts",
-      "import": "./dist/jsx-dev-runtime/extracted.js"
+    "./entry/rsc-dev/jsx-runtime": {
+      "types": "./entry/rsc_dev/jsx_runtime.ts",
+      "import": "./dist/entry/rsc-dev/jsx-runtime.js"
     },
-    "./jsx/dev-runtime/prod": {
-      "types": "./jsx/jsx-dev-runtime.ts",
-      "import": "./dist/jsx-dev-runtime/prod.js"
+    "./entry/rsc-dev/jsx-dev-runtime": {
+      "types": "./entry/rsc_dev/jsx_dev_runtime.ts",
+      "import": "./dist/entry/rsc-dev/jsx-dev-runtime.js"
     },
-    "./jsx/dev-runtime/server": {
-      "types": "./jsx/jsx-dev-runtime.ts",
-      "import": "./dist/jsx-dev-runtime/server.js"
+    "./entry/rsc-prod/jsx-runtime": {
+      "types": "./entry/rsc_prod/jsx_runtime.ts",
+      "import": "./dist/entry/rsc-prod/jsx-runtime.js"
     },
-    "./jsx/dev-runtime/server/extracted": {
-      "types": "./jsx/jsx-dev-runtime.ts",
-      "import": "./dist/jsx-dev-runtime/server-extracted.js"
-    },
-    "./plugin/compiler": {
-      "types": "./compiler/index.ts",
-      "import": "./dist/compiler/index.mjs",
-      "default": "./dist/compiler/index.mjs"
+    "./entry/rsc-prod/jsx-dev-runtime": {
+      "types": "./entry/rsc_prod/jsx_dev_runtime.ts",
+      "import": "./dist/entry/rsc-prod/jsx-dev-runtime.js"
     }
   },
   "files": [
@@ -239,6 +202,7 @@
     "dev",
     "jsx",
     "plugin",
+    "entry",
     "runtime",
     "selector",
     "server.ts",
@@ -257,35 +221,31 @@
     "test": "tsx ./tests/run-tests.ts"
   },
   "dependencies": {
-    "@jridgewell/trace-mapping": "^0.3.31",
-    "css-what": "^8.0.0",
-    "csstype": "^3.2.3",
-    "oxc-resolver": "^11.20.0",
-    "picomatch": "^4.0.4"
+    "@jridgewell/trace-mapping": "0.3.31",
+    "css-what": "8.0.0",
+    "csstype": "3.2.3",
+    "oxc-resolver": "11.20.0",
+    "picomatch": "4.0.4"
   },
   "devDependencies": {
-    "@babel/types": "^7.29.7",
-    "@types/babel__core": "^7.20.5",
-    "@types/picomatch": "^4.0.3",
-    "@types/react": "^19.2.14",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
-    "tsdown": "^0.22.1",
-    "tsx": "^4.20.6",
-    "typescript": "^5.8.3",
-    "vite": "^8.0.16",
-    "webpack": "^5.107.2"
+    "@types/babel__core": "7.20.5",
+    "@types/picomatch": "4.0.3",
+    "@types/react": "19.2.14",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "tsdown": "0.22.1",
+    "tsx": "4.20.6",
+    "typescript": "5.8.3",
+    "vite": "8.0.16",
+    "webpack": "5.107.2"
   },
   "peerDependencies": {
     "@babel/core": ">=7",
     "@farmfe/core": ">=1",
     "@rspack/core": ">=1",
-    "esbuild": ">=0.20",
     "next": ">=15",
     "react": ">=18",
     "react-dom": ">=18",
-    "rolldown": ">=1",
-    "rollup": ">=4",
     "vite": ">=5",
     "webpack": ">=5"
   },
@@ -299,16 +259,7 @@
     "@rspack/core": {
       "optional": true
     },
-    "esbuild": {
-      "optional": true
-    },
     "next": {
-      "optional": true
-    },
-    "rollup": {
-      "optional": true
-    },
-    "rolldown": {
       "optional": true
     },
     "vite": {

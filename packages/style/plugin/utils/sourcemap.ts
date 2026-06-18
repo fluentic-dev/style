@@ -11,7 +11,7 @@ export function parseBundlerSourceMap(map: string | null | undefined): any {
 }
 
 export function resolveDevSourcemapMode(
-  mode: DevSourcemapMode,
+  mode: DevSourcemapMode | undefined,
   dev: boolean,
 ): DevSourcemapMode {
   return mode ?? (dev ? 'sidecarServer' : 'sourceUrl');

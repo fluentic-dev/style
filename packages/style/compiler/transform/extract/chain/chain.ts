@@ -1,8 +1,8 @@
-import type * as BabelTypes from '@babel/types';
-import { getAtomicClassName, getClassNameDedupe } from '../../../../atomic/classname';
+import type { BabelTypes } from '../../utils/babel';
+import { getAtomicClassName, getClassNameDedupe } from '../../../../atomic/className';
 import { LayerDefaultPriority } from '../../../../atomic/layer';
 import { buildAtomicRule, getAtomicRuleLayerPriority } from '../../../../atomic/rule';
-import { getLocalVarName } from '../../../../atomic/token';
+import { getLocalVarName } from '../../../../atomic/var';
 import { getTokenVar, getTokenVarName } from '../../../../atomic/token';
 import { getCssVarRawFallback } from '../../../../atomic/utils/css';
 import { shouldAppendCssPx } from '../../../../atomic/value';
@@ -32,9 +32,9 @@ import type {
   RuntimeScopeItem,
   RuntimeStyleItem,
 } from '../../../../builder/data/state';
-import { PrioritySelectors } from '../../../../selector/presets';
+import type { ClassNameFormat, TokenNameFormat } from '../../../../config/types';
 import type { Selector } from '../../../../selector/types';
-import { getStyleFnMeta } from '../../../../style/style';
+import type { StyleFnMeta } from '../../../../style/style';
 import {
   getStyleTokenId,
   isStyleTokenData,
@@ -56,22 +56,23 @@ import {
 } from '../../evaluator/evaluator';
 import type { EvalResult } from '../../evaluator/types';
 import { validateResolvedSelectorValue, validateSelectorDefinition } from '../../utils/selector';
-import { extractStyleChain, type StyleChainParseResult } from './extract_chain';
+import { extractStyleChain, STATIC_MERGE_METHOD, type StyleChainParseResult } from './extract_chain';
 import type { CompiledChainData, CompiledCssItem, CompiledItem, CssExtractRule } from './types';
 
 type SelectorsMap = Record<string, Selector>;
 
 type CssConfig = {
-  classNamePrefix: string;
+  classNameFormat: ClassNameFormat | null;
+  tokenNameFormat: TokenNameFormat | null;
   localClassName: boolean;
   debugClassName: boolean;
-  debugPropertyLength: number;
-  debugValueLength: number;
-  debugSelectorLength: number;
-  debugParentSelectorLength: number;
-  debugAtRuleLength: number;
   scopeTargetPrefix: string;
-  tokenVarPrefix: string;
+};
+
+type ExtractCssOptions = NonNullable<CompilerOptions['css']> & {
+  localClassName?: boolean;
+  debugClassName?: boolean;
+  scopeTargetPrefix?: string;
 };
 
 type StyleChainBuilderType =
@@ -100,12 +101,12 @@ export function compileChain(
   nodeLoc: { line: number; column: number; } | null | undefined,
   scope: EvalScope,
   opts: CompilerOptions,
+  meta: StyleFnMeta,
   styleNames: Set<string> = new Set(),
 ): CompiledChainData | null {
   const css = getCssConfig(opts);
-  const meta = opts.styleFn ? getStyleFnMeta(opts.styleFn) : null;
-  const selectors = meta?.selectors ?? PrioritySelectors;
-  const transform = meta?.transform ?? null;
+  const selectors = meta.selectors;
+  const transform = meta.transform;
 
   if (chain.kind === 'style') {
     return compileStyleChain(chain, selectors, fileId, scope, css, transform, styleNames, opts);
@@ -126,17 +127,14 @@ export function compileChain(
 function getCssConfig(
   opts: CompilerOptions,
 ): CssConfig {
+  const css = opts.css as ExtractCssOptions | undefined;
+
   return {
-    classNamePrefix: opts.css?.classNamePrefix ?? DEFAULT_CONFIG.classNamePrefix,
-    localClassName: opts.css?.localClassName ?? DEFAULT_CONFIG.localClassName,
-    debugClassName: opts.css?.debugClassName ?? DEFAULT_CONFIG.debugClassName,
-    debugPropertyLength: opts.css?.debugPropertyLength ?? DEFAULT_CONFIG.debugPropertyLength,
-    debugValueLength: opts.css?.debugValueLength ?? DEFAULT_CONFIG.debugValueLength,
-    debugSelectorLength: opts.css?.debugSelectorLength ?? DEFAULT_CONFIG.debugSelectorLength,
-    debugParentSelectorLength: opts.css?.debugParentSelectorLength ?? DEFAULT_CONFIG.debugParentSelectorLength,
-    debugAtRuleLength: opts.css?.debugAtRuleLength ?? DEFAULT_CONFIG.debugAtRuleLength,
-    scopeTargetPrefix: opts.css?.scopeTargetPrefix ?? DEFAULT_CONFIG.scopeTargetPrefix,
-    tokenVarPrefix: opts.css?.tokenVarPrefix ?? DEFAULT_CONFIG.tokenVarPrefix,
+    classNameFormat: css?.classNameFormat ?? DEFAULT_CONFIG.classNameFormat ?? null,
+    tokenNameFormat: css?.tokenNameFormat ?? DEFAULT_CONFIG.tokenNameFormat ?? null,
+    localClassName: css?.localClassName ?? DEFAULT_CONFIG.localClassName,
+    debugClassName: css?.debugClassName ?? DEFAULT_CONFIG.debugClassName,
+    scopeTargetPrefix: css?.scopeTargetPrefix ?? '',
   };
 }
 
@@ -355,7 +353,7 @@ function compileScopeMethod(
 ): boolean {
   const selector = selectors[method.name];
   if (!selector) return false;
-  validateSelectorDefinition(options.checkSelector, `style.${method.name}`, selector, method.nameNode);
+  validateSelectorDefinition(options.dev?.checkSelector, `style.${method.name}`, selector, method.nameNode);
 
   const selectorStr = selector.selector.trim();
 
@@ -377,6 +375,7 @@ function compileScopeMethod(
   if (selectorStr.startsWith(SELECTOR_AT_RULE)) {
     // At-rule scope method: media('(max-width: 900px)', [...items])
     const isMedia = selectorStr.startsWith(SELECTOR_MEDIA) || selectorStr.startsWith(SELECTOR_CONTAINER);
+    const hasArg = selectorStr.includes(SELECTOR_ARGS);
 
     const priority = getAtRulePriority(selector.priority, isMedia, method.args[0]);
     let argOffset = 0;
@@ -384,24 +383,28 @@ function compileScopeMethod(
       argOffset = 1; // skip priority arg
     }
 
-    const queryArg = evaluateNode(method.args[argOffset], scope);
-    validateResolvedSelectorValue(
-      options.checkSelector,
-      `style.${method.name}`,
-      selector,
-      queryArg,
-      method.args[argOffset],
-    );
-    throwIfRequiredStaticSelectorValue(options, `style.${method.name}`, queryArg);
-    if (!queryArg.ok) return false;
+    let atRule = selectorStr;
+    if (hasArg) {
+      const queryArg = evaluateNode(method.args[argOffset], scope);
+      validateResolvedSelectorValue(
+        options.dev?.checkSelector,
+        `style.${method.name}`,
+        selector,
+        queryArg,
+        method.args[argOffset],
+      );
+      throwIfRequiredStaticSelectorValue(options, `style.${method.name}`, queryArg);
+      if (!queryArg.ok) return false;
 
-    const [before, after] = selectorStr.split(SELECTOR_ARGS);
-    const atRule = before + String(queryArg.value) + (after ?? '');
+      const [before, after] = selectorStr.split(SELECTOR_ARGS);
+      atRule = before + String(queryArg.value) + (after ?? '');
+    }
+
     const atRuleSelector: ItemSelector = priority !== null
       ? [atRule, priority]
       : atRule;
 
-    const itemsArg = method.args[argOffset + 1];
+    const itemsArg = method.args[hasArg ? argOffset + 1 : argOffset];
     if (!itemsArg) return false;
 
     return compileScopeItemsArg(
@@ -425,7 +428,7 @@ function compileScopeMethod(
     const [before, after] = selectorStr.split(splitToken);
 
     const selectorArg = evaluateNode(method.args[0], scope);
-    validateResolvedSelectorValue(options.checkSelector, `style.${method.name}`, selector, selectorArg, method.args[0]);
+    validateResolvedSelectorValue(options.dev?.checkSelector, `style.${method.name}`, selector, selectorArg, method.args[0]);
     if (!selectorArg.ok) return false;
 
     const itemsArg = method.args[1];
@@ -686,12 +689,13 @@ function resolveOverrideMethod(
 ): OverrideItem | null {
   const sel = selectors[methodName];
   if (!sel) return null;
-  validateSelectorDefinition(options.checkSelector, `style.${methodName}`, sel);
+  validateSelectorDefinition(options.dev?.checkSelector, `style.${methodName}`, sel);
 
   const selectorStr = sel.selector.trim();
 
   if (selectorStr.startsWith(SELECTOR_AT_RULE)) {
     const isMedia = selectorStr.startsWith(SELECTOR_MEDIA) || selectorStr.startsWith(SELECTOR_CONTAINER);
+    const hasArg = selectorStr.includes(SELECTOR_ARGS);
 
     const priority = getAtRulePriority(sel.priority, isMedia, args[0]);
     let argOffset = 0;
@@ -699,16 +703,20 @@ function resolveOverrideMethod(
       argOffset = 1;
     }
 
-    const queryArg = evaluateNode(args[argOffset], scope);
-    validateResolvedSelectorValue(options.checkSelector, `style.${methodName}`, sel, queryArg, args[argOffset]);
-    throwIfRequiredStaticSelectorValue(options, `style.${methodName}`, queryArg);
-    if (!queryArg.ok) return null;
+    let atRule = selectorStr;
+    if (hasArg) {
+      const queryArg = evaluateNode(args[argOffset], scope);
+      validateResolvedSelectorValue(options.dev?.checkSelector, `style.${methodName}`, sel, queryArg, args[argOffset]);
+      throwIfRequiredStaticSelectorValue(options, `style.${methodName}`, queryArg);
+      if (!queryArg.ok) return null;
 
-    const styleArg = evaluateNode(args[argOffset + 1], scope);
+      const [before, after] = selectorStr.split(SELECTOR_ARGS);
+      atRule = before + String(queryArg.value) + (after ?? '');
+    }
+
+    const styleArg = evaluateNode(args[hasArg ? argOffset + 1 : argOffset], scope);
     if (!styleArg.ok) return null;
 
-    const [before, after] = selectorStr.split(SELECTOR_ARGS);
-    const atRule = before + String(queryArg.value) + (after ?? '');
     const atRuleSelector: ItemSelector = priority !== null ? [atRule, priority] : atRule;
 
     return {
@@ -724,7 +732,7 @@ function resolveOverrideMethod(
     const [before, after] = selectorStr.split(splitToken);
 
     const selectorArg = evaluateNode(args[0], scope);
-    validateResolvedSelectorValue(options.checkSelector, `style.${methodName}`, sel, selectorArg, args[0]);
+    validateResolvedSelectorValue(options.dev?.checkSelector, `style.${methodName}`, sel, selectorArg, args[0]);
     if (!selectorArg.ok) return null;
 
     const styleArg = evaluateNode(args[1], scope);
@@ -853,30 +861,41 @@ function compileChainMethod(
   styleNames: Set<string>,
   options: CompilerOptions,
 ): boolean {
+  if (method.name === STATIC_MERGE_METHOD) {
+    return compileMergeArg(
+      method.args[0],
+      fileId,
+      scope,
+      type,
+      slotId,
+      atRules,
+      cssConfig,
+      items,
+      cssRules,
+      styleNames,
+      options,
+    );
+  }
+
   const selector = selectors[method.name];
   if (!selector) return false;
-  validateSelectorDefinition(options.checkSelector, `style.${method.name}`, selector, method.nameNode);
+  validateSelectorDefinition(options.dev?.checkSelector, `style.${method.name}`, selector, method.nameNode);
 
   const selectorStr = selector.selector.trim();
 
   if (selectorStr === SELECTOR_MERGE) {
-    const styleArg = evaluateNode(method.args[0], scope);
-    if (!styleArg.ok) {
-      throwIfRequiredStaticStyleValue(styleArg);
-      return false;
-    }
-
-    return addStyleDataItems(
-      styleArg.value,
-      null,
-      null,
-      atRules,
+    return compileMergeArg(
+      method.args[0],
       fileId,
+      scope,
       type,
       slotId,
+      atRules,
+      cssConfig,
       items,
       cssRules,
-      cssConfig,
+      styleNames,
+      options,
     );
   }
 
@@ -932,6 +951,64 @@ function compileChainMethod(
   return addStyleItems(styleObj, itemSelector, null, atRules, fileId, type, slotId, items, cssRules, cssConfig);
 }
 
+function compileMergeArg(
+  styleArgNode: BabelTypes.Node | undefined,
+  fileId: string,
+  scope: EvalScope,
+  type: StyleChainBuilderType,
+  slotId: string | null,
+  atRules: ItemSelector[] | null,
+  cssConfig: CssConfig,
+  items: CompiledItem[],
+  cssRules: CssExtractRule[],
+  styleNames: Set<string>,
+  options: CompilerOptions,
+): boolean {
+  if (!styleArgNode) return false;
+
+  if (styleArgNode.type === 'CallExpression') {
+    const nestedChain = extractStyleChain(styleArgNode, styleNames);
+    const nestedMeta = nestedChain ? scope.styleMetas?.get(nestedChain.rootName) : null;
+
+    if (nestedChain?.kind === 'style' && nestedMeta) {
+      return compileStyleChainInto(
+        nestedChain,
+        nestedMeta.selectors,
+        fileId,
+        scope,
+        cssConfig,
+        nestedMeta.transform,
+        type,
+        slotId,
+        atRules,
+        items,
+        cssRules,
+        styleNames,
+        options,
+      );
+    }
+  }
+
+  const styleArg = evaluateNode(styleArgNode, scope);
+  if (!styleArg.ok) {
+    throwIfRequiredStaticStyleValue(styleArg);
+    return false;
+  }
+
+  return addStyleDataItems(
+    styleArg.value,
+    null,
+    null,
+    atRules,
+    fileId,
+    type,
+    slotId,
+    items,
+    cssRules,
+    cssConfig,
+  );
+}
+
 function compileAtRuleMethod(
   method: { name: string; args: BabelTypes.Node[]; nameNode?: BabelTypes.Node; },
   slotId: string | null,
@@ -950,7 +1027,8 @@ function compileAtRuleMethod(
   options: CompilerOptions,
 ): boolean {
   const isMedia = selectorStr.startsWith(SELECTOR_MEDIA) || selectorStr.startsWith(SELECTOR_CONTAINER);
-  validateSelectorDefinition(options.checkSelector, `style.${method.name}`, selector, method.nameNode);
+  const hasArg = selectorStr.includes(SELECTOR_ARGS);
+  validateSelectorDefinition(options.dev?.checkSelector, `style.${method.name}`, selector, method.nameNode);
 
   const priority = getAtRulePriority(selector.priority, isMedia, method.args[0]);
   let argOffset = 0;
@@ -958,38 +1036,42 @@ function compileAtRuleMethod(
     argOffset = 1;
   }
 
-  const queryArg = evaluateNode(method.args[argOffset], scope);
-  validateResolvedSelectorValue(
-    options.checkSelector,
-    `style.${method.name}`,
-    selector,
-    queryArg,
-    method.args[argOffset],
-  );
-  throwIfRequiredStaticSelectorValue(options, `style.${method.name}`, queryArg);
-  if (!queryArg.ok) return false;
+  let atRule = selectorStr;
+  if (hasArg) {
+    const queryArg = evaluateNode(method.args[argOffset], scope);
+    validateResolvedSelectorValue(
+      options.dev?.checkSelector,
+      `style.${method.name}`,
+      selector,
+      queryArg,
+      method.args[argOffset],
+    );
+    throwIfRequiredStaticSelectorValue(options, `style.${method.name}`, queryArg);
+    if (!queryArg.ok) return false;
 
-  const [before, after] = selectorStr.split(SELECTOR_ARGS);
-  const atRule = before + String(queryArg.value) + (after ?? '');
+    const [before, after] = selectorStr.split(SELECTOR_ARGS);
+    atRule = before + String(queryArg.value) + (after ?? '');
+  }
 
   const atRuleSelector: ItemSelector = priority !== null ? [atRule, priority] : atRule;
   const nextAtRules = mergeAtRules(atRules, [atRuleSelector]);
 
-  const styleArg = method.args[argOffset + 1];
+  const styleArg = method.args[hasArg ? argOffset + 1 : argOffset];
   if (!styleArg) return false;
 
   // Style arg can be a StyleData reference (style({...})) or plain object
   if (styleArg.type === 'CallExpression') {
     // Nested style() call
     const nestedChain = extractStyleChain(styleArg, styleNames);
-    if (nestedChain?.kind === 'style') {
+    const nestedMeta = nestedChain ? scope.styleMetas?.get(nestedChain.rootName) : null;
+    if (nestedChain?.kind === 'style' && nestedMeta) {
       return compileStyleChainInto(
         nestedChain,
-        selectors,
+        nestedMeta.selectors,
         fileId,
         scope,
         cssConfig,
-        transform,
+        nestedMeta.transform,
         type,
         slotId,
         nextAtRules,
@@ -1054,7 +1136,7 @@ function compileArgMethod(
   options: CompilerOptions,
 ): boolean {
   const selectorStr = selector.selector.trim();
-  validateSelectorDefinition(options.checkSelector, `style.${method.name}`, selector, method.nameNode);
+  validateSelectorDefinition(options.dev?.checkSelector, `style.${method.name}`, selector, method.nameNode);
   const hasArgsTemplate = selectorStr.includes(SELECTOR_ARGS);
   const splitToken = hasArgsTemplate ? SELECTOR_ARGS : SELECTOR_ARG;
   const [before, after] = selectorStr.split(splitToken);
@@ -1066,7 +1148,7 @@ function compileArgMethod(
   if (!argNode || !styleArg) return false;
 
   const selectorArg = evaluateNode(argNode, scope);
-  validateResolvedSelectorValue(options.checkSelector, `style.${method.name}`, selector, selectorArg, argNode);
+  validateResolvedSelectorValue(options.dev?.checkSelector, `style.${method.name}`, selector, selectorArg, argNode);
   throwIfRequiredStaticSelectorValue(options, `style.${method.name}`, selectorArg);
   if (!selectorArg.ok) return false;
 
@@ -1248,14 +1330,9 @@ function addRuntimeScopeItem(
     itemParentSelector,
     itemAtRules,
     sourceItem.callsite,
-    cssConfig.classNamePrefix,
     cssConfig.localClassName,
     cssConfig.debugClassName,
-    cssConfig.debugPropertyLength,
-    cssConfig.debugValueLength,
-    cssConfig.debugSelectorLength,
-    cssConfig.debugParentSelectorLength,
-    cssConfig.debugAtRuleLength,
+    cssConfig.classNameFormat,
   );
 
   const item: CompiledItem = createCompiledItem(
@@ -1418,14 +1495,9 @@ function addRuntimeStyleItem(
     parentSelector,
     itemAtRules,
     sourceItem.callsite,
-    cssConfig.classNamePrefix,
     cssConfig.localClassName,
     cssConfig.debugClassName,
-    cssConfig.debugPropertyLength,
-    cssConfig.debugValueLength,
-    cssConfig.debugSelectorLength,
-    cssConfig.debugParentSelectorLength,
-    cssConfig.debugAtRuleLength,
+    cssConfig.classNameFormat,
   );
 
   const item: CompiledItem = createCompiledItem(
@@ -1547,16 +1619,16 @@ function addStyleItems(
         propertyLoc.filePath ?? fileId,
         propertyLoc.line,
         propertyLoc.column,
-        cssConfig.tokenVarPrefix,
+        cssConfig.tokenNameFormat,
       )
       : null;
 
     const valueStr = variableName
       ? token
-        ? getCssVarRawFallback(variableName, getTokenVar(token, cssConfig.tokenVarPrefix))
+        ? getCssVarRawFallback(variableName, getTokenVar(token, cssConfig.tokenNameFormat))
         : `var(${variableName})`
       : token
-      ? getTokenVar(token, cssConfig.tokenVarPrefix)
+      ? getTokenVar(token, cssConfig.tokenNameFormat)
       : String(value);
 
     const dedupe = getClassNameDedupe(
@@ -1575,14 +1647,9 @@ function addStyleItems(
       parentSelector,
       atRules,
       propertyCallsite,
-      cssConfig.classNamePrefix,
       cssConfig.localClassName,
       cssConfig.debugClassName,
-      cssConfig.debugPropertyLength,
-      cssConfig.debugValueLength,
-      cssConfig.debugSelectorLength,
-      cssConfig.debugParentSelectorLength,
-      cssConfig.debugAtRuleLength,
+      cssConfig.classNameFormat,
     );
 
     const item: CompiledItem = createCompiledItem(
@@ -1597,7 +1664,6 @@ function addStyleItems(
       setCompiledItemValue(item, [
         ITEM_VALUE_TYPE_AT_RULE_REF,
         {
-          type: ref.type,
           key: ref.key,
           value: ref.value,
           css: null,
@@ -1607,7 +1673,7 @@ function addStyleItems(
     } else if (token || runtimeValue) {
       setCompiledItemValue(item, [
         ITEM_VALUE_TYPE_VARIABLE,
-        variableName ?? (token ? getTokenVarName(token, cssConfig.tokenVarPrefix) : ''),
+        variableName ?? (token ? getTokenVarName(token, cssConfig.tokenNameFormat) : ''),
         token ?? value,
         shouldAppendCssPx(property) ? ITEM_VALUE_NUMBER_PX : undefined,
       ]);
@@ -1681,8 +1747,6 @@ function throwIfRequiredStaticStyleValue(result: EvalResult) {
     result.reason.includes('createFontPaletteValues') ||
     result.reason.includes('createPositionTry') ||
     result.reason.includes('createProperty') ||
-    result.reason.includes('createScrollTimeline') ||
-    result.reason.includes('createViewTimeline') ||
     result.reason.includes('fontSrc')
   ) {
     throw new Error(result.reason);
@@ -1694,7 +1758,7 @@ function throwIfRequiredStaticSelectorValue(
   fnLabel: string,
   result: EvalResult,
 ) {
-  if (result.ok || options.checkSelector === false) return;
+  if (result.ok || options.dev?.checkSelector === false) return;
 
   throw new Error([
     'Invalid selector',

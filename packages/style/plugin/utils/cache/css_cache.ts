@@ -27,13 +27,13 @@ export type GetFileCssArgs = {
 
 export type FileCssCacheArgs = {
   cacheDir: string;
-  namespace: string;
+  cacheSubdir: string;
 };
 
 export type FileCssCache = ReturnType<typeof createFileCssCache>;
 
 export function createFileCssCache(args: FileCssCacheArgs) {
-  const rootDir = path.join(args.cacheDir, args.namespace);
+  const rootDir = path.join(args.cacheDir, args.cacheSubdir);
   const filesDir = path.join(rootDir, 'files');
 
   const getFilePath = (filePath: string) => {

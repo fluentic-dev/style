@@ -1,4 +1,4 @@
-import { RUNTIME_CONFIG } from '../config';
+import { RUNTIME_CONFIG } from '../config/config/runtime';
 
 export const IS_SERVER_RUNTIME = typeof window === 'undefined';
 

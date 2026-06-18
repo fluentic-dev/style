@@ -1,17 +1,27 @@
+import { LayerPlaceholder } from '../../config';
 import { hashString } from '../../utils/hash';
-import { LayerPlaceholder, type LayerPriority } from './types';
+import type { LayerPriority } from './types';
 
 export function compareLayerPriority(
   p1: LayerPriority,
   p2: LayerPriority,
 ) {
+  // Priority expands from broad domains into narrower ones:
+  // value -> direct selector -> parent selector -> media -> scope/origin -> property.
   return (
+    // Explicit value weight wins across all lower priority domains.
     p1[0] - p2[0] ||
+    // Direct selector bucket: base < parent-only < selector < priority selector.
     p1[1] - p2[1] ||
+    // Parent selector bucket inside the same direct selector bucket.
     p1[2] - p2[2] ||
+    // Media bucket inside the same selector/parent selector bucket.
     p1[3] - p2[3] ||
+    // Nested at-rule depth inside the same media bucket.
     p1[4] - p2[4] ||
+    // Scope-origin tiebreaker inside the same contextual bucket.
     p1[5] - p2[5] ||
+    // Property bucket: shorthand < intermediate < longhand.
     p1[6] - p2[6]
   );
 }

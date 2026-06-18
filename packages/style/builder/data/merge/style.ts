@@ -1,8 +1,10 @@
-import { getAtomicClassName, getClassNameDedupe } from '../../../atomic/classname';
+import { getAtomicClassName, getClassNameDedupe } from '../../../atomic/className';
 import { getTokenVar } from '../../../atomic/token';
 import { getCssVar, getCssVarRawFallback } from '../../../atomic/utils/css';
 import { getCssPropertyValue, shouldAppendCssPx } from '../../../atomic/value';
-import { RUNTIME_CONFIG } from '../../../config';
+import { CSS_CONFIG } from '../../../config/config/css';
+import { DEBUG_CONFIG } from '../../../config/config/debug';
+import { DEV_CONFIG } from '../../../config/config/dev';
 import { isStyleTokenData, isStyleTokenOverrideData, type StyleTokenData } from '../../../style/token';
 import type { StyleObject, StyleValueTuple } from '../../../style/types';
 import { type AtRuleRef, isAtRuleRef } from '../../../style/valueRef';
@@ -111,10 +113,10 @@ export function mergeBuilderData<Data extends BuilderData>(
 
       value = variableName
         ? token
-          ? getCssVarRawFallback(variableName, getTokenVar(token, RUNTIME_CONFIG.tokenVarPrefix))
+          ? getCssVarRawFallback(variableName, getTokenVar(token, CSS_CONFIG.tokenNameFormat ?? null))
           : getCssVar(variableName, getCssPropertyValue(property, String(valueRaw ?? '')))
         : token
-        ? getTokenVar(token, RUNTIME_CONFIG.tokenVarPrefix)
+        ? getTokenVar(token, CSS_CONFIG.tokenNameFormat ?? null)
         : String(valueRaw ?? '');
 
       value = priority !== null ? [value, priority] : value;
@@ -205,14 +207,9 @@ export function mergeBuilderData<Data extends BuilderData>(
       null,
       runtimeItem.atRule,
       runtimeItem.callsite,
-      RUNTIME_CONFIG.classNamePrefix,
-      RUNTIME_CONFIG.localClassName,
-      RUNTIME_CONFIG.debugClassName,
-      RUNTIME_CONFIG.debugPropertyLength,
-      RUNTIME_CONFIG.debugValueLength,
-      RUNTIME_CONFIG.debugSelectorLength,
-      RUNTIME_CONFIG.debugParentSelectorLength,
-      RUNTIME_CONFIG.debugAtRuleLength,
+      DEV_CONFIG.isLocalClassNameEnabled,
+      DEBUG_CONFIG.isDebugClassNameEnabled,
+      CSS_CONFIG.classNameFormat ?? null,
     );
 
     runtimeItem.dedupe = dedupe;

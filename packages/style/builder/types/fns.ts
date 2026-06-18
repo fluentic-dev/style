@@ -10,12 +10,12 @@ type StyleFn<Style, Self> = {
   (style: StyleObject<Style>): Self;
 };
 
-type StyleArgFn<Style, Self> = {
-  (selector: string, style: StyleObject<Style>): Self;
+type StyleArgFn<Style, Self, Arg extends string> = {
+  (selector: Arg, style: StyleObject<Style>): Self;
 };
 
-type StyleArgsFn<Style, Self> = {
-  (selector: string | string[], style: StyleObject<Style>): Self;
+type StyleArgsFn<Style, Self, Arg extends string> = {
+  (selector: Arg | Arg[], style: StyleObject<Style>): Self;
 };
 
 type StyleMergeFn<Style, Self> = {
@@ -26,17 +26,26 @@ type StyleAtRuleFn<Style, Self, Arg> = {
   (selector: Arg, style: AtRuleStyleData<Style>): Self;
 };
 
+type StyleAtRuleNoArgFn<Style, Self> = {
+  (style: AtRuleStyleData<Style>): Self;
+};
+
 type StyleMediaFn<Style, Self, Arg> = StyleAtRuleFn<Style, Self, Arg> & {
   (priority: number, selector: Arg, style: AtRuleStyleData<Style>): Self;
 };
 
-type StyleAtRuleArgFn<Style, Self> = StyleAtRuleFn<Style, Self, string>;
-type StyleAtRuleArgsFn<Style, Self> = StyleAtRuleFn<Style, Self, string | string[]>;
+type StyleMediaNoArgFn<Style, Self> = StyleAtRuleNoArgFn<Style, Self> & {
+  (priority: number, style: AtRuleStyleData<Style>): Self;
+};
 
-type StyleMediaArgFn<Style, Self> = StyleMediaFn<Style, Self, string>;
-type StyleMediaArgsFn<Style, Self> = StyleMediaFn<Style, Self, string | string[]>;
+type StyleAtRuleArgFn<Style, Self, Arg extends string> = StyleAtRuleFn<Style, Self, Arg>;
+type StyleAtRuleArgsFn<Style, Self, Arg extends string> = StyleAtRuleFn<Style, Self, Arg | Arg[]>;
 
-type SelectorString<S> = S extends Selector<infer T> ? T : S;
+type StyleMediaArgFn<Style, Self, Arg extends string> = StyleMediaFn<Style, Self, Arg>;
+type StyleMediaArgsFn<Style, Self, Arg extends string> = StyleMediaFn<Style, Self, Arg | Arg[]>;
+
+type SelectorString<S> = S extends Selector<infer T, any> ? T : S;
+type SelectorArg<S> = S extends Selector<any, infer Arg> ? Arg : string;
 
 type GetArgFn<
   Selector,
@@ -47,17 +56,20 @@ type GetArgFn<
 
 type GetFn<
   Selector,
-  Fns extends Record<'MediaArg' | 'MediaArgs' | 'AtRuleArg' | 'AtRuleArgs' | 'Args' | 'Arg' | 'Default', unknown>,
+  Fns extends Record<
+    'MediaNoArg' | 'MediaArg' | 'MediaArgs' | 'AtRuleNoArg' | 'AtRuleArg' | 'AtRuleArgs' | 'Args' | 'Arg' | 'Default',
+    unknown
+  >,
 > = Selector extends `@media${string}` | `@container${string}` ? GetArgFn<Selector, {
     Args: Fns['MediaArgs'];
     Arg: Fns['MediaArg'];
-    Default: Fns['AtRuleArg'];
+    Default: Fns['MediaNoArg'];
   }>
   : Selector extends `@${string}` //
     ? GetArgFn<Selector, {
       Args: Fns['AtRuleArgs'];
       Arg: Fns['AtRuleArg'];
-      Default: Fns['AtRuleArg'];
+      Default: Fns['AtRuleNoArg'];
     }>
   : GetArgFn<Selector, {
     Args: Fns['Args'];
@@ -67,12 +79,14 @@ type GetFn<
 
 type GetStyleFn<Selector, Style, Self> = SelectorString<Selector> extends '...' ? StyleMergeFn<Style, Self>
   : GetFn<SelectorString<Selector>, {
-    MediaArgs: StyleMediaArgsFn<Style, Self>;
-    MediaArg: StyleMediaArgFn<Style, Self>;
-    AtRuleArgs: StyleAtRuleArgsFn<Style, Self>;
-    AtRuleArg: StyleAtRuleArgFn<Style, Self>;
-    Args: StyleArgsFn<Style, Self>;
-    Arg: StyleArgFn<Style, Self>;
+    MediaNoArg: StyleMediaNoArgFn<Style, Self>;
+    MediaArgs: StyleMediaArgsFn<Style, Self, SelectorArg<Selector>>;
+    MediaArg: StyleMediaArgFn<Style, Self, SelectorArg<Selector>>;
+    AtRuleNoArg: StyleAtRuleNoArgFn<Style, Self>;
+    AtRuleArgs: StyleAtRuleArgsFn<Style, Self, SelectorArg<Selector>>;
+    AtRuleArg: StyleAtRuleArgFn<Style, Self, SelectorArg<Selector>>;
+    Args: StyleArgsFn<Style, Self, SelectorArg<Selector>>;
+    Arg: StyleArgFn<Style, Self, SelectorArg<Selector>>;
     Default: StyleFn<Style, Self>;
   }>;
 
@@ -82,35 +96,45 @@ type ScopeFn<Style, Result> = {
   (styles: Style): Result;
 };
 
-type ScopeArgFn<Style, Result> = {
-  (selector: string, styles: Style): Result;
+type ScopeArgFn<Style, Result, Arg extends string> = {
+  (selector: Arg, styles: Style): Result;
 };
 
-type ScopeArgsFn<Style, Result> = {
-  (selector: string | string[], styles: Style): Result;
+type ScopeArgsFn<Style, Result, Arg extends string> = {
+  (selector: Arg | Arg[], styles: Style): Result;
 };
 
 type ScopeAtRuleFn<Style, Result, Arg> = {
   (selector: Arg, styles: Style): Result;
 };
 
+type ScopeAtRuleNoArgFn<Style, Result> = {
+  (styles: Style): Result;
+};
+
 type ScopeMediaFn<Style, Result, Arg> = ScopeAtRuleFn<Style, Result, Arg> & {
   (priority: number, selector: Arg, styles: Style): Result;
 };
 
-type ScopeAtRuleArgFn<Style, Result> = ScopeAtRuleFn<Style, Result, string>;
-type ScopeAtRuleArgsFn<Style, Result> = ScopeAtRuleFn<Style, Result, string | string[]>;
+type ScopeMediaNoArgFn<Style, Result> = ScopeAtRuleNoArgFn<Style, Result> & {
+  (priority: number, styles: Style): Result;
+};
 
-type ScopeMediaArgFn<Style, Result> = ScopeMediaFn<Style, Result, string>;
-type ScopeMediaArgsFn<Style, Result> = ScopeMediaFn<Style, Result, string | string[]>;
+type ScopeAtRuleArgFn<Style, Result, Arg extends string> = ScopeAtRuleFn<Style, Result, Arg>;
+type ScopeAtRuleArgsFn<Style, Result, Arg extends string> = ScopeAtRuleFn<Style, Result, Arg | Arg[]>;
+
+type ScopeMediaArgFn<Style, Result, Arg extends string> = ScopeMediaFn<Style, Result, Arg>;
+type ScopeMediaArgsFn<Style, Result, Arg extends string> = ScopeMediaFn<Style, Result, Arg | Arg[]>;
 
 type GetScopeFn<Selector, Style, Result> = GetFn<SelectorString<Selector>, {
-  MediaArgs: ScopeMediaArgsFn<Style, Result>;
-  MediaArg: ScopeMediaArgFn<Style, Result>;
-  AtRuleArgs: ScopeAtRuleArgsFn<Style, Result>;
-  AtRuleArg: ScopeAtRuleArgFn<Style, Result>;
-  Args: ScopeArgsFn<Style, Result>;
-  Arg: ScopeArgFn<Style, Result>;
+  MediaNoArg: ScopeMediaNoArgFn<Style, Result>;
+  MediaArgs: ScopeMediaArgsFn<Style, Result, SelectorArg<Selector>>;
+  MediaArg: ScopeMediaArgFn<Style, Result, SelectorArg<Selector>>;
+  AtRuleNoArg: ScopeAtRuleNoArgFn<Style, Result>;
+  AtRuleArgs: ScopeAtRuleArgsFn<Style, Result, SelectorArg<Selector>>;
+  AtRuleArg: ScopeAtRuleArgFn<Style, Result, SelectorArg<Selector>>;
+  Args: ScopeArgsFn<Style, Result, SelectorArg<Selector>>;
+  Arg: ScopeArgFn<Style, Result, SelectorArg<Selector>>;
   Default: ScopeFn<Style, Result>;
 }>;
 

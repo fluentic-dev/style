@@ -1,5 +1,5 @@
-import * as BabelCore from '@babel/core';
-import type { types } from '@babel/core';
+import { BabelCore } from '../utils/babel';
+import type { BabelTypes } from '../utils/babel';
 import { hashString } from '../../../utils/hash';
 import type { CompilerOptions } from '../../compiler/types';
 import type { CompilerCssCollector } from '../../extract/collector';
@@ -53,6 +53,7 @@ export function createExtractPlugin(args: PluginArgs) {
     return {
       pre(this) {
         this.styleNames = new Set();
+        this.styleMetas = new Map();
         this.bindings = new Map();
         this.imports = new Map();
         this.needsExtractImport = false;
@@ -65,7 +66,7 @@ export function createExtractPlugin(args: PluginArgs) {
         this.collector = args.collector;
         this.filePath = this.file?.opts?.filename ?? 'unknown';
         this.styleFilePath = args.styleFilePath ?? this.filePath;
-        this.sourcemapTrace = options.sourcemapTrace ?? 'style';
+        this.sourcemapTrace = options.dev?.sourcemapMode ?? 'style';
         this.fileId = args.styleFilePath ?? getProjectFileId(args.projectDir, this.file?.opts?.filename);
       },
 
@@ -92,8 +93,10 @@ export function createExtractPlugin(args: PluginArgs) {
               ? getImportedName(spec)
               : 'default';
 
-            if (state.importSourceMatcher({ source: sourceName, name: imported })) {
+            const meta = state.importSourceMatcher({ source: sourceName, name: imported });
+            if (meta) {
               state.styleNames.add(spec.local.name);
+              state.styleMetas.set(spec.local.name, meta);
             }
           });
         },
@@ -180,10 +183,12 @@ export function createExtractPlugin(args: PluginArgs) {
 
           const scope = getEvalScope(state);
           const loc = path.node.loc?.start;
+          const meta = state.styleMetas.get(chain.rootName);
+          if (!meta) return;
 
           let result: ReturnType<typeof compileChain>;
           try {
-            result = compileChain(chain, state.fileId, loc, scope, options, state.styleNames);
+            result = compileChain(chain, state.fileId, loc, scope, options, meta, state.styleNames);
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             const node = getSelectorCompileErrorNode(error);
@@ -249,12 +254,12 @@ export function createExtractPlugin(args: PluginArgs) {
 }
 
 function buildCodeFrameError(
-  path: BabelCore.NodePath<types.Node>,
-  node: types.Node,
+  path: BabelCore.NodePath<BabelTypes.Node>,
+  node: BabelTypes.Node,
   message: string,
 ) {
   const hub = path.hub as unknown as {
-    buildError: (node: types.Node, message: string, ErrorCtor: ErrorConstructor) => Error;
+    buildError: (node: BabelTypes.Node, message: string, ErrorCtor: ErrorConstructor) => Error;
   };
 
   return hub.buildError(node, message, Error);
@@ -275,15 +280,15 @@ function getProjectFileId(projectDir: string, filePath: string | null | undefine
 }
 
 type ChainReplacementArgs = {
-  t: typeof types;
-  path: BabelCore.NodePath<types.CallExpression>;
+  t: typeof BabelTypes;
+  path: BabelCore.NodePath<BabelTypes.CallExpression>;
   state: ExtractPluginState;
   result: Parameters<typeof buildReplacement>[1];
   hoist: boolean;
 };
 
 type ChainReplacement = {
-  expression: types.Expression;
+  expression: BabelTypes.Expression;
   hoist: boolean;
 };
 
@@ -329,15 +334,15 @@ function createChainReplacement(
 function createRuntimeTokenCollector(
   args: ChainReplacementArgs,
 ) {
-  const tokensByItem = new WeakMap<object, types.Identifier>();
-  const overrides: types.Expression[] = [];
+  const tokensByItem = new WeakMap<object, BabelTypes.Identifier>();
+  const overrides: BabelTypes.Expression[] = [];
 
   return {
     overrides,
-    addOverride(item: { valueNode: types.Expression; }) {
+    addOverride(item: { valueNode: BabelTypes.Expression; }) {
       overrides.push(args.t.cloneNode(item.valueNode));
     },
-    add(item: object, valueNode: types.Expression) {
+    add(item: object, valueNode: BabelTypes.Expression) {
       const token = getRuntimeTokenIdentifier(args, tokensByItem, item);
 
       overrides.push(
@@ -351,7 +356,7 @@ function createRuntimeTokenCollector(
 
 function getRuntimeTokenIdentifier(
   args: ChainReplacementArgs,
-  tokensByItem: WeakMap<object, types.Identifier>,
+  tokensByItem: WeakMap<object, BabelTypes.Identifier>,
   item: object,
 ) {
   const existing = tokensByItem.get(item);
@@ -377,8 +382,8 @@ function getRuntimeTokenIdentifier(
 }
 
 function insertHoistedDeclarations(
-  path: BabelCore.NodePath<types.Program>,
-  declarations: types.Statement[],
+  path: BabelCore.NodePath<BabelTypes.Program>,
+  declarations: BabelTypes.Statement[],
 ) {
   if (!declarations.length) return;
 
