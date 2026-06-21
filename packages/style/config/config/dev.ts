@@ -40,6 +40,11 @@ type PartialDevConfig = {
   config: Partial<DevConfig> | null;
 };
 
+export const IS_DEV = globalData<{ isDev: boolean; }>(
+  'config.dev.isDev',
+  () => ({ isDev: false }),
+);
+
 export const DEV_CONFIG = globalData<DevConfig>(
   'config.dev',
   () => ({ ...DEV_CONFIG_DEFAULT }),
@@ -65,16 +70,18 @@ export type DevRuntimeOptions = {
 export function setBuildDevConfig(config: BuildDevConfig) {
   const checkSelector = config.checkSelector === 'force' ? false : config.checkSelector;
 
+  IS_DEV.isDev = true;
+
   setDevRuntimeOptions({ ...config, checkSelector });
 }
 
 export function setDevUtilsRuntimeOptions(options: DevRuntimeOptions | null) {
-  setOptions(configBase, options);
+  setOptions(configUtils, options, null);
   rebuildDevConfig();
 }
 
 export function setDevRuntimeOptions(options: DevRuntimeOptions | null) {
-  setOptions(configBase, options);
+  setOptions(configBase, options, { ...DEV_CONFIG_DEFAULT });
   rebuildDevConfig();
 }
 
@@ -83,10 +90,11 @@ function rebuildDevConfig() {
 
   Object.assign(
     DEV_CONFIG,
-    DEV_CONFIG_DEFAULT,
     configBase.config,
     configUtils.config,
   );
+
+  DEV_CONFIG.isDev = IS_DEV.isDev;
 
   RUNTIME_CONFIG.changes += 1;
 }
@@ -94,14 +102,15 @@ function rebuildDevConfig() {
 function setOptions(
   partialConfig: PartialDevConfig,
   options: DevRuntimeOptions | null,
+  defaultConfig: DevConfig | null,
 ) {
   if (!options) {
-    partialConfig.config = null;
+    partialConfig.config = defaultConfig;
     return;
   }
 
   if (!partialConfig.config) {
-    partialConfig.config = {};
+    partialConfig.config = defaultConfig || {};
   }
 
   const config = partialConfig.config;

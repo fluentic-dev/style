@@ -8,6 +8,11 @@ export {
   getToken,
 } from '../../runtime/style';
 export {
+  createTheme,
+  createToken,
+  createTokens,
+} from '../../style';
+export {
   type ClassNameProps,
   type ClassNameResult,
   getClassName,

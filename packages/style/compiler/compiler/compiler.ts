@@ -1,7 +1,18 @@
 import { createCssCollector, extractCss } from '../extract';
 import { createTracer, transformDebug, transformExtract } from '../transform';
 import { getDebugSourceUrl } from '../transform/debug/utils/source_url';
+import { rewriteImportSources } from '../transform/utils/import';
+import {
+  STYLE_CSS_IMPORT_PATH,
+  STYLE_DEV_RSC_IMPORT_PATH,
+  STYLE_IMPORT_PATH,
+} from '../utils/constants';
 import { clearResolverCache } from '../utils/file_resolver';
+import {
+  getStyleRuntimeCssImportPath,
+  getStyleRuntimeDevRscImportPath,
+  getStyleRuntimeImportPath,
+} from '../utils/imports';
 import { createCompilerCache } from './cache';
 import type {
   CompilerInvalidateFileInfo,
@@ -13,9 +24,17 @@ import type {
   TransformExtractResult,
 } from './types';
 
+export enum CompilerRuntimeMode {
+  Dev = 'dev',
+  Prod = 'prod',
+  RscDev = 'rsc-dev',
+  RscProd = 'rsc-prod',
+}
+
 export type CompilerArgs = {
   projectDir: string;
   cacheDir: string;
+  runtimeMode: CompilerRuntimeMode | null;
 };
 
 export type Compiler = ReturnType<typeof createCompiler>;
@@ -29,11 +48,17 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
   const collector = createCssCollector();
 
   const compileDebug = (args: TransformDebugArgs): TransformDebugResult | null => {
-    return transformDebug(internal, args, { tracer });
+    return rewriteTransformResult(
+      transformDebug(internal, args, { tracer }),
+      internal.runtimeMode,
+    );
   };
 
   const compileDebugRSC = (args: TransformDebugArgs): TransformDebugRscResult | null => {
-    const debugResult = transformDebug(internal, args, { tracer });
+    const debugResult = rewriteTransformResult(
+      transformDebug(internal, args, { tracer }),
+      internal.runtimeMode,
+    );
     if (!debugResult) return null;
 
     const rscCollector = createCssCollector();
@@ -74,10 +99,10 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
 
     if (!result) return null;
 
-    return {
+    return rewriteTransformResult({
       ...result,
       rules: collector.getItems().slice(startIndex),
-    };
+    }, internal.runtimeMode);
   };
 
   const getExtractedCss = () => {
@@ -102,14 +127,44 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
 }
 
 function createCompilerInternal(args: CompilerArgs, options: CompilerOptions) {
-  const { projectDir, cacheDir } = args;
+  const { projectDir, cacheDir, runtimeMode } = args;
 
   const cache = createCompilerCache({ cacheDir });
 
   return {
     projectDir,
     cacheDir,
+    runtimeMode,
     cache,
     options,
   };
+}
+
+function rewriteTransformResult<Result extends { code: string; }>(
+  result: Result | null,
+  runtimeMode: CompilerRuntimeMode | null,
+) {
+  if (!result || !runtimeMode) return result;
+
+  return {
+    ...result,
+    code: rewriteCompilerRuntimeImports(result.code, runtimeMode),
+  };
+}
+
+function rewriteCompilerRuntimeImports(code: string, runtimeMode: CompilerRuntimeMode) {
+  return rewriteImportSources(
+    code,
+    (source) => getCompilerRuntimeImportSource(source, runtimeMode),
+  );
+}
+
+function getCompilerRuntimeImportSource(source: string, runtimeMode: CompilerRuntimeMode) {
+  if (source === STYLE_IMPORT_PATH) return getStyleRuntimeImportPath(runtimeMode);
+  if (source === STYLE_CSS_IMPORT_PATH) return getStyleRuntimeCssImportPath(runtimeMode);
+  if (runtimeMode === CompilerRuntimeMode.RscDev && source === STYLE_DEV_RSC_IMPORT_PATH) {
+    return getStyleRuntimeDevRscImportPath(runtimeMode);
+  }
+
+  return null;
 }

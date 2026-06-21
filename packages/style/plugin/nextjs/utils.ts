@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import type { Compilation, Compiler, WebpackPluginInstance } from 'webpack';
@@ -16,7 +17,16 @@ import type { PluginOptions, WebpackConfiguration } from './types';
 
 export const nextRegistry = createWebpackRegistry('nextjs.registry');
 
-export const PRECOLLECT_CACHE_DIR = 'nextjs/precollect';
+export const PRECOLLECT_CACHE_DIRS = {
+  dev: 'nextjs/precollect/dev',
+  prod: 'nextjs/precollect/prod',
+};
+
+export const NEXT_COMPILER_IDS = {
+  turbopack: 'nextjs:turbopack',
+  webpackServer: 'nextjs:webpack-server',
+  webpackClient: 'nextjs:webpack-client',
+};
 
 export type { PluginCompiler };
 
@@ -44,6 +54,10 @@ export function getNextCacheDir(rootDir: string, cacheDir?: string) {
   return cacheDir ?? path.join(rootDir, '.next/cache/fluentic-style');
 }
 
+export function getNextPrecollectCacheSubdir(dev: boolean) {
+  return dev ? PRECOLLECT_CACHE_DIRS.dev : PRECOLLECT_CACHE_DIRS.prod;
+}
+
 export function createNextBuildConfig(options: PluginOptions): BuildConfig {
   return getPluginBuildConfig(options);
 }
@@ -54,14 +68,14 @@ export function createNextBuildDevConfig(options: PluginOptions): BuildDevConfig
 
 export function createNextConfigHash(
   buildConfig: BuildConfig,
-  buildDevConfig: BuildDevConfig | null,
   dev: boolean,
 ) {
-  return {
-    buildConfig,
-    buildDevConfig,
-    dev,
-  };
+  const values = [
+    dev ? 'dev' : 'prod',
+    buildConfig.hoist ? 'hoist' : 'no-hoist',
+  ];
+
+  return createHash('sha256').update(values.join('\0')).digest('hex');
 }
 
 export function resolveNextCompilerOptions(

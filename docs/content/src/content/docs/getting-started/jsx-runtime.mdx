@@ -13,11 +13,16 @@ This prop is stripped before it reaches the DOM.
 
 ## Project-level setup
 
+Choose the JSX import source that matches your build:
+
+- `@fluentic/style/plugin/jsx` when a Fluentic Style compiler plugin is enabled.
+- `@fluentic/style/jsx` for runtime-only usage without a compiler plugin.
+
 ```json
 {
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "@fluentic/style"
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
   }
 }
 ```
@@ -26,17 +31,9 @@ Most React bundlers also need their React transform configured:
 
 ```ts
 react({
-  jsxImportSource: '@fluentic/style',
+  jsxImportSource: '@fluentic/style/plugin/jsx',
 });
 ```
-
-## File-level setup
-
-```tsx
-/** @jsxImportSource @fluentic/style */
-```
-
-This is useful when you want to adopt Fluentic Style gradually.
 
 ## `css` accepts arrays
 

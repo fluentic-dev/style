@@ -41,7 +41,7 @@ export default (_, argv) => {
                 transform: {
                   react: {
                     runtime: 'automatic',
-                    importSource: '@fluentic/style',
+                    importSource: '@fluentic/style/plugin/jsx',
                   },
                 },
               },

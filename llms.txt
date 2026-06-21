@@ -129,15 +129,9 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   plugins: [
     stylePlugin(),
-    react({ jsxImportSource: '@fluentic/style' }),
+    react({ jsxImportSource: '@fluentic/style/plugin/jsx' }),
   ],
 });
-```
-
-Per-file pragma:
-
-```tsx
-/** @jsxImportSource @fluentic/style */
 ```
 
 Use `css` with resolved items from `combineStyle(...)`:
@@ -617,7 +611,8 @@ Component APIs:
 
 Runtime and JSX:
 
-- Configure `jsxImportSource: '@fluentic/style'` whenever you use `css` props.
+- Configure `jsxImportSource: '@fluentic/style/plugin/jsx'` when a Fluentic Style compiler plugin is enabled.
+- Configure `jsxImportSource: '@fluentic/style/jsx'` for runtime-only usage without a compiler plugin.
 - Keep raw DOM `className` for external or framework classes; the JSX runtime
   appends Fluentic classes after existing `className`.
 - Call `configureRuntime()` before styles are resolved. Runtime config is global,

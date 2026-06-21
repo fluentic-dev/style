@@ -45,7 +45,7 @@ export function createVitePluginState(options: PluginOptions) {
       const sidecarUrl = await getSidecarUrl(dev, getViteRoot(config));
 
       return {
-        define: getStyleEntryDefines(buildConfig, buildDevConfig, dev, sidecarUrl),
+        define: getStyleEntryDefines(buildConfig, buildDevConfig, sidecarUrl),
       };
     },
 

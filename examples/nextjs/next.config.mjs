@@ -9,7 +9,7 @@ let nextConfig = {
 
 nextConfig = stylePlugin(nextConfig, {
   getSourcemapFilePath,
-  layer: false,
+  // layer: false,
 });
 
 export default nextConfig;

@@ -1,4 +1,3 @@
 import './config';
 
-export * from '../../jsx/jsx_dev_runtime_extracted';
-
+export * from '../../jsx/extracted/jsx_dev_runtime';

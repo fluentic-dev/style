@@ -24,7 +24,7 @@ export default defineConfig(({ command }) => {
         getSourcemapFilePath,
       }),
       react({
-        jsxImportSource: '@fluentic/style',
+        jsxImportSource: '@fluentic/style/plugin/jsx',
       }),
     ].filter(Boolean),
   };

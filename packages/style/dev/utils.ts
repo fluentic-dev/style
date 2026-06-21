@@ -63,7 +63,7 @@ function getUtils(displayName: string) {
     },
   });
 
-  const setSourcemapTraceUtils = createDevUtilsObject({
+  const setSourcemapModeUtils = createDevUtilsObject({
     toStyle() {
       setSourcemapMode('style');
       return null;
@@ -76,16 +76,6 @@ function getUtils(displayName: string) {
   });
 
   const setElementMarkerUtils = createDevUtilsObject({
-    on() {
-      setElementMarkerMode(true);
-      return null;
-    },
-
-    off() {
-      setElementMarkerMode(false);
-      return null;
-    },
-
     toOn() {
       setElementMarkerMode(true);
       return null;
@@ -147,10 +137,10 @@ function getUtils(displayName: string) {
 
   const pluginUtils = createDevUtilsObject({
     ...baseUtils,
-    setSourcemapTrace: setSourcemapTraceUtils,
+    setSourcemapMode: setSourcemapModeUtils,
   });
 
-  if (typeof globalThis.window === 'undefined') {
+  if (enableRuntimeTraceSourcemap()) {
     return createDevUtilsObject({
       ...baseUtils,
       traceSourcemap() {
@@ -161,6 +151,10 @@ function getUtils(displayName: string) {
   }
 
   return pluginUtils;
+}
+
+function enableRuntimeTraceSourcemap() {
+  return DEV_CONFIG.isDev && !RUNTIME_CONFIG.isPlugin;
 }
 
 function setSourcemapMode(mode: SourcemapLocationMode) {
@@ -339,6 +333,15 @@ function logInfoRows() {
   ];
 
   for (const [label, value, detail] of rows) {
+    if (!detail) {
+      console.log(
+        `%c${label.padEnd(12)}%c${value}`,
+        'font-weight:700;color:#7c3aed',
+        'font-weight:700;color:#111827',
+      );
+      continue;
+    }
+
     console.log(
       `%c${label.padEnd(12)}%c${value}%c ${detail}`,
       'font-weight:700;color:#7c3aed',
@@ -408,7 +411,7 @@ function getSourcemapDetail() {
     return 'Sourcemaps are disabled.';
   }
 
-  if (!RUNTIME_CONFIG.isPlugin) {
+  if (enableRuntimeTraceSourcemap()) {
     return 'Run traceSourcemap() to trace runtime callsites.';
   }
 
@@ -438,9 +441,11 @@ function getElementMarkerLabel() {
 }
 
 function getElementMarkerDetail() {
-  return DEV_CONFIG.isElementClassNameEnabled
+  if (!DEV_CONFIG.isElementClassNameEnabled) return 'Element marker classes are disabled.';
+
+  return CSS_CONFIG.elementClassNameFormat
     ? `Format ${CSS_CONFIG.elementClassNameFormat}`
-    : 'Element marker classes are disabled.';
+    : '';
 }
 
 function getUsageCommands(displayName: string) {
@@ -451,16 +456,16 @@ function getUsageCommands(displayName: string) {
     [`${displayName}.reset()`, 'Reset saved local debug preferences'],
     [`${displayName}.startupMessage.on()`, 'Show the initial helper message'],
     [`${displayName}.startupMessage.off()`, 'Hide the initial helper message'],
-    [`${displayName}.setElementMarker.on()`, 'Add element source marker classes'],
-    [`${displayName}.setElementMarker.off()`, 'Stop adding element source marker classes'],
+    [`${displayName}.setElementMarker.toOn()`, 'Add element source marker classes'],
+    [`${displayName}.setElementMarker.toOff()`, 'Stop adding element source marker classes'],
     [`${displayName}.setPriorityMode.toLayer()`, 'Use layer priority mode'],
     [`${displayName}.setPriorityMode.toSort()`, 'Use sorted priority mode'],
   ];
 
-  if (RUNTIME_CONFIG.isPlugin) {
+  if (!enableRuntimeTraceSourcemap()) {
     commands.push(
-      [`${displayName}.setSourcemapTrace.toStyle()`, 'Map spread values to the style site'],
-      [`${displayName}.setSourcemapTrace.toValue()`, 'Map spread values to the value source'],
+      [`${displayName}.setSourcemapMode.toStyle()`, 'Map spread values to the style site'],
+      [`${displayName}.setSourcemapMode.toValue()`, 'Map spread values to the value source'],
     );
   } else {
     commands.push([`${displayName}.traceSourcemap()`, 'Trace runtime sourcemaps']);

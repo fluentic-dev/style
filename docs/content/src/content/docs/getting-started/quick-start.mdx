@@ -10,7 +10,6 @@ slot targets, or token overrides.
 ## 1. Write a style
 
 ```tsx
-/** @jsxImportSource @fluentic/style */
 import { style } from '@fluentic/style';
 
 const button = style({
@@ -87,7 +86,6 @@ Reusable components should let callers add element-level styles. Accept
 one-off adjustments.
 
 ```tsx
-/** @jsxImportSource @fluentic/style */
 import { style } from '@fluentic/style';
 import type { StyleProp } from '@fluentic/style';
 import type { ReactNode } from 'react';
@@ -173,7 +171,6 @@ export const buttonStyles = {
 ```
 
 ```tsx title="Button.tsx"
-/** @jsxImportSource @fluentic/style */
 import type { StyleProp } from '@fluentic/style';
 import type { ReactNode } from 'react';
 import { buttonStyles } from './Button.styles';

@@ -6,7 +6,7 @@ export type { NodePath, types as BabelTypes } from '@babel/core';
 export type BabelTransformArgs = {
   code: string;
   sourcemap?: BabelTransformSourceMap;
-  filePath: string;
+  filePath?: string;
   plugins: BabelTransformPlugins;
   retainLines?: boolean;
   errorLabel?: string;

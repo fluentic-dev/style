@@ -1,21 +1,21 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'tsdown';
 
-const JSX_RUNTIME_SERVER_ENTRY = 'jsx/jsx_runtime_server.ts';
-const JSX_DEV_RUNTIME_SERVER_ENTRY = 'jsx/jsx_dev_runtime_server.ts';
+const JSX_RUNTIME_RSC_ENTRY = 'jsx/rsc/jsx_runtime.ts';
+const JSX_DEV_RUNTIME_RSC_ENTRY = 'jsx/rsc/jsx_dev_runtime.ts';
 
 export default [
   // Runtime / browser-neutral entries that do not need runtime-mode defines.
   defineConfig({
     entry: {
       'index': 'index.ts',
-      'server': 'server.ts',
+      'server': 'entry/rsc_dev/server.ts',
       'css': 'css/index.ts',
       'config/index': 'config/index.ts',
       'selector/index': 'selector/index.ts',
       'dev': 'dev/index.ts',
-      'jsx/jsx-runtime': 'jsx/jsx_runtime.ts',
-      'jsx/jsx-dev-runtime': 'jsx/jsx_dev_runtime.ts',
+      'jsx/jsx-runtime': 'jsx/runtime/jsx_runtime.ts',
+      'jsx/jsx-dev-runtime': 'jsx/runtime/jsx_dev_runtime.ts',
       'entry/dev': 'entry/dev/index.ts',
       'entry/dev/css': 'entry/dev/css.ts',
       'entry/dev/jsx-runtime': 'entry/dev/jsx_runtime.ts',
@@ -45,8 +45,8 @@ export default [
   }),
 
   createRuntimeConfig({
-    'jsx/jsx-runtime.server': JSX_RUNTIME_SERVER_ENTRY,
-    'jsx/jsx-dev-runtime.server': JSX_DEV_RUNTIME_SERVER_ENTRY,
+    'jsx/jsx-runtime.server': JSX_RUNTIME_RSC_ENTRY,
+    'jsx/jsx-dev-runtime.server': JSX_DEV_RUNTIME_RSC_ENTRY,
   }, {
     checkSelector: false,
   }),
@@ -54,6 +54,7 @@ export default [
   createRuntimeConfig({
     'entry/rsc-dev': 'entry/rsc_dev/index.ts',
     'entry/rsc-dev/css': 'entry/rsc_dev/css.ts',
+    'entry/rsc-dev/dev': 'entry/rsc_dev/dev.ts',
     'entry/rsc-dev/jsx-runtime': 'entry/rsc_dev/jsx_runtime.ts',
     'entry/rsc-dev/jsx-dev-runtime': 'entry/rsc_dev/jsx_dev_runtime.ts',
   }),
@@ -66,11 +67,32 @@ export default [
       'plugin/webpack/loader': 'plugin/bundler/webpack/loader.ts',
       'plugin/rspack/index': 'plugin/bundler/rspack/index.ts',
       'plugin/farm/index': 'plugin/bundler/farm/index.ts',
+      'plugin/parcel/index': 'plugin/bundler/parcel/index.ts',
+      'plugin/parcel/transformer': 'plugin/bundler/parcel/transformer.ts',
+      'plugin/parcel/resolver': 'plugin/bundler/parcel/resolver.ts',
+      'plugin/parcel/runtime': 'plugin/bundler/parcel/runtime.ts',
+      'plugin/parcel/optimizer': 'plugin/bundler/parcel/optimizer.ts',
       'plugin/nextjs/index': 'plugin/nextjs/index.ts',
       'plugin/nextjs/loader': 'plugin/nextjs/loader.ts',
     },
     dts: false,
     format: ['esm'],
+    clean: false,
+    sourcemap: true,
+    platform: 'node',
+  }),
+
+  // Parcel's package manager can statically track CommonJS plugin graphs.
+  defineConfig({
+    entry: {
+      'plugin/parcel/index': 'plugin/bundler/parcel/index.ts',
+      'plugin/parcel/transformer': 'plugin/bundler/parcel/transformer.ts',
+      'plugin/parcel/resolver': 'plugin/bundler/parcel/resolver.ts',
+      'plugin/parcel/runtime': 'plugin/bundler/parcel/runtime.ts',
+      'plugin/parcel/optimizer': 'plugin/bundler/parcel/optimizer.ts',
+    },
+    dts: false,
+    format: ['cjs'],
     clean: false,
     sourcemap: true,
     platform: 'node',
@@ -86,6 +108,7 @@ function createRuntimeConfig(
   const checkSelectorAlias = options.checkSelector !== false
     ? resolveLocal('builder/data/check_selector.ts')
     : resolveLocal('builder/data/check_selector.noop.ts');
+
   const alias: Record<string, string> = {
     './data/check_selector': checkSelectorAlias,
   };

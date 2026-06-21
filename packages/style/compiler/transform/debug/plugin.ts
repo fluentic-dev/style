@@ -175,7 +175,6 @@ export function createDebugPlugin(args: PluginArgs) {
           path: NodePath<BabelTypes.JSXOpeningElement>,
           state: PluginState,
         ) {
-          if (isElementDebugEnabled(options) !== true) return;
           if (!isHostJsxElement(path.node.name)) return;
 
           const cssAttr = getJsxAttribute(path.node, 'css');
@@ -339,10 +338,6 @@ function getShortFileLabel(filePath: string) {
   const index = fileName.lastIndexOf('.');
 
   return index > 0 ? fileName.slice(0, index) : fileName;
-}
-
-function isElementDebugEnabled(options: CompilerOptions) {
-  return options.dev?.elementClassName ?? false;
 }
 
 function validateStaticSelectorArg(

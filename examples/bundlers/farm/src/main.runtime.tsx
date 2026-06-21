@@ -1,5 +1,5 @@
 import { configureBundlerRuntime } from '@example/bundler-shared/runtime';
 
-configureBundlerRuntime(false);
+configureBundlerRuntime(import.meta.env.DEV);
 
 void import('./main');

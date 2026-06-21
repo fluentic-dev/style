@@ -55,21 +55,14 @@ Enable the custom JSX runtime so DOM and SVG elements accept the `css` prop.
 {
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "@fluentic/style"
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
   }
 }
-```
-
-You can also use a file-level pragma:
-
-```tsx
-/** @jsxImportSource @fluentic/style */
 ```
 
 ## Quick Start
 
 ```tsx
-/** @jsxImportSource @fluentic/style */
 import { combineStyle, style } from '@fluentic/style';
 
 const styles = {
@@ -127,7 +120,6 @@ export function PrimaryButton() {
 ## Tokens and Themes
 
 ```tsx
-/** @jsxImportSource @fluentic/style */
 import { combineStyle, createTheme, createToken, style } from '@fluentic/style';
 
 const color = {
@@ -170,7 +162,7 @@ export default defineConfig({
   plugins: [
     stylePlugin(),
     react({
-      jsxImportSource: '@fluentic/style',
+      jsxImportSource: '@fluentic/style/plugin/jsx',
     }),
   ],
 });

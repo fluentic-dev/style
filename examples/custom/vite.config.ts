@@ -21,7 +21,7 @@ export default defineConfig({
       }],
     }),
     react({
-      jsxImportSource: '@fluentic/style',
+      jsxImportSource: '@fluentic/style/plugin/jsx',
     }),
   ],
 });

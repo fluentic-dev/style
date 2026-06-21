@@ -1,0 +1,31 @@
+{
+  "name": "@example/bundler-parcel",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "clear": "rm -rf dist .parcel-cache node_modules/.cache/fluentic-style/parcel-css",
+    "dev": "parcel index.html --config @fluentic/style/plugin/parcel/config --cache-dir .parcel-cache --watch-dir . --host 127.0.0.1 --port 4176",
+    "dev:plugin": "parcel index.html --config @fluentic/style/plugin/parcel/config --cache-dir .parcel-cache --watch-dir . --host 127.0.0.1 --port 4176",
+    "build": "parcel build index.html --config @fluentic/style/plugin/parcel/config --cache-dir .parcel-cache --watch-dir . --dist-dir dist --public-url ./",
+    "build:plugin": "parcel build index.html --config @fluentic/style/plugin/parcel/config --cache-dir .parcel-cache --watch-dir . --dist-dir dist --public-url ./",
+    "serve": "npx serve dist -l 4176"
+  },
+  "dependencies": {
+    "@example/bundler-shared": "workspace:*",
+    "@fluentic/style": "workspace:*",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@parcel/config-default": "^2.16.1",
+    "@parcel/plugin": "^2.16.1",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "parcel": "^2.16.1",
+    "typescript": "^5.9.3"
+  },
+  "@parcel/resolver-default": {
+    "packageExports": true
+  }
+}

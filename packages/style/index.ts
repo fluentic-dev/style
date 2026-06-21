@@ -32,5 +32,5 @@ export type {
   CSSValueExclude,
 } from './atomic/utils/types';
 
-export { createElement } from './jsx/jsx_runtime';
+export { createElement } from './jsx/runtime/jsx_runtime';
 export * from './jsx/types';

@@ -39,15 +39,11 @@ import {
 import { traceDevSourcemaps } from '../dev/trace';
 import { enableStyleDevUtils } from '../dev/utils';
 import { plugin as viteStylePlugin } from '../plugin/bundler/vite';
-import { prependWebpackRuntimeEntry } from '../plugin/bundler/webpack/utils';
+import { createWebpackRuntimeModuleSource, prependWebpackRuntimeEntry } from '../plugin/bundler/webpack/utils';
 import { injectDevCssLink } from '../plugin/nextjs/html';
-import { rewriteServerDevStyleImports, rewriteServerStyleImports } from '../plugin/nextjs/loader';
-import {
-  createPluginCompiler,
-  createTransformFilter,
-  getRuntimeImportAliases,
-  getServerRuntimeImportAliases,
-} from '../plugin/utils';
+import nextLoader from '../plugin/nextjs/loader';
+import { nextRegistry } from '../plugin/nextjs/utils';
+import { createPluginCompiler, createTransformFilter } from '../plugin/utils';
 import { normalizeSidecarRoutePath } from '../plugin/utils/sidecar/utils';
 import { createCombinedStylePool } from '../runtime/core/cache/pool';
 import { resolveStyleProp } from '../runtime/core/cache/prop';
@@ -102,6 +98,7 @@ export {
   createToken,
   createTokens,
   createTransformFilter,
+  createWebpackRuntimeModuleSource,
   CSS_CONFIG,
   DEV_CONFIG,
   ELEMENT_CSS_DATA_ATTR,
@@ -115,21 +112,19 @@ export {
   getRscDevInitialStyleSelector,
   getRscStyleCss,
   getRuleCallsite,
-  getRuntimeImportAliases,
   getScopeParentClassName,
-  getServerRuntimeImportAliases,
   getSheetRules,
   getToken,
   injectDevCssLink,
   isSlotOverrideData,
   ITEM_VALUE_NUMBER_PX,
+  nextLoader,
+  nextRegistry,
   normalizeSidecarRoutePath,
   parseRscStylePayload,
   prependWebpackRuntimeEntry,
   readFileSync,
   resolveStyleProp,
-  rewriteServerDevStyleImports,
-  rewriteServerStyleImports,
   RUNTIME_CONFIG,
   selector,
   setBuildMeta,
@@ -419,6 +414,7 @@ export function createCompiler(options: TestCompilerOptions = {}) {
     projectDir: testDir,
     cacheDir: testDir + '.test-cache',
     options: normalizeTestCompilerOptions(options),
+    runtimeMode: null,
   });
 
   return {
@@ -463,6 +459,7 @@ export function injectStyleDebugData(
         return sourceUrl ?? info.sourceUrl;
       },
     },
+    runtimeMode: null,
   });
 
   const result = compiler.transform(code, filePath);

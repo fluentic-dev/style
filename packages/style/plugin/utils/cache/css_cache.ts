@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { CssExtractRule } from '../../../compiler/extract';
+import { compareLayerPriority } from '../../../atomic/layer';
+import { extractCss, type CompilerExtractCssArgs, type CssExtractRule } from '../../../compiler/extract';
 import { normalizePath } from '../../../compiler/utils/path';
 
 export type FileCssCacheRule = CssExtractRule;
@@ -21,7 +22,7 @@ export type SetFileCssArgs = {
   rules: FileCssCacheRule[];
 };
 
-export type GetFileCssArgs = {
+export type GetFileCssArgs = CompilerExtractCssArgs & {
   configHash?: string;
 };
 
@@ -56,31 +57,26 @@ export function createFileCssCache(args: FileCssCacheArgs) {
 
   const getCss = (args: GetFileCssArgs = {}) => {
     const rules = getRules(args);
-    const seen = new Set<string>();
-    const css: string[] = [];
-
-    for (const rule of rules) {
-      const key = rule.className;
-      if (!key || seen.has(key)) continue;
-
-      seen.add(key);
-      css.push(rule.css);
-    }
-
-    return css.join('\n');
+    return extractCss(rules, args);
   };
 
   const getRules = (args: GetFileCssArgs = {}) => {
     const records = readRecords(filesDir, args);
     const rules: FileCssCacheRule[] = [];
 
-    records.sort((a, b) => a.filePath.localeCompare(b.filePath));
-
     for (const record of records) {
       rules.push(...record.rules);
     }
 
-    return rules;
+    return rules.sort((a, b) => compareLayerPriority(a.priority, b.priority));
+  };
+
+  const clear = () => {
+    try {
+      fs.rmSync(rootDir, { recursive: true, force: true });
+    } catch {
+      // Cache cleanup is best effort.
+    }
   };
 
   const invalidateFile = (filePath: string) => {
@@ -97,6 +93,7 @@ export function createFileCssCache(args: FileCssCacheArgs) {
     setFileCss,
     getCss,
     getRules,
+    clear,
     invalidateFile,
   };
 }

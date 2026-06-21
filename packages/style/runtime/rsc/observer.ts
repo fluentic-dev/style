@@ -139,11 +139,13 @@ function cleanupInitialStyle() {
 }
 
 export function getRscDevInitialStyleSelector() {
-  return [
+  const selectors = [
     `[${PRECOLLECT_LINK_TAG_ATTR}]`,
     `[${SEED_STYLE_TAG_ATTR}]`,
     `[data-href="${SEED_STYLE_TAG_HREF}"]`,
-  ].join(', ');
+  ];
+
+  return selectors.join(', ');
 }
 
 export function parseRscStylePayload(value: string | null): SheetRule[] {

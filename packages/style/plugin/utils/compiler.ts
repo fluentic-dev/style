@@ -1,9 +1,8 @@
 import path from 'node:path';
 import { createCompiler } from '../../compiler';
-import type { Compiler, CompilerCssOptions, CompilerOptions } from '../../compiler';
-import { PLUGIN_CACHE_DIR } from './constants';
+import type { Compiler, CompilerCssOptions, CompilerOptions, CompilerRuntimeMode } from '../../compiler';
+import { PLUGIN_CACHE_DIR, PLUGIN_NAME } from './constants';
 import { createTransformFilter, normalizeModuleId, type TransformFilterOptions } from './filter';
-import { rewriteStyleRuntimeImports, type StyleRuntimeMode } from './runtimeEntry';
 import type { BundlerSourceMap } from './sourcemap';
 
 export type PluginCssOptions = CompilerCssOptions;
@@ -17,10 +16,16 @@ export type PluginCompiler = ReturnType<typeof createPluginCompiler>;
 export type PluginCompilerArgs = {
   dev: boolean;
   projectDir: string;
-  cacheDir?: string;
-  options?: PluginOptions;
-  runtimeMode?: StyleRuntimeMode | null;
+  cacheDir: string;
+  options: PluginOptions;
+  runtimeMode: CompilerRuntimeMode | null;
 };
+
+let nextCompilerId = 0;
+
+export function createCompilerId(name?: string) {
+  return [PLUGIN_NAME, name, String(nextCompilerId++)].filter(Boolean).join('|');
+}
 
 export function getPluginCacheDir(projectDir: string, cacheDir?: string) {
   return cacheDir ?? path.join(projectDir, PLUGIN_CACHE_DIR);
@@ -28,13 +33,17 @@ export function getPluginCacheDir(projectDir: string, cacheDir?: string) {
 
 export function createPluginCompiler(args: PluginCompilerArgs) {
   const dev = args.dev;
-  const options = args.options ?? {};
+  const options = args.options;
 
   const projectDir = args.projectDir;
-  const cacheDir = getPluginCacheDir(projectDir, args.cacheDir);
+  const cacheDir = args.cacheDir;
 
   const compiler = createCompiler(
-    { projectDir, cacheDir },
+    {
+      projectDir,
+      cacheDir,
+      runtimeMode: args.runtimeMode,
+    },
     options,
   );
 
@@ -56,8 +65,9 @@ export function createPluginCompiler(args: PluginCompilerArgs) {
     if (!result) return null;
 
     return {
-      code: rewriteStyleRuntimeImports(result.code, args.runtimeMode, filePath),
+      code: result.code,
       map: result.sourcemap,
+      rules: 'rules' in result ? result.rules : [],
     };
   };
 

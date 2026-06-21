@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       withStylePlugin ? stylePlugin({ checkSelector }) : null,
       react({
-        jsxImportSource: '@fluentic/style',
+        jsxImportSource: '@fluentic/style/plugin/jsx',
       }),
     ],
   };

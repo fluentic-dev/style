@@ -26,4 +26,8 @@ export type WebpackConfigContext = Parameters<WebpackConfigHook>[1];
 export type TurbopackConfig = NonNullable<NextConfig['turbopack']>;
 export type TurbopackRules = NonNullable<TurbopackConfig['rules']>;
 export type TurbopackResolveAlias = NonNullable<TurbopackConfig['resolveAlias']>;
-export type TurbopackLoaderItem = { loader: string; options?: unknown; };
+
+export type TurbopackLoaderItem = {
+  loader: string;
+  options?: unknown;
+};

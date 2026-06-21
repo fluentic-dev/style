@@ -1,7 +1,6 @@
 import { getRuntimeAwareEntry, getSourcemapFilePath, useStylePlugin } from '@example/bundler-shared/bundler.mjs';
 import { defineConfig } from '@farmfe/core';
 import { plugin as stylePlugin } from '@fluentic/style/plugin/farm';
-import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -9,22 +8,22 @@ const rootDir = path.dirname(fileURLToPath(import.meta.url));
 const stylePluginEnabled = useStylePlugin();
 
 export default defineConfig(({ mode }) => {
-  const dev = mode === 'development';
+  const dev = mode !== 'production';
 
   return {
     root: rootDir,
     plugins: [
+      ['@farmfe/plugin-react', {
+        runtime: 'automatic',
+        importSource: '@fluentic/style/plugin/jsx',
+        development: dev,
+      }],
       stylePluginEnabled && stylePlugin({
         dev,
         devSourcemap: dev ? 'sidecarServer' : 'sourceUrl',
         getSourcemapFilePath,
       }),
     ].filter(Boolean),
-    vitePlugins: [
-      react({
-        jsxImportSource: '@fluentic/style',
-      }),
-    ],
     compilation: {
       input: {
         index: './index.html',

@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import path from 'node:path';
 import {
   createPluginCompiler,
@@ -9,6 +10,7 @@ import {
   type PluginOptions,
   resolvePluginSourcemapFilePath,
 } from '../../utils';
+import { hasCssMarker, replaceCssMarker } from '../../utils/cssMarker';
 import {
   getPluginBuildConfig,
   getPluginBuildDevConfig,
@@ -39,6 +41,19 @@ type FarmUserConfig = {
   [key: string]: unknown;
 };
 
+type FarmResource = {
+  name: string;
+  bytes: number[];
+  emitted: boolean;
+  resourceType: string;
+  origin: {
+    type: 'ResourcePot' | 'Module';
+    value: string;
+  };
+};
+
+type FarmResourcesMap = Record<string, FarmResource>;
+
 export default plugin;
 
 export function plugin(options: FarmPluginOptions = {}) {
@@ -46,6 +61,7 @@ export function plugin(options: FarmPluginOptions = {}) {
   const extract = !dev;
   const buildConfig = getPluginBuildConfig(options);
   const buildDevConfig = getPluginBuildDevConfig(options);
+  const runtimeMode = getStyleRuntimeMode(dev);
   const projectDir = process.cwd();
   const cacheDir = getPluginCacheDir(projectDir, options.cacheDir);
 
@@ -83,7 +99,7 @@ export function plugin(options: FarmPluginOptions = {}) {
       cacheDir,
       dev,
       options: pluginOptions,
-      runtimeMode: getStyleRuntimeMode(dev),
+      runtimeMode,
     });
 
     return state;
@@ -106,8 +122,7 @@ export function plugin(options: FarmPluginOptions = {}) {
             ...getStyleEntryDefines(
               buildConfig,
               buildDevConfig,
-              dev,
-              sourcemapSidecar?.getBaseUrl(),
+              sourcemapSidecar?.getBaseUrl() || null,
             ),
           },
         },
@@ -192,6 +207,16 @@ export function plugin(options: FarmPluginOptions = {}) {
       },
     },
 
+    finalizeResources: {
+      executor(param: { resourcesMap: FarmResourcesMap; }) {
+        const current = state;
+        const css = current?.compiler.getExtractedCss();
+        if (!css) return;
+
+        return finalizeCssResources(param.resourcesMap, css);
+      },
+    },
+
     updateModules: {
       executor(param: { paths?: Array<[string, number | string]>; }) {
         const current = state;
@@ -202,7 +227,6 @@ export function plugin(options: FarmPluginOptions = {}) {
         current.filter.clear();
       },
     },
-
   };
 }
 
@@ -220,4 +244,72 @@ function getModuleType(filePath: string) {
   if (ext === '.ts' || ext === '.mts' || ext === '.cts') return 'ts';
   if (ext === '.jsx') return 'jsx';
   return 'js';
+}
+
+function finalizeCssResources(resourcesMap: FarmResourcesMap, css: string) {
+  const cssResource = getCssResource(resourcesMap);
+  const cssFileName = cssResource?.name ?? 'fluentic-style.css';
+
+  if (cssResource) {
+    cssResource.bytes = textToBytes(mergeCssResource(cssResource, css));
+  } else {
+    resourcesMap[cssFileName] = {
+      name: cssFileName,
+      bytes: textToBytes(css),
+      emitted: false,
+      resourceType: 'css',
+      origin: {
+        type: 'Module',
+        value: PLUGIN_NAME,
+      },
+    };
+  }
+
+  injectCssLink(resourcesMap, cssFileName);
+
+  return resourcesMap;
+}
+
+function getCssResource(resourcesMap: FarmResourcesMap) {
+  for (const resource of Object.values(resourcesMap)) {
+    if (resource.resourceType === 'css' || resource.name.endsWith('.css')) {
+      return resource;
+    }
+  }
+
+  return null;
+}
+
+function mergeCssResource(resource: FarmResource, css: string) {
+  const text = bytesToText(resource.bytes);
+  if (!text) return css;
+
+  return hasCssMarker(text)
+    ? replaceCssMarker(text, css)
+    : `${text}\n${css}`;
+}
+
+function injectCssLink(resourcesMap: FarmResourcesMap, cssFileName: string) {
+  for (const resource of Object.values(resourcesMap)) {
+    if (resource.resourceType !== 'html' && !resource.name.endsWith('.html')) continue;
+
+    const html = bytesToText(resource.bytes);
+    const href = `/${cssFileName}`;
+    if (html.includes(`href="${href}"`) || html.includes(`href='${href}'`)) continue;
+
+    const tag = `<link rel="stylesheet" href="${href}" data-fluentic-style>`;
+    const nextHtml = html.includes('</head>')
+      ? html.replace('</head>', `${tag}</head>`)
+      : `${tag}${html}`;
+
+    resource.bytes = textToBytes(nextHtml);
+  }
+}
+
+function bytesToText(bytes: number[]) {
+  return Buffer.from(bytes).toString('utf8');
+}
+
+function textToBytes(text: string) {
+  return Array.from(Buffer.from(text));
 }

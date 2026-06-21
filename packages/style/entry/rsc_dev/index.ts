@@ -1,4 +1,3 @@
 import './config';
 
-export * from '../../server';
-
+export * from './server';

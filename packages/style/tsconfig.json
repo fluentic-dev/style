@@ -13,7 +13,7 @@
   "compilerOptions": {
     "lib": ["ES2020", "DOM"],
     "jsx": "react-jsx",
-    "jsxImportSource": "@fluentic/style",
+    "jsxImportSource": "@fluentic/style/plugin/jsx",
     "declaration": true,
     "declarationMap": true,
     "emitDeclarationOnly": false

@@ -49,7 +49,7 @@ Configure the custom JSX runtime:
 {
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "@fluentic/style"
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
   }
 }
 ```
@@ -57,7 +57,6 @@ Configure the custom JSX runtime:
 Create styles and render them:
 
 ```tsx
-/** @jsxImportSource @fluentic/style */
 import { style } from '@fluentic/style';
 
 const styles = {
@@ -115,7 +114,7 @@ export default defineConfig({
       selectors: DefaultPrioritySelectors,
     }),
     react({
-      jsxImportSource: '@fluentic/style',
+      jsxImportSource: '@fluentic/style/plugin/jsx',
     }),
   ],
 });

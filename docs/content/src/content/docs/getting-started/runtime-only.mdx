@@ -14,10 +14,20 @@ Use runtime-only mode when:
 - you are testing components;
 - your styles depend on runtime values that cannot be statically evaluated.
 
+## Setup
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/jsx"
+  }
+}
+```
+
 ## Example
 
 ```tsx
-/** @jsxImportSource @fluentic/style */
 import { style, combineStyle } from '@fluentic/style';
 
 const styles = {

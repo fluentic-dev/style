@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [
     stylePlugin({ hoist: true }),
     react({
-      jsxImportSource: '@fluentic/style',
+      jsxImportSource: '@fluentic/style/plugin/jsx',
     }),
   ],
 });

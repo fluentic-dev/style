@@ -1,7 +1,7 @@
 import { createElement as reactCreateElement } from 'react';
 import * as react from 'react/jsx-dev-runtime';
-import { transformElement } from '../runtime/extract/jsx';
-import { createJsxDEV, wrapCreateElement, wrapFragment } from './utils';
+import { transformElement } from '../../runtime/extract/jsx';
+import { createJsxDEV, wrapCreateElement, wrapFragment } from '../utils';
 
 export type { JSX } from 'react/jsx-dev-runtime';
 

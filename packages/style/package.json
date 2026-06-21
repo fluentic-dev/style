@@ -59,6 +59,38 @@
       "types": "./plugin/bundler/farm/index.ts",
       "import": "./dist/plugin/farm/index.mjs"
     },
+    "./plugin/parcel": {
+      "types": "./plugin/bundler/parcel/index.ts",
+      "import": "./dist/plugin/parcel/index.mjs",
+      "require": "./dist/plugin/parcel/index.cjs"
+    },
+    "./plugin/parcel/config": {
+      "default": "./plugin/bundler/parcel/config.json"
+    },
+    "./plugin/parcel/transformer": {
+      "types": "./plugin/bundler/parcel/transformer.ts",
+      "import": "./dist/plugin/parcel/transformer.mjs",
+      "require": "./dist/plugin/parcel/transformer.cjs",
+      "default": "./dist/plugin/parcel/transformer.mjs"
+    },
+    "./plugin/parcel/resolver": {
+      "types": "./plugin/bundler/parcel/resolver.ts",
+      "import": "./dist/plugin/parcel/resolver.mjs",
+      "require": "./dist/plugin/parcel/resolver.cjs",
+      "default": "./dist/plugin/parcel/resolver.mjs"
+    },
+    "./plugin/parcel/runtime": {
+      "types": "./plugin/bundler/parcel/runtime.ts",
+      "import": "./dist/plugin/parcel/runtime.mjs",
+      "require": "./dist/plugin/parcel/runtime.cjs",
+      "default": "./dist/plugin/parcel/runtime.mjs"
+    },
+    "./plugin/parcel/optimizer": {
+      "types": "./plugin/bundler/parcel/optimizer.ts",
+      "import": "./dist/plugin/parcel/optimizer.mjs",
+      "require": "./dist/plugin/parcel/optimizer.cjs",
+      "default": "./dist/plugin/parcel/optimizer.mjs"
+    },
     "./plugin/nextjs": {
       "types": "./plugin/nextjs/index.ts",
       "import": "./dist/plugin/nextjs/index.mjs",
@@ -72,12 +104,14 @@
     "./plugin/jsx/jsx-runtime": {
       "types": "./entry/prod/jsx_runtime.ts",
       "react-server": "./dist/entry/rsc-prod/jsx-runtime.js",
-      "import": "./dist/entry/prod/jsx-runtime.js"
+      "import": "./dist/entry/prod/jsx-runtime.js",
+      "default": "./dist/entry/prod/jsx-runtime.js"
     },
     "./plugin/jsx/jsx-dev-runtime": {
       "types": "./entry/dev/jsx_dev_runtime.ts",
       "react-server": "./dist/entry/rsc-dev/jsx-dev-runtime.js",
-      "import": "./dist/entry/dev/jsx-dev-runtime.js"
+      "import": "./dist/entry/dev/jsx-dev-runtime.js",
+      "default": "./dist/entry/dev/jsx-dev-runtime.js"
     },
     "./config": {
       "types": "./config/index.ts",
@@ -95,28 +129,18 @@
       "types": "./runtime/rsc/index.ts",
       "import": "./dist/dev/rsc.js"
     },
-    "./jsx-runtime": {
-      "types": "./jsx/jsx_runtime.ts",
-      "react-server": "./dist/jsx/jsx-runtime.server.js",
-      "import": "./dist/jsx/jsx-runtime.js"
-    },
-    "./jsx-dev-runtime": {
-      "types": "./jsx/jsx_dev_runtime.ts",
-      "react-server": "./dist/jsx/jsx-dev-runtime.server.js",
-      "import": "./dist/jsx/jsx-dev-runtime.js"
-    },
     "./css": {
       "types": "./css/index.ts",
       "import": "./dist/css.js"
     },
     "./jsx/jsx-runtime": {
-      "types": "./jsx/jsx_runtime.ts",
-      "react-server": "./dist/jsx/jsx-runtime.server.js",
+      "types": "./jsx/runtime/jsx_runtime.ts",
+      "react-server": null,
       "import": "./dist/jsx/jsx-runtime.js"
     },
     "./jsx/jsx-dev-runtime": {
-      "types": "./jsx/jsx_dev_runtime.ts",
-      "react-server": "./dist/jsx/jsx-dev-runtime.server.js",
+      "types": "./jsx/runtime/jsx_dev_runtime.ts",
+      "react-server": null,
       "import": "./dist/jsx/jsx-dev-runtime.js"
     },
     "./entry/dev": {
@@ -130,6 +154,10 @@
     "./entry/rsc-dev": {
       "types": "./entry/rsc_dev/index.ts",
       "import": "./dist/entry/rsc-dev.js"
+    },
+    "./entry/rsc-dev/dev": {
+      "types": "./runtime/rsc/index.ts",
+      "import": "./dist/entry/rsc-dev/dev.js"
     },
     "./entry/rsc-prod": {
       "types": "./entry/rsc_prod/index.ts",
@@ -158,38 +186,6 @@
     "./entry/prod/extract": {
       "types": "./entry/prod/extract.ts",
       "import": "./dist/entry/prod/extract.js"
-    },
-    "./entry/dev/jsx-runtime": {
-      "types": "./entry/dev/jsx_runtime.ts",
-      "import": "./dist/entry/dev/jsx-runtime.js"
-    },
-    "./entry/dev/jsx-dev-runtime": {
-      "types": "./entry/dev/jsx_dev_runtime.ts",
-      "import": "./dist/entry/dev/jsx-dev-runtime.js"
-    },
-    "./entry/prod/jsx-runtime": {
-      "types": "./entry/prod/jsx_runtime.ts",
-      "import": "./dist/entry/prod/jsx-runtime.js"
-    },
-    "./entry/prod/jsx-dev-runtime": {
-      "types": "./entry/prod/jsx_dev_runtime.ts",
-      "import": "./dist/entry/prod/jsx-dev-runtime.js"
-    },
-    "./entry/rsc-dev/jsx-runtime": {
-      "types": "./entry/rsc_dev/jsx_runtime.ts",
-      "import": "./dist/entry/rsc-dev/jsx-runtime.js"
-    },
-    "./entry/rsc-dev/jsx-dev-runtime": {
-      "types": "./entry/rsc_dev/jsx_dev_runtime.ts",
-      "import": "./dist/entry/rsc-dev/jsx-dev-runtime.js"
-    },
-    "./entry/rsc-prod/jsx-runtime": {
-      "types": "./entry/rsc_prod/jsx_runtime.ts",
-      "import": "./dist/entry/rsc-prod/jsx-runtime.js"
-    },
-    "./entry/rsc-prod/jsx-dev-runtime": {
-      "types": "./entry/rsc_prod/jsx_dev_runtime.ts",
-      "import": "./dist/entry/rsc-prod/jsx-dev-runtime.js"
     }
   },
   "files": [
@@ -205,7 +201,6 @@
     "entry",
     "runtime",
     "selector",
-    "server.ts",
     "sheet",
     "atRule",
     "css",
@@ -221,6 +216,7 @@
     "test": "tsx ./tests/run-tests.ts"
   },
   "dependencies": {
+    "@parcel/config-default": "^2.16.1",
     "@jridgewell/trace-mapping": "0.3.31",
     "css-what": "8.0.0",
     "csstype": "3.2.3",
@@ -242,6 +238,7 @@
   "peerDependencies": {
     "@babel/core": ">=7",
     "@farmfe/core": ">=1",
+    "@parcel/plugin": ">=2",
     "@rspack/core": ">=1",
     "next": ">=15",
     "react": ">=18",
@@ -254,6 +251,9 @@
       "optional": true
     },
     "@farmfe/core": {
+      "optional": true
+    },
+    "@parcel/plugin": {
       "optional": true
     },
     "@rspack/core": {

@@ -2,13 +2,13 @@ import type { NextConfig } from 'next';
 import { PHASE_DEVELOPMENT_SERVER } from 'next/constants';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Compilation, Compiler, RuleSetRule, WebpackPluginInstance } from 'webpack';
+import type { Compiler, RuleSetRule } from 'webpack';
 import type { BuildConfig, BuildDevConfig } from '../../config/build';
 import { isPromiseLike } from '../../utils/object';
 import {
   BUNDLE_CSS_FILE,
+  createCompilerId,
   createFileCssCache,
-  createFileCssConfigHash,
   createPluginCompiler,
   DEFAULT_TRANSFORM_EXCLUDE,
   DEFAULT_TRANSFORM_INCLUDE,
@@ -18,7 +18,6 @@ import {
   PLUGIN_NAME,
 } from '../utils';
 import { writeCacheFile } from '../utils/cache';
-import { formatError } from '../utils/misc';
 import { getStyleEntryDefines, getStyleRuntimeMode } from '../utils/runtimeEntry';
 import { getSourcemapSidecar, type SourcemapSidecar } from '../utils/sidecar';
 import type { SidecarRouteHandler } from '../utils/sidecar/server';
@@ -42,17 +41,26 @@ import {
   createNextBuildDevConfig,
   createNextConfigHash,
   getNextCacheDir,
+  getNextPrecollectCacheSubdir,
   getTransformLoaderPath,
+  NEXT_COMPILER_IDS,
   type NextLoaderState,
   nextRegistry,
-  type PluginCompiler,
-  PRECOLLECT_CACHE_DIR,
   removeUndefinedValues,
-  replaceCssMarkerAsset,
   resolveNextCompilerOptions,
 } from './utils';
 
 export default plugin;
+
+const TURBOPACK_TRANSFORM_EXTENSIONS = ['*.ts', '*.tsx', '*.js', '*.jsx'] as const;
+const clearedPrecollectCacheRoots = new Set<string>();
+
+type NextPhaseState = {
+  buildConfig: BuildConfig;
+  buildDevConfig: BuildDevConfig | null;
+  configHash: string;
+  dev: boolean;
+};
 
 export function plugin(
   nextConfig: NextConfigInput = {},
@@ -83,21 +91,30 @@ function createNextConfig(
 
   const cssCache = createFileCssCache({
     cacheDir,
-    cacheSubdir: PRECOLLECT_CACHE_DIR,
+    cacheSubdir: getNextPrecollectCacheSubdir(dev),
   });
+
+  const phaseState: NextPhaseState = {
+    buildConfig: createNextBuildConfig(options),
+    buildDevConfig: createNextBuildDevConfig(options),
+    configHash: '',
+    dev,
+  };
+
+  phaseState.configHash = createNextConfigHash(
+    phaseState.buildConfig,
+    phaseState.dev,
+  );
 
   let sidecar: SourcemapSidecar | null = null;
 
   if (dev) {
-    const buildConfig = createNextBuildConfig(options);
-    const buildDevConfig = createNextBuildDevConfig(options);
-    const configHash = createFileCssConfigHash(
-      createNextConfigHash(buildConfig, buildDevConfig, dev),
-    );
-
     const route: SidecarRouteHandler = () => ({
       contentType: 'text/css; charset=utf-8',
-      body: cssCache.getCss({ configHash }),
+      body: cssCache.getCss({
+        ...phaseState.buildConfig.css,
+        configHash: phaseState.configHash,
+      }),
     });
 
     sidecar = getSourcemapSidecar({
@@ -115,6 +132,7 @@ function createNextConfig(
       cacheDir,
       cssCache,
       sidecar,
+      phaseState,
     );
 
   return sidecar && dev
@@ -129,24 +147,19 @@ function createFluenticNextConfigResolved(
   cacheDir: string,
   cssCache: ReturnType<typeof createFileCssCache>,
   sidecar: SourcemapSidecar | null,
+  phaseState: NextPhaseState,
 ): NextConfig {
   const originalWebpack = nextConfig.webpack;
   const originalTurbopack: TurbopackConfig = nextConfig.turbopack ?? {};
   const originalCompiler = nextConfig.compiler ?? {};
   const originalRunAfterProductionCompile = originalCompiler.runAfterProductionCompile;
-  const extractCompilers: PluginCompiler[] = [];
   const projectDir = process.cwd();
-  const phaseBuildConfig = createNextBuildConfig(options);
-  const phaseBuildDevConfig = createNextBuildDevConfig(options);
-  const phaseConfigHash = createFileCssConfigHash(
-    createNextConfigHash(phaseBuildConfig, phaseBuildDevConfig, dev),
-  );
 
   const devCssHref = dev && sidecar
     ? sidecar.getRouteUrl(DEV_CSS_ROUTE)
     : null;
 
-  const turbopackCompilerId = createCompilerId('turbopack');
+  const turbopackCompilerId = createCompilerId(NEXT_COMPILER_IDS.turbopack);
 
   const turbopackState = createPluginCompiler({
     projectDir,
@@ -154,12 +167,12 @@ function createFluenticNextConfigResolved(
     options: resolveNextCompilerOptions(
       options,
       sidecar,
-      phaseBuildConfig,
-      phaseBuildDevConfig,
+      phaseState.buildConfig,
+      phaseState.buildDevConfig,
       dev,
     ),
     dev,
-    runtimeMode: getStyleRuntimeMode(dev),
+    runtimeMode: getStyleRuntimeMode(dev, true),
   });
 
   const turbopackCssEntryPath = writeCacheFile(
@@ -174,12 +187,12 @@ function createFluenticNextConfigResolved(
   nextRegistry.setEntry<NextLoaderState>(turbopackCompilerId, {
     compiler: turbopackState.compiler,
     filter: turbopackState.filter,
-    configHash: phaseConfigHash,
+    configHash: phaseState.configHash,
     cssCache,
     cssEntryImportPath: turbopackCssAliases[CSS_ENTRY_IMPORT_PATH],
     dev,
     devCssHref,
-    isServer: false,
+    isServer: true,
   });
 
   return {
@@ -190,10 +203,10 @@ function createFluenticNextConfigResolved(
       define: {
         ...originalCompiler.define,
         ...getStyleEntryDefines(
-          phaseBuildConfig,
-          phaseBuildDevConfig,
-          dev,
-          dev ? sidecar?.getBaseUrl() : '',
+          phaseState.buildConfig,
+          phaseState.buildDevConfig,
+          (dev && sidecar?.getBaseUrl()) || null,
+          false,
         ),
       },
       defineServer: originalCompiler.defineServer,
@@ -203,18 +216,21 @@ function createFluenticNextConfigResolved(
         if (dev) return;
 
         patchTurbopackExtractedCss({
-          css: cssCache.getCss({ configHash: phaseConfigHash }),
+          css: cssCache.getCss({
+            ...phaseState.buildConfig.css,
+            configHash: phaseState.configHash,
+          }),
           distDir: metadata.distDir,
           projectDir: metadata.projectDir,
         });
       },
     },
     turbopack: createTurbopackConfig(originalTurbopack, {
-      buildConfig: phaseBuildConfig,
-      buildDevConfig: phaseBuildDevConfig,
+      buildConfig: phaseState.buildConfig,
+      buildDevConfig: phaseState.buildDevConfig,
       cacheDir,
       compilerId: turbopackCompilerId,
-      configHash: phaseConfigHash,
+      configHash: phaseState.configHash,
       cssAliases: turbopackCssAliases,
       dev,
       devCssHref,
@@ -225,29 +241,23 @@ function createFluenticNextConfigResolved(
         config = originalWebpack(config, context);
       }
 
-      const buildConfig = createNextBuildConfig(options);
-      const buildDevConfig = createNextBuildDevConfig(options);
-      const configHash = createFileCssConfigHash(
-        createNextConfigHash(buildConfig, buildDevConfig, context.dev),
-      );
-
       const state = createPluginCompiler({
-        projectDir: context.dir ?? process.cwd(),
+        projectDir: context.dir,
         cacheDir,
         options: resolveNextCompilerOptions(
           options,
           sidecar,
-          buildConfig,
-          buildDevConfig,
+          phaseState.buildConfig,
+          phaseState.buildDevConfig,
           context.dev,
         ),
         dev: context.dev,
         runtimeMode: getStyleRuntimeMode(context.dev, context.isServer),
       });
 
-      extractCompilers.push(state.compiler);
-
-      const compilerId = createCompilerId(context.isServer ? 'server' : 'client');
+      const compilerId = createCompilerId(
+        context.isServer ? NEXT_COMPILER_IDS.webpackServer : NEXT_COMPILER_IDS.webpackClient,
+      );
 
       const cssEntryPath = writeCacheFile(
         state.cacheDir,
@@ -261,9 +271,9 @@ function createFluenticNextConfigResolved(
       nextRegistry.setEntry<NextLoaderState>(compilerId, {
         compiler: state.compiler,
         filter: state.filter,
-        configHash,
-        cssCache: context.dev ? cssCache : null,
-        cssEntryImportPath: CSS_ENTRY_IMPORT_PATH,
+        configHash: phaseState.configHash,
+        cssCache,
+        cssEntryImportPath: cssEntryPath,
         dev: context.dev,
         devCssHref,
         isServer: context.isServer,
@@ -272,25 +282,13 @@ function createFluenticNextConfigResolved(
       addAliases(config, cssAliases);
 
       addTransformLoader(config, options, compilerId);
-      addWebpackPlugin(
-        config,
-        new context.webpack.DefinePlugin(getStyleEntryDefines(
-          buildConfig,
-          buildDevConfig,
-          context.dev,
-          context.dev ? sidecar?.getBaseUrl() : '',
-        )),
-      );
 
-      if (!context.isServer) {
-        addCssPatchPlugin(
-          config,
-          context.dev,
-          () => extractCompilers.map((compiler) => compiler.getExtractedCss()).filter(Boolean).join('\n'),
-        );
-      }
-
-      addLifecyclePlugin(config, state.compiler, sidecar);
+      addLifecyclePlugin(config, {
+        compiler: state.compiler,
+        cssCache,
+        dev: context.dev,
+        sidecar,
+      });
 
       return config;
     },
@@ -355,18 +353,18 @@ function mergeTurbopackRules(
       cssEntryImportPath: args.cssAliases[CSS_ENTRY_IMPORT_PATH],
       dev: args.dev,
       devCssHref: args.devCssHref,
-      isServer: false,
+      isServer: true,
       projectDir: args.projectDir,
     }),
   };
 
-  return {
-    ...existingRules,
-    '*.ts': prependTurbopackLoader(existingRules['*.ts'], loaderItem),
-    '*.tsx': prependTurbopackLoader(existingRules['*.tsx'], loaderItem),
-    '*.js': prependTurbopackLoader(existingRules['*.js'], loaderItem),
-    '*.jsx': prependTurbopackLoader(existingRules['*.jsx'], loaderItem),
-  } as TurbopackRules;
+  const nextRules: Record<string, unknown> = { ...existingRules };
+
+  for (const extension of TURBOPACK_TRANSFORM_EXTENSIONS) {
+    nextRules[extension] = prependTurbopackLoader(existingRules[extension], loaderItem);
+  }
+
+  return nextRules as TurbopackRules;
 }
 
 function prependTurbopackLoader(rule: unknown, loader: TurbopackLoaderItem) {
@@ -411,60 +409,6 @@ function addTransformLoader(
   };
 
   config.module.rules.unshift(rule);
-}
-
-function addCssPatchPlugin(
-  config: WebpackConfiguration,
-  dev: boolean,
-  getExtractedCss: () => string,
-) {
-  if (dev) return;
-
-  addWebpackPlugin(config, createCssPatchPlugin(getExtractedCss));
-}
-
-function createCssPatchPlugin(getExtractedCss: () => string): WebpackPluginInstance {
-  return {
-    apply(compiler: Compiler) {
-      compiler.hooks.thisCompilation.tap(PLUGIN_NAME, (compilation) => {
-        compilation.hooks.processAssets.tap(
-          {
-            name: PLUGIN_NAME,
-            stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONS,
-          },
-          () =>
-            patchExtractedCssAsset(
-              compiler,
-              compilation,
-              getExtractedCss(),
-            ),
-        );
-      });
-    },
-  };
-}
-
-function patchExtractedCssAsset(
-  compiler: Compiler,
-  compilation: Compilation,
-  css: string,
-) {
-  if (!css) return;
-  if (
-    replaceCssMarkerAsset({
-      compiler,
-      compilation,
-      css,
-      marker: EXTRACTED_CSS_MARKER,
-    })
-  ) return;
-
-  compilation.warnings.push(
-    new Error(formatError(
-      'No CSS asset containing the Fluentic marker was emitted by Next.js, so extracted CSS could not be attached. ' +
-        'Make sure your app has a root layout that can receive the Fluentic CSS marker import.',
-    )),
-  );
 }
 
 function patchTurbopackExtractedCss(args: {
@@ -512,29 +456,32 @@ function findCssFiles(dir: string): string[] {
 
 function addLifecyclePlugin(
   config: WebpackConfiguration,
-  compiler: NextLoaderState['compiler'],
-  sidecar: SourcemapSidecar | null,
+  args: {
+    compiler: NextLoaderState['compiler'];
+    cssCache: ReturnType<typeof createFileCssCache>;
+    dev: boolean;
+    sidecar: SourcemapSidecar | null;
+  },
 ) {
   addWebpackPlugin(config, {
     apply(webpackCompiler: Compiler) {
       webpackCompiler.hooks.beforeRun.tapPromise(PLUGIN_NAME, async () => {
-        await sidecar?.ensureStarted();
+        await args.sidecar?.ensureStarted();
+
+        if (!args.dev && !clearedPrecollectCacheRoots.has(args.cssCache.rootDir)) {
+          clearedPrecollectCacheRoots.add(args.cssCache.rootDir);
+          args.cssCache.clear();
+        }
       });
 
       webpackCompiler.hooks.watchRun.tapPromise(PLUGIN_NAME, async (watchCompiler) => {
-        await sidecar?.ensureStarted();
+        await args.sidecar?.ensureStarted();
 
         const files = watchCompiler.modifiedFiles;
         if (!files || !files.size) return;
 
-        invalidateFiles(compiler, files);
+        invalidateFiles(args.compiler, files);
       });
     },
   });
-}
-
-let nextCompilerId = 0;
-
-function createCompilerId(label: string) {
-  return `${PLUGIN_NAME}:nextjs:${label}:${nextCompilerId++}`;
 }

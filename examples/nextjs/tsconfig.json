@@ -4,7 +4,7 @@
     "allowJs": true,
     "incremental": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "@fluentic/style",
+    "jsxImportSource": "@fluentic/style/plugin/jsx",
     "module": "esnext",
     "moduleResolution": "bundler",
     "noEmit": true,

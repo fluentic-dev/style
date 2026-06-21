@@ -1,6 +1,8 @@
 import type { Compiler, RuleSetRule, WebpackPluginInstance } from 'webpack';
+import { getStyleRuntimeImportPath } from '../../../compiler/utils/imports';
 import {
   BUNDLE_CSS_FILE,
+  createCompilerId,
   createPluginCompiler,
   DEFAULT_TRANSFORM_EXCLUDE,
   DEFAULT_TRANSFORM_INCLUDE,
@@ -67,12 +69,27 @@ class WebpackPlugin implements WebpackPluginInstance {
       sourcemapSidecar,
     );
 
+    const runtimeMode = getStyleRuntimeMode(dev);
+    const useRuntimeSidecarUrl = isRspackCompiler(compiler) && devSourcemap === 'sidecarServer';
+
+    const createRuntimeSource = (sidecarUrl: string | null = null) =>
+      createWebpackRuntimeModuleSource(
+        extract,
+        cssFilePath,
+        useRuntimeSidecarUrl
+          ? {
+            runtimeImportPath: getStyleRuntimeImportPath(runtimeMode),
+            sidecarUrl,
+          }
+          : undefined,
+      );
+
     const state = createPluginCompiler({
       projectDir: compiler.context,
       cacheDir,
       dev,
       options: { ...this.options, devSourcemap, getSourcemapFilePath },
-      runtimeMode: getStyleRuntimeMode(dev),
+      runtimeMode,
     });
 
     const cssFilePath = extract
@@ -82,14 +99,13 @@ class WebpackPlugin implements WebpackPluginInstance {
     const runtimeFilePath = writePluginCacheFile(
       state,
       WEBPACK_RUNTIME_FILE,
-      createWebpackRuntimeModuleSource(extract, cssFilePath),
+      createRuntimeSource(),
     );
 
-    const compilerId = createCompilerId();
+    const compilerId = createCompilerId('webpack');
 
     webpackRegistry.setEntry<WebpackLoaderState>(compilerId, {
-      compiler: state.compiler,
-      dev,
+      transform: state.transform,
     });
 
     compiler.options.entry = prependWebpackRuntimeEntry(
@@ -98,7 +114,8 @@ class WebpackPlugin implements WebpackPluginInstance {
     );
 
     addTransformLoader(compiler, this.options, compilerId);
-    const entryDefines = getStyleEntryDefines(buildConfig, buildDevConfig, dev);
+
+    const entryDefines = getStyleEntryDefines(buildConfig, buildDevConfig, null);
 
     compiler.options.plugins ??= [];
     compiler.options.plugins.push(
@@ -107,31 +124,36 @@ class WebpackPlugin implements WebpackPluginInstance {
 
     compiler.hooks.beforeRun.tapPromise(PLUGIN_NAME, async () => {
       await sourcemapSidecar?.ensureStarted();
-      Object.assign(entryDefines, getStyleEntryDefines(
-        buildConfig,
-        buildDevConfig,
-        dev,
-        sourcemapSidecar?.getBaseUrl(),
-      ));
+
+      Object.assign(
+        entryDefines,
+        getStyleEntryDefines(
+          buildConfig,
+          buildDevConfig,
+          sourcemapSidecar?.getBaseUrl() || null,
+        ),
+      );
       writePluginCacheFile(
         state,
         WEBPACK_RUNTIME_FILE,
-        createWebpackRuntimeModuleSource(extract, cssFilePath),
+        createRuntimeSource(sourcemapSidecar?.getBaseUrl() || null),
       );
     });
 
     compiler.hooks.watchRun.tapPromise(PLUGIN_NAME, async (watchCompiler) => {
       await sourcemapSidecar?.ensureStarted();
-      Object.assign(entryDefines, getStyleEntryDefines(
-        buildConfig,
-        buildDevConfig,
-        dev,
-        sourcemapSidecar?.getBaseUrl(),
-      ));
+      Object.assign(
+        entryDefines,
+        getStyleEntryDefines(
+          buildConfig,
+          buildDevConfig,
+          sourcemapSidecar?.getBaseUrl() || null,
+        ),
+      );
       writePluginCacheFile(
         state,
         WEBPACK_RUNTIME_FILE,
-        createWebpackRuntimeModuleSource(extract, cssFilePath),
+        createRuntimeSource(sourcemapSidecar?.getBaseUrl() || null),
       );
 
       const files = watchCompiler.modifiedFiles;
@@ -204,8 +226,10 @@ function addTransformLoader(
   compiler.options.module.rules.unshift(rule);
 }
 
-let nextCompilerId = 0;
+function isRspackCompiler(compiler: Compiler) {
+  const webpack = compiler.webpack as typeof compiler.webpack & {
+    rspackVersion?: unknown;
+  };
 
-function createCompilerId() {
-  return `${PLUGIN_NAME}-${nextCompilerId++}`;
+  return typeof webpack.rspackVersion === 'string';
 }

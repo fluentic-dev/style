@@ -1,5 +1,5 @@
 import { SIDECAR_URL_GLOBAL_SYMBOL } from '../config/utils';
-import { setDevRuntimeOptions } from '../config/config/dev';
+import { DEV_CONFIG, IS_DEV, setBuildDevConfig, setDevRuntimeOptions, setDevUtilsRuntimeOptions } from '../config/config/dev';
 import {
   configureTestRuntime,
   createDevSheet,
@@ -586,7 +586,62 @@ test('dev sheet registries are shared across duplicate module instances', async 
   }
 });
 
-test('dev utils installs on window target', () => {
+test('dev utils installs plugin controls on window target', () => {
+  const root = globalThis as typeof globalThis & {
+    window?: Window & typeof globalThis & Record<string, unknown>;
+  };
+  const previousWindow = root.window;
+
+  try {
+    root.window = {} as Window & typeof globalThis & Record<string, unknown>;
+    configureTestRuntime({ dev: true });
+    setBuildMeta({
+      dev: true,
+      extract: false,
+      hoist: false,
+      rsc: false,
+      css: null,
+    });
+    enableStyleDevUtils({ name: 'CssDevUtils' });
+
+    const utils = root.window.CssDevUtils as {
+      usage?: () => null;
+      info?: () => null;
+      reset?: () => null;
+      traceSourcemap?: unknown;
+      startupMessage?: { on?: unknown; off?: unknown; };
+      setElementMarker?: { toOn?: unknown; toOff?: unknown; };
+      setSourcemapMode?: { toStyle?: unknown; toValue?: unknown; };
+      setPriorityMode?: { toLayer?: unknown; toSort?: unknown; };
+    };
+
+    equal(Object.getPrototypeOf(utils), null);
+    equal(Object.getPrototypeOf(utils.startupMessage), null);
+    equal(Object.getPrototypeOf(utils.setElementMarker), null);
+    equal(Object.getPrototypeOf(utils.setPriorityMode), null);
+    equal(Object.getPrototypeOf(utils.setSourcemapMode), null);
+    equal(typeof utils.usage, 'function');
+    equal(typeof utils.info, 'function');
+    equal(typeof utils.reset, 'function');
+    equal(typeof utils.traceSourcemap, 'undefined');
+    equal(typeof utils.startupMessage?.on, 'function');
+    equal(typeof utils.startupMessage?.off, 'function');
+    equal(typeof utils.setElementMarker?.toOn, 'function');
+    equal(typeof utils.setElementMarker?.toOff, 'function');
+    equal(typeof utils.setSourcemapMode?.toStyle, 'function');
+    equal(typeof utils.setSourcemapMode?.toValue, 'function');
+    equal(typeof utils.setPriorityMode?.toLayer, 'function');
+    equal(typeof utils.setPriorityMode?.toSort, 'function');
+    equal(utils.usage?.(), null);
+    equal(utils.info?.(), null);
+  } finally {
+    configureTestRuntime({ dev: false });
+    setDevRuntimeOptions(null);
+    root.window = previousWindow;
+  }
+});
+
+test('dev utils enables runtime sourcemap trace on window target without plugin', () => {
   const root = globalThis as typeof globalThis & {
     window?: Window & typeof globalThis & Record<string, unknown>;
   };
@@ -599,35 +654,13 @@ test('dev utils installs on window target', () => {
     enableStyleDevUtils({ name: 'CssDevUtils' });
 
     const utils = root.window.CssDevUtils as {
-      usage?: () => null;
-      info?: () => null;
-      reset?: () => null;
       traceSourcemap?: unknown;
-      startupMessage?: { on?: unknown; off?: unknown; };
-      setElementMarker?: { on?: unknown; off?: unknown; };
-      setSourcemapTrace?: { toStyle?: unknown; toValue?: unknown; };
-      setPriorityMode?: { toLayer?: unknown; toSort?: unknown; };
+      setSourcemapMode?: { toStyle?: unknown; toValue?: unknown; };
     };
 
-    equal(Object.getPrototypeOf(utils), null);
-    equal(Object.getPrototypeOf(utils.startupMessage), null);
-    equal(Object.getPrototypeOf(utils.setElementMarker), null);
-    equal(Object.getPrototypeOf(utils.setPriorityMode), null);
-    equal(Object.getPrototypeOf(utils.setSourcemapTrace), null);
-    equal(typeof utils.usage, 'function');
-    equal(typeof utils.info, 'function');
-    equal(typeof utils.reset, 'function');
-    equal(typeof utils.traceSourcemap, 'undefined');
-    equal(typeof utils.startupMessage?.on, 'function');
-    equal(typeof utils.startupMessage?.off, 'function');
-    equal(typeof utils.setElementMarker?.on, 'function');
-    equal(typeof utils.setElementMarker?.off, 'function');
-    equal(typeof utils.setSourcemapTrace?.toStyle, 'function');
-    equal(typeof utils.setSourcemapTrace?.toValue, 'function');
-    equal(typeof utils.setPriorityMode?.toLayer, 'function');
-    equal(typeof utils.setPriorityMode?.toSort, 'function');
-    equal(utils.usage?.(), null);
-    equal(utils.info?.(), null);
+    equal(typeof utils.traceSourcemap, 'function');
+    equal(typeof utils.setSourcemapMode?.toStyle, 'undefined');
+    equal(typeof utils.setSourcemapMode?.toValue, 'undefined');
   } finally {
     configureTestRuntime({ dev: false });
     setDevRuntimeOptions(null);
@@ -643,8 +676,8 @@ test('enableStyleDevUtils works without a window global', () => {
       reset?: () => null;
       traceSourcemap?: unknown;
       startupMessage?: { on?: unknown; off?: unknown; };
-      setElementMarker?: { on?: unknown; off?: unknown; };
-      setSourcemapTrace?: { toStyle?: unknown; toValue?: unknown; };
+      setElementMarker?: { toOn?: unknown; toOff?: unknown; };
+      setSourcemapMode?: { toStyle?: unknown; toValue?: unknown; };
       setPriorityMode?: { toLayer?: unknown; toSort?: unknown; };
     };
     window?: Window & typeof globalThis;
@@ -671,10 +704,10 @@ test('enableStyleDevUtils works without a window global', () => {
     equal(typeof utils?.traceSourcemap, 'function');
     equal(typeof utils?.startupMessage?.on, 'function');
     equal(typeof utils?.startupMessage?.off, 'function');
-    equal(typeof utils?.setElementMarker?.on, 'function');
-    equal(typeof utils?.setElementMarker?.off, 'function');
-    equal(typeof utils?.setSourcemapTrace?.toStyle, 'undefined');
-    equal(typeof utils?.setSourcemapTrace?.toValue, 'undefined');
+    equal(typeof utils?.setElementMarker?.toOn, 'function');
+    equal(typeof utils?.setElementMarker?.toOff, 'function');
+    equal(typeof utils?.setSourcemapMode?.toStyle, 'undefined');
+    equal(typeof utils?.setSourcemapMode?.toValue, 'undefined');
     equal(typeof utils?.setPriorityMode?.toLayer, 'function');
     equal(typeof utils?.setPriorityMode?.toSort, 'function');
     equal(utils?.usage?.(), null);
@@ -684,6 +717,47 @@ test('enableStyleDevUtils works without a window global', () => {
     setDevRuntimeOptions(null);
     root.window = previousWindow;
     root.CssDevUtils = previousUtils;
+  }
+});
+
+test('style dev utils preserves build dev mode', () => {
+  const root = globalThis as typeof globalThis & {
+    localStorage?: Storage;
+    window?: Window & typeof globalThis;
+  };
+  const previousStorage = root.localStorage;
+  const previousWindow = root.window;
+  const previousDevConfig = { ...DEV_CONFIG };
+  const previousIsDev = IS_DEV.isDev;
+
+  try {
+    root.localStorage = createFakeStorage({
+      '@fluentic/style.dev.priorityMode': 'sort',
+    }) as unknown as Storage;
+    delete (root as { window?: unknown; }).window;
+
+    setBuildDevConfig({
+      checkSelector: true,
+      elementClassName: true,
+      priorityMode: 'layer',
+      sourcemapMode: 'style',
+    });
+
+    enableStyleDevUtils({ name: 'CssDevUtils', silent: true });
+
+    equal(DEV_CONFIG.isDev, true);
+  } finally {
+    setDevUtilsRuntimeOptions(null);
+    setDevRuntimeOptions({
+      checkSelector: previousDevConfig.isCheckSelectorEnabled,
+      elementClassName: previousDevConfig.isElementClassNameEnabled,
+      priorityMode: previousDevConfig.stylePriorityMode,
+      sourcemapMode: previousDevConfig.sourcemapLocationMode,
+    });
+    IS_DEV.isDev = previousIsDev;
+    DEV_CONFIG.isDev = previousIsDev;
+    root.localStorage = previousStorage;
+    root.window = previousWindow;
   }
 });
 
@@ -697,6 +771,14 @@ test('style dev utils saves local debug preferences automatically', () => {
   const storage = createFakeStorage();
 
   try {
+    root.window = {} as Window & typeof globalThis & Record<string, unknown>;
+    root.localStorage = storage as Storage;
+    configureTestRuntime({
+      dev: true,
+      css: { layer: true },
+      priorityMode: 'layer',
+      sourcemapMode: 'style',
+    });
     setBuildMeta({
       dev: true,
       extract: false,
@@ -707,28 +789,20 @@ test('style dev utils saves local debug preferences automatically', () => {
       sourcemapTrace: 'style',
       css: null,
     });
-    root.window = {} as Window & typeof globalThis & Record<string, unknown>;
-    root.localStorage = storage as Storage;
-    configureTestRuntime({
-      dev: true,
-      css: { layer: true },
-      priorityMode: 'layer',
-      sourcemapMode: 'style',
-    });
 
     enableStyleDevUtils({ name: 'CssDevUtils', silent: true });
 
     const utils = root.window.CssDevUtils as {
       reset?: () => null;
       startupMessage?: { on?: () => null; off?: () => null; };
-      setElementMarker?: { off?: () => null; };
+      setElementMarker?: { toOff?: () => null; };
       setPriorityMode?: { toSort?: () => null; };
-      setSourcemapTrace?: { toValue?: () => null; };
+      setSourcemapMode?: { toValue?: () => null; };
     };
 
     equal(utils.setPriorityMode?.toSort?.(), null);
-    equal(utils.setSourcemapTrace?.toValue?.(), null);
-    equal(utils.setElementMarker?.off?.(), null);
+    equal(utils.setSourcemapMode?.toValue?.(), null);
+    equal(utils.setElementMarker?.toOff?.(), null);
     equal(storage.getItem('@fluentic/style.dev.priorityMode'), 'sort');
     equal(storage.getItem('@fluentic/style.dev.sourcemapTrace'), 'value');
     equal(storage.getItem('@fluentic/style.dev.elementMarker'), 'false');
@@ -1143,6 +1217,9 @@ test('dev trace keeps querystring sourcemap fetches separate from queryless miss
 });
 
 test('dev sheet ignores duplicate keys', () => {
+  setDevUtilsRuntimeOptions(null);
+  configureTestRuntime({ dev: true, css: { layer: true }, priorityMode: 'layer' });
+
   const document = createFakeDocument();
   const sheet = createDevSheet({
     document: document as unknown as Document,

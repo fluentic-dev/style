@@ -1,9 +1,12 @@
 import { mkdtempSync, statSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { compareLayerPriority, type LayerPriority } from '../atomic/layer';
 import { formatClassName } from '../atomic/debug/className';
+import { compareLayerPriority, type LayerPriority } from '../atomic/layer';
 import { normalizeDebugKeywordValue, normalizePropertyName, sanitizeDebugPropertyName } from '../atomic/utils/debug';
+import { CompilerRuntimeMode } from '../compiler';
+import webpackLoader from '../plugin/bundler/webpack/loader';
+import { webpackRegistry } from '../plugin/bundler/webpack/utils';
 import { writeCacheFile } from '../plugin/utils/cache';
 import {
   assertCompileError,
@@ -11,24 +14,24 @@ import {
   BUILDER_STATE,
   countOccurrences,
   createCompiler,
+  createPluginCompiler,
   createStyleFn,
   createTransformFilter,
+  createWebpackRuntimeModuleSource,
   deepEqual,
   equal,
   fileURLToPath,
   getCallStringArgs,
   getCssClassNames,
-  getRuntimeImportAliases,
-  getServerRuntimeImportAliases,
   includes,
   injectDevCssLink,
   injectStyleDebugData,
+  nextLoader,
+  nextRegistry,
   notEqual,
   notIncludes,
   prependWebpackRuntimeEntry,
   readFileSync,
-  rewriteServerDevStyleImports,
-  rewriteServerStyleImports,
   selector,
   style,
   test,
@@ -179,7 +182,7 @@ export function App() {
   includes(result.code, '$$elementDebug: true');
 });
 
-test('debug transform does not inject host element marker metadata by default', () => {
+test('debug transform injects host element marker metadata by default', () => {
   const result = injectStyleDebugData(
     `
 import { style } from '@fluentic/style';
@@ -194,7 +197,7 @@ export function App() {
     { rootDir: '/project' },
   );
 
-  notIncludes(result.code, '$$elementDebug');
+  includes(result.code, '$$elementDebug: true');
 });
 
 test('compiler extracts scope base and parent selector rules', () => {
@@ -1365,6 +1368,9 @@ export const styles = {
   includes(css, 'gap: 12px');
   includes(css, 'min-height: 100vh');
   includes(css, 'color: red');
+  notIncludes(result.code, 'style.raw');
+  notIncludes(result.code, 'style.plain');
+  notIncludes(result.code, ' style ');
 });
 
 test('compiler extracts imported style.raw and style.plain objects', () => {
@@ -1580,29 +1586,6 @@ test('vite plugin imports runtime once from html entry', () => {
   equal(tags[0].injectTo, 'head-prepend');
 });
 
-test('runtime import aliases split production extracted and runtime entries', () => {
-  const extracted = getRuntimeImportAliases(false);
-  const prod = getRuntimeImportAliases(false);
-  const dev = getRuntimeImportAliases(true);
-
-  equal(extracted['@fluentic/style'], '@fluentic/style/entry/prod');
-  equal(prod['@fluentic/style'], '@fluentic/style/entry/prod');
-  equal(dev['@fluentic/style'], '@fluentic/style/entry/dev');
-  equal(extracted['@fluentic/style/jsx/jsx-runtime'], undefined);
-  equal(dev['@fluentic/style/jsx/jsx-runtime'], undefined);
-});
-
-test('server runtime import aliases split dev rsc and production extracted entries', () => {
-  const extracted = getServerRuntimeImportAliases(false);
-  const prod = getServerRuntimeImportAliases(false);
-  const dev = getServerRuntimeImportAliases(true);
-
-  equal(extracted['@fluentic/style'], '@fluentic/style/entry/rsc-prod');
-  equal(dev['@fluentic/style'], '@fluentic/style/entry/rsc-dev');
-  equal(Object.keys(extracted).length, 1);
-  equal(Object.keys(prod).length, 1);
-});
-
 test('next dev css link is appended after layout children', () => {
   const result = injectDevCssLink(
     `
@@ -1621,34 +1604,180 @@ export default function RootLayout({ children }) {
   before(result, '<StyleDev />', 'data-fluentic-style-rsc-dev-link');
 });
 
-test('next loader rewrites exact server dev style imports', () => {
-  const result = rewriteServerDevStyleImports(`
-import { getClassName } from "@fluentic/style";
-import { jsx } from "@fluentic/style/jsx/jsx-runtime";
-import '@fluentic/style';
-export { style } from '@fluentic/style';
-`);
+test('next dev loader uses rsc debug payload transport', async () => {
+  let extractCalls = 0;
+  let debugRscCalls = 0;
+  const compilerId = 'next-dev-client-test';
 
-  includes(result, 'from "@fluentic/style/entry/rsc-dev"');
-  includes(result, 'import "@fluentic/style/entry/rsc-dev";');
-  includes(result, 'from "@fluentic/style/entry/rsc-dev"');
-  includes(result, 'from "@fluentic/style/jsx/jsx-runtime"');
-  notIncludes(result, '@fluentic/style/entry/rsc-dev/jsx-runtime');
+  nextRegistry.setEntry(compilerId, {
+    compiler: {
+      compileExtract(args: { code: string; filePath: string; sourcemap: unknown; }) {
+        extractCalls++;
+        equal(args.filePath, '/tmp/project/app/client.tsx');
+
+        return {
+          code: 'export const ok = true;',
+          rules: [{ key: 'test', css: '.test{}' }],
+          sourcemap: null,
+        };
+      },
+      compileDebugRSC() {
+        debugRscCalls++;
+
+        return {
+          code: 'export const ok = true;',
+          css: '.test{}',
+          rules: [{ key: 'test', css: '.test{}' }],
+          sourcemap: null,
+        };
+      },
+    },
+    configHash: 'hash',
+    cssCache: {
+      setFileCss() {},
+    },
+    cssEntryImportPath: '@fluentic/style/plugin/nextjs/bundle.css',
+    dev: true,
+    devCssHref: null,
+    filter: () => true,
+    isServer: false,
+  });
+
+  const result = await new Promise<{ code: string; map: unknown; }>((resolve, reject) => {
+    const context = {
+      async() {
+        return (err: Error | null, code: string, map: unknown) => {
+          if (err) reject(err);
+          else resolve({ code, map });
+        };
+      },
+      getOptions() {
+        return { compilerId };
+      },
+      resourcePath: '/tmp/project/app/client.tsx',
+      rootContext: '/tmp/project',
+    };
+
+    nextLoader.call(context as any, 'import { style } from "@fluentic/style";', null as any);
+  });
+
+  equal(extractCalls, 0);
+  equal(debugRscCalls, 1);
+  includes(result.code, 'export const ok = true;');
 });
 
-test('next loader rewrites exact server production style imports to extracted entry', () => {
-  const result = rewriteServerStyleImports(
-    `
-import { createTheme, style } from "@fluentic/style";
-import { jsx } from "@fluentic/style/jsx/jsx-runtime";
-export { combineStyle } from "@fluentic/style";
-`,
-    '@fluentic/style/entry/rsc-prod',
-  );
+test('next dev loader keeps precollect css from the server graph', async () => {
+  const writes: Array<{ filePath: string; rules: Array<{ className: string; css: string; }>; }> = [];
 
-  includes(result, 'from "@fluentic/style/entry/rsc-prod"');
-  includes(result, 'from "@fluentic/style/jsx/jsx-runtime"');
-  notIncludes(result, '@fluentic/style/entry/rsc-prod/jsx-runtime');
+  async function runNextDevLoader(args: { compilerId: string; isServer: boolean; }) {
+    nextRegistry.setEntry(args.compilerId, {
+      compiler: {
+        compileExtract() {
+          throw new Error('dev loader should not use extracted mode');
+        },
+        compileDebugRSC() {
+          return {
+            code: 'export const ok = true;',
+            css: args.isServer ? '.server{}' : '.client{}',
+            rules: [{
+              className: args.isServer ? 'server' : 'client',
+              css: args.isServer ? '.server{}' : '.client{}',
+            }],
+            sourcemap: null,
+          };
+        },
+      },
+      configHash: 'hash',
+      cssCache: {
+        setFileCss(item: { filePath: string; rules: Array<{ className: string; css: string; }>; }) {
+          writes.push({
+            filePath: item.filePath,
+            rules: item.rules,
+          });
+        },
+      },
+      cssEntryImportPath: '@fluentic/style/plugin/nextjs/bundle.css',
+      dev: true,
+      devCssHref: null,
+      filter: () => true,
+      isServer: args.isServer,
+    });
+
+    await new Promise<{ code: string; map: unknown; }>((resolve, reject) => {
+      const context = {
+        async() {
+          return (err: Error | null, code: string, map: unknown) => {
+            if (err) reject(err);
+            else resolve({ code, map });
+          };
+        },
+        getOptions() {
+          return { compilerId: args.compilerId };
+        },
+        resourcePath: '/tmp/project/app/page.tsx',
+        rootContext: '/tmp/project',
+      };
+
+      nextLoader.call(context as any, 'import { style } from "@fluentic/style";', null as any);
+    });
+  }
+
+  await runNextDevLoader({ compilerId: 'next-dev-server-precollect-test', isServer: true });
+  await runNextDevLoader({ compilerId: 'next-dev-client-precollect-test', isServer: false });
+
+  equal(writes.length, 1);
+  equal(writes[0]?.rules[0]?.className, 'server');
+});
+
+test('next turbopack dev loader uses rsc runtime for explicit getClassName calls', async () => {
+  const compilerId = 'nextjs:turbopack-explicit-get-class-name-test';
+
+  nextRegistry.setEntry(compilerId, {
+    compiler: {
+      compileExtract() {
+        throw new Error('dev loader should not use extracted mode');
+      },
+      compileDebugRSC() {
+        return {
+          code: 'import { getClassName } from "@fluentic/style/entry/rsc-dev";\nexport const ok = getClassName;',
+          css: '',
+          rules: [],
+          sourcemap: null,
+        };
+      },
+    },
+    configHash: 'hash',
+    cssCache: null,
+    cssEntryImportPath: '@fluentic/style/plugin/nextjs/bundle.css',
+    dev: true,
+    devCssHref: null,
+    filter: () => true,
+    isServer: false,
+  });
+
+  const result = await new Promise<{ code: string; map: unknown; }>((resolve, reject) => {
+    const context = {
+      async() {
+        return (err: Error | null, code: string, map: unknown) => {
+          if (err) reject(err);
+          else resolve({ code, map });
+        };
+      },
+      getOptions() {
+        return {
+          compilerId,
+          isServer: false,
+        };
+      },
+      resourcePath: '/tmp/project/lib/Chrome.tsx',
+      rootContext: '/tmp/project',
+    };
+
+    nextLoader.call(context as any, 'import { getClassName } from "@fluentic/style";', null as any);
+  });
+
+  includes(result.code, 'from "@fluentic/style/entry/rsc-dev"');
+  notIncludes(result.code, 'from "@fluentic/style/entry/dev"');
 });
 
 test('webpack plugin prepends runtime to existing entries', () => {
@@ -1672,6 +1801,113 @@ test('webpack plugin prepends runtime to existing entries', () => {
       app: { import: [runtime, '/tmp/app/src/main.tsx'] },
     },
   );
+});
+
+test('webpack runtime module can publish rspack sidecar url', () => {
+  const source = createWebpackRuntimeModuleSource(false, null, {
+    runtimeImportPath: '@fluentic/style/entry/dev',
+    sidecarUrl: 'http://127.0.0.1:4321',
+  });
+
+  includes(source, `import "@fluentic/style/entry/dev";`);
+  includes(source, `globalThis[Symbol.for("FLUENTIC_STYLE_SIDECAR_URL")] = "http://127.0.0.1:4321";`);
+});
+
+test('plugin compiler rewrites root runtime imports but preserves plugin jsx runtime imports', () => {
+  const compiler = createPluginCompiler({
+    dev: true,
+    projectDir: testDir,
+    cacheDir: testDir + '.test-cache',
+    options: {},
+    runtimeMode: CompilerRuntimeMode.Dev,
+  });
+
+  const result = compiler.transform(
+    [
+      'import { style } from "@fluentic/style";',
+      'import { jsx } from "@fluentic/style/plugin/jsx/jsx-runtime";',
+      'export const value = jsx("div", { css: style({ color: "red" }) });',
+    ].join('\n'),
+    '/project/src/App.tsx',
+  );
+
+  if (!result) throw new Error('expected transform result');
+
+  includes(result.code, '@fluentic/style/entry/dev');
+  includes(result.code, '@fluentic/style/plugin/jsx/jsx-runtime');
+  notIncludes(result.code, 'from "@fluentic/style"');
+  notIncludes(result.code, '@fluentic/style/entry/dev/jsx-runtime');
+});
+
+test('plugin compiler rewrites rsc dev helper imports through runtime mode', () => {
+  const compiler = createPluginCompiler({
+    dev: true,
+    projectDir: testDir,
+    cacheDir: testDir + '.test-cache',
+    options: {},
+    runtimeMode: CompilerRuntimeMode.RscDev,
+  });
+
+  const result = compiler.transform(
+    [
+      'import { StyleDev } from "@fluentic/style/dev/rsc";',
+      'export { StyleDev as FluenticStyleDev } from "@fluentic/style/dev/rsc";',
+      'export const value = StyleDev;',
+    ].join('\n'),
+    '/project/src/App.tsx',
+  );
+
+  if (!result) throw new Error('expected transform result');
+
+  includes(result.code, 'from "@fluentic/style/entry/rsc-dev/dev"');
+  notIncludes(result.code, '@fluentic/style/dev/rsc');
+});
+
+test('webpack loader rewrites dev style imports to the dev runtime', async () => {
+  const compilerId = 'test-webpack-dev-runtime';
+
+  webpackRegistry.setEntry(compilerId, {
+    transform() {
+      return {
+        code: [
+          'import { style } from "@fluentic/style/entry/dev";',
+          'import { jsx } from "@fluentic/style/plugin/jsx/jsx-runtime";',
+          'export const value = jsx("div", { css: style({ color: "red" }) });',
+        ].join('\n'),
+        map: null,
+        rules: [],
+      };
+    },
+  });
+
+  const result = await new Promise<{ code: string; map: unknown; }>((resolve, reject) => {
+    webpackLoader.call(
+      {
+        async() {
+          return (err: Error | null, code?: string, map?: unknown) => {
+            if (err) {
+              reject(err);
+              return;
+            }
+
+            resolve({ code: code ?? '', map });
+          };
+        },
+        getOptions() {
+          return { compilerId };
+        },
+        resourcePath: '/project/src/App.tsx',
+        rootContext: '/project',
+      } as never,
+      'export {};',
+      undefined,
+    );
+  });
+
+  includes(result.code, '@fluentic/style/entry/dev');
+  includes(result.code, '@fluentic/style/plugin/jsx/jsx-runtime');
+  notIncludes(result.code, 'from "@fluentic/style"');
+  notIncludes(result.code, '@fluentic/style/entry/dev/jsx-runtime');
 });
 
 test('cache file writes preserve timestamp when content is unchanged', () => {

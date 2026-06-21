@@ -2,7 +2,7 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "@fluentic/style",
+    "jsxImportSource": "@fluentic/style/plugin/jsx",
     "types": ["vite/client"]
   },
   "include": ["src"]

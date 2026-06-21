@@ -1,57 +1,53 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { rewriteImportSources } from '../../compiler/transform/utils/import';
 import { getDefaultSourcemapUrl, type SourcemapFilePathInfo } from '../../compiler/utils/sourcemap';
 import type { BuildConfig, BuildDevConfig } from '../../config/build';
+import { createWebpackLoader, type WebpackLoaderOptions } from '../bundler/webpack/shared/loader';
 import {
   createFileCssCache,
-  createFileCssConfigHash,
   createFileCssContentHash,
   createPluginCompiler,
   EXTRACTED_CSS_MARKER,
   type FileCssCache,
 } from '../utils';
-import { getStyleRuntimeImportPath, STYLE_IMPORTS } from '../utils/imports';
-import { getStyleRuntimeMode, StyleRuntimeMode } from '../utils/runtimeEntry';
 import { injectModuleImport } from '../utils/injection';
-import { createWebpackLoader, type WebpackLoaderOptions } from '../bundler/webpack/shared/loader';
-import { CSS_ENTRY_IMPORT_PATH } from './constants';
+import { getStyleRuntimeMode } from '../utils/runtimeEntry';
 import { injectDevCssLink } from './html';
 import {
-  createNextBuildConfig,
-  createNextBuildDevConfig,
-  createNextConfigHash,
   getNextCacheDir,
+  getNextPrecollectCacheSubdir,
   isAppLayoutFile,
+  NEXT_COMPILER_IDS,
   type NextLoaderState,
   nextRegistry,
-  PRECOLLECT_CACHE_DIR,
   resolveNextCompilerOptions,
 } from './utils';
 
 type NextTurbopackLoaderOptions = WebpackLoaderOptions & {
-  buildConfig?: BuildConfig;
-  buildDevConfig?: BuildDevConfig | null;
-  cacheDir?: string;
-  cssEntryImportPath?: string;
-  configHash?: string;
-  dev?: boolean;
-  devCssHref?: string | null;
-  isServer?: boolean;
-  projectDir?: string;
+  buildConfig: BuildConfig;
+  buildDevConfig: BuildDevConfig | null;
+  cacheDir: string;
+  cssEntryImportPath: string;
+  configHash: string;
+  dev: boolean;
+  devCssHref: string | null;
+  isServer: boolean;
+  projectDir: string;
 };
 
 const loader = createWebpackLoader<NextLoaderState>({
   missingCompilerMessage: 'Next.js compiler is not registered.',
   getEntry(compilerId, options) {
     return nextRegistry.getEntry(compilerId) ??
-      getTurbopackEntry(options as NextTurbopackLoaderOptions);
+      getTurbopackEntry(options);
   },
   shouldTransform({ entry, filePath }) {
     return entry.filter(filePath);
   },
-  transform({ code, entry, filePath, inputMap }) {
+  transform({ code, entry, filePath, inputMap, options }) {
     if (entry.dev) {
+      const isServer = getNextLoaderIsServer(entry, options);
+
       const result = entry.compiler.compileDebugRSC({
         code,
         filePath,
@@ -60,7 +56,7 @@ const loader = createWebpackLoader<NextLoaderState>({
 
       if (!result) return null;
 
-      if (entry.cssCache) {
+      if (entry.cssCache && shouldWriteFileCss(entry, isServer, options)) {
         entry.cssCache.setFileCss({
           filePath,
           contentHash: createFileCssContentHash(code),
@@ -70,7 +66,11 @@ const loader = createWebpackLoader<NextLoaderState>({
       }
 
       return {
-        code: injectNextRuntimeCode(result.code, entry, filePath),
+        code: injectNextRuntimeCode(
+          result.code,
+          entry,
+          filePath,
+        ),
         sourcemap: result.sourcemap,
       };
     }
@@ -83,7 +83,7 @@ const loader = createWebpackLoader<NextLoaderState>({
 
     if (!result) return null;
 
-    if (entry.cssCache) {
+    if (entry.cssCache && shouldWriteFileCss(entry, getNextLoaderIsServer(entry, options), options)) {
       entry.cssCache.setFileCss({
         filePath,
         contentHash: createFileCssContentHash(code),
@@ -93,7 +93,11 @@ const loader = createWebpackLoader<NextLoaderState>({
     }
 
     return {
-      code: injectNextRuntimeCode(result.code, entry, filePath),
+      code: injectNextRuntimeCode(
+        result.code,
+        entry,
+        filePath,
+      ),
       sourcemap: result.sourcemap,
     };
   },
@@ -108,12 +112,6 @@ function injectNextRuntimeCode(
 ) {
   let nextCode = code;
 
-  if (entry.isServer) {
-    nextCode = entry.dev
-      ? rewriteServerDevStyleImports(nextCode)
-      : rewriteServerStyleImports(nextCode);
-  }
-
   if (isAppLayoutFile(filePath)) {
     if (entry.dev) {
       nextCode = injectDevCssLink(nextCode, entry.devCssHref);
@@ -125,19 +123,19 @@ function injectNextRuntimeCode(
   return nextCode;
 }
 
-export function rewriteServerDevStyleImports(code: string) {
-  return rewriteServerStyleImports(code, getStyleRuntimeImportPath(StyleRuntimeMode.RscDev));
+function getNextLoaderIsServer(
+  entry: NextLoaderState,
+  options: WebpackLoaderOptions,
+): boolean {
+  return isTurbopackLoaderOptions(options) ? true : entry.isServer;
 }
 
-export function rewriteServerStyleImports(
-  code: string,
-  importPath = getStyleRuntimeImportPath(StyleRuntimeMode.RscProd),
+function shouldWriteFileCss(
+  entry: NextLoaderState,
+  isServer: boolean,
+  options: WebpackLoaderOptions,
 ) {
-  return rewriteImportSources(
-    code,
-    (source) => source === STYLE_IMPORTS.Root ? importPath : null,
-    'fluentic-next-server-style-imports.js',
-  );
+  return !entry.dev || isServer || isTurbopackLoaderOptions(options);
 }
 
 function ensureCssEntryImportPath(importPath: string, importerPath: string) {
@@ -158,22 +156,18 @@ function toRelativeImportPath(filePath: string) {
   return normalized.startsWith('.') ? normalized : './' + normalized;
 }
 
-function getTurbopackEntry(options: NextTurbopackLoaderOptions): NextLoaderState | null {
-  if (!options.projectDir || !options.cacheDir) return null;
+function getTurbopackEntry(options: WebpackLoaderOptions): NextLoaderState | null {
+  if (!isTurbopackLoaderOptions(options)) return null;
 
-  const dev = options.dev ?? false;
-
-  const buildConfig = options.buildConfig ?? createNextBuildConfig(options);
-  const buildDevConfig = options.buildDevConfig ?? createNextBuildDevConfig(options);
   const compilerOptions = resolveNextCompilerOptions(
     options,
     null,
-    buildConfig,
-    buildDevConfig,
-    dev,
+    options.buildConfig,
+    options.buildDevConfig,
+    options.dev,
   );
 
-  if (dev) {
+  if (options.dev) {
     compilerOptions.devSourcemap = 'sidecarServer';
 
     compilerOptions.getSourcemapFilePath = createTurbopackFallbackSourcemapFilePath(
@@ -185,30 +179,30 @@ function getTurbopackEntry(options: NextTurbopackLoaderOptions): NextLoaderState
   const compiler = createPluginCompiler({
     projectDir: options.projectDir,
     cacheDir: options.cacheDir,
-    dev,
+    dev: options.dev,
     options: compilerOptions,
-    runtimeMode: getStyleRuntimeMode(dev, options.isServer ?? false),
+    runtimeMode: getStyleRuntimeMode(options.dev, true),
   });
-
-  const configHash = options.configHash ?? createFileCssConfigHash(
-    createNextConfigHash(buildConfig, buildDevConfig, dev),
-  );
 
   const cssCache: FileCssCache = createFileCssCache({
     cacheDir: getNextCacheDir(options.projectDir, options.cacheDir),
-    cacheSubdir: PRECOLLECT_CACHE_DIR,
+    cacheSubdir: getNextPrecollectCacheSubdir(options.dev),
   });
 
   return {
     compiler: compiler.compiler,
     filter: compiler.filter,
-    configHash,
+    configHash: options.configHash,
     cssCache,
-    cssEntryImportPath: options.cssEntryImportPath ?? CSS_ENTRY_IMPORT_PATH,
-    isServer: options.isServer ?? false,
-    devCssHref: options.devCssHref ?? null,
-    dev,
+    cssEntryImportPath: options.cssEntryImportPath,
+    isServer: true,
+    devCssHref: options.devCssHref,
+    dev: options.dev,
   };
+}
+
+function isTurbopackLoaderOptions(options: WebpackLoaderOptions): options is NextTurbopackLoaderOptions {
+  return options.compilerId.includes(NEXT_COMPILER_IDS.turbopack);
 }
 
 function createTurbopackFallbackSourcemapFilePath(

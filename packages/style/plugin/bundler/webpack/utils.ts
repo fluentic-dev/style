@@ -1,8 +1,9 @@
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import type { EntryNormalized } from 'webpack';
-import type { Compiler } from '../../../compiler';
 import { normalizePath } from '../../../compiler/utils/path';
+import { SIDECAR_URL_GLOBAL_SYMBOL } from '../../../config/utils';
+import type { PluginCompiler } from '../../utils';
 import { STYLE_IMPORTS } from '../../utils/imports';
 import { createWebpackRegistry } from './shared/registry';
 
@@ -10,8 +11,7 @@ type WebpackStaticEntry = Exclude<EntryNormalized, () => Promise<unknown>>;
 type WebpackEntryDescription = WebpackStaticEntry[string];
 
 export type WebpackLoaderState = {
-  compiler: Compiler;
-  dev: boolean;
+  transform: PluginCompiler['transform'];
 };
 
 export const webpackRegistry = createWebpackRegistry('webpack.registry');
@@ -27,9 +27,16 @@ export function getStylePackageDistPath() {
 export function createWebpackRuntimeModuleSource(
   extract: boolean,
   cssFilePath: string | null,
+  options: {
+    runtimeImportPath?: string | null;
+    sidecarUrl?: string | null;
+  } = {},
 ) {
   return [
     extract && cssFilePath && `import ${JSON.stringify(normalizePath(cssFilePath))};`,
+    options.sidecarUrl && options.runtimeImportPath && `import ${JSON.stringify(options.runtimeImportPath)};`,
+    options.sidecarUrl &&
+    `globalThis[Symbol.for(${JSON.stringify(SIDECAR_URL_GLOBAL_SYMBOL)})] = ${JSON.stringify(options.sidecarUrl)};`,
     '',
   ].filter(Boolean).join('\n');
 }

@@ -1,0 +1,2 @@
+# Parcel CLI uses the nearest lockfile or VCS directory as projectRoot.
+# Keep this package-local marker so Parcel reads this example's tsconfig.json.

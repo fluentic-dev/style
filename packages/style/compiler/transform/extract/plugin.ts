@@ -4,6 +4,8 @@ import { hashString } from '../../../utils/hash';
 import type { CompilerOptions } from '../../compiler/types';
 import type { CompilerCssCollector } from '../../extract/collector';
 import {
+  FN_STYLE_PLAIN,
+  FN_STYLE_RAW,
   FN_CREATE_EXTRACTED_THEME,
   FN_CREATE_EXTRACTED_TOKEN,
   FN_WITH_TOKENS,
@@ -232,6 +234,7 @@ export function createExtractPlugin(args: PluginArgs) {
           exit(path, state) {
             if (mode === 'collect') return;
 
+            pruneUnusedStyleInputDeclarations(path, state);
             pruneUnusedStyleImports(path, state);
 
             if (!state.needsExtractImport) return;
@@ -251,6 +254,54 @@ export function createExtractPlugin(args: PluginArgs) {
       },
     };
   });
+}
+
+function pruneUnusedStyleInputDeclarations(
+  path: BabelCore.NodePath<BabelTypes.Program>,
+  state: PluginState,
+) {
+  path.scope.crawl();
+
+  path.traverse({
+    VariableDeclarator(declaratorPath) {
+      const node = declaratorPath.node;
+
+      if (declaratorPath.parentPath?.parentPath?.isExportNamedDeclaration()) return;
+      if (node.id.type !== 'Identifier') return;
+      if (!isStyleInputCall(node.init, state)) return;
+
+      const binding = declaratorPath.scope.getBinding(node.id.name);
+      if (!binding || binding.referencePaths.length) return;
+
+      const declarationPath = declaratorPath.parentPath;
+      if (!declarationPath?.isVariableDeclaration()) return;
+
+      if (declarationPath.node.declarations.length > 1) {
+        declaratorPath.remove();
+      } else {
+        declarationPath.remove();
+      }
+    },
+  });
+
+  path.scope.crawl();
+}
+
+function isStyleInputCall(
+  node: BabelTypes.Node | null | undefined,
+  state: PluginState,
+) {
+  if (!node || node.type !== 'CallExpression') return false;
+
+  const callee = node.callee;
+  if (callee.type !== 'MemberExpression' || callee.computed) return false;
+  if (callee.object.type !== 'Identifier') return false;
+  if (!state.styleNames.has(callee.object.name)) return false;
+
+  const property = callee.property;
+  if (property.type !== 'Identifier') return false;
+
+  return property.name === FN_STYLE_RAW || property.name === FN_STYLE_PLAIN;
 }
 
 function buildCodeFrameError(

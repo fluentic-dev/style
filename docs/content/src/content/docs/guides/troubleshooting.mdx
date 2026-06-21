@@ -11,7 +11,7 @@ Set the JSX import source:
 {
   "compilerOptions": {
     "jsx": "react-jsx",
-    "jsxImportSource": "@fluentic/style"
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
   }
 }
 ```
@@ -19,7 +19,7 @@ Set the JSX import source:
 Also configure your React transform, for example in Vite:
 
 ```ts
-react({ jsxImportSource: '@fluentic/style' });
+react({ jsxImportSource: '@fluentic/style/plugin/jsx' });
 ```
 
 ## Styles render in development but not production

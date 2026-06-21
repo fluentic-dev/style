@@ -38,7 +38,11 @@ export default (_, argv) => {
             options: {
               presets: [
                 ['@babel/preset-env', { targets: 'defaults' }],
-                ['@babel/preset-react', { runtime: 'automatic', importSource: '@fluentic/style' }],
+                ['@babel/preset-react', {
+                  runtime: 'automatic',
+                  importSource: '@fluentic/style/plugin/jsx',
+                  development: dev,
+                }],
                 ['@babel/preset-typescript', { isTSX: true, allExtensions: true }],
               ],
             },
