@@ -8,6 +8,8 @@
     "components-own-their-implementation",
     "resolving-at-component-boundaries",
     "style-resolution-and-cache",
+    "priority-model",
+    "hoisting-inline-style-chains",
     "publishing-less-surface-area",
     "themes-as-style-data",
     "debugging-through-identity",

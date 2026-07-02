@@ -10,15 +10,17 @@ as a user-chosen color, opacity, transform, or shadow width.
 pnpm bench:dynamic-values
 ```
 
-The main lane compares the recommended CSS-variable path across libraries. That
-keeps style rules static while each item carries its own value.
+The main lane compares the recommended stable-rule dynamic value path across
+libraries. In Fluentic app code, that means tokens/value bindings. The generated
+CSS may use variables internally, but app code should not hand-wire raw custom
+properties for normal Fluentic styling.
 
 ## Why This Lane Exists
 
 Known variants and open-ended values are different problems.
 
 Known variants should usually become static styles, class switches, recipes, or
-scopes. Open-ended values should usually flow through CSS custom properties so
+scopes. Open-ended values should usually flow through token/value bindings so
 the app does not generate a new CSS rule for every value.
 
 The benchmark keeps Fluentic inline dynamic style generation as an intentional
@@ -43,7 +45,9 @@ steps.
 | styledComponentsDynamicVars | 57.3 ms | 31.4 ms | 7 | 999 |
 
 The inline Fluentic row is deliberately included as a warning case. The
-CSS-variable row is the recommended pattern for arbitrary app values.
+`fluenticDynamicVars` row represents the recommended stable-rule path for
+arbitrary app values: Fluentic token/value binding in app code, generated
+variables internally.
 
 ## Settings
 

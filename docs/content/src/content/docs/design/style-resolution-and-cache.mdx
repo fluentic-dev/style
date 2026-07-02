@@ -120,7 +120,8 @@ All three renders can hit the same `buttonStyles -> danger(root)` path. The
 runtime can reuse the combined style facade and the resolved slot fields instead
 of rebuilding that path for every instance.
 
-The cache is based on object identity and order. These are cache-friendly:
+The cache is based on object identity and order. Stable module-scope values are
+the easiest path to reason about:
 
 ```ts
 const dangerButton = style.scope([
@@ -130,7 +131,9 @@ const dangerButton = style.scope([
 combineStyle(buttonStyles, dangerButton(buttonStyles.root));
 ```
 
-These create new identities every render and are less cache-friendly:
+Inline chains are more subtle.
+
+This source looks like it creates a new scope every render:
 
 ```tsx
 combineStyle(
@@ -141,8 +144,15 @@ combineStyle(
 );
 ```
 
-Keep reusable scopes, themes, and styles outside render when their values do not
-depend on render-time data.
+With static extraction and hoisting enabled, supported inline chains can be
+lifted into generated module-scope extracted data. That means extracted
+production can still get stable identities and class names for many inline
+chains.
+
+Still, module-scope styles are the clearer default for shared variants, themes,
+and scopes. Inline chains are useful for local one-off styles, especially when
+the compiler can hoist them. See
+[Hoisting Inline Style Chains](../hoisting-inline-style-chains).
 
 ## Carrying Combined Styles
 
@@ -220,18 +230,31 @@ This is why stable style objects matter:
 <button css={[css.root, style({ marginTop: props.gap })]} />
 ```
 
-For open-ended values, use CSS variables instead of generating a new style
-object for every value:
+For open-ended values, use tokens/value bindings instead of generating a new
+style object for every value:
 
 ```tsx
-const swatch = style({
-  backgroundColor: 'var(--swatch-color)',
-});
+const swatchColor = createToken('transparent');
 
-<span css={swatch} style={{ '--swatch-color': color }} />;
+const swatchStyles = {
+  root: style({
+    backgroundColor: swatchColor,
+  }),
+};
+
+export function Swatch(props: { color: string }) {
+  const css = combineStyle(
+    swatchStyles,
+    swatchColor(props.color),
+  );
+
+  return <span css={css.root} />;
+}
 ```
 
-The style object stays stable. The value changes through React's `style` prop.
+The style object stays stable. The value changes through a token override.
+With extraction and hoisting, supported inline token bindings can become stable
+generated CSS variable plumbing internally.
 
 ## Extracted Production
 
@@ -271,7 +294,7 @@ Write styles so stable things have stable identities:
 - define themes outside render;
 - use `combineStyle.for(styles)` when a component repeatedly combines the same
   style object;
-- use CSS variables for arbitrary dynamic values.
+- use tokens/value bindings for arbitrary dynamic values.
 
 Then repeated component instances can share the cached path instead of making
 each instance redo the same style-resolution work.

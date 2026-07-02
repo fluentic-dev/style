@@ -102,32 +102,38 @@ In extracted production:
 
 - the `page` CSS rule is already in the CSS file;
 - the theme class or token override is chosen while React renders;
-- the browser applies the current CSS variable values.
+- the browser applies the current generated token variable values.
 
 No duplicate static rule insertion is needed.
 
 ## Dynamic Values
 
-If the value can be anything, prefer CSS variables.
+If the value can be anything, prefer token/value bindings.
 
 Good dynamic value pattern:
 
 ```tsx
-const swatch = style({
-  backgroundColor: 'var(--swatch-color)',
-});
+const swatchColor = createToken('transparent');
+
+const swatchStyles = {
+  root: style({
+    backgroundColor: swatchColor,
+  }),
+};
 
 export function Swatch(props: { color: string }) {
-  return (
-    <span
-      css={swatch}
-      style={{ '--swatch-color': props.color }}
-    />
+  const css = combineStyle(
+    swatchStyles,
+    swatchColor(props.color),
   );
+
+  return <span css={css.root} />;
 }
 ```
 
-The CSS rule is stable. Only the inline custom property changes.
+The style rule is stable. The value changes through a token override. In
+extracted production, hoisting can keep the supported style chain stable and
+carry the render-time value through generated variable bindings.
 
 Avoid generating a new style object for every possible value:
 
@@ -191,6 +197,6 @@ style declarations -> browser rule insertion
 render-time choices -> class/token/scope resolution
 ```
 
-Use extraction for production apps when you can. Use CSS variables for
+Use extraction for production apps when you can. Use tokens/value bindings for
 open-ended dynamic values. Let runtime resolution handle the parts that only
 React can know at render time.
