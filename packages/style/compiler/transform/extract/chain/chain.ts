@@ -1675,7 +1675,19 @@ function addRuntimeStyleItem(
 
   const itemSelector = selector ?? sourceItem.selector;
   const itemAtRules = mergeAtRules(atRules, sourceItem.atRule);
-  const valueStr = String(value ?? '');
+  const variable = sourceItem.variable;
+  const runtimeValue = variable?.[0] === ITEM_VALUE_TYPE_VARIABLE
+    ? getCompiledRuntimeValue(variable[2])
+    : undefined;
+  const shouldUseVariable = !!variable &&
+    (
+      variable[0] !== ITEM_VALUE_TYPE_VARIABLE ||
+      !!sourceItem.token ||
+      !!runtimeValue
+    );
+  const valueStr = variable?.[0] === ITEM_VALUE_TYPE_VARIABLE && !shouldUseVariable
+    ? String(variable[2] ?? '')
+    : String(value ?? '');
 
   const dedupe = getClassNameDedupe(
     sourceItem.property,
@@ -1708,10 +1720,8 @@ function addRuntimeStyleItem(
     !!parentSelector,
   );
 
-  if (type !== BUILDER_TYPE_SCOPE && sourceItem.variable) {
-    setCompiledItemValue(item, sourceItem.variable);
-
-    const runtimeValue = getCompiledRuntimeValue(sourceItem.variable[2]);
+  if (type !== BUILDER_TYPE_SCOPE && variable && shouldUseVariable) {
+    setCompiledItemValue(item, variable);
     if (runtimeValue) item.valueNode = runtimeValue;
   }
 
@@ -1815,7 +1825,9 @@ function addStyleItems(
       }
       : null);
 
-    const variableName = (token || runtimeValue) && propertyLoc
+    const shouldUseVariable = !!(token || runtimeValue);
+
+    const variableName = shouldUseVariable && propertyLoc
       ? getLocalVarName(
         propertyLoc.filePath ?? fileId,
         propertyLoc.line,
@@ -1871,7 +1883,7 @@ function addStyleItems(
           tokens: ref.tokens,
         },
       ]);
-    } else if (token || runtimeValue) {
+    } else if (shouldUseVariable) {
       setCompiledItemValue(item, [
         ITEM_VALUE_TYPE_VARIABLE,
         variableName ?? (token ? getTokenVarName(token, cssConfig.tokenNameFormat) : ''),

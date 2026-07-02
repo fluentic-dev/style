@@ -1,7 +1,7 @@
 import { getAtomicClassName, getClassNameDedupe } from '../../../atomic/className';
 import { getTokenVar } from '../../../atomic/token';
-import { getCssVar, getCssVarRawFallback } from '../../../atomic/utils/css';
-import { getCssPropertyValue, shouldAppendCssPx } from '../../../atomic/value';
+import { getCssVarRawFallback } from '../../../atomic/utils/css';
+import { shouldAppendCssPx } from '../../../atomic/value';
 import { CSS_CONFIG } from '../../../config/config/css';
 import { DEBUG_CONFIG } from '../../../config/config/debug';
 import { DEV_CONFIG } from '../../../config/config/dev';
@@ -128,10 +128,8 @@ export function mergeBuilderData<Data extends BuilderData>(
       token = isStyleTokenData(valueRaw) ? valueRaw : null;
       variableName = getDebugFieldVarName(debug, property);
 
-      value = variableName
-        ? token
-          ? getCssVarRawFallback(variableName, getTokenVar(token, CSS_CONFIG.tokenNameFormat ?? null))
-          : getCssVar(variableName, getCssPropertyValue(property, String(valueRaw ?? '')))
+      value = variableName && token
+        ? getCssVarRawFallback(variableName, getTokenVar(token, CSS_CONFIG.tokenNameFormat ?? null))
         : token
         ? getTokenVar(token, CSS_CONFIG.tokenNameFormat ?? null)
         : String(valueRaw ?? '');
@@ -149,7 +147,7 @@ export function mergeBuilderData<Data extends BuilderData>(
         value,
         variable: ref
           ? [ITEM_VALUE_TYPE_AT_RULE_REF, ref]
-          : variableName
+          : variableName && token
           ? [
             ITEM_VALUE_TYPE_VARIABLE,
             variableName,

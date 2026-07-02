@@ -1360,6 +1360,40 @@ const styles = {
   includes(css, ', blue)');
 });
 
+test('compiler extracts traceable plain constants as literal css values', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import { palette, spacing } from './fixtures/shared';
+
+const size = {
+  buttonMinWidth: 112,
+};
+
+const button = style.slot({
+  color: palette.accentHover,
+  minWidth: size.buttonMinWidth,
+  padding: \`\${spacing.md}px \${spacing.sm}px\`,
+});
+`,
+    fileURLToPath(new URL('./constant-style-entry.ts', import.meta.url)),
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(css, 'color: #1d4ed8');
+  includes(css, 'min-width: 112px');
+  includes(css, 'padding: 12px 8px');
+  notIncludes(css, 'var(--var-');
+  notIncludes(result.code, '[1, "--var-');
+});
+
 test('compiler preserves scope token provider values', () => {
   const compiler = createCompiler({
     layer: false,

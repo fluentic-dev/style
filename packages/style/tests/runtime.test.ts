@@ -311,26 +311,37 @@ test('style prop resolver ignores bare debug element marker', () => {
   equal(result.style, undefined);
 });
 
-test('style prop resolver normalizes numeric debug variable values by property', () => {
+test('runtime debug variables do not wrap plain static values', () => {
   const rule = (style as any)({
+    color: '#ffffff',
+    minWidth: 112,
     padding: 12,
+    paddingInline: '12px 20px',
     opacity: 0.5,
   }, {
     $$debug: true,
     loc: [1, 1],
     label: ['rule', 'style', 'runtime.test.ts'],
     vars: {
+      color: '--debug-color',
+      minWidth: '--debug-min-width',
       padding: '--debug-padding',
+      paddingInline: '--debug-padding-inline',
       opacity: '--debug-opacity',
     },
     sourceUrl: 'source:///runtime.test.ts',
   });
 
   const result = resolveStyleProp(rule);
-  const styleVars = result.style as Record<string, unknown>;
+  const rules = getSheetRules(rule);
 
-  equal(styleVars['--debug-padding'], '12px');
-  equal(styleVars['--debug-opacity'], '0.5');
+  equal(result.style, undefined);
+  equal(rules.some((item) => item.css.includes('color: #ffffff')), true);
+  equal(rules.some((item) => item.css.includes('min-width: 112px')), true);
+  equal(rules.some((item) => item.css.includes('padding: 12px')), true);
+  equal(rules.some((item) => item.css.includes('padding-inline: 12px 20px')), true);
+  equal(rules.some((item) => item.css.includes('opacity: 0.5')), true);
+  equal(rules.some((item) => item.css.includes('var(--debug-')), false);
 });
 
 test('style prop resolver skips result cache when cache is disabled', () => {
