@@ -1,0 +1,55 @@
+---
+title: Contract
+description: Correctness and build-output benchmark report.
+---
+
+Use the contract benchmark before trusting timing numbers.
+
+```sh
+pnpm bench:contract
+```
+
+This report builds each benchmark app, verifies that the rendered DOM and
+computed styles match the expected contract, records bundle/CSS output size, and
+then runs timings only for apps that pass correctness.
+
+## What It Checks
+
+| Check | Why it matters |
+| --- | --- |
+| Production build | The benchmark should measure production output, not dev-server behavior. |
+| DOM structure | Apps need to render the same shape before timing comparisons make sense. |
+| Computed styles | The visible result needs to match, not only the component tree. |
+| JS and CSS bytes | Build output can regress even when timing stays steady. |
+| Style tags and CSS rules | Runtime insertion behavior should stay visible in the report. |
+
+## Latest Local Report
+
+Report file: `benchmark/main/results/contract-1781608860990.json`
+
+Created: `2026-06-16T11:21:00.989Z`
+
+Settings: 500 rows, 3 repeats. All rows shown below passed correctness.
+
+| App | Build ms | JS KB | CSS KB |
+| --- | ---: | ---: | ---: |
+| fluentic-style-extract-chain | 807.1 | 221.0 | 2.8 |
+| fluentic-runtime-css-prop | 469.1 | 268.9 | 0.0 |
+| emotion | 411.0 | 214.3 | 0.0 |
+| styled-components | 418.9 | 222.2 | 0.0 |
+| goober | 405.3 | 199.1 | 0.0 |
+| stylex | 609.3 | 196.0 | 2.1 |
+| vanilla-extract | 667.8 | 193.1 | 1.2 |
+| css-modules | 563.0 | 193.4 | 1.3 |
+
+## Filtering
+
+```sh
+APP=fluentic-style-extract-chain pnpm bench:contract
+APP=@benchmark/app-emotion pnpm bench:contract
+SKIP_FLUENTIC_STYLE=1 pnpm bench:contract
+INCLUDE_EXPERIMENTAL=1 pnpm bench:contract
+```
+
+The `APP` filter accepts benchmark app names and package filters. Use it when a
+single app fails and you want a tight repair loop.

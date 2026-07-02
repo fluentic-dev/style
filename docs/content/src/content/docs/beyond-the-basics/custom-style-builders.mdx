@@ -1,0 +1,114 @@
+---
+title: Custom Style Builders
+description: Decide when a design system needs its own style function.
+---
+
+A product team can use the default `style` builder for a long time.
+
+Custom builders are for the moment when a styling convention becomes shared
+design-system language instead of local component code.
+
+That usually means one of these things is happening:
+
+| Need | Put it in |
+| --- | --- |
+| Authors repeat custom style fields like `row`, `gapX`, `pill`, or `tone`. | [Custom Style Fields](../custom-style-fields) |
+| Authors repeat state or responsive selectors like `pressed`, `open`, `selected`, `md`, or `below`. | [Custom Chain Methods](../custom-chain-methods) |
+| A component needs to combine styles from several builders. | [Multiple Style Functions](../multiple-style-functions) |
+| A state must always win another state. | [Priority And Rule Order](../priority-and-rule-order) |
+
+`createStyleFn(...)` is the boundary where those conventions become a typed
+builder.
+
+It can define:
+
+- accepted style object type;
+- transform from custom fields to CSS properties;
+- selector methods;
+- priority behavior;
+- matching slot and scope builders.
+
+## Builder Shape
+
+A custom builder is still the same Fluentic model: style, slot, scope, resolve.
+
+```ts
+import {
+  createStyleFn,
+  styleTransform,
+  type CSSProperties,
+} from '@fluentic/style';
+import {
+  selector,
+  selectorPriority,
+} from '@fluentic/style/selector';
+
+type UiStyle = CSSProperties & {
+  stack?: 'row' | 'column';
+};
+
+const transform = styleTransform<UiStyle>({
+  transform(style) {
+    const { stack, ...css } = style;
+
+    if (stack) {
+      css.display = 'flex';
+      css.flexDirection = stack;
+    }
+
+    return css;
+  },
+});
+
+const selectors = {
+  hover: selector(':hover'),
+  pressed: selector('[aria-pressed="true"]'),
+};
+
+const prioritySelectors = selectorPriority(selectors, [
+  'hover',
+  'pressed',
+]);
+
+export const { style: ui } = createStyleFn({
+  selectors: prioritySelectors,
+  transform,
+});
+```
+
+Component code then uses the project vocabulary directly:
+
+```ts
+const button = ui({
+  stack: 'row',
+  alignItems: 'center',
+  border: 0,
+}).hover({
+  transform: 'translateY(-1px)',
+}).pressed({
+  transform: 'translateY(1px)',
+});
+```
+
+This page is the map. Use the focused pages for the details:
+
+| Page | Goes deep on |
+| --- | --- |
+| [Custom Style Fields](../custom-style-fields) | `styleTransform(...)`, custom fields, slots, scopes, `raw(...)`, and `plain(...)`. |
+| [Custom Chain Methods](../custom-chain-methods) | `selector(...)`, `selectorPriority(...)`, validators, responsive methods, and selector checks. |
+| [Multiple Style Functions](../multiple-style-functions) | `style.merge(...)`, cross-builder composition, and extraction with `importSources`. |
+
+## When Not To Create One
+
+Do not create a custom builder just to avoid writing CSS once.
+
+Keep using the default `style` builder when:
+
+- the style belongs to one component;
+- the selector is local and readable with `.select(...)`;
+- the field does not have a stable design-system meaning;
+- a slot or scope would describe the relationship more clearly.
+
+Custom builders are best when they make a repeated convention explicit. They
+are less helpful when they hide ordinary CSS behind project-specific names that
+only appear once.

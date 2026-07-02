@@ -1,0 +1,243 @@
+---
+title: CSS Helpers
+description: CSS helper APIs for named at-rules and low-level CSS constructs.
+---
+
+Use `@fluentic/style/css` for named CSS at-rules that need to be referenced
+from a style value.
+
+Most component styles should import from `@fluentic/style`. Reach for this entry
+when the CSS feature creates a name first, then uses that name in a declaration:
+`@keyframes`, `@font-face`, `@property`, `@counter-style`,
+`@font-palette-values`, and `@position-try`.
+
+For related production behavior, see
+[Static Extraction](../beyond-the-basics/static-extraction).
+
+```ts
+import { style } from '@fluentic/style';
+import { createKeyframes } from '@fluentic/style/css';
+
+const enter = createKeyframes({
+  from: { opacity: 0, transform: 'translateY(8px)' },
+  to: { opacity: 1, transform: 'none' },
+});
+
+const card = style({
+  animationName: enter,
+  animationDuration: '220ms',
+});
+```
+
+## API Summary
+
+| Helper | Creates | Common style property |
+| --- | --- | --- |
+| `createKeyframes()` | `@keyframes` | `animationName` |
+| `createFontFace()` | `@font-face` | `fontFamily` |
+| `fontSrc()` | escaped font `src` value | `src` inside `createFontFace()` |
+| `createFontPaletteValues()` | `@font-palette-values` | `fontPalette` |
+| `createCounterStyle()` | `@counter-style` | `listStyleType` |
+| `createProperty()` | `@property` | custom property name, `transitionProperty` |
+| `createPositionTry()` | `@position-try` | `positionTryFallbacks` |
+
+Each create helper returns an at-rule value reference. Use the reference directly
+where CSS expects the generated name.
+
+## createKeyframes
+
+`createKeyframes()` accepts a keyframe object. Keys are `from`, `to`, percentage
+strings, or another keyframe selector string.
+
+```ts
+import { style } from '@fluentic/style';
+import { createKeyframes } from '@fluentic/style/css';
+
+const pulse = createKeyframes({
+  '0%': { opacity: 1, transform: 'scale(1)' },
+  '40%': { opacity: 0.72, transform: 'scale(0.98)' },
+  '100%': { opacity: 1, transform: 'scale(1)' },
+});
+
+export const statusDot = style({
+  animationName: pulse,
+  animationDuration: '1800ms',
+  animationIterationCount: 'infinite',
+  animationTimingFunction: 'ease-in-out',
+});
+```
+
+The generated keyframes are emitted when the value reference is used.
+
+## createFontFace
+
+`createFontFace()` creates a generated font-family name and emits `@font-face`.
+Use the returned value in `fontFamily`.
+
+```ts
+import { style } from '@fluentic/style';
+import { createFontFace, fontSrc } from '@fluentic/style/css';
+
+const brandFont = createFontFace({
+  src: fontSrc('/fonts/Brand.woff2', 'woff2'),
+  fontDisplay: 'swap',
+  fontStyle: 'normal',
+  fontWeight: 400,
+});
+
+export const title = style({
+  fontFamily: brandFont,
+  fontWeight: 700,
+});
+```
+
+Use `fontSrc(url, format)` when the source should be emitted as
+`url("...") format("...")`. It escapes quotes and backslashes in the URL and
+format string.
+
+`createFontFace()` requires a static `src` string so the compiler can extract
+the at-rule.
+
+## createFontPaletteValues
+
+`createFontPaletteValues()` creates `@font-palette-values` and returns the
+generated palette name.
+
+```ts
+import { style } from '@fluentic/style';
+import { createFontPaletteValues } from '@fluentic/style/css';
+
+const palette = createFontPaletteValues({
+  fontFamily: 'system-ui',
+  basePalette: 1,
+});
+
+export const label = style({
+  fontPalette: palette,
+});
+```
+
+Use it when a color font exposes palettes and the app needs a named palette
+value in CSS.
+
+## createCounterStyle
+
+`createCounterStyle()` creates `@counter-style` and returns the generated
+counter style name.
+
+```ts
+import { style } from '@fluentic/style';
+import { createCounterStyle } from '@fluentic/style/css';
+
+const marker = createCounterStyle({
+  system: 'cyclic',
+  symbols: '"◆" "◇"',
+  suffix: '" "',
+});
+
+export const list = style({
+  listStyleType: marker,
+  paddingLeft: 22,
+});
+```
+
+Use it for reusable list marker styles that should be generated with the rest of
+the Fluentic CSS output.
+
+## createProperty
+
+`createProperty()` registers a custom property with `@property`.
+
+```ts
+import { style } from '@fluentic/style';
+import { createProperty } from '@fluentic/style/css';
+
+const spinAngle = createProperty('--spin-angle', {
+  syntax: '"<angle>"',
+  inherits: false,
+  initialValue: '0deg',
+});
+
+export const icon = style({
+  '--spin-angle': '0deg',
+  transform: 'rotate(var(--spin-angle))',
+  transitionProperty: spinAngle,
+  transitionDuration: '240ms',
+} as never).hover({
+  '--spin-angle': '18deg',
+} as never);
+```
+
+The first argument can be the custom property name. If you omit it, Fluentic
+generates a stable custom property name for the registration.
+
+```ts
+const progress = createProperty({
+  syntax: '"<number>"',
+  inherits: false,
+  initialValue: 0,
+});
+```
+
+Use the returned value anywhere CSS expects the registered property name, such
+as `transitionProperty`.
+
+## createPositionTry
+
+`createPositionTry()` creates `@position-try` and returns the generated fallback
+name.
+
+```ts
+import { style } from '@fluentic/style';
+import { createPositionTry } from '@fluentic/style/css';
+
+const menuFallback = createPositionTry({
+  positionArea: 'top',
+  margin: '8px',
+});
+
+export const menu = style({
+  position: 'absolute',
+  positionArea: 'bottom',
+  positionTryFallbacks: menuFallback,
+});
+```
+
+Use it with CSS anchor positioning when a positioned element needs named
+fallback placement rules.
+
+## Stable Names
+
+Every helper accepts an optional stable id object in the second argument:
+
+```ts
+const enter = createKeyframes(
+  {
+    from: { opacity: 0 },
+    to: { opacity: 1 },
+  },
+  { name: 'enter', id: 'button-enter' },
+);
+```
+
+`name` is used by the configured at-rule name format when the format includes a
+name placeholder. `id` participates in hashing. Most app code can omit this and
+let Fluentic generate names.
+
+## Types
+
+The CSS entry also exports the descriptor object types:
+
+```ts
+import type {
+  CounterStyleObject,
+  FontFaceObject,
+  FontPaletteValuesObject,
+  KeyframesObject,
+  PositionTryObject,
+  PropertyObject,
+} from '@fluentic/style/css';
+```
+
+Use these when a design-system helper wraps one of the lower-level create
+functions.

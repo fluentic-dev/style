@@ -1,31 +1,30 @@
 ---
 title: Integration Overview
-description: Choose the right plugin or compiler entry point.
+description: Choose the setup path for your build system.
 ---
 
-`@fluentic/style` ships one package with isolated subpath exports for bundlers
-and compiler integrations.
+The integration layer wires Fluentic into the build system you already use.
 
-| Import | Purpose |
-| --- | --- |
-| `@fluentic/style/plugin/nextjs` | Next.js App Router integration |
-| `@fluentic/style/plugin/vite` | Vite plugin |
-| `@fluentic/style/plugin/webpack` | Webpack plugin |
-| `@fluentic/style/plugin/rspack` | Rspack plugin |
-| `@fluentic/style/plugin/farm` | Farm plugin |
+Your component code still uses the same APIs:
 
-Bundler adapters are intended for final app builds. Component libraries should
-ship Fluentic source and let the consuming app plugin transform the package.
-
-## Plugin options
-
-```ts
-stylePlugin({
-  include: /\.[jt]sx?$/,
-  exclude: /node_modules/,
-});
+```txt
+style -> slot -> scope -> combineStyle
 ```
 
-See [Plugin Options](../../reference/plugin-options) for the full shape.
+The integration handles the pieces that differ by build system: JSX runtime
+wiring, development CSS, sourcemaps, runtime entries, and static extraction.
 
-For App Router projects, see the [Next.js guide](../nextjs).
+| Environment | Start here |
+| --- | --- |
+| Shared plugin options | [Plugin Options](options) |
+| Next.js App Router | [Next.js](nextjs) |
+| Vite + React | [Vite](vite) |
+| Webpack | [Webpack](webpack) |
+| Rspack | [Rspack](rspack) |
+| Farm | [Farm](farm) |
+| Parcel 2 | [Parcel](parcel) |
+| No compiler plugin | [Runtime-Only Mode](runtime-only-mode) |
+| Custom build system | [Custom Compiler](custom-compiler) |
+
+Production apps should use a bundler adapter when one exists. Runtime-only usage
+works with the JSX runtime configured, but it keeps more work in the browser.

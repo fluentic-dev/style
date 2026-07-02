@@ -1,0 +1,16 @@
+---
+title: bindScope
+description: Bind incoming scopes to a component-owned target slot.
+---
+
+```ts
+import { bindScope } from '@fluentic/style';
+
+const css = combineStyle(
+  styles,
+  bindScope(styles.root, props.theme),
+);
+```
+
+`bindScope(target, ...themes)` accepts scopes, arrays of scopes, falsy values,
+and nested `StyleTheme` inputs.

@@ -123,8 +123,8 @@ export function PrimaryButton() {
 import { combineStyle, createTheme, createToken, style } from '@fluentic/style';
 
 const color = {
-  accent: createToken('#2563eb', 'accent'),
-  accentText: createToken('#ffffff', 'accent-text'),
+  accent: createToken('#2563eb'),
+  accentText: createToken('#ffffff'),
 };
 
 const theme = createTheme([
@@ -180,21 +180,21 @@ dynamic styles keep the runtime path.
 `@fluentic/style` ships one package with isolated subpath exports for app,
 JSX, and bundler usage.
 
-| Import                                  | Purpose                                                                   |
-| --------------------------------------- | ------------------------------------------------------------------------- |
-| `@fluentic/style`                       | Runtime API, style builders, hooks, tokens, themes, and types.            |
-| `@fluentic/style/css`                   | CSS helper APIs for keyframes, font faces, and at-rules.                  |
-| `@fluentic/style/selector`              | Selector constructors, validators, presets, and priority helpers.         |
-| `@fluentic/style/config`                | Runtime configuration helpers.                                            |
-| `@fluentic/style/dev`                   | Development utilities.                                                    |
-| `@fluentic/style/dev/rsc`               | React Server Component dev client boundary.                               |
-| `@fluentic/style/jsx`                   | JSX import source for runtime-only apps.                                  |
-| `@fluentic/style/plugin/jsx`            | JSX import source for plugin-managed builds.                              |
-| `@fluentic/style/plugin/nextjs`         | Next.js App Router integration.                                           |
-| `@fluentic/style/plugin/vite`           | Vite plugin.                                                              |
-| `@fluentic/style/plugin/webpack`        | Webpack plugin.                                                           |
-| `@fluentic/style/plugin/rspack`         | Rspack plugin.                                                            |
-| `@fluentic/style/plugin/farm`           | Farm plugin.                                                              |
+| Import                           | Purpose                                                           |
+| -------------------------------- | ----------------------------------------------------------------- |
+| `@fluentic/style`                | Runtime API, style builders, hooks, tokens, themes, and types.    |
+| `@fluentic/style/css`            | CSS helper APIs for keyframes, font faces, and at-rules.          |
+| `@fluentic/style/selector`       | Selector constructors, validators, presets, and priority helpers. |
+| `@fluentic/style/config`         | Runtime configuration helpers.                                    |
+| `@fluentic/style/dev`            | Development utilities.                                            |
+| `@fluentic/style/dev/rsc`        | React Server Component dev client boundary.                       |
+| `@fluentic/style/jsx`            | JSX import source for runtime-only apps.                          |
+| `@fluentic/style/plugin/jsx`     | JSX import source for plugin-managed builds.                      |
+| `@fluentic/style/plugin/nextjs`  | Next.js App Router integration.                                   |
+| `@fluentic/style/plugin/vite`    | Vite plugin.                                                      |
+| `@fluentic/style/plugin/webpack` | Webpack plugin.                                                   |
+| `@fluentic/style/plugin/rspack`  | Rspack plugin.                                                    |
+| `@fluentic/style/plugin/farm`    | Farm plugin.                                                      |
 
 See the [integration guide](https://fluenticstack.com/style/docs/integrations/overview/)
 for Vite, Webpack, Rspack, Farm, and Next.js.

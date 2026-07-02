@@ -1,0 +1,157 @@
+---
+title: DevTools And Sourcemaps
+description: Connect generated CSS back to authored TypeScript with DevTools metadata.
+---
+
+This page is the setup and controls reference for Fluentic's development tools.
+
+For the step-by-step debugging workflow, see
+[Tracing Styles In Real Apps](../tracing-styles-in-real-apps).
+
+Depending on integration mode, Fluentic can record source information for:
+
+- generated CSS rules;
+- style object locations;
+- token value sources;
+- JSX element markers;
+- source URL customization;
+- runtime-only traces.
+
+The exact setup depends on your bundler and sourcemap mode. The controls below
+let you choose how much debug metadata appears while developing.
+
+## Enable Dev Utilities
+
+For client apps, install the browser console helper in development:
+
+```ts title="main.tsx"
+import { enableStyleDevUtils } from '@fluentic/style/dev';
+
+if (import.meta.env.DEV) {
+  enableStyleDevUtils();
+}
+```
+
+The default helper appears on `window` as `StyleDevUtils`:
+
+```ts
+StyleDevUtils.info();
+StyleDevUtils.usage();
+StyleDevUtils.getConfig();
+StyleDevUtils.reset();
+```
+
+For Next.js App Router or RSC development, add the dev client once near the app
+root:
+
+```tsx title="app/layout.tsx"
+import { StyleDev } from '@fluentic/style/dev/rsc';
+
+export default function RootLayout(props: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {props.children}
+        {process.env.NODE_ENV === 'development'
+          ? <StyleDev enableStyleDevUtils />
+          : null}
+      </body>
+    </html>
+  );
+}
+```
+
+`StyleDev` wires the RSC dev style stream and enables the same
+`StyleDevUtils` console helper.
+
+## Useful Toggles
+
+Use the console when a rule looks wrong:
+
+```ts
+StyleDevUtils.info();
+```
+
+`info()` prints the current priority mode, sourcemap mode, class name mode,
+element marker state, CSS mode, runtime mode, and plugin state.
+
+Switch sourcemap trace mode:
+
+```ts
+StyleDevUtils.setSourcemapMode.toStyle();
+StyleDevUtils.setSourcemapMode.toValue();
+```
+
+Use `toStyle()` when you want spread or merged values to point to the style call
+that assembled them.
+
+Use `toValue()` when you want spread or merged values to point to the original
+value object.
+
+Toggle element markers:
+
+```ts
+StyleDevUtils.setElementMarker.toOn();
+StyleDevUtils.setElementMarker.toOff();
+```
+
+Element markers add a development-only marker class to host elements that
+receive a `css` prop. The marker rule maps back to the JSX element location and
+only writes an internal custom property:
+
+```css
+.<marker-class>{--fluentic-element-marker:0}
+```
+
+Switch priority output:
+
+```ts
+StyleDevUtils.setPriorityMode.toLayer();
+StyleDevUtils.setPriorityMode.toSort();
+```
+
+Layer mode makes priority buckets easier to inspect.
+
+Sort mode emits rules in sorted priority order.
+
+All of these preferences are saved in local storage. Use `reset()` to clear
+them:
+
+```ts
+StyleDevUtils.reset();
+```
+
+## Runtime Sourcemap Trace
+
+Runtime-only development does not have plugin metadata for every callsite.
+
+In that mode, `StyleDevUtils` exposes:
+
+```ts
+StyleDevUtils.traceSourcemap();
+```
+
+`traceSourcemap()` fetches browser-served JavaScript sourcemaps, resolves
+original positions, and rewrites development CSS sourcemap comments so DevTools
+can jump closer to the authored TypeScript.
+
+Plugin-powered development usually exposes `setSourcemapMode` instead, because
+the plugin already records style and value locations.
+
+## What Gets Recorded
+
+Development metadata can include:
+
+| Metadata | Used for |
+| --- | --- |
+| Source URL | Pointing generated CSS back to the transformed file. |
+| Style call location | Jumping from a generated rule to the style call. |
+| Per-property locations | Jumping to the exact property inside a style object. |
+| Spread and merge sources | Choosing between the leaf style site and reusable value site. |
+| JSX element markers | Jumping from a rendered host element to the JSX element with the `css` prop. |
+
+`StyleDevUtils.setSourcemapMode.toStyle()` maps spread or merge rules to the
+style call that assembled them.
+
+`StyleDevUtils.setSourcemapMode.toValue()` maps spread or merge rules to the
+original reusable style value when possible.

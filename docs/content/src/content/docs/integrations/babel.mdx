@@ -1,67 +1,26 @@
 ---
 title: Babel
-description: Use the Babel plugin directly when you own the transform pipeline.
+description: Notes for Babel-based projects.
 ---
 
-```js
-import { plugin as fluenticBabel } from '@fluentic/style/babel';
+Fluentic's public integrations now use bundler adapters rather than a public
+Babel plugin subpath.
 
+If your project uses Babel through Webpack, use the [Webpack](webpack) adapter
+and keep Babel responsible for React and TypeScript:
+
+```js title="babel-loader options"
 export default {
-  plugins: [
-    fluenticBabel({
-      extract: true,
-    }),
+  presets: [
+    ['@babel/preset-react', {
+      runtime: 'automatic',
+      importSource: '@fluentic/style/plugin/jsx',
+    }],
+    '@babel/preset-typescript',
   ],
 };
 ```
 
-The Babel plugin is useful for custom build systems and framework integrations.
-Bundler users should usually use the bundler-specific plugin instead, because it
-also manages virtual CSS/runtime modules.
-
-## Options
-
-The Babel plugin accepts compiler options:
-
-```ts
-type CompilerOptions = {
-  importSources?: ImportSource[];
-  css?: CompilerCssOptions;
-  extract?: boolean;
-};
-```
-
-Use `importSources` if you re-export or rename the `style` builder from your own
-package.
-
-```ts
-import { style } from './style';
-import { sx } from './sx-style';
-import { ui } from './ui-style';
-
-fluenticBabel({
-  extract: true,
-  importSources: [
-    {
-      source: './style',
-      name: 'style',
-      styleFn: style,
-    },
-    {
-      source: './sx-*',
-      name: 'sx',
-      styleFn: sx,
-    },
-    {
-      source: /ui-style$/,
-      name: 'ui',
-      styleFn: ui,
-    },
-  ],
-});
-```
-
-`source` can be an exact import source, a glob pattern, a regular expression, or
-an array of those. Each entry carries the style function meta for that imported
-builder, so one file can use multiple typed style functions and the compiler can
-extract each chain with the correct selectors and transform.
+For other Babel-based build systems, use [Runtime-Only Mode](runtime-only-mode)
+or build a custom integration around the compiler internals until a first-class
+adapter exists.

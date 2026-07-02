@@ -1,109 +1,269 @@
 ---
 title: Plugin Options
-description: Configure compiler behavior and transform filters.
+description: Shared compiler and transform options.
 ---
 
-Bundler plugins accept compiler options and transform filter options.
+Fluentic integrations share one option shape.
+
+Use the integration page for the adapter-specific wrapper, then use this page
+for the option names:
 
 ```ts
 stylePlugin({
-  hoist: true,
   include: /\.[jt]sx?$/,
   exclude: /node_modules/,
-  getSourcemapFilePath({ relativePath }) {
-    return `/src/${relativePath}`;
+  hoist: true,
+  devSourcemap: 'sidecarServer',
+  getSourcemapFilePath({ sourcePath, sourceUrl }) {
+    return sourcePath.startsWith('src/')
+      ? `source://@app/${sourcePath}`
+      : sourceUrl;
+  },
+  css: {
+    layer: true,
+    layers: ['reset', '$layer', 'app'],
+    layerNamespace: 'fluentic',
+    classNameFormat: 'f-[(property)]-$hash',
+    scopeClassNameFormat: 'scope-$hash',
+    elementClassNameFormat: '@(name)',
+    themeNameFormat: 'theme-(name)-$hash',
+    tokenNameFormat: 'token-(name)-$hash',
+    varNameFormat: 'var-$hash',
+    localClassName: true,
+    debugClassName: true,
+  },
+  dev: {
+    priorityMode: 'layer',
+    sourcemapMode: 'style',
+    elementClassName: true,
+    checkSelector: true,
   },
 });
 ```
 
-## `hoist`
+## Top-Level Options
 
-Controls whether extracted style, slot, and scope builders are hoisted to module
-scope. Dynamic inline values are carried through generated token bindings.
+| Option | Purpose |
+| --- | --- |
+| `include` | Limit files processed by the transform. |
+| `exclude` | Exclude files from the transform. |
+| `hoist` | Control supported style hoisting during extraction. |
+| `css` | Configure extracted CSS behavior where supported. |
+| `dev` | Configure development runtime behavior. |
+| `importSources` | Configure recognized Fluentic import sources. |
+| `getSourcemapFilePath` | Customize source paths in CSS sourcemaps. |
+| `devSourcemap` | Choose how development source text is exposed to DevTools. |
 
-```ts
-hoist?: boolean
-```
+### Import Sources
 
-The default is `true`. Set `hoist: false` to keep extracted helper creation at
-the original call site.
+`importSources` teaches the compiler about custom or re-exported style
+functions.
 
-## `include` and `exclude`
-
-Control which files are transformed.
-
-```ts
-include?: RegExp | string | string[]
-exclude?: RegExp | string | string[]
-```
-
-The default include is JavaScript and TypeScript files. The default exclude is
-`node_modules`.
-
-## `getSourcemapFilePath`
-
-Customize the source path or URL written into CSS sourcemaps for a transformed
-source file.
-
-```ts
-getSourcemapFilePath?: (info: {
-  filePath: string;
-  absolutePath: string;
-  relativePath: string;
-  rootDir?: string;
-  sourceUrl?: string | null;
-}) => string | null | undefined;
-```
-
-Use this when a framework serves browser sourcemap sources under a different
-path than the absolute file path seen by the plugin.
-
-```ts
-stylePlugin({
-  getSourcemapFilePath({ relativePath }) {
-    return `webpack://_N_E/./${relativePath}`;
-  },
-});
-```
-
-Return `null` or `undefined` to keep the integration default.
-
-## `importSources`
-
-Register style functions that the compiler should extract.
-
-```ts
-importSources?: {
-  source?: string | RegExp | (string | RegExp)[];
-  name?: string | string[];
-  styleFn: StyleFn;
-  check?: (info: { source: string; name: string }) => boolean;
-}[]
-```
-
-`source` accepts exact import sources, glob patterns, regular expressions, or an
-array of patterns. Use this when an app has multiple style functions:
+The default `style` export from `@fluentic/style` is already known. Add
+`importSources` when your app imports a custom builder, such as `sx` or `ui`,
+from your own package.
 
 ```ts
 stylePlugin({
   importSources: [
-    { source: './style', name: 'style', styleFn: style },
-    { source: './sx-*', name: 'sx', styleFn: sx },
-    { source: /ui-style$/, name: 'ui', styleFn: ui },
+    {
+      source: './sx-style',
+      name: 'sx',
+      styleFn: sx,
+    },
   ],
 });
 ```
 
-Each imported builder keeps its own selectors and transform during extraction.
+Each entry supports:
 
-## `css`
+| Field | Meaning |
+| --- | --- |
+| `styleFn` | The actual style function created by `createStyleFn(...)`. |
+| `source` | Import source string, glob, RegExp, or array of those values. |
+| `name` | Imported binding name, or an array of names. |
+| `check` | Custom matcher receiving `{ source, name }`. |
 
-Configure generated CSS behavior.
+Use separate entries when one module exports multiple style functions.
 
 ```ts
-css?: {
-  layer?: boolean;
-}
+stylePlugin({
+  importSources: [
+    {
+      source: '@acme/styles',
+      name: 'ui',
+      styleFn: ui,
+    },
+    {
+      source: '@acme/styles',
+      name: 'sx',
+      styleFn: sx,
+    },
+  ],
+});
 ```
 
-Additional generated CSS config can be passed through this object.
+Use a RegExp or glob when the import path has several possible forms:
+
+```ts
+stylePlugin({
+  importSources: [
+    {
+      source: /sx-style$/,
+      name: 'sx',
+      styleFn: sx,
+    },
+  ],
+});
+```
+
+This is what lets extraction understand merged chains from more than one style
+function. See
+[Multiple Style Functions](../beyond-the-basics/multiple-style-functions).
+
+## CSS Options
+
+`css` controls generated CSS names, layers, and debug readability:
+
+| Option | Purpose |
+| --- | --- |
+| `layer` | Wrap generated CSS in cascade layers. |
+| `layers` | Configure layer order. Use `$layer` where Fluentic priority layers should be inserted. |
+| `layerNamespace` | Prefix generated priority layer names. |
+| `classNameFormat` | Format atomic class names. Supports strings or functions. |
+| `scopeClassNameFormat` | Format scope target class names. |
+| `elementClassNameFormat` | Format development element marker class names. |
+| `themeNameFormat` | Format generated theme class names. |
+| `tokenNameFormat` | Format generated token CSS variable names. |
+| `varNameFormat` | Format generated local dynamic value variable names. |
+| `localClassName` | Include callsite-local hashing in development class names. |
+| `debugClassName` | Include readable property/value parts in development class names. |
+
+Most apps only change `layer`, `layers`, `layerNamespace`, or naming formats.
+Leave the rest at defaults unless you are aligning Fluentic with existing CSS
+infrastructure.
+
+### Class Name Formats
+
+`classNameFormat` controls atomic class names when `debugClassName` is enabled.
+
+```ts
+stylePlugin({
+  css: {
+    debugClassName: true,
+    classNameFormat: '[(atRule)-][(scopeSelector)-](property)[-(selector)][-(value)]-$hash',
+  },
+});
+```
+
+For a rule like `style({ display: 'flex' }).hover(...)`, the formatter can use:
+
+| Placeholder | Meaning |
+| --- | --- |
+| `$hash` | The stable hash for this exact generated rule. |
+| `(property)` | The CSS property, such as `display` or `background-color`. |
+| `(value)` | A readable value when Fluentic can safely name it, such as `flex` or `center`. |
+| `(selector)` | The selector segment, such as `hover` or `focus-visible`. |
+| `(scopeSelector)` | The parent scope selector segment when a scoped rule is generated. |
+| `(atRule)` | The at-rule segment, such as a media or container marker. |
+
+Format strings support optional groups:
+
+```ts
+classNameFormat: '[(property)][-(selector)][-(value)]-$hash'
+```
+
+`[-(value)]` is omitted when the value cannot be named. This keeps names from
+ending with empty separators.
+
+You can limit placeholder length:
+
+```ts
+classNameFormat: '[(property:16!)][-(value:10)]-$hash'
+```
+
+`(property:16!)` truncates to 16 characters. `(value:10)` only appears when the
+value is 10 characters or shorter.
+
+If `$hash` is not present, Fluentic appends the hash to the formatted name. Keep
+`$hash` somewhere in production-facing formats unless you intentionally want to
+own uniqueness yourself.
+
+The other CSS name formats use the same formatter syntax with smaller
+placeholder sets:
+
+| Option | Placeholders |
+| --- | --- |
+| `scopeClassNameFormat` | `(className)` and `$hash` |
+| `elementClassNameFormat` | `(name)` and `$hash` |
+| `themeNameFormat` | `(name)` and `$hash` |
+| `tokenNameFormat` | `(name)` and `$hash` |
+| `varNameFormat` | `(name)` and `$hash` |
+
+Each format option also accepts a function:
+
+```ts
+stylePlugin({
+  css: {
+    classNameFormat(info) {
+      return `${info.property}-${info.selector ?? 'base'}`;
+    },
+  },
+});
+```
+
+## Dev Options
+
+`dev` controls how development CSS is represented while debugging:
+
+| Option | Purpose |
+| --- | --- |
+| `priorityMode` | `layer` uses dev cascade layers. `sort` emits sorted rules. |
+| `sourcemapMode` | `style` traces merged/spread styles to the consuming style site. `value` traces to the original value source when possible. |
+| `elementClassName` | Add development marker classes to DOM elements with a `css` prop. |
+| `checkSelector` | Validate static selector arguments. Use `force` to keep checks even when runtime checks would normally be skipped. |
+
+## Sourcemap Options
+
+`devSourcemap` controls how source text is made available to browser DevTools:
+
+| Value | Behavior |
+| --- | --- |
+| `sidecarServer` | Serve sources from a local sidecar server in development. |
+| `sourceContent` | Embed source text in generated sourcemaps. |
+| `sourceUrl` | Write source URLs without embedded source text. |
+
+### getSourcemapFilePath
+
+`getSourcemapFilePath` rewrites the source URL stored in generated CSS
+sourcemaps.
+
+Use it when the default source path is technically correct, but not the path you
+want to see in DevTools. For example, you may want source URLs to match your
+bundler's style, your monorepo aliases, or a shorter app-facing path that is
+easier to recognize while debugging.
+
+```ts
+stylePlugin({
+  getSourcemapFilePath({ sourcePath, sourceUrl }) {
+    if (sourcePath.startsWith('src/')) {
+      return `source://@app/${sourcePath}`;
+    }
+
+    if (sourcePath.startsWith('../ui/src/')) {
+      return `source://@ui/${sourcePath.slice('../ui/src/'.length)}`;
+    }
+
+    return sourceUrl;
+  },
+});
+```
+
+The returned string becomes the source URL used by CSS sourcemaps. Return
+`sourceUrl`, `null`, or `undefined` when you want to keep Fluentic's default for
+that file.
+
+Adapter-specific behavior may differ. Start with your integration page, such as
+[Next.js](../integrations/nextjs), then use the
+[Integration Plugin Options](../integrations/options) page for setup examples,
+sourcemap modes, and adapter-specific notes.

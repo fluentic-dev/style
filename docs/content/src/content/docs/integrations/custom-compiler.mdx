@@ -1,35 +1,22 @@
 ---
 title: Custom Compiler
-description: Use createCompiler for custom build systems.
+description: Notes for custom build systems.
 ---
 
-For build systems that do not fit the provided adapters, use the compiler
-entrypoint:
+Use a custom integration only when the provided adapters do not fit your build
+system. The stable public path is to use a bundler adapter; the compiler APIs
+used by those adapters currently live in the package source.
 
-```ts
-import { createCompiler } from '@fluentic/style/compiler';
+A custom integration is responsible for the same work the provided adapters do:
 
-const compiler = createCompiler({
-  extract: true,
-});
+- passing supported source files to the compiler;
+- preserving source maps;
+- emitting extracted CSS;
+- writing or aliasing the Fluentic runtime entry;
+- leaving runtime imports available for dynamic styles;
+- keeping JSX configured with `@fluentic/style/plugin/jsx`.
 
-const result = compiler.transform(sourceCode, filePath);
-
-if (result) {
-  console.log(result.code);
-  console.log(result.css);
-}
-```
-
-The compiler transform result contains:
-
-```ts
-type CompilerTransformResult = {
-  code: string;
-  map: string | null;
-  css: string[];
-};
-```
-
-Use this only if you are writing tooling. Application users should prefer a
-bundler adapter.
+The compiler should see source files before another transform hides
+`style(...)`, `style.slot(...)`, `style.scope(...)`, `createTheme(...)`, or JSX.
+The component code should stay ordinary Fluentic: style, slot, scope, and
+`combineStyle`.

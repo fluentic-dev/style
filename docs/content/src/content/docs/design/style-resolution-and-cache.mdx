@@ -1,0 +1,277 @@
+---
+title: Style Resolution And Cache
+description: How css props and combineStyle reuse work across rendered instances.
+---
+
+Most components render more than once.
+
+Most screens also render many instances of the same component:
+
+```tsx
+{rows.map((row) => (
+  <Card key={row.id} tone={row.tone} />
+))}
+```
+
+Fluentic's resolver is built for that shape. If many instances walk the same
+style graph, the runtime should not redo all of the same slot, scope, token, and
+class-name work for every instance.
+
+## Two Places Resolve Styles
+
+There are two related paths:
+
+| Path | Happens when | What it resolves |
+| --- | --- | --- |
+| `combineStyle(...)` | Inside a component before JSX | Component slot graph, scopes, slot overrides, token overrides, and carried combined styles. |
+| `css` prop | On a rendered host element | Final className/style output for the element. |
+
+They usually work together:
+
+```tsx
+export function Button(props: ButtonProps) {
+  const css = combineStyle(
+    buttonStyles,
+    props.danger && danger(buttonStyles.root),
+    props.theme?.(buttonStyles.root),
+  );
+
+  return (
+    <button css={[css.root, props.css]}>
+      <span css={css.label}>{props.children}</span>
+    </button>
+  );
+}
+```
+
+`combineStyle(...)` resolves the component-aware inputs.
+
+The `css` prop resolves the final element input.
+
+## What combineStyle Walks
+
+`combineStyle(styles, ...args)` starts from one style object and walks the
+arguments you pass after it.
+
+It accepts:
+
+- falsy values, which are skipped;
+- arrays, which are flattened;
+- scope targets, such as `danger(buttonStyles.root)`;
+- token overrides and themes;
+- a combined style created from the same `styles` object.
+
+The combined result mirrors the original style object:
+
+```ts
+const css = combineStyle(
+  buttonStyles,
+  props.compact && compact(buttonStyles.root),
+);
+
+css.root;
+css.icon;
+css.label;
+```
+
+Those fields are resolved lazily. Accessing `css.root` resolves the root slot.
+Accessing `css.label` resolves the label slot. If the component never renders
+`css.icon`, that field does not need to resolve.
+
+Nested style objects work the same way:
+
+```ts
+css.menu.item;
+```
+
+Each accessed field is cached on that combined result.
+
+## The combineStyle Cache
+
+The `combineStyle(...)` cache is keyed by the graph path:
+
+```txt
+styles object
+  -> inherited scopes
+  -> scope target
+  -> scope target
+  -> token values
+```
+
+That means equivalent inputs reuse the same combined result:
+
+```ts
+const first = combineStyle(buttonStyles, danger(buttonStyles.root));
+const second = combineStyle(buttonStyles, [danger(buttonStyles.root)]);
+
+first === second;
+```
+
+This is useful when many component instances on the screen use the same variant
+path:
+
+```tsx
+<Button danger />
+<Button danger />
+<Button danger />
+```
+
+All three renders can hit the same `buttonStyles -> danger(root)` path. The
+runtime can reuse the combined style facade and the resolved slot fields instead
+of rebuilding that path for every instance.
+
+The cache is based on object identity and order. These are cache-friendly:
+
+```ts
+const dangerButton = style.scope([
+  buttonStyles.root({ color: 'white' }),
+]);
+
+combineStyle(buttonStyles, dangerButton(buttonStyles.root));
+```
+
+These create new identities every render and are less cache-friendly:
+
+```tsx
+combineStyle(
+  buttonStyles,
+  style.scope([
+    buttonStyles.root({ color: 'white' }),
+  ])(buttonStyles.root),
+);
+```
+
+Keep reusable scopes, themes, and styles outside render when their values do not
+depend on render-time data.
+
+## Carrying Combined Styles
+
+`combineStyle(...)` can carry a previous combined result from the same style
+object:
+
+```ts
+const combine = combineStyle.for(buttonStyles);
+
+const parent = combine(parentTheme(buttonStyles.root));
+const child = combine(parent, compact(buttonStyles.root));
+```
+
+The child keeps the parent scopes, then adds its own scopes.
+
+Fluentic intentionally rejects carrying a combined result from a different style
+object. That avoids accidentally mixing two unrelated slot graphs:
+
+```ts
+combineStyle(buttonStyles, otherCardCss); // throws
+```
+
+## What The css Prop Walks
+
+The `css` prop walks the value you pass to the host element:
+
+```tsx
+<button css={[css.root, props.css]} />
+```
+
+It accepts:
+
+- falsy values, which are skipped;
+- arrays, which are flattened;
+- direct `style(...)` or `style.slot(...)` values;
+- resolved fields from `combineStyle(...)`;
+- themes.
+
+It does not accept raw scopes or slot overrides directly. Pass those to
+`combineStyle(...)` first:
+
+```tsx
+// Good
+const css = combineStyle(buttonStyles, danger(buttonStyles.root));
+return <button css={css.root} />;
+
+// Wrong
+return <button css={danger(buttonStyles.root)} />;
+```
+
+In development, unsupported `css` prop values warn so the component boundary is
+clear.
+
+## The css Prop Cache
+
+The `css` prop cache also walks a graph path, but its path is the flattened
+object sequence passed to the prop:
+
+```txt
+css.root
+  -> props.css
+  -> theme
+```
+
+When the same sequence of style object identities appears again, Fluentic can
+reuse the resolved className/style result.
+
+This is why stable style objects matter:
+
+```tsx
+// Cache-friendly
+<button css={[css.root, props.css]} />
+
+// Less cache-friendly if created every render
+<button css={[css.root, style({ marginTop: props.gap })]} />
+```
+
+For open-ended values, use CSS variables instead of generating a new style
+object for every value:
+
+```tsx
+const swatch = style({
+  backgroundColor: 'var(--swatch-color)',
+});
+
+<span css={swatch} style={{ '--swatch-color': color }} />;
+```
+
+The style object stays stable. The value changes through React's `style` prop.
+
+## Extracted Production
+
+In extracted production, the CSS rules are already in the CSS asset.
+
+The resolver still does useful work:
+
+- choosing which extracted class names apply for this render;
+- combining caller `className` and `style`;
+- applying token override values;
+- resolving scopes and slot overrides;
+- returning the final props for the host element.
+
+It does not reinsert the already-extracted static rules.
+
+In runtime-only mode, the same resolved items are also inserted into the runtime
+stylesheet when needed.
+
+## What It Optimizes For
+
+The cache is optimized for repeated stable graph paths:
+
+```txt
+same component styles object
+same variant scopes
+same theme/token override identities
+same css prop object sequence
+many instances on screen
+```
+
+That is the common app shape.
+
+Write styles so stable things have stable identities:
+
+- define base styles at module scope;
+- define reusable scopes at module scope;
+- define themes outside render;
+- use `combineStyle.for(styles)` when a component repeatedly combines the same
+  style object;
+- use CSS variables for arbitrary dynamic values.
+
+Then repeated component instances can share the cached path instead of making
+each instance redo the same style-resolution work.

@@ -1,9 +1,22 @@
 {
   "title": "Reference",
   "pages": [
-    "api",
-    "plugin-options",
+    "style",
+    "style-slot",
+    "style-scope",
+    "combine-style",
+    "bind-scope",
+    "combine-scope",
+    "tokens",
+    "values",
+    "create-theme",
+    "create-style-fn",
+    "selectors",
+    "transforms",
+    "priority",
+    "css-helpers",
+    "types",
     "imports",
-    "typescript"
+    "plugin-options"
   ]
 }

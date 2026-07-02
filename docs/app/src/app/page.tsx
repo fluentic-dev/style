@@ -4,72 +4,115 @@ import './home.css';
 const basePath = process.env.NEXT_PUBLIC_DOCS_BASE ?? '';
 
 const previewCode = `import {
-  createTokens,
-  style,
+  style, type StyleProp, type StyleTheme,
+  combineStyle, bindScope,
 } from '@fluentic/style';
 
-export const tokens = createTokens({
-  color: {
-    surface: '#ffffff',
-    text: '#111827',
-    accent: '#2563eb',
-    accentHover: '#1d4ed8',
-    accentText: '#ffffff',
-  },
-  radius: {
-    control: '10px',
-  },
-});
-
-export const button = {
-  root: style.slot({
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-    border: '1px solid transparent',
-    borderRadius: tokens.radius.control,
-    color: tokens.color.text,
-    cursor: 'pointer',
-    display: 'inline-flex',
+const card = {
+  container: style({
+    borderRadius: 16,
+    padding: 20,
+  }),
+  title: style({
+    fontSize: 20,
     fontWeight: 700,
-    gap: '8px',
-    minHeight: '40px',
-    padding: '0 14px',
-  })
-    .hover({
-      transform: 'translateY(-1px)',
-    })
-    .media('(max-width: 640px)', {
-      width: '100%',
-    }),
-  icon: style.slot({
-    height: 16,
-    width: 16,
+  }),
+  body: style({
+    lineHeight: 1.6,
   }),
 };
 
-export const primary = style.scope([
-  button.root({
-    backgroundColor: tokens.color.accent,
-    color: tokens.color.accentText,
+const productCard = style.scope([
+  card.container({
+    backgroundColor: '#111827',
+    color: 'white',
   }),
-  button.root.hover({
-    backgroundColor: tokens.color.accentHover,
+  card.title({
+    letterSpacing: 0.2,
   }),
-  button.icon({
-    opacity: 0.9,
-  }),
-]);`;
+]);
+
+function Card(props: {
+  title: string;
+  css?: StyleProp;
+  theme?: StyleTheme;
+  children: React.ReactNode;
+}) {
+  const css = combineStyle(
+    card,
+    bindScope(card.container, props.theme),
+  );
+
+  return (
+    <article css={[css.container, props.css]}>
+      <h2 css={css.title}>{props.title}</h2>
+      <div css={css.body}>{props.children}</div>
+    </article>
+  );
+}
+
+<Card theme={productCard} title="Revenue">
+  ...
+</Card>`;
 
 const previewCodeHtml = highlightPreviewCode(previewCode);
+const ownershipOutsideCode = `const productCard = style.scope([
+  card.container({
+    backgroundColor: '#111827',
+    color: 'white',
+  }),
+]);
+
+const dashboardCard = style({
+  marginBlock: 24,
+});
+
+<Card
+  theme={productCard}
+  css={dashboardCard}
+  title="Revenue"
+/>`;
+const ownershipInsideCode = `type CardProps = {
+  theme?: StyleTheme;
+  css?: StyleProp;
+};
+
+function Card(props: CardProps) {
+  const css = combineStyle(
+    card,
+    bindScope(card.container, props.theme),
+  );
+
+  return (
+    <article css={[css.container, props.css]}>
+      ...
+    </article>
+  );
+}`;
+
+const ownershipOutsideCodeHtml = highlightPreviewCode(ownershipOutsideCode);
+const ownershipInsideCodeHtml = highlightPreviewCode(ownershipInsideCode);
 
 function highlightPreviewCode(code: string) {
   const tokenPattern =
     /(\/\/.*|\/\*[\s\S]*?\*\/|'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|`(?:\\.|[^`\\])*`|\b(?:import|from|const|export|function|return|type|true|false)\b|\b\d+(?:\.\d+)?\b|\b[A-Za-z_$][\w$]*(?=\s*\()|\b[A-Za-z_$][\w$]*\b)/g;
 
-  return code.replace(tokenPattern, (token, _match, offset: number, source: string) => {
+  let html = '';
+  let lastIndex = 0;
+
+  code.replace(tokenPattern, (token, _match, offset: number, source: string) => {
+    html += escapeHtml(source.slice(lastIndex, offset));
+
     const className = getTokenClassName(token, offset, source);
-    return className ? `<span class="${className}">${escapeHtml(token)}</span>` : escapeHtml(token);
+    html += className ? `<span class="${className}">${escapeHtml(token)}</span>` : escapeHtml(token);
+    lastIndex = offset + token.length;
+
+    return token;
   });
+
+  html += escapeHtml(code.slice(lastIndex));
+
+  return html;
 }
 
 function getTokenClassName(token: string, offset: number, source: string) {
@@ -78,9 +121,30 @@ function getTokenClassName(token: string, offset: number, source: string) {
   if (/^\d/.test(token)) return 'tok-num';
   if (/^(import|from|const|export|function|return|type|true|false)$/.test(token)) return 'tok-key';
   if (/^[A-Za-z_$][\w$]*$/.test(token)) {
+    const jsxClassName = getJsxTokenClassName(token, offset, source);
+    if (jsxClassName) return jsxClassName;
+
     const next = source.slice(offset + token.length).trimStart()[0];
     return next === '(' ? 'tok-call' : 'tok-id';
   }
+  return null;
+}
+
+function getJsxTokenClassName(token: string, offset: number, source: string) {
+  const lineStart = source.lastIndexOf('\n', offset - 1) + 1;
+  const beforeOnLine = source.slice(lineStart, offset);
+  const lastOpen = beforeOnLine.lastIndexOf('<');
+  const lastClose = beforeOnLine.lastIndexOf('>');
+
+  if (lastOpen <= lastClose) return null;
+
+  const afterOpen = beforeOnLine.slice(lastOpen + 1).trimStart();
+  const tagPrefix = afterOpen.startsWith('/') ? afterOpen.slice(1).trimStart() : afterOpen;
+  const isTagName = tagPrefix === '';
+  const next = source.slice(offset + token.length).trimStart()[0];
+
+  if (isTagName) return 'tok-jsx-tag';
+  if (next === '=') return 'tok-jsx-attr';
   return null;
 }
 
@@ -91,49 +155,99 @@ function escapeHtml(value: string) {
     .replace(/>/g, '&gt;');
 }
 
-const features = [
-  [
-    'ts',
-    'Write styles in TypeScript',
-    'Use objects, constants, functions, and imports. Add tokens only when a value needs to be shared or overridden.',
-  ],
-  [
-    'slot',
-    'Name the parts callers can style',
-    'Define slots like container, icon, or label. Callers override those slots instead of reaching for generated class names.',
-  ],
-  [
-    'theme',
-    'Apply variants with scopes',
-    'Set a theme or variant once around a section, and every nested component can pick up the right tokens and overrides.',
-  ],
-  [
-    'css',
-    'Atomic CSS, dynamic values',
-    'Extract static styles to ordered atomic rules, and keep render-time values working without changing APIs.',
-  ],
-];
-
-const reasons = [
+const situations = [
   [
     '01',
-    'Start with plain TypeScript',
-    'Use constants, token objects, or scoped themes in the same file. Add structure only where reuse needs it.',
+    'Another product wants this component.',
+    'A Button built in one app is reused by another product with different branding.',
   ],
   [
     '02',
-    'Keep overrides explicit',
-    'Slots name the parts consumers can style. Selectors, media rules, and variants stay attached to those slots.',
+    "A theme shouldn't know the DOM.",
+    "A product theme should not need to know the component's markup to change how it looks.",
   ],
   [
     '03',
-    'Handle render-time values',
-    'Pass values that only exist during render without moving the whole component to handwritten CSS.',
+    'The safe change is unclear',
+    'A small tweak feels risky, so the team adds one more override instead of changing the original.',
   ],
   [
     '04',
-    'Keep emitted CSS boring',
-    'Static rules extract to ordered atomic CSS. Runtime rules use the same ordering model, so composition stays predictable.',
+    'The browser shows the result',
+    'DevTools shows the final CSS rule, but the team still needs to know which source decision created it.',
+  ],
+];
+
+const modelSteps = [
+  [
+    'Style',
+    'Local styles',
+    'Keep style data close to the element or component that owns it.',
+    'style({ padding: 20 })',
+  ],
+  [
+    'Slot',
+    'Styleable parts',
+    'Reusable components name the parts callers may style.',
+    'title: style({ ... })',
+  ],
+  [
+    'Scope',
+    'Outside styling',
+    'External code describes changes without depending on private markup.',
+    'style.scope([title({ ... })])',
+  ],
+  [
+    'Resolve',
+    'Component decides',
+    'The component brings those styles together where it owns the DOM.',
+    'bindScope(container, theme)',
+  ],
+];
+
+const readingCards = [
+  [
+    'Why Fluentic',
+    'Start with the idea: React solved UI composition. What would style composition look like?',
+    '/docs/why-fluentic/changing-existing-styles/',
+  ],
+  [
+    'Learn',
+    'Build from local styles to reusable components, themes, overrides, and debugging.',
+    '/docs/learn/installation/',
+  ],
+  [
+    'Beyond the Basics',
+    'See what the same model unlocks for debugging, custom selectors, extraction, and runtime behavior.',
+    '/docs/beyond-the-basics/tracing-styles-in-real-apps/',
+  ],
+  [
+    'Design',
+    'Read why the model has this shape, from authoring to runtime and extraction.',
+    '/docs/design/keeping-styles-as-data/',
+  ],
+];
+
+const productionCards = [
+  [
+    'Typed style APIs',
+    'Write styles, slots, scopes, and tokens in TypeScript with names your editor can follow.',
+  ],
+  [
+    'Extracted CSS',
+    'Static styles compile to ordered atomic CSS, so the browser gets plain stylesheets.',
+  ],
+  [
+    'Runtime values',
+    'Keep values that depend on props, state, or data without switching to a second styling pattern.',
+  ],
+  [
+    'Debuggable output',
+    'Follow a generated class back to the slot, scope, or source value that created it.',
+  ],
+  [
+    'Integrations',
+    'Use it with Next.js, Vite, Webpack, Rspack, Babel, or your own compiler pipeline.',
   ],
 ];
 
@@ -169,44 +283,74 @@ export default function HomePage() {
 
       <section className='home-hero'>
         <div className='home-copy'>
-          <p className='home-kicker'>Typesafe styles, scoped theme, atomic output.</p>
-          <h1>Styles compose like components do.</h1>
+          <p className='home-kicker'>Component style composition for React</p>
+          <h1>What if styling composed like React components do?</h1>
           <p className='home-lede'>
-            Give developers named override points, selectors that stay close to component code, themes that compose
-            across subtrees, and atomic CSS that keeps delivery predictable as the system grows.
+            React gave us components, props, context, and composition. Styling has evolved in many directions, each
+            solving different problems. Fluentic explores one approach where styling follows the same component model.
           </p>
           <p className='home-tagline'>
-            Write normal TypeScript. Ship styles that scale.
+            Most developers no longer struggle writing styles. The difficult part is confidently changing them months
+            later.
           </p>
-          <div className='home-install' aria-label='Install command'>
-            <span>$</span>
-            <code>npm install @fluentic/style</code>
-          </div>
           <div className='home-actions'>
-            <Link className='home-primary' href='/docs/getting-started/quick-start/'>
-              Read quick start
+            <Link className='home-primary' href='/docs/why-fluentic/changing-existing-styles/'>
+              See the idea
             </Link>
-            <Link className='home-secondary' href='/playground/'>
-              Try playground
+            <Link className='home-secondary' href='/docs/learn/styling-reusable-components/'>
+              Build your first component
             </Link>
           </div>
         </div>
 
-        <div className='home-stage' aria-label='Fluentic Style code preview'>
+        <div className='home-stage' aria-label='Component style composition code preview'>
           <div className='home-stage-bar'>
             <span className='home-window-dots' aria-hidden='true'>
               <i />
               <i />
               <i />
             </span>
-            <span>button.styles.ts</span>
+            <span>card-style.tsx</span>
           </div>
           <pre className='home-code'><code dangerouslySetInnerHTML={{ __html: previewCodeHtml }} /></pre>
         </div>
       </section>
 
-      <section className='home-features' aria-label='Highlights'>
-        {features.map(([tag, title, body]) => (
+      <section className='home-composition' aria-labelledby='composition-title'>
+        <div className='home-section-head'>
+          <h2 id='composition-title'>Change is easier when ownership is clear.</h2>
+          <p>
+            Component code usually gives change a place to live: markup belongs to a component, props describe what
+            callers can change, and context moves values through a tree. Styling needs the same clarity once themes,
+            overrides, and shared components enter the picture.
+          </p>
+        </div>
+        <div className='home-compare' aria-label='Composition comparison'>
+          <article>
+            <span>React</span>
+            <ul>
+              <li>Components</li>
+              <li>Props</li>
+              <li>Context</li>
+              <li>Hooks</li>
+            </ul>
+            <p>Components keep implementation details inside.</p>
+          </article>
+          <article>
+            <span>Styling</span>
+            <ul>
+              <li>Reuse</li>
+              <li>Theming</li>
+              <li>Overrides</li>
+              <li>Debugging</li>
+            </ul>
+            <p>Styles often need to change across component boundaries.</p>
+          </article>
+        </div>
+      </section>
+
+      <section className='home-features' aria-label='Familiar development situations'>
+        {situations.map(([tag, title, body]) => (
           <article key={title}>
             <span>{tag}</span>
             <h2>{title}</h2>
@@ -215,23 +359,235 @@ export default function HomePage() {
         ))}
       </section>
 
-      <section className='home-reasons'>
+      <section className='home-ownership'>
         <div className='home-section-head'>
-          <h2>Keep component styles readable</h2>
+          <h2>Components decide where styling attaches.</h2>
           <p>
-            Put the style definitions next to the component, expose the parts callers may override, and let the compiler
-            extract the CSS it can prove is static.
+            A theme should not need to know how a component is built. It only describes what should change. The
+            component decides where those changes attach.
           </p>
         </div>
+        <div className='home-ownership-grid'>
+          <article>
+            <span>Caller</span>
+            <p>The caller passes styling through a public prop.</p>
+            <pre><code dangerouslySetInnerHTML={{ __html: ownershipOutsideCodeHtml }} /></pre>
+          </article>
+          <article>
+            <span>Component</span>
+            <p>The component resolves theme data and attaches the result where it owns the DOM.</p>
+            <pre><code dangerouslySetInnerHTML={{ __html: ownershipInsideCodeHtml }} /></pre>
+          </article>
+        </div>
+      </section>
+
+      <section className='home-reasons'>
+        <div className='home-section-head'>
+          <h2>One styling path from component code to CSS.</h2>
+          <p>
+            Local styles, public slots, outside themes, and final CSS all stay connected through the same component
+            styling flow.
+          </p>
+        </div>
+        <div className='home-style-flow' aria-label='Styling flow'>
+          <span>Style data</span>
+          <i aria-hidden='true' />
+          <span>Public slots</span>
+          <i aria-hidden='true' />
+          <span>Scoped changes</span>
+          <i aria-hidden='true' />
+          <span>Component resolves</span>
+          <i aria-hidden='true' />
+          <code>.padding-a8f3c2d {'{'} padding: 20px {'}'}</code>
+        </div>
         <div className='home-reason-grid'>
-          {reasons.map(([tag, title, body]) => (
+          {modelSteps.map(([tag, title, body, code]) => (
             <article key={title}>
-              <span>{tag}</span>
               <div>
+                <span>{tag}</span>
                 <h3>{title}</h3>
-                <p>{body}</p>
+              </div>
+              <p>{body}</p>
+              <code dangerouslySetInnerHTML={{ __html: highlightPreviewCode(code) }} />
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className='home-production' aria-labelledby='production-title'>
+        <div className='home-section-head'>
+          <h2 id='production-title'>From TypeScript to production CSS.</h2>
+          <p>
+            Write component styles in TypeScript, extract the static parts to CSS, and keep runtime values working when
+            they depend on props or state.
+          </p>
+        </div>
+        <div className='home-production-grid'>
+          {productionCards.map(([title, body]) => (
+            <article key={title}>
+              <h3>{title}</h3>
+              <p>{body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className='home-trace'>
+        <div className='home-section-head'>
+          <div>
+            <h2>Debug generated CSS from the source.</h2>
+            <p>
+              Inspect a generated class and see where it came from: the TypeScript file, the style call, and the line
+              that produced the rule.
+            </p>
+          </div>
+          <Link className='home-trace-link' href='/playground/'>
+            Open playground
+          </Link>
+        </div>
+        <div className='home-trace-demo' aria-label='Mini trace playground'>
+          <div className='home-trace-map'>
+            <article>
+              <div className='home-trace-demo-head'>
+                <span>Property trace</span>
+                <code>card.styles.ts:24:5</code>
+              </div>
+              <div className='home-trace-path-line'>
+                <span>.background-color-f7gmmz0</span>
+                <i aria-hidden='true' />
+                <span>backgroundColor</span>
+              </div>
+              <div className='home-trace-code'>
+                <span>
+                  container: <span className='tok-call'>style</span>({'{'}
+                </span>
+                <span className='is-target'>
+                  <span className='tok-id'>backgroundColor</span>: <span className='tok-str'>'#ffffff'</span>,
+                </span>
+                <span>{'}'});</span>
               </div>
             </article>
+            <article>
+              <div className='home-trace-demo-head'>
+                <span>Element marker</span>
+                <code>Card.tsx:44:5</code>
+              </div>
+              <div className='home-trace-path-line'>
+                <span>@container-a8f3c2d</span>
+                <i aria-hidden='true' />
+                <span>{'<article css>'}</span>
+              </div>
+              <div className='home-trace-code'>
+                <span>
+                  <span className='tok-key'>return</span> (
+                </span>
+                <span className='is-target'>
+                  &lt;<span className='tok-jsx-tag'>article</span> <span className='tok-jsx-attr'>css</span>={'{'}
+                  [css.container, props.css]
+                  {'}'} /&gt;
+                </span>
+                <span>);</span>
+              </div>
+            </article>
+            <article>
+              <div className='home-trace-demo-head'>
+                <span>Spread value trace</span>
+                <code>card-base.ts:7:3</code>
+              </div>
+              <div className='home-trace-path-line'>
+                <span>.padding-a8f3c2d</span>
+                <i aria-hidden='true' />
+                <span>base.padding</span>
+              </div>
+              <div className='home-trace-code'>
+                <span className='home-trace-code-label'>card-base.ts</span>
+                <span>
+                  <span className='tok-key'>const</span> base = {'{'}
+                </span>
+                <span className='is-target'>
+                  <span className='tok-id'>padding</span>: <span className='tok-num'>20</span>,
+                </span>
+                <span>{'}'};</span>
+                <span className='home-trace-code-label'>card.styles.ts</span>
+                <span>
+                  container: <span className='tok-call'>style</span>({'{'}
+                </span>
+                <span>...base,</span>
+                <span>{'}'});</span>
+              </div>
+            </article>
+            <article>
+              <div className='home-trace-demo-head'>
+                <span>Spread usage trace</span>
+                <code>card.styles.ts:24:18</code>
+              </div>
+              <div className='home-trace-path-line'>
+                <span>.padding-a8f3c2d</span>
+                <i aria-hidden='true' />
+                <span>...base</span>
+              </div>
+              <div className='home-trace-code'>
+                <span className='home-trace-code-label'>card-base.ts</span>
+                <span>
+                  <span className='tok-key'>const</span> base = {'{'}
+                </span>
+                <span>
+                  <span className='tok-id'>padding</span>: <span className='tok-num'>20</span>,
+                </span>
+                <span>{'}'};</span>
+                <span className='home-trace-code-label'>card.styles.ts</span>
+                <span>
+                  container: <span className='tok-call'>style</span>({'{'}
+                </span>
+                <span className='is-target'>...base,</span>
+                <span>{'}'});</span>
+              </div>
+            </article>
+          </div>
+        </div>
+        <div className='home-trace-flow' aria-label='Debug trace'>
+          <span>Generated rule</span>
+          <i aria-hidden='true' />
+          <span>Style call</span>
+          <i aria-hidden='true' />
+          <span>Source file</span>
+          <i aria-hidden='true' />
+          <span>Line number</span>
+        </div>
+      </section>
+
+      <section className='home-growing'>
+        <div className='home-section-head'>
+          <div>
+            <h2>When styling systems grow.</h2>
+            <p>
+              Growing systems rarely struggle writing another style. They struggle understanding the styles they already
+              have. Styleable parts, composition, traceability, and predictable theming make later changes easier to
+              review and maintain.
+            </p>
+          </div>
+          <ul aria-label='Style system growth needs'>
+            <li>Styleable parts</li>
+            <li>Traceability</li>
+            <li>Reviewable output</li>
+          </ul>
+        </div>
+      </section>
+
+      <section className='home-reading' aria-labelledby='reading-title'>
+        <div className='home-section-head'>
+          <h2 id='reading-title'>Continue reading.</h2>
+          <p>
+            The homepage only introduces the question. The docs walk through the model, how to use it, and why it has
+            this shape.
+          </p>
+        </div>
+        <div className='home-reading-grid'>
+          {readingCards.map(([title, body, href]) => (
+            <Link href={href} key={title}>
+              <h3>{title}</h3>
+              <p>{body}</p>
+            </Link>
           ))}
         </div>
       </section>
@@ -242,9 +598,8 @@ export default function HomePage() {
             <img src={`${basePath}/logo.png`} alt='' width={32} height={32} />
             <span>Fluentic Style</span>
           </Link>
-          <p>Typesafe styles, scoped theme, atomic output.</p>
           <nav aria-label='Footer'>
-            <Link href='/docs/getting-started/quick-start/'>Quick start</Link>
+            <Link href='/docs/reference/style/'>Reference</Link>
             <Link href='/playground/'>Playground</Link>
           </nav>
         </div>

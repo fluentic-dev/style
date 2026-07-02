@@ -9,6 +9,10 @@ import { createExtractPlugin } from '../../../../packages/style/compiler/transfo
 import { resetStyleThemeIdCounter } from '../../../../packages/style/style/theme';
 import { resetStyleTokenIdCounter } from '../../../../packages/style/style/token';
 
+export type PlaygroundCompilerOptions = CompilerOptions & {
+  layer?: boolean;
+};
+
 export type PlaygroundFile = {
   name: string;
   code: string;
@@ -36,7 +40,7 @@ type ModuleInfo = {
 
 const STYLE_SOURCES = new Set(['@fluentic/style', '@fluentic/style/server']);
 
-export function compilePlayground(files: PlaygroundFile[], options: CompilerOptions): CompileResult {
+export function compilePlayground(files: PlaygroundFile[], options: PlaygroundCompilerOptions): CompileResult {
   resetStyleTokenIdCounter();
   resetStyleThemeIdCounter();
 
@@ -115,7 +119,7 @@ export function compilePlayground(files: PlaygroundFile[], options: CompilerOpti
       imports,
       styleNames,
       filePath: normalized,
-      sourcemapTrace: options.sourcemapTrace ?? 'style',
+      sourcemapTrace: options.dev?.sourcemapMode ?? 'style',
       resolveImport,
     };
 
@@ -132,6 +136,7 @@ export function compilePlayground(files: PlaygroundFile[], options: CompilerOpti
     options,
     collector,
     projectDir: '/',
+    runtimeMode: null,
     tracer: {
       resolveImport(_babel: unknown, source: string, fromFile: string) {
         return resolveImport(source, fromFile);
@@ -166,7 +171,7 @@ export function compilePlayground(files: PlaygroundFile[], options: CompilerOpti
 }
 
 function getCompileTraces(items: CssExtractRule[]): CompileTrace[] {
-  const traces: CompileTrace[] = [];
+  const traceByCss = new Map<string, CompileTrace>();
   const seen = new Set<string>();
 
   for (const item of items) {
@@ -184,17 +189,23 @@ function getCompileTraces(items: CssExtractRule[]): CompileTrace[] {
     if (seen.has(key)) continue;
     seen.add(key);
 
-    traces.push({
+    const trace = {
       key: item.className,
       css: item.css,
       filePath: item.trace.filePath,
       line: item.trace.line,
       column: item.trace.column,
       trace: item.trace.trace,
-    });
+    };
+
+    traceByCss.set(getTraceCssIdentity(item.css), trace);
   }
 
-  return traces;
+  return [...traceByCss.values()];
+}
+
+function getTraceCssIdentity(css: string) {
+  return css.replace(/^\.[^{:]+/, '.');
 }
 
 function normalizeFileName(fileName: string) {

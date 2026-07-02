@@ -1,0 +1,48 @@
+---
+title: Styling Components From Outside
+description: Use scopes to package overrides for public component slots.
+---
+
+A product team wants a branded `Card`.
+
+They need a dark root, white text, and a stronger title.
+
+They do not need to know whether `title` is an `h2`, a `span`, or a nested
+component.
+
+A theme usually lives outside the component. It should say which public parts
+change without depending on the component's markup.
+
+Because `Card` published slots, outside code can target those names inside a
+scope:
+
+```ts
+export const marketingCard = style.scope([
+  CardStyle.root({
+    backgroundColor: '#111827',
+    color: 'white',
+  }),
+  CardStyle.title({
+    letterSpacing: 0.2,
+  }),
+]);
+```
+
+That is the job of `style.scope()`.
+
+A scope groups overrides for slots.
+
+It can contain one slot override or many.
+
+It can represent a brand theme, a variant, a state, or a product-specific
+customization.
+
+It does not know DOM.
+
+It only knows the public slots.
+
+Even for one slot, keep the override inside `style.scope([...])`. The scope is
+the marker that this value is a component theme.
+
+That leaves one important question: who decides which rendered element receives
+those overrides?

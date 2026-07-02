@@ -1,0 +1,31 @@
+---
+title: Tradeoffs
+description: Understand the tradeoffs Fluentic makes for React styling.
+---
+
+Every styling library is a set of choices.
+
+Those choices feel helpful in some projects and limiting in others.
+
+There is not one correct way to style React applications.
+
+If you want CSS syntax as the main thing developers write, Fluentic may feel
+indirect.
+
+If you want external code to reach every DOM node, slots may feel strict.
+
+If you want themes to own implementation, isolated scopes may feel constrained.
+
+Those tradeoffs come with the API.
+
+This direction leans toward:
+
+- public styling contracts;
+- component ownership;
+- traceability;
+- predictable composition;
+- AI-generated code that humans can still understand.
+
+Those preferences are useful in some projects and unnecessary in others. The
+question is whether they match the kind of styling work your team expects to
+revisit.

@@ -4,23 +4,37 @@ import type { editor as MonacoEditor, IDisposable } from 'monaco-editor';
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { TRACE_STYLE, TRACE_VALUE } from '../../../../packages/style/builder/data/debug';
-import type { CompilerOptions } from '../../../../packages/style/compiler/compiler/types';
-import { compilePlayground, type CompileTrace, type PlaygroundFile } from './playground-compiler';
+import type { SourcemapLocationMode, StylePriorityMode } from '../../../../packages/style/config/types';
+import {
+  compilePlayground,
+  type CompileTrace,
+  type PlaygroundCompilerOptions,
+  type PlaygroundFile,
+} from './playground-compiler';
 import { compilerConfig as defaultCompilerConfig, examples } from './playground-examples';
+import type { RuntimeMarker } from './playground-runtime';
 import './playground.css';
 
-type RuntimeWorkerResult = { kind: 'result'; id: number; html?: string; css?: string; error?: string; };
-type OutputPanel = 'runtimeCss' | 'buildJs' | 'buildCss' | 'trace' | 'errors';
-type CodeOutputPanel = Exclude<OutputPanel, 'trace' | 'errors'>;
+type RuntimeWorkerResult = {
+  kind: 'result';
+  id: number;
+  html?: string;
+  css?: string;
+  markers?: RuntimeMarker[];
+  error?: string;
+};
+type OutputPanel = 'runtimeCss' | 'buildJs' | 'buildCss' | 'trace' | 'marker' | 'errors';
+type CodeOutputPanel = Exclude<OutputPanel, 'trace' | 'marker' | 'errors'>;
 type PreviewTab = 'preview' | 'config';
-type SourcemapTraceState = NonNullable<CompilerOptions['sourcemapTrace']>;
-type PriorityModeState = NonNullable<CompilerOptions['priorityMode']>;
+type SourcemapTraceState = SourcemapLocationMode;
+type PriorityModeState = StylePriorityMode;
 type MonacoModule = typeof import('monaco-editor');
 type CssOptionsState = {
   layers: string[];
   layerNamespace: string;
   classNamePrefix: string;
   scopeTargetPrefix: string;
+  elementMarkerPrefix: string;
   themeNamePrefix: string;
   tokenVarPrefix: string;
   localClassName: boolean;
@@ -56,6 +70,7 @@ const outputTabs: Array<{ id: OutputPanel; label: string; }> = [
   { id: 'buildCss', label: 'Prod CSS' },
   { id: 'runtimeCss', label: 'Debug CSS' },
   { id: 'trace', label: 'Trace' },
+  { id: 'marker', label: 'Element' },
   { id: 'errors', label: 'Errors' },
 ];
 
@@ -114,6 +129,7 @@ export default function PlaygroundApp() {
   const [buildJs, setBuildJs] = useState('// Waiting for build output.');
   const [buildCss, setBuildCss] = useState('/* Waiting for build output. */');
   const [traces, setTraces] = useState<CompileTrace[]>([]);
+  const [markers, setMarkers] = useState<RuntimeMarker[]>([]);
   const [previewDoc, setPreviewDoc] = useState(() => createPreviewDoc('', ''));
   const [diagnostics, setDiagnostics] = useState('');
   const [status, setStatus] = useState('Ready');
@@ -179,7 +195,12 @@ export default function PlaygroundApp() {
   }
 
   const runRuntime = useCallback(
-    (config: CssOptionsState, runtimeLayer: boolean, runtimePriorityMode: PriorityModeState) => {
+    (
+      config: CssOptionsState,
+      runtimeLayer: boolean,
+      runtimePriorityMode: PriorityModeState,
+      runtimeSourcemapTrace: SourcemapTraceState,
+    ) => {
       const worker = runtimeWorker.current;
       if (!worker) return;
 
@@ -192,7 +213,9 @@ export default function PlaygroundApp() {
         config: {
           ...config,
           layer: runtimeLayer,
+          elementClassNameFormat: getElementClassNameFormat(config.elementMarkerPrefix),
           priorityMode: runtimePriorityMode,
+          sourcemapMode: runtimeSourcemapTrace,
         },
         // oxlint-disable-next-line unicorn/require-post-message-target-origin
       });
@@ -201,7 +224,7 @@ export default function PlaygroundApp() {
   );
 
   const runBuild = useCallback(
-    (prodConfig: CompilerOptions, debugConfig: CompilerOptions) => {
+    (prodConfig: PlaygroundCompilerOptions, debugConfig: PlaygroundCompilerOptions) => {
       try {
         const prodResult = compilePlayground(files, prodConfig);
         const debugResult = compilePlayground(files, debugConfig);
@@ -221,14 +244,17 @@ export default function PlaygroundApp() {
   );
 
   const runPlayground = useCallback(() => {
-    runRuntime(cssOptions, layer, priorityMode);
+    runRuntime(cssOptions, layer, priorityMode, sourcemapTrace);
     runBuild(
       { css: getProdCssOptions(cssOptions), layer },
       {
         css: getDebugCssOptions(cssOptions),
         layer,
-        priorityMode,
-        sourcemapTrace,
+        dev: {
+          elementClassName: true,
+          priorityMode,
+          sourcemapMode: sourcemapTrace,
+        },
       },
     );
   }, [cssOptions, layer, priorityMode, sourcemapTrace, runRuntime, runBuild]);
@@ -258,6 +284,7 @@ export default function PlaygroundApp() {
         data.css || '/* No runtime rules collected. */',
         priorityModeRef.current,
       ));
+      setMarkers(data.markers ?? []);
       setPreviewDoc(createPreviewDoc(data.html ?? '', data.css ?? ''));
     });
     return () => {
@@ -276,6 +303,13 @@ export default function PlaygroundApp() {
     const fileName = resolvePlaygroundFileName(trace.filePath, files);
     setActiveTraceKey(getTraceKey(trace));
     setSourceFocus({ file: fileName, line: trace.line, column: trace.column });
+    setActiveFile(fileName);
+  }
+
+  function jumpToMarker(marker: RuntimeMarker) {
+    const fileName = resolvePlaygroundFileName(marker.filePath, files);
+    setActiveTraceKey(getMarkerKey(marker));
+    setSourceFocus({ file: fileName, line: marker.line, column: marker.column });
     setActiveFile(fileName);
   }
 
@@ -402,6 +436,7 @@ export default function PlaygroundApp() {
 
   useEffect(() => {
     let disposed = false;
+    let titleObserver: MutationObserver | null = null;
 
     async function mountEditor() {
       (globalThis as MonacoWorkerGlobal).MonacoEnvironment = {
@@ -439,6 +474,7 @@ export default function PlaygroundApp() {
           multipleImplementations: 'goto',
           multipleReferences: 'goto',
         },
+        hover: { enabled: false },
         lineHeight: 24,
         minimap: { enabled: false },
         occurrencesHighlight: 'off',
@@ -455,6 +491,7 @@ export default function PlaygroundApp() {
       });
       editorRef.current = editor;
       sourceDecorRef.current = editor.createDecorationsCollection();
+      titleObserver = stripNativeEditorTitles(monacoHostRef.current, outputHostRef.current);
 
       editor.onDidChangeModelContent(() => {
         if (modelUpdateRef.current) return;
@@ -531,6 +568,8 @@ export default function PlaygroundApp() {
       editorRef.current = null;
       outputEditorRef.current?.dispose();
       outputEditorRef.current = null;
+      titleObserver?.disconnect();
+      titleObserver = null;
       monacoConfigured = false;
     };
   }, [configureMonaco]);
@@ -618,6 +657,7 @@ export default function PlaygroundApp() {
   }, []);
 
   const isCodeOutput = CODE_OUTPUT_IDS.has(selectedOutput);
+  const activeJumpLabel = activeTraceKey.startsWith('marker:') ? 'Marker' : 'Trace';
 
   return (
     <div className='pg-app'>
@@ -693,7 +733,7 @@ export default function PlaygroundApp() {
             {activeTraceKey && sourceFocus
               ? (
                 <span className='pg-trace-chip'>
-                  <span className='pg-trace-chip-label'>Trace</span>
+                  <span className='pg-trace-chip-label'>{activeJumpLabel}</span>
                   <code className='pg-trace-chip-loc'>
                     {sourceFocus.file}:{sourceFocus.line}:{sourceFocus.column}
                   </code>
@@ -779,6 +819,40 @@ export default function PlaygroundApp() {
                         </span>
                         <code className='pg-trace-css'>
                           <TraceCss css={formatTraceCss(trace.css)} />
+                        </code>
+                      </button>
+                    );
+                  })}
+              </div>
+
+              <div
+                className={`pg-trace-overlay pg-marker-overlay${selectedOutput === 'marker' ? ' is-active' : ''}${
+                  markers.length === 0 ? ' is-empty' : ''
+                }`}
+              >
+                {markers.length === 0
+                  ? <p className='pg-trace-empty'>No element markers were emitted.</p>
+                  : markers.map((marker) => {
+                    const fileName = resolvePlaygroundFileName(marker.filePath, files);
+                    return (
+                      <button
+                        key={getMarkerKey(marker)}
+                        type='button'
+                        aria-selected={activeTraceKey === getMarkerKey(marker)}
+                        onClick={() => jumpToMarker(marker)}
+                      >
+                        <span className='pg-trace-meta'>
+                          <span className='pg-trace-file'>{fileName}</span>
+                          <span className='pg-trace-badges'>
+                            <span className='pg-trace-kind'>element</span>
+                            <span className='pg-trace-loc'>{marker.line}:{marker.column}</span>
+                          </span>
+                        </span>
+                        <code className='pg-trace-css'>
+                          <TraceCss css={formatTraceCss(marker.css)} />
+                        </code>
+                        <code className='pg-trace-html'>
+                          {marker.html ?? getSimulatedMarkerHtml(marker.className)}
                         </code>
                       </button>
                     );
@@ -960,6 +1034,17 @@ export default function PlaygroundApp() {
                         </label>
                         <label className='pg-config-field'>
                           <span>
+                            <strong>Marker prefix</strong>
+                            <small>Prefix for source marker classes on JSX elements.</small>
+                          </span>
+                          <input
+                            type='text'
+                            value={cssOptions.elementMarkerPrefix}
+                            onChange={(event) => updateCssOption('elementMarkerPrefix', event.currentTarget.value)}
+                          />
+                        </label>
+                        <label className='pg-config-field'>
+                          <span>
                             <strong>Theme prefix</strong>
                             <small>Prefix for generated theme class names.</small>
                           </span>
@@ -1048,10 +1133,11 @@ function getProdCssOptions(options: CssOptionsState): Partial<CssOptionsState> {
   };
 }
 
-function getDebugCssOptions(options: CssOptionsState): Partial<CssOptionsState> {
+function getDebugCssOptions(options: CssOptionsState): Partial<CssOptionsState> & { elementClassNameFormat: string; } {
   return {
     ...options,
     debugClassName: true,
+    elementClassNameFormat: getElementClassNameFormat(options.elementMarkerPrefix),
     localClassName: true,
   };
 }
@@ -1073,6 +1159,18 @@ function resolvePlaygroundFileName(filePath: string, files: PlaygroundFile[]) {
 
 function getTraceKey(trace: CompileTrace) {
   return `${trace.key}-${trace.filePath}-${trace.line}-${trace.column}-${trace.trace ?? 'direct'}`;
+}
+
+function getMarkerKey(marker: RuntimeMarker) {
+  return `marker:${marker.className}-${marker.filePath}-${marker.line}-${marker.column}`;
+}
+
+function getSimulatedMarkerHtml(className: string) {
+  return `<div class="${className}">...</div>`;
+}
+
+function getElementClassNameFormat(prefix: string) {
+  return `${prefix || '@'}(name)`;
 }
 
 function getTraceKindLabel(trace: number) {
@@ -1337,7 +1435,7 @@ function createPreviewDoc(html: string, css: string) {
   <meta charset="utf-8" />
   <style>
     html, body { margin: 0; min-height: 100%; }
-    body { background: #eef4fb; color: #111827; font-family: Inter, ui-sans-serif, system-ui, sans-serif; }
+    body { background: #eef4fb; color: #111827; font-family: "Source Sans 3", ui-sans-serif, system-ui, sans-serif; }
     .demo-shell { min-height: 100vh; display: grid; place-items: center; padding: 44px; box-sizing: border-box; }
     ${css}
   </style>
@@ -1655,6 +1753,44 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+function stripNativeEditorTitles(...roots: Array<HTMLElement | null>) {
+  const containers = roots.filter((root): root is HTMLElement => Boolean(root));
+
+  function strip(root: HTMLElement) {
+    Array.from(root.querySelectorAll<HTMLElement>('[title]')).forEach((element) => {
+      element.removeAttribute('title');
+    });
+  }
+
+  containers.forEach(strip);
+
+  const observer = new MutationObserver((records) => {
+    for (const record of records) {
+      if (record.type === 'attributes' && record.target instanceof HTMLElement) {
+        if (record.target.hasAttribute('title')) {
+          record.target.removeAttribute('title');
+        }
+        continue;
+      }
+
+      record.addedNodes.forEach((node) => {
+        if (node instanceof HTMLElement) strip(node);
+      });
+    }
+  });
+
+  containers.forEach((root) => {
+    observer.observe(root, {
+      attributes: true,
+      attributeFilter: ['title'],
+      childList: true,
+      subtree: true,
+    });
+  });
+
+  return observer;
+}
+
 function fluenticDts() {
   return `declare module '@fluentic/style' {
   export type CssValue = string | number;
@@ -1674,6 +1810,7 @@ function fluenticDts() {
 
   export type Slot = {
     (overrides?: StyleObject): Slot;
+    merge(style: Style | readonly Style[]): Slot;
     hover(overrides: StyleObject): Slot;
     active(overrides: StyleObject): Slot;
     focus(overrides: StyleObject): Slot;
@@ -1684,6 +1821,7 @@ function fluenticDts() {
 
   export type Scope = {
     (target?: Slot | StyleProp): ScopeTarget;
+    merge(scope: Scope | readonly Scope[]): Scope;
     hover(styles: readonly ScopeItem[]): Scope;
     active(styles: readonly ScopeItem[]): Scope;
     media(query: string, styles: readonly ScopeItem[]): Scope;
@@ -1695,10 +1833,15 @@ function fluenticDts() {
 
   export type StyleToken<T = unknown> = { value: T; (value: T): unknown };
 
-  export const style: {
+  export interface StyleFn {
+    (styles: StyleObject): Style;
+    raw(styles: StyleObject): StyleObject;
+    plain(styles: StyleObject): StyleObject;
     slot(styles: StyleObject): Slot;
     scope(styles?: unknown[]): Scope;
-  };
+  }
+
+  export const style: StyleFn;
 
   /** Create a reactive design token. */
   export function createToken<T>(value: T): StyleToken<T>;

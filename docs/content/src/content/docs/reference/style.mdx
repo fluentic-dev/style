@@ -1,0 +1,17 @@
+---
+title: style
+description: Default style builder for one rendered element.
+---
+
+```ts
+import { style } from '@fluentic/style';
+
+const button = style({
+  padding: '8px 12px',
+}).hover({
+  opacity: 0.86,
+});
+```
+
+Use `style(...)` for standalone styles that do not need slot-aware component
+customization.

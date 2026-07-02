@@ -1,0 +1,68 @@
+---
+title: Attaching Outside Styles
+description: Components attach incoming scopes to the slots they own.
+---
+
+The caller can pass a theme:
+
+```tsx
+<Card theme={marketingCard} />
+```
+
+That theme was written outside `Card`.
+
+It can say what should change, but it should not reach into `Card` and pick the
+DOM node that receives the change.
+
+The component owns its root, wrappers, and future markup changes.
+
+Inside the component, attach the incoming theme to the slot that `Card` owns:
+
+```tsx
+import {
+  bindScope,
+  combineStyle,
+  type StyleProp,
+  type StyleTheme,
+} from '@fluentic/style';
+
+type CardProps = {
+  css?: StyleProp;
+  theme?: StyleTheme;
+  title: string;
+  children: React.ReactNode;
+};
+
+export function Card(props: CardProps) {
+  const css = combineStyle(
+    styles,
+    bindScope(styles.root, props.theme),
+  );
+
+  return (
+    <article css={[css.root, props.css]}>
+      <h2 css={css.title}>{props.title}</h2>
+      <div css={css.body}>{props.children}</div>
+    </article>
+  );
+}
+```
+
+The rule is small:
+
+> Callers provide overrides. Components decide where they attach.
+
+For example, `marketingCard` may contain overrides for `root` and `title`.
+
+`bindScope(styles.root, props.theme)` lets `Card` apply those overrides while
+still keeping the JSX private:
+
+```txt
+incoming theme: root + title overrides
+Card styles:    root + title + body slots
+result:         css.root, css.title, css.body
+```
+
+That keeps outside code from depending on private markup.
+
+The next step is resolving all style inputs for a component in one place.

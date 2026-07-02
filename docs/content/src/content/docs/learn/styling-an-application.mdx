@@ -1,0 +1,92 @@
+---
+title: Styling An Application
+description: Use createValues for app-wide colors and apply themes to a subtree.
+---
+
+Application styling is usually about app-wide values.
+
+A page, route, workspace, or product area chooses colors, borders, shadows, and
+spacing for a subtree.
+
+Use `createValues()` when you want those values to stay literal in code:
+
+```ts
+import { createTheme, createValues, style } from '@fluentic/style';
+
+const color = createValues([
+  'white',
+  '#111827',
+  '#d8e3df',
+  '#2563eb',
+]);
+
+const space = createValues(Number, [8, 12, 16, 24]);
+```
+
+Use those values in app and component styles:
+
+```ts
+export const appStyles = {
+  root: style.slot({
+    backgroundColor: color('white'),
+    color: color('#111827'),
+  }),
+  panel: style.slot({
+    border: '1px solid',
+    borderColor: color('#d8e3df'),
+    padding: space(16),
+  }),
+};
+```
+
+The style still shows the values the app designer talks about:
+
+```txt
+white
+#111827
+#d8e3df
+16
+```
+
+That makes app-wide color, border, and spacing changes easier to scan.
+
+Create a theme by mapping default literals to themed values:
+
+```ts
+export const darkTheme = createTheme([
+  color('white', '#111827'),
+  color('#111827', 'white'),
+  color('#d8e3df', '#374151'),
+  color('#2563eb', '#60a5fa'),
+  space(16, 20),
+]);
+```
+
+Apply the theme on the element that wraps that part of the app:
+
+```tsx
+export function App() {
+  const css = combineStyle(appStyles);
+
+  return (
+    <main css={[darkTheme, css.root]}>
+      <Dashboard />
+    </main>
+  );
+}
+```
+
+The app-value flow is:
+
+```txt
+createValues -> use literal values in styles -> createTheme -> apply theme
+```
+
+Components inside the subtree keep reading values like `color('white')` and
+`color('#111827')`.
+
+The theme decides what those values become for that subtree.
+
+When an app also needs to customize a component's named theme API, use named
+tokens or a component scope for that part. The next page shows how app values
+and component themes fit together without becoming one giant object.

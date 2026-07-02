@@ -1,0 +1,53 @@
+---
+title: Moving Styles Into Separate Files
+description: Keep repeated page styles organized before creating component APIs.
+---
+
+The page grows.
+
+The same section layout appears in a few places.
+
+There is still no reusable component contract. There are just repeated styles
+that deserve a clear home.
+
+```ts title="settings.styles.ts"
+import { style } from '@fluentic/style';
+
+export const styles = {
+  section: style({
+    display: 'grid',
+    gap: 12,
+    padding: 16,
+  }),
+  title: style({
+    fontSize: 18,
+    fontWeight: 700,
+    margin: 0,
+  }),
+};
+```
+
+In JSX, use the style map directly:
+
+```tsx
+import { styles } from './settings.styles';
+
+export function SettingsSection() {
+  return (
+    <section css={styles.section}>
+      <h2 css={styles.title}>Profile</h2>
+    </section>
+  );
+}
+```
+
+This is still simple styling:
+
+- each entry is a style for one element;
+- JSX chooses where each entry attaches;
+- no caller is promised a styling API.
+
+The next problem is different. The same UI becomes a reusable component, and
+other code needs supported ways to style its parts.
+
+That is when one element style becomes a component styling surface.

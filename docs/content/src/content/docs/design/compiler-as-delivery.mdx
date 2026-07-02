@@ -1,0 +1,33 @@
+---
+title: Compiler As Delivery
+description: Let the build emit CSS without changing component code.
+---
+
+Developers usually want two things at once.
+
+They want component code that stays readable while the UI is still changing.
+
+They also want production output that is efficient for the browser.
+
+Those needs should not force two different ways to write styles.
+
+Treat the compiler like part of the build pipeline.
+
+It recognizes supported Fluentic calls and moves static style work into CSS
+assets.
+
+You still write the component the same way in TypeScript. Production builds can
+ship the static parts as CSS.
+
+That gives the build a familiar job:
+
+```txt
+write React + TypeScript
+extract styles the build can prove are static
+keep render-time values in the runtime
+emit CSS assets for the browser
+```
+
+That raises the practical question from regular front-end work: what still has
+to happen during render because props, app themes, or library composition are
+only known at runtime?

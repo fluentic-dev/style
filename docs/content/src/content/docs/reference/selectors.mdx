@@ -1,0 +1,275 @@
+---
+title: Selectors
+description: Built-in and custom selector APIs.
+---
+
+Selectors are how Fluentic turns CSS selector templates into chainable style
+methods.
+
+The default `style` export already includes the common selector set:
+
+```ts
+import { style } from '@fluentic/style';
+
+const button = style({
+  border: 0,
+  padding: '8px 12px',
+}).hover({
+  opacity: 0.86,
+}).focusVisible({
+  outline: '2px solid currentColor',
+  outlineOffset: 2,
+}).media('(max-width: 700px)', {
+  width: '100%',
+});
+```
+
+Use `@fluentic/style/selector` when you need presets, custom selector methods,
+validators, or custom selector priority.
+
+For the design-system guide version of this topic, see
+[Custom Chain Methods](../beyond-the-basics/custom-chain-methods) and
+[Custom Style Builders](../beyond-the-basics/custom-style-builders). For
+composition across more than one builder, see
+[Multiple Style Functions](../beyond-the-basics/multiple-style-functions).
+
+## Built-In Methods
+
+The default builder uses `PrioritySelectors`.
+
+```ts
+import {
+  MinimalPrioritySelectors,
+  MinimalSelectors,
+  PrioritySelectors,
+  Selectors,
+} from '@fluentic/style/selector';
+```
+
+| Preset | Use |
+| --- | --- |
+| `Selectors` | Full selector set. |
+| `PrioritySelectors` | Full selector set plus default priority for common states. |
+| `MinimalSelectors` | Smaller practical set for design-system builders. |
+| `MinimalPrioritySelectors` | Minimal set plus default state priority. |
+
+Common method groups:
+
+| Group | Methods |
+| --- | --- |
+| State pseudo classes | `hover`, `active`, `focus`, `focusVisible`, `focusWithin`, `disabled`, `checked`, `invalid`, `valid`, and more |
+| Pseudo elements | `before`, `after` |
+| Pseudo functions | `not`, `is`, `where`, `has`, `nthChild`, `nthOfType`, `lang`, `dir` |
+| At-rules | `media`, `container`, `supports` |
+| Escape hatches | `select`, `attr`, `merge` |
+
+Examples:
+
+```ts
+const input = style({
+  borderColor: '#d1d5db',
+}).invalid({
+  borderColor: '#dc2626',
+}).disabled({
+  opacity: 0.48,
+});
+
+const item = style().nthChild('2n + 1', {
+  backgroundColor: '#f8fafc',
+});
+
+const panel = style().supports('(backdrop-filter: blur(8px))', {
+  backdropFilter: 'blur(8px)',
+});
+```
+
+## Argument Selectors
+
+Selectors with `$` accept one argument. Selectors with `$$` accept one argument
+or an array. An array writes multiple rules; it does not join the values into
+one selector.
+
+```ts
+const item = style().is(['.selected', '.highlighted'], {
+  fontWeight: 700,
+});
+```
+
+That is equivalent to:
+
+```ts
+const item = style()
+  .is('.selected', { fontWeight: 700 })
+  .is('.highlighted', { fontWeight: 700 });
+```
+
+The same pattern works for at-rules:
+
+```ts
+const motionSafe = style().media(
+  ['(max-width: 700px)', '(prefers-reduced-motion: reduce)'],
+  { transition: 'none' },
+);
+```
+
+## select
+
+Use `.select(...)` when a selector still targets the element receiving the
+generated class.
+
+```ts
+const trigger = style({
+  border: 0,
+}).select('&[aria-expanded="true"]', {
+  backgroundColor: 'CanvasText',
+  color: 'Canvas',
+});
+```
+
+Do not use `.select(...)` as the default way to style component internals. When
+the outside should style a component part, expose a slot and override it through
+`style.scope(...)`.
+
+```ts
+const menu = {
+  root: style.slot({ display: 'grid' }),
+  item: style.slot(),
+};
+
+const roomyItems = style.scope([
+  menu.item({ padding: 8 }),
+]);
+```
+
+## attr
+
+Use `.attr(...)` for simple attribute selector names and values without the
+square brackets.
+
+```ts
+const button = style().attr('aria-pressed="true"', {
+  backgroundColor: '#111827',
+  color: 'white',
+});
+```
+
+The built-in validator rejects `[` and `]` because the method adds the selector
+shape for you.
+
+## merge
+
+The built-in `.merge(...)` method comes from the `selector('...')` primitive. It
+merges another complete style chain into the current chain.
+
+```ts
+const interaction = style().hover({
+  opacity: 0.86,
+}).active({
+  transform: 'translateY(1px)',
+});
+
+const button = style({
+  border: 0,
+  padding: '8px 12px',
+}).merge(interaction);
+```
+
+The method name is not hard-coded by the compiler. In a custom selector map,
+any selector whose template is `...` becomes a merge method.
+
+## Custom Selectors
+
+Use `createStyleFn(...)` with `selector(...)` when a design system wants its own
+selector names.
+
+```ts
+import { createStyleFn, type, type CSSProperties } from '@fluentic/style';
+import {
+  assertEnumSelector,
+  selector,
+  selectorPriority,
+} from '@fluentic/style/selector';
+
+const selectors = {
+  hover: selector(':hover'),
+  focusVisible: selector(':focus-visible'),
+  pressed: selector('[aria-pressed="true"]'),
+  tone: selector('[data-tone="$"]', assertEnumSelector('brand', 'danger')),
+  media: selector('@media $$', 'media'),
+  merge: selector('...'),
+};
+
+const prioritySelectors = selectorPriority(selectors, [
+  'hover',
+  'focusVisible',
+  'pressed',
+]);
+
+const { style: ui } = createStyleFn({
+  style: type<CSSProperties>,
+  selectors: prioritySelectors,
+});
+
+const toggle = ui({ border: 0 }).pressed({
+  backgroundColor: '#111827',
+  color: 'white',
+}).tone('danger', {
+  borderColor: '#dc2626',
+});
+```
+
+The object key becomes the chain method name. The selector string describes how
+the generated class selector is modified.
+
+## Placeholders
+
+| Placeholder | Meaning |
+| --- | --- |
+| `$` | One selector argument. |
+| `$$` | One selector argument, or an array that expands into multiple rules. |
+| `...` | Merge another style data object. |
+
+Examples:
+
+```ts
+const selectors = {
+  nthChild: selector(':nth-child($)', 'value'),
+  media: selector('@media $$', 'media'),
+  merge: selector('...'),
+};
+```
+
+## Validators
+
+Selector validators catch malformed selector arguments in development and
+during extraction.
+
+```ts
+const selectors = {
+  select: selector('$$', 'local'),
+  attr: selector('$', 'attr'),
+  nthChild: selector(':nth-child($)', 'value'),
+  media: selector('@media $$', 'media'),
+  supports: selector('@supports $$', 'supports'),
+  container: selector('@container $$', 'container'),
+};
+```
+
+| Validator | Accepts |
+| --- | --- |
+| `local` | Current-element selectors only. No tags, combinators, or selector lists. |
+| `arg` | Pseudo selector arguments. |
+| `tag` | A single tag selector. |
+| `attr` | Attribute selector content without `[` or `]`. |
+| `value` | Raw CSS value without `{` or `}`. |
+| `media` | Media query without `{` or `}`. |
+| `supports` | Supports query without `{` or `}`. |
+| `container` | Container query without `{` or `}`. |
+
+For fixed value sets, use `assertEnumSelector(...)`.
+
+```ts
+const selectors = {
+  size: selector('[data-size="$"]', assertEnumSelector('sm', 'md', 'lg')),
+};
+```

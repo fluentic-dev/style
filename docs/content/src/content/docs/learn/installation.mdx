@@ -1,0 +1,81 @@
+---
+title: Installation
+description: Install Fluentic and choose the smallest setup that lets you start.
+---
+
+You want to try Fluentic in a React app.
+
+At this point, do not start with compiler plugins, source maps, or production
+CSS output. First make the `css` prop work in normal JSX.
+
+Install the package:
+
+<Tabs items={['pnpm', 'npm', 'Yarn', 'Bun']}>
+  <Tab>
+
+```sh
+pnpm add @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+npm install @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+yarn add @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+bun add @fluentic/style
+```
+
+  </Tab>
+</Tabs>
+
+Configure the automatic JSX runtime:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+Now React elements can receive a `css` prop:
+
+```tsx
+import { style } from '@fluentic/style';
+
+const button = style({
+  borderRadius: 8,
+  padding: '8px 12px',
+});
+
+export function SaveButton() {
+  return <button css={button}>Save changes</button>;
+}
+```
+
+For a real app, pick your integration later:
+
+- [Vite](../integrations/vite)
+- [Next.js](../integrations/nextjs)
+- [Webpack](../integrations/webpack)
+- [Rspack](../integrations/rspack)
+
+The learning path starts the way front-end work usually starts: render a
+component, pass it styles, and make the UI behave correctly. Static extraction
+comes later as a bundler optimization for production CSS.
+
+Next, style one element without introducing any component ideas yet.

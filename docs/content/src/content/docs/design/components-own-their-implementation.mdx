@@ -1,0 +1,26 @@
+---
+title: Components Own Their Implementation
+description: Components decide where outside styling attaches inside their implementation.
+---
+
+A caller can ask a component to look different.
+
+That does not mean the caller should know where the component puts its root,
+title, wrapper, or internal layout.
+
+React components already own their implementation.
+
+Styling is easier to revisit when it preserves that rule.
+
+External themes can provide overrides, while the component decides where those
+overrides attach inside its implementation.
+
+`bindScope(...)` marks the boundary:
+
+```txt
+caller passes overrides
+component attaches them
+```
+
+When the component owns attachment, the next question is how much of its
+styling surface it should publish.

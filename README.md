@@ -128,20 +128,20 @@ import 'virtual:fluentic-style';
 
 ## Package exports
 
-| Import                            | Purpose                                                                          |
-| --------------------------------- | -------------------------------------------------------------------------------- |
-| `@fluentic/style`                 | Runtime API, default `style`, selectors, sheet utilities, React hooks and types. |
-| `@fluentic/style/css`             | CSS helper APIs for keyframes, font faces, and at-rules.                         |
-| `@fluentic/style/config`          | Runtime configuration helpers.                                                   |
-| `@fluentic/style/dev`             | Development utilities.                                                           |
-| `@fluentic/style/dev/rsc`         | React Server Component dev client boundary.                                      |
-| `@fluentic/style/jsx`             | JSX import source for runtime-only apps.                                         |
-| `@fluentic/style/plugin/jsx`      | JSX import source for plugin-managed builds.                                     |
-| `@fluentic/style/plugin/nextjs`   | Next.js App Router integration.                                                  |
-| `@fluentic/style/plugin/vite`     | Vite plugin.                                                                     |
-| `@fluentic/style/plugin/webpack`  | Webpack plugin.                                                                  |
-| `@fluentic/style/plugin/rspack`   | Rspack plugin.                                                                   |
-| `@fluentic/style/plugin/farm`     | Farm plugin.                                                                     |
+| Import                           | Purpose                                                                          |
+| -------------------------------- | -------------------------------------------------------------------------------- |
+| `@fluentic/style`                | Runtime API, default `style`, selectors, sheet utilities, React hooks and types. |
+| `@fluentic/style/css`            | CSS helper APIs for keyframes, font faces, and at-rules.                         |
+| `@fluentic/style/config`         | Runtime configuration helpers.                                                   |
+| `@fluentic/style/dev`            | Development utilities.                                                           |
+| `@fluentic/style/dev/rsc`        | React Server Component dev client boundary.                                      |
+| `@fluentic/style/jsx`            | JSX import source for runtime-only apps.                                         |
+| `@fluentic/style/plugin/jsx`     | JSX import source for plugin-managed builds.                                     |
+| `@fluentic/style/plugin/nextjs`  | Next.js App Router integration.                                                  |
+| `@fluentic/style/plugin/vite`    | Vite plugin.                                                                     |
+| `@fluentic/style/plugin/webpack` | Webpack plugin.                                                                  |
+| `@fluentic/style/plugin/rspack`  | Rspack plugin.                                                                   |
+| `@fluentic/style/plugin/farm`    | Farm plugin.                                                                     |
 
 ## Runtime and extraction
 

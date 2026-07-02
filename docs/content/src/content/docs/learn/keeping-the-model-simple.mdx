@@ -1,0 +1,61 @@
+---
+title: Keeping The Model Simple
+description: Choose the smallest Fluentic concept that matches the styling problem.
+---
+
+Most styling setups do not start confusing.
+
+They become confusing one special case at a time.
+
+A root override here. A variant prop there. A theme object for one component,
+tokens for another, a selector workaround somewhere else.
+
+The codebase stays easier to work on when each problem gets the smallest API
+that fits.
+
+Use this checklist when you are writing code.
+
+If it is one element, use `style()`.
+
+If the element needs hover, focus, media, or another local condition, keep that
+behavior next to the declarations with a chain.
+
+If callers need to style a component part, make that part public with
+`style.slot()`.
+
+If outside code wants to override that part, put the slot override inside
+`style.scope([...])`.
+
+If a part is implementation detail, keep it private.
+
+If the exported styling API is narrower than the internal styles,
+`exposeStyle(...)` makes that public list explicit.
+
+If one or several slot overrides belong to a variant, state, product skin, or
+component theme, group them with `style.scope()`.
+
+If a theme comes from outside, bind it inside the component that owns
+attachment.
+
+If a named shared value changes across a subtree, create it with
+`createToken()` or `createTokens()` and override it with `createTheme(...)`.
+
+If app-facing colors, borders, spacing, or other literal values should stay
+visible in code, create them with `createValues()`.
+
+Use optional labels when a literal needs a readable identity without forcing a
+full token naming system.
+
+When a component renders, call `combineStyle()` before JSX uses the slot styles.
+
+Avoid turning private DOM into public API by accident.
+
+Let the compiler optimize production CSS, but design the component API around
+the React code people actually call.
+
+The path stays visible:
+
+```txt
+style -> chain -> slot -> scope -> combineStyle
+token values -> createTheme -> css prop
+```

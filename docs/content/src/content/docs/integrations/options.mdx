@@ -1,0 +1,217 @@
+---
+title: Plugin Options
+description: Shared options for Fluentic bundler and framework adapters.
+---
+
+Most integrations accept the same option object:
+
+```ts
+stylePlugin({
+  include: /\.[jt]sx?$/,
+  exclude: /node_modules/,
+  devSourcemap: 'sidecarServer',
+  getSourcemapFilePath({ sourcePath }) {
+    return `source://@${sourcePath}`;
+  },
+});
+```
+
+For Next.js, pass the options as the second argument:
+
+```js title="next.config.mjs"
+import stylePlugin from '@fluentic/style/plugin/nextjs';
+
+export default stylePlugin(nextConfig, {
+  include: /\.[jt]sx?$/,
+});
+```
+
+Vite, Webpack, Rspack, and Farm pass the options directly to their plugin:
+
+```ts
+stylePlugin({
+  devSourcemap: 'sidecarServer',
+});
+```
+
+Parcel normally uses the bundled config:
+
+```sh
+parcel index.html --config @fluentic/style/plugin/parcel/config
+```
+
+## Common Options
+
+| Option | Supported by | Purpose |
+| --- | --- | --- |
+| `include` | Next.js, Vite, Webpack, Rspack, Farm | Limit which source files the transform sees. Accepts a string, RegExp, or array. |
+| `exclude` | Next.js, Vite, Webpack, Rspack, Farm | Skip files from the transform. Defaults to `node_modules` unless `include` is provided. |
+| `cacheDir` | Next.js, Vite, Webpack, Rspack, Farm | Override the plugin cache directory. |
+| `hoist` | Next.js, Vite, Webpack, Rspack, Farm, Parcel internals | Control supported style hoisting during extraction. Defaults to enabled. |
+| `css` | Next.js, Vite, Webpack, Rspack, Farm, Parcel internals | Configure emitted CSS names, layers, and related CSS output details. |
+| `dev` | Next.js, Vite, Webpack, Rspack, Farm, Parcel internals | Configure development runtime behavior such as priority mode, sourcemap mode, element markers, and selector checks. |
+| `importSources` | Next.js, Vite, Webpack, Rspack, Farm, Parcel internals | Teach the compiler about custom or re-exported style builders. |
+| `getSourcemapFilePath` | Next.js, Vite, Webpack, Rspack, Farm, Parcel internals | Customize the source URL written into generated CSS sourcemaps. |
+| `devSourcemap` | Vite, Webpack, Rspack, Farm, Parcel internals | Choose how development sourcemap sources are written. Next.js chooses this for you. |
+
+The defaults are tuned for app builds: transform JavaScript and TypeScript
+source files, skip `node_modules`, keep development metadata available, and
+extract supported static styles in production.
+
+## Filtering Source Files
+
+Use `include` when Fluentic styles live outside the default source shape, or
+when a workspace package should be transformed by the app bundler:
+
+```ts
+stylePlugin({
+  include: [
+    /\.[jt]sx?$/,
+    '../ui/src/**/*.{ts,tsx}',
+  ],
+  exclude: /node_modules/,
+});
+```
+
+The plugin should see source before another transform hides `style(...)`,
+`style.slot(...)`, `style.scope(...)`, `createTheme(...)`, or JSX.
+
+## CSS Output
+
+Use `css` for output-level choices:
+
+```ts
+stylePlugin({
+  css: {
+    layer: true,
+    layers: ['reset', '$layer', 'app'],
+    layerNamespace: 'fluentic',
+    classNameFormat: 'f-[(property)]-$hash',
+    tokenNameFormat: 'token-(name)-$hash',
+  },
+});
+```
+
+The most common reason to touch this is integration with an existing CSS layer
+strategy or a class name naming convention. Most apps can leave it alone.
+For the full list of `css` options and naming placeholders, see
+[Plugin Options](../../reference/plugin-options#css-options).
+
+## Development Runtime
+
+Use `dev` to control how development CSS is represented while debugging:
+
+```ts
+stylePlugin({
+  dev: {
+    priorityMode: 'layer',
+    sourcemapMode: 'style',
+    elementClassName: true,
+    checkSelector: true,
+  },
+});
+```
+
+`priorityMode` can be:
+
+| Value | Behavior |
+| --- | --- |
+| `layer` | Uses development CSS layers so priority buckets are easier to inspect. |
+| `sort` | Emits rules in sorted priority order. |
+
+`sourcemapMode` can be:
+
+| Value | Behavior |
+| --- | --- |
+| `style` | Maps generated rules to the style call that assembled them. |
+| `value` | Maps generated rules to the original value object when possible. |
+
+`elementClassName` adds a development-only marker class to elements that receive
+a `css` prop. That marker helps DevTools jump from a rendered DOM element back
+to the JSX element location.
+
+The same values can be changed from the browser console when dev utilities are
+enabled:
+
+```ts
+StyleDevUtils.setSourcemapMode.toStyle();
+StyleDevUtils.setSourcemapMode.toValue();
+StyleDevUtils.setElementMarker.toOn();
+StyleDevUtils.setElementMarker.toOff();
+StyleDevUtils.setPriorityMode.toLayer();
+StyleDevUtils.setPriorityMode.toSort();
+StyleDevUtils.reset();
+```
+
+For Next.js App Router, enable those utilities with `<StyleDev
+enableStyleDevUtils />` in the root layout. See the [Next.js](../nextjs)
+setup.
+
+## Debug Sourcemaps
+
+Fluentic's development transform records more than the generated CSS rule. It
+can record where the style call was created, where an individual property came
+from, where token values were defined, and which JSX element received a `css`
+prop.
+
+That is why the `style` and `value` sourcemap modes both exist:
+
+```ts
+const shared = style.raw({
+  color: 'tomato',
+});
+
+const title = style({
+  ...shared,
+  fontWeight: 700,
+});
+```
+
+`style` mode points the spread rule at `title`, which is useful when you are
+debugging the component's assembled style. `value` mode points the same rule at
+`shared`, which is useful when you are debugging the reusable value itself.
+
+This is especially helpful in real components, where a final class name may come
+from slots, scopes, themes, merges, selectors, and tokens instead of a single
+inline object.
+
+## Development Sourcemap Modes
+
+`devSourcemap` controls how the source text referenced by CSS sourcemaps is made
+available to browser DevTools:
+
+| Value | Behavior |
+| --- | --- |
+| `sidecarServer` | Starts a local `127.0.0.1` sidecar server and points sourcemaps at source URLs served by that server. This is the default for most dev adapters. |
+| `sourceContent` | Embeds source text into the sourcemap. This is useful when an extra local server is not desirable. |
+| `sourceUrl` | Writes source URLs without embedding the source text. This is the production default. |
+
+Sidecar sourcemaps keep generated CSS maps small while still letting DevTools
+open the original TypeScript source. The sidecar also gives integrations a place
+to serve development-only sources and routes that the main bundler does not own.
+
+Next.js chooses `sidecarServer` in development and `sourceUrl` for production.
+For Vite, Webpack, Rspack, and Farm you can set the mode explicitly:
+
+```ts
+stylePlugin({
+  devSourcemap: process.env.NODE_ENV === 'development'
+    ? 'sidecarServer'
+    : 'sourceUrl',
+});
+```
+
+Use `getSourcemapFilePath` when DevTools should show a bundler-specific source
+path:
+
+```ts
+stylePlugin({
+  getSourcemapFilePath({ sourcePath, sourceUrl }) {
+    return sourcePath.startsWith('src/')
+      ? `webpack://app/./${sourcePath}`
+      : sourceUrl;
+  },
+});
+```
+
+Return `null` or `undefined` to keep the integration default for that file.

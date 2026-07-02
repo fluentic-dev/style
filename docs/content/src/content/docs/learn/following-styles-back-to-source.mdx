@@ -1,0 +1,45 @@
+---
+title: Following Styles Back To Source
+description: Generated CSS can still lead back to the authored decision.
+---
+
+You inspect a button.
+
+DevTools shows:
+
+```css
+color: red;
+```
+
+But where did `red` come from?
+
+Was it a base slot, component theme, app token, parent state, or spread helper?
+
+The trail is longer than the CSS rule:
+
+```txt
+DOM element
+JSX element
+CSS property
+style property
+slot, scope, or token source
+original TypeScript value
+```
+
+Fluentic keeps source information on the values you author:
+
+- `style()` identifies one element style;
+- `style.slot()` identifies a component part;
+- `style.scope()` identifies a grouped override;
+- tokens identify shared values.
+
+Enough of that source information survives the pipeline for the trail to exist.
+
+Generated CSS is what the browser needs.
+
+Humans usually need the authored decision.
+
+The deep tooling details live in [Tracing Styles In Real Apps](../beyond-the-basics/tracing-styles-in-real-apps).
+
+With styling, theming, and debugging in place, the same ideas become component
+library design questions.

@@ -1,0 +1,48 @@
+---
+title: Styling One Element
+description: Start with style() and the css prop before introducing component APIs.
+---
+
+Start with the smallest Fluentic idea.
+
+One element needs CSS:
+
+```tsx
+<button>Save changes</button>
+```
+
+Write a `style()` value and pass it to the `css` prop:
+
+```tsx
+import { style } from '@fluentic/style';
+
+const saveButton = style({
+  alignItems: 'center',
+  border: 0,
+  borderRadius: 8,
+  cursor: 'pointer',
+  display: 'inline-flex',
+  gap: 8,
+  padding: '8px 12px',
+});
+
+export function SettingsPage() {
+  return <button css={saveButton}>Save changes</button>;
+}
+```
+
+That is enough when the style belongs to this rendered element.
+
+At this stage, avoid component concepts:
+
+- no slots;
+- no scopes;
+- no themes;
+- no exported styling API.
+
+The useful habit is that a style is still just a TypeScript value. You can put
+it next to the component, move it to another file, reuse it, or include it in a
+`css` array later.
+
+The next step is local behavior: hover, focus, and responsive changes on the
+same element.

@@ -1,0 +1,16 @@
+---
+title: Values
+description: createValues creates app-facing scales with token identity.
+---
+
+```ts
+const space = createValues(Number, [8, 12, 16]);
+```
+
+Use values when app code should read literal scales while Fluentic still tracks
+themeable identity underneath:
+
+```ts
+space(12);
+space(12, 16);
+```

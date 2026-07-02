@@ -1,0 +1,197 @@
+---
+title: Multiple Style Functions
+description: Compose styles from more than one custom builder.
+---
+
+A design system can have more than one style function.
+
+One builder might expose layout shorthands. Another builder might expose
+semantic states. A component library might export slots from the default
+`style` builder while an app uses its own `ui` builder.
+
+Those builders can still meet at a component boundary.
+
+## Why Multiple Builders Exist
+
+Different style functions carry different vocabulary:
+
+```ts
+const layout = createStyleFn({
+  selectors: MinimalPrioritySelectors,
+  transform: layoutTransform,
+}).style;
+
+const ui = createStyleFn({
+  style: type<CSSProperties>,
+  selectors: uiPrioritySelectors,
+}).style;
+```
+
+`layout` might understand fields like `row`, `column`, and `gapX`.
+
+`ui` might understand methods like `.pressed(...)`, `.selected(...)`, and
+`.tone(...)`.
+
+Do not force every convention into one global builder just so styles can be
+combined later.
+
+## Chain merge
+
+Use chain `.merge(...)` when you are extending a style with another complete
+style chain.
+
+```ts
+const interaction = style().hover({
+  opacity: 0.86,
+}).active({
+  transform: 'translateY(1px)',
+});
+
+const button = style({
+  border: 0,
+  padding: '8px 12px',
+}).merge(interaction);
+```
+
+The default `.merge(...)` method comes from the selector map entry
+`merge: selector('...')`. In a custom builder, any method whose selector is
+`selector('...')` behaves as a merge method.
+
+```ts
+const selectors = {
+  use: selector('...'),
+  hover: selector(':hover'),
+};
+
+const base = ui({ color: 'CanvasText' });
+
+const button = ui({ border: 0 }).use(base);
+```
+
+The method name is your API. The `...` selector is the primitive.
+
+## Static style.merge
+
+Every style function also has a static `style.merge(...)` helper.
+
+Use it when the target and the merged styles may come from different builders.
+
+```ts
+import { style } from '@fluentic/style';
+import { sx } from './sx-style';
+import { ui } from './ui-style';
+
+const button = style.merge(
+  style.slot({
+    color: 'black',
+  }),
+  sx({
+    row: true,
+    gapX: 8,
+  }),
+  ui().pressed({
+    transform: 'translateY(1px)',
+  }),
+);
+```
+
+The first argument is the target. The later arguments are complete style chains
+whose data is appended to that target.
+
+This is useful for slots:
+
+```ts
+export const buttonStyles = {
+  root: style.merge(
+    style.slot({
+      border: 0,
+      padding: '8px 12px',
+    }),
+    sx({ row: true, gapX: 8 }),
+    ui().focusVisible({
+      outline: '2px solid currentColor',
+    }),
+  ),
+};
+```
+
+The result is still a slot because the target is `style.slot(...)`.
+
+## Builder Context Is Kept
+
+Merged chains keep their own selector and transform behavior.
+
+```ts
+const button = style.merge(
+  style.slot({ color: 'black' }),
+  sx({ row: true }),
+  ui().pressed({ opacity: 0.8 }),
+);
+```
+
+Here `row` belongs to `sx`.
+
+`pressed` belongs to `ui`.
+
+The target slot belongs to `style`.
+
+`style.merge(...)` does not borrow `.pressed(...)` from `ui` and add it to
+`style`. It appends already-built style data.
+
+This keeps advanced composition explicit: each builder owns its own vocabulary,
+then the component boundary combines the finished pieces.
+
+## Extraction
+
+The compiler can extract merged style chains, including direct multi-builder
+chains, when the imported style functions are known to the compiler.
+
+For app code that imports from `@fluentic/style`, the default builder is known.
+
+For custom builders imported from your own package, configure `importSources` in
+the plugin options so the compiler knows which import name points to which style
+function.
+
+```ts
+stylePlugin({
+  importSources: [
+    {
+      source: './sx-style',
+      name: 'sx',
+      styleFn: sx,
+    },
+  ],
+});
+```
+
+See [Plugin Options](../reference/plugin-options#import-sources) for the full
+configuration shape.
+
+## Order
+
+Merge order is the order you write:
+
+```ts
+const button = style({ color: 'black' })
+  .merge(shared)
+  .hover({ color: 'red' });
+```
+
+The base style is first, `shared` is appended next, and the hover style is last.
+
+Use this deliberately. Put reusable base fragments early. Put the most local
+component-specific style later.
+
+## When To Use It
+
+Use multiple style functions when the vocabularies are genuinely separate:
+
+```txt
+layout shortcuts     -> sx(...)
+semantic states      -> ui(...)
+component slot API   -> style.slot(...)
+component boundary   -> style.merge(...)
+```
+
+If all styles are using the same vocabulary, normal chain `.merge(...)` or
+ordinary `combineStyle(...)` at the component boundary is usually enough.

@@ -1,0 +1,147 @@
+---
+title: Tracing Styles In Real Apps
+description: Trace element markers, style properties, and spread or merge sources.
+---
+
+You inspect an element because something looks wrong.
+
+The browser can tell you which CSS rule applied.
+
+> Which CSS rule applied?
+
+In a component system, there is usually a more useful question right behind it:
+
+> Which authored TypeScript decision produced this rule?
+
+The trace is usually not one link. It is a chain:
+
+- element marker to JSX source;
+- CSS property to style property;
+- spread or merge item to the leaf style site or the original reusable value.
+
+That chain matters most when composition gets real.
+
+Generated CSS is useful, but the authored location usually matters more during
+review.
+
+## Trace A Rendered Element
+
+Start with the JSX:
+
+```tsx
+export function Card() {
+  const css = combineStyle(cardStyles);
+
+  return (
+    <article css={css.root}>
+      <h2 css={css.title}>Revenue</h2>
+    </article>
+  );
+}
+```
+
+In development, element markers can attach a tiny marker rule to the rendered
+host element. Turn them on from the browser console:
+
+```ts
+StyleDevUtils.setElementMarker.toOn();
+```
+
+Inspect the `<article>` in DevTools.
+
+You should see one normal set of Fluentic classes plus a development marker
+class. The marker rule maps to the JSX element that received `css={css.root}`.
+
+This answers:
+
+```txt
+Which rendered element received this style?
+```
+
+Turn markers off when the extra debug class is noisy:
+
+```ts
+StyleDevUtils.setElementMarker.toOff();
+```
+
+## Trace A Style Property
+
+Now follow the generated CSS rule back to the style object:
+
+```ts
+export const cardStyles = {
+  root: style.slot({
+    backgroundColor: '#ffffff',
+    border: '1px solid',
+    borderColor: '#d8e3df',
+    borderRadius: 8,
+  }),
+  title: style.slot({
+    color: '#111827',
+    fontWeight: 800,
+  }),
+};
+```
+
+When DevTools shows the generated `border-color` rule, sourcemaps can point to
+the `borderColor` property instead of only pointing to a generated CSS file.
+
+This answers:
+
+```txt
+Which authored property produced this CSS rule?
+```
+
+## Trace Spread Or Merge Sources
+
+Reusable style fragments can be traced two ways:
+
+```ts
+const textReset = style.raw({
+  color: '#111827',
+  lineHeight: 1.5,
+});
+
+const title = style({
+  ...textReset,
+  fontWeight: 800,
+});
+```
+
+Chain merge follows the same tracing mode:
+
+```ts
+const interaction = style({
+  outline: '2px solid transparent',
+}).focusVisible({
+  outlineColor: '#2563eb',
+});
+
+const button = style({
+  border: 0,
+  borderRadius: 8,
+}).merge(interaction);
+```
+
+Use style-site tracing when you want DevTools to point to the leaf style call
+that assembled the final rule:
+
+```ts
+StyleDevUtils.setSourcemapMode.toStyle();
+```
+
+Use value-site tracing when you want DevTools to point to the original reusable
+object or style:
+
+```ts
+StyleDevUtils.setSourcemapMode.toValue();
+```
+
+The trace should let you choose between:
+
+```txt
+toStyle() -> the leaf style call that used ...textReset or .merge(interaction)
+toValue() -> the original style.raw object or merged style
+```
+
+That is the core debugging loop for real apps.

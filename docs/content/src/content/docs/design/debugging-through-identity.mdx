@@ -1,0 +1,24 @@
+---
+title: Debugging Through Identity
+description: Trace styles by preserving slot, scope, token, and element identity.
+---
+
+Debugging usually starts with a concrete problem.
+
+An element has the wrong color.
+
+The browser shows the generated rule, but the real decision may live in a slot,
+a scope, a token theme, or the JSX element that received the style.
+
+Generated output is rarely enough on its own.
+
+Traceability needs identity to survive:
+
+- slots identify component parts;
+- scopes identify grouped overrides;
+- tokens identify shared values;
+- `combineStyle` identifies where styles are merged;
+- element markers connect DOM back to JSX.
+
+The question is whether those identities survive long enough for a developer
+to follow the wrong property back to the TypeScript that produced it.

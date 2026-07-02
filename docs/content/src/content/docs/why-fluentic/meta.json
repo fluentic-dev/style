@@ -1,0 +1,13 @@
+{
+  "title": "Why Fluentic",
+  "pages": [
+    "changing-existing-styles",
+    "local-change-in-react",
+    "when-styles-cross-boundaries",
+    "staying-in-typescript",
+    "component-style-composition",
+    "public-styling-contracts",
+    "reviewing-generated-styles",
+    "the-style-model"
+  ]
+}

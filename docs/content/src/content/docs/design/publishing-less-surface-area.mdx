@@ -1,0 +1,22 @@
+---
+title: Publishing Less Surface Area
+description: Keep public styling APIs smaller than a component's internal style object.
+---
+
+A component often has more internal styles than public styling promises.
+
+It may have a root and title that callers can style.
+
+It may also have wrappers, measurement layers, layout helpers, or temporary
+elements that should stay private.
+
+Public slots are part of the contract.
+
+Private styles are implementation.
+
+A narrowed export makes that boundary visible.
+
+Consumers see the supported styling surface, not every internal style value.
+
+This mirrors normal component design: export what callers may depend on, then
+ask how outside styling should target only that surface.

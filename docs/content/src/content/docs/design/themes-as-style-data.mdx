@@ -1,0 +1,31 @@
+---
+title: Themes As Style Data
+description: Pass token themes and component themes through the same style APIs.
+---
+
+A theme often starts with an ordinary request.
+
+Make this app dark.
+
+Make this card match the marketing site.
+
+Try the new brand colors in this product area.
+
+One version changes shared values.
+
+Another version changes public component parts.
+
+Those are different levels of the same styling problem.
+
+Both can stay as Fluentic values until the component renders.
+
+That keeps the API small:
+
+```txt
+shared value change -> token theme
+component part change -> scope
+component render -> combineStyle
+```
+
+The question is how far those values can travel before they have to become
+class names.

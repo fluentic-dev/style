@@ -1,0 +1,43 @@
+---
+title: Component Style Composition
+description: See how styles move from local elements to reusable components and themes.
+---
+
+A style usually starts close to one element.
+
+Then the component gets reused.
+
+Then a product theme wants to reach it.
+
+Then the component needs to keep some markup private while still accepting
+outside styling.
+
+At that point, the practical question changes:
+
+> How do styles move through React components?
+
+That question changes what the system needs.
+
+A local element needs a style.
+
+A reusable component needs named public parts.
+
+A product theme needs to target those parts without knowing DOM.
+
+A component needs to decide where outside styling attaches.
+
+A render function needs to resolve all of that into `css` props.
+
+That gives the rest of the guide a path:
+
+```txt
+style -> slot -> scope -> resolve
+```
+
+Each step appears after styles start being reused.
+
+The names are secondary.
+
+What matters is the boundary each name protects.
+
+That leads to the first boundary: the public styling contract.

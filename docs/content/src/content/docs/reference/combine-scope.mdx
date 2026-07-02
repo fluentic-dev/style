@@ -1,0 +1,14 @@
+---
+title: combineScope
+description: Pre-compose scopes and apply them to a target later.
+---
+
+```ts
+import { combineScope } from '@fluentic/style';
+
+const themed = combineScope(baseTheme, props.theme);
+const targets = themed(styles.root);
+```
+
+Use `combineScope(...)` when scope composition needs to be reused before a
+target slot is available.

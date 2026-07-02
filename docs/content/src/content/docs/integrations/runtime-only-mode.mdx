@@ -1,0 +1,20 @@
+---
+title: Runtime-Only Mode
+description: Use Fluentic without a compiler plugin.
+---
+
+Runtime-only mode is the lowest-friction setup.
+
+Configure the JSX runtime and write Fluentic styles normally. The runtime
+resolves class names and inserts rules as components render.
+
+This is useful for:
+
+- quick experiments;
+- tests;
+- libraries that cannot assume a bundler plugin;
+- dynamic style values.
+
+Runtime-only mode trades build setup simplicity for more runtime work.
+
+Production apps should prefer static extraction when their stack supports it.

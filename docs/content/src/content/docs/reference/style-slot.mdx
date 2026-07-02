@@ -1,0 +1,19 @@
+---
+title: style.slot
+description: Create a public component styling target.
+---
+
+```ts
+const styles = {
+  root: style.slot({ padding: 12 }),
+  label: style.slot({ fontWeight: 700 }),
+};
+```
+
+Calling a slot creates an override for that slot:
+
+```ts
+styles.label({ color: 'white' });
+```
+
+Slot overrides belong in scopes or `bindScope(...)` inputs.

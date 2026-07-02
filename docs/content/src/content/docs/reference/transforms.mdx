@@ -1,0 +1,216 @@
+---
+title: Transforms
+description: Transform custom style fields into CSS properties.
+---
+
+Transforms let a design system accept its own style shape and normalize it into
+regular CSS properties.
+
+Use a transform when component authors should write controlled fields like
+`row`, `column`, `center`, `gapX`, `gapY`, `pill`, or token aliases instead of
+repeating low-level CSS declarations every time.
+
+For the guide version of this topic, see
+[Custom Style Fields](../beyond-the-basics/custom-style-fields) and
+[Custom Style Builders](../beyond-the-basics/custom-style-builders).
+
+## Define A Style Type
+
+Start by extending `CSSProperties` with the custom fields your system owns.
+
+```ts
+import type { CSSProperties } from '@fluentic/style';
+
+type LayoutStyle = CSSProperties & {
+  row?: boolean;
+  column?: boolean;
+  center?: boolean;
+  gapX?: CSSProperties['columnGap'];
+  gapY?: CSSProperties['rowGap'];
+};
+```
+
+The custom fields are typed everywhere the custom style function is used:
+normal styles, slots, scopes, raw styles, plain style fragments, and keyframes.
+
+## Write The Transform
+
+`styleTransform(...)` receives your custom style object and returns normal CSS.
+
+```ts
+import { styleTransform } from '@fluentic/style';
+
+const layoutTransform = styleTransform<LayoutStyle>({
+  transform(style) {
+    const { row, column, center, gapX, gapY, ...css } = style;
+
+    if (row || column) {
+      css.display = 'flex';
+      css.flexDirection = row ? 'row' : 'column';
+    }
+
+    if (center) {
+      css.alignItems = 'center';
+      css.justifyContent = 'center';
+    }
+
+    if (gapX !== undefined) css.columnGap = gapX;
+    if (gapY !== undefined) css.rowGap = gapY;
+
+    return css;
+  },
+});
+```
+
+This lets authors write:
+
+```ts
+const toolbar = layout({
+  row: true,
+  center: true,
+  gapX: 8,
+});
+```
+
+and emit ordinary CSS:
+
+```txt
+display: flex
+flex-direction: row
+align-items: center
+justify-content: center
+column-gap: 8px
+```
+
+## Create The Style Function
+
+Pass the transform to `createStyleFn(...)`.
+
+```ts
+import { createStyleFn } from '@fluentic/style';
+import { MinimalPrioritySelectors } from '@fluentic/style/selector';
+
+export const { style: layout } = createStyleFn({
+  selectors: MinimalPrioritySelectors,
+  transform: layoutTransform,
+});
+```
+
+The resulting `layout` function has the same feature shape as the default
+`style` export, but with your custom fields.
+
+```ts
+const card = {
+  root: layout.slot({
+    column: true,
+    gapY: 12,
+    padding: 16,
+  }),
+  actions: layout.slot({
+    row: true,
+    center: true,
+    gapX: 8,
+  }),
+};
+```
+
+## Slots And Scopes
+
+The transform runs for slot styles and scope overrides too.
+
+```ts
+const compact = layout.scope().media('(max-width: 700px)', [
+  card.root({
+    gapY: 8,
+    padding: 12,
+  }),
+  card.actions({
+    column: true,
+    gapY: 6,
+  }),
+]);
+```
+
+This keeps design-system shortcuts available in responsive and scoped
+overrides, not only in base styles.
+
+## raw And plain
+
+Custom style functions expose `raw(...)` and `plain(...)` for reusable fragments.
+
+Use `raw(...)` when the fragment should accept the full Fluentic style value
+model, including tokens, value references, and value weight tuples.
+
+```ts
+import { createToken } from '@fluentic/style';
+
+const surface = createToken('Canvas');
+
+const reset = layout.raw({
+  row: true,
+  gapX: 4,
+  backgroundColor: surface,
+  color: [1, 'CanvasText'],
+});
+```
+
+Use `plain(...)` when the fragment should stay close to a plain TypeScript style
+object.
+
+```ts
+const stackBase = layout.plain({
+  column: true,
+  gapY: 10,
+});
+
+const panel = layout({
+  ...stackBase,
+  padding: 16,
+});
+```
+
+In short:
+
+```txt
+raw(...)    reusable Fluentic style object; supports tokens and value refs
+plain(...)  reusable plain style object for ordinary object spreads
+```
+
+## Keyframes
+
+Transforms also apply to keyframes created by the custom style function.
+
+```ts
+const enter = layout.keyframes({
+  from: {
+    column: true,
+    opacity: 0,
+    transform: 'translateY(8px)',
+  },
+  to: {
+    opacity: 1,
+    transform: 'none',
+  },
+});
+```
+
+Use `style.keyframes(...)` when the default style shape is enough. Use a custom
+builder's `.keyframes(...)` when the frames should accept that builder's custom
+fields.
+
+## Pattern
+
+Good transforms are small and predictable:
+
+```txt
+custom typed field
+  -> remove it from the object
+  -> write one or more CSS properties
+  -> return the remaining CSS object
+```
+
+Keep selector behavior separate from transform behavior. Transforms decide
+which CSS declarations exist. Selectors decide when those declarations apply.
+
+Avoid using transforms to hide component relationships. Relationships belong in
+slots and scopes.

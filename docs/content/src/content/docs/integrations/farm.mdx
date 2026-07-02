@@ -1,0 +1,90 @@
+---
+title: Farm
+description: Configure Fluentic Style with Farm and React.
+---
+
+Install the package:
+
+<Tabs items={['pnpm', 'npm', 'Yarn', 'Bun']}>
+  <Tab>
+
+```sh
+pnpm add @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+npm install @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+yarn add @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+bun add @fluentic/style
+```
+
+  </Tab>
+</Tabs>
+
+Add the Farm adapter and configure the React plugin with Fluentic's JSX import
+source:
+
+```js title="farm.config.mjs"
+import { defineConfig } from '@farmfe/core';
+import { plugin as stylePlugin } from '@fluentic/style/plugin/farm';
+
+export default defineConfig(({ mode }) => {
+  const dev = mode !== 'production';
+
+  return {
+    plugins: [
+      ['@farmfe/plugin-react', {
+        runtime: 'automatic',
+        importSource: '@fluentic/style/plugin/jsx',
+        development: dev,
+      }],
+      stylePlugin({
+        dev,
+        devSourcemap: dev ? 'sidecarServer' : 'sourceUrl',
+      }),
+    ],
+    compilation: {
+      script: {
+        parser: {
+          tsConfig: {
+            tsx: true,
+          },
+        },
+      },
+      sourcemap: dev ? true : 'all',
+    },
+  };
+});
+```
+
+Keep TypeScript aligned with the same JSX import source:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+The Farm adapter emits extracted CSS through the bundler and keeps runtime
+support for dynamic style values.
+
+See [Plugin Options](options) for `include`, `exclude`, `devSourcemap`,
+`getSourcemapFilePath`, and the development sourcemap modes.

@@ -1,0 +1,21 @@
+---
+title: Types
+description: Common public TypeScript types.
+---
+
+```ts
+import type {
+  CSSProperties,
+  StyleProp,
+  StyleTheme,
+  StyleTokenInput,
+  CombinedStyle,
+  CombinedStyleFor,
+} from '@fluentic/style';
+```
+
+Use `StyleProp` for one rendered element.
+
+Use `StyleTheme` for scopes, arrays, and conditional theme inputs.
+
+Use `CombinedStyleFor<typeof styles>` for values returned by `combineStyle`.

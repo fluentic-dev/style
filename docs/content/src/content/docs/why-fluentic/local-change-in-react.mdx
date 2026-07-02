@@ -1,0 +1,44 @@
+---
+title: Local Change In React
+description: React components are easier to evolve because ownership is clear.
+---
+
+You can usually change a React component without making every caller change
+with it.
+
+You can rename a local variable, move markup around, split out a helper, or
+change an internal element.
+
+As long as the props still mean the same thing, the outside world usually keeps
+working.
+
+A component owns its implementation. Props describe inputs. Context carries
+shared state. Composition makes larger interfaces from smaller pieces.
+TypeScript makes those contracts visible.
+
+That works because responsibilities are clear:
+
+- parents pass inputs;
+- children own implementation;
+- public props are contracts;
+- private markup can change.
+
+That is one reason React code can feel calm to revisit. Every caller does not
+need to know every DOM detail inside the component.
+
+Styling has evolved too, through many useful directions.
+
+CSS, CSS Modules, utility classes, CSS-in-JS, and design-system override APIs
+all help teams ship interfaces.
+
+That ownership instinct raises one styling question:
+
+> What would it look like if styling used the same ownership instinct React
+> components already use?
+
+Parents pass inputs. Children own implementation. Public contracts stay
+explicit. Private details remain free to change.
+
+That ownership boundary is ordinary in React code.
+
+The next page looks at what happens when styling has to cross that boundary.

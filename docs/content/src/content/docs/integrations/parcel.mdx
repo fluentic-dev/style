@@ -1,0 +1,73 @@
+---
+title: Parcel
+description: Configure Fluentic Style with Parcel 2.
+---
+
+Install the package:
+
+<Tabs items={['pnpm', 'npm', 'Yarn', 'Bun']}>
+  <Tab>
+
+```sh
+pnpm add @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+npm install @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+yarn add @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+bun add @fluentic/style
+```
+
+  </Tab>
+</Tabs>
+
+Use the bundled Parcel config when running Parcel:
+
+```json title="package.json"
+{
+  "scripts": {
+    "dev": "parcel index.html --config @fluentic/style/plugin/parcel/config",
+    "build": "parcel build index.html --config @fluentic/style/plugin/parcel/config"
+  }
+}
+```
+
+Keep TypeScript aligned with Fluentic's JSX import source:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+The config extends Parcel's default config and adds Fluentic's transformer,
+resolver, and CSS optimizer. Your HTML entry can stay ordinary:
+
+```html title="index.html"
+<div id="root"></div>
+<script type="module" src="./src/main.tsx"></script>
+```
+
+Parcel owns the emitted JavaScript and CSS assets, including production
+extraction output.
+
+See [Plugin Options](options) for the shared compiler options used internally by
+the adapter and for an explanation of development sourcemap modes.

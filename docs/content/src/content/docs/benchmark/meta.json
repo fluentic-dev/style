@@ -1,0 +1,13 @@
+{
+  "title": "Benchmark",
+  "pages": [
+    "overview",
+    "react-app",
+    "contract",
+    "style-cache",
+    "dynamic-values",
+    "ssr-style",
+    "compiler",
+    "bundle-size"
+  ]
+}

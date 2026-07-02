@@ -1,0 +1,33 @@
+---
+title: JSX Runtime Setup
+description: Configure React so DOM elements can receive the css prop.
+---
+
+Fluentic's JSX runtime enables the `css` prop on React elements.
+
+Set the TypeScript JSX import source:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+Configure your React transform with the same import source when your bundler
+does not read it automatically:
+
+```js
+{
+  runtime: 'automatic',
+  importSource: '@fluentic/style/plugin/jsx'
+}
+```
+
+After this, DOM elements can receive `css`:
+
+```tsx
+<button css={buttonStyle}>Save</button>
+```

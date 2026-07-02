@@ -68,7 +68,7 @@ value weight 2
   atRule,
   origin,
   property,
-]
+];
 ```
 
 The comparator reads that tuple in order. Do not move media before selector:

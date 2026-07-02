@@ -1,0 +1,46 @@
+---
+title: When Styles Cross Boundaries
+description: Reusable components often need a clearer boundary between contract and implementation.
+---
+
+You publish a reusable `Card`.
+
+Another team wants the title to look different in their product.
+
+If the public styling surface is a class name, they may reach for a DOM
+question:
+
+```css
+.product-card > div:first-child h2 {
+  font-weight: 760;
+}
+```
+
+That selector may be the right local choice.
+
+It also carries a cost. It knows the wrapper. It knows the heading. It knows
+the nesting. If the component changes shape later, the selector may have been
+depending on more implementation than anyone intended.
+
+Teams have many reasonable ways to manage this:
+
+- `className` for the root;
+- child class props;
+- `slotProps`;
+- variant props;
+- theme override objects.
+
+Each solves a real problem.
+
+The pressure appears when a component spreads across products and nobody is
+quite sure which styling details are public and which are accidental.
+
+One possible answer is small:
+
+> The component names the parts it is willing to let others style.
+
+External styling can then target those parts by identity instead of by DOM
+path.
+
+Once those parts have names, the next question is how to keep styling close to
+the component language React teams already use.

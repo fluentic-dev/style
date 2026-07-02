@@ -1,11 +1,12 @@
 {
   "title": "Fluentic Style",
   "pages": [
-    "index",
-    "getting-started",
-    "core",
-    "guides",
+    "why-fluentic",
+    "learn",
+    "beyond-the-basics",
     "integrations",
-    "reference"
+    "design",
+    "reference",
+    "benchmark"
   ]
 }

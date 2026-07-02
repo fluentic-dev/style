@@ -1,0 +1,14 @@
+---
+title: createTheme
+description: Create a token or value theme.
+---
+
+```ts
+const darkTheme = createTheme([
+  color.surface('#111827'),
+  color.text('white'),
+]);
+```
+
+Pass themes to `combineStyle(...)` or include them in composition where token
+values should change.

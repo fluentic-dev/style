@@ -1,0 +1,18 @@
+{
+  "title": "Design",
+  "pages": [
+    "keeping-styles-as-data",
+    "separating-behavior-from-declarations",
+    "giving-component-parts-identity",
+    "outside-styles-target-public-parts",
+    "components-own-their-implementation",
+    "resolving-at-component-boundaries",
+    "style-resolution-and-cache",
+    "publishing-less-surface-area",
+    "themes-as-style-data",
+    "debugging-through-identity",
+    "runtime-and-react",
+    "compiler-as-delivery",
+    "tradeoffs"
+  ]
+}

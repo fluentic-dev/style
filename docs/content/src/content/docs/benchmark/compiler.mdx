@@ -1,0 +1,64 @@
+---
+title: Compiler
+description: Compiler transform benchmark report for generated source corpora.
+---
+
+Use the compiler benchmark when you want to measure Fluentic's transform cost
+across generated source shapes.
+
+```sh
+pnpm --filter @benchmark/main bench:compiler
+```
+
+The report writes JSON under `benchmark/main/results` by default, or under
+`BENCH_OUT_DIR` when that variable is set.
+
+## What It Measures
+
+The compiler benchmark generates source corpora, runs the Fluentic transform,
+and records transform timing. It is useful when changing extraction, evaluator,
+or sourcemap behavior.
+
+Use it for questions like:
+
+| Question | Example change |
+| --- | --- |
+| Did extraction get slower for many files? | Evaluator or import-resolution changes. |
+| Did a source pattern become expensive? | New chain methods, spreads, merges, or tokens. |
+| Does sourcemap/debug work change transform time? | Debug transform or source-location changes. |
+
+## Latest Local Report
+
+Report file: `benchmark/main/results/compiler-1781617667349.json`
+
+Created: `2026-06-16T13:47:47.348Z`
+
+Settings: 100 files per corpus, 8 components per file, 1 warmup, 5 measured
+runs, sourcemaps enabled.
+
+| Name | Corpus | Files | LOC | Median ms | ms/file | files/sec |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| fluenticExtractCold | unrelated-tsx | 100 | 9200 | 157.9 | 1.6 | 633.3 |
+| fluenticExtractWarm | unrelated-tsx | 100 | 9200 | 156.0 | 1.6 | 641.2 |
+| stylexBabelPlugin | unrelated-tsx | 100 | 9200 | 169.0 | 1.7 | 591.6 |
+| fluenticExtractCold | direct-styles | 100 | 23000 | 242.0 | 2.4 | 413.2 |
+| fluenticExtractWarm | direct-styles | 100 | 23000 | 244.1 | 2.4 | 409.7 |
+| stylexBabelPlugin | direct-styles | 100 | 23000 | 234.7 | 2.3 | 426.0 |
+| fluenticExtractCold | theme-slots | 100 | 33200 | 410.4 | 4.1 | 243.6 |
+| fluenticExtractWarm | theme-slots | 100 | 33200 | 412.6 | 4.1 | 242.4 |
+| stylexBabelPlugin | theme-slots | 100 | 33200 | 381.3 | 3.8 | 262.3 |
+| fluenticExtractCold | stylex-styles | 100 | 31000 | 273.9 | 2.7 | 365.1 |
+| fluenticExtractWarm | stylex-styles | 100 | 31000 | 274.8 | 2.7 | 363.9 |
+| stylexBabelPlugin | stylex-styles | 100 | 31000 | 413.6 | 4.1 | 241.8 |
+
+## Settings
+
+```sh
+FILES=200 COMPONENTS=20 pnpm --filter @benchmark/main bench:compiler
+WARMUPS=3 MEASURED=20 pnpm --filter @benchmark/main bench:compiler
+CASE=chain pnpm --filter @benchmark/main bench:compiler
+CORPUS=large BENCH_OUT_DIR=./tmp/compiler-report pnpm --filter @benchmark/main bench:compiler
+```
+
+Run this benchmark before and after compiler-heavy changes on the same machine.
+The before-and-after delta matters more than a single absolute number.

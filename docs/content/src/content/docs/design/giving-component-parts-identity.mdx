@@ -1,0 +1,35 @@
+---
+title: Giving Component Parts Identity
+description: Reusable component parts eventually need stable styling identity.
+---
+
+A reusable component usually has more than one part.
+
+A `Card` has a root, title, body, actions, maybe a badge.
+
+Another team may want to style one of those parts without learning whether the
+title is an `h2`, a `span`, or wrapped in another `div`.
+
+If those parts do not have names, teams reach for whatever is available.
+
+Generated classes.
+
+DOM selectors.
+
+Extra props.
+
+Those can work, but they are not always stable contracts.
+
+A slot gives the component part a stable styling name:
+
+```txt
+Button.root
+Button.icon
+Button.label
+```
+
+Once the part has identity, themes and debugging have something stable to
+refer to.
+
+That leads to the next question: how should styling written outside the
+component refer to those named parts?

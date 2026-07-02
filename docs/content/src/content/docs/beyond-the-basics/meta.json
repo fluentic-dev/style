@@ -1,0 +1,14 @@
+{
+  "title": "Beyond the Basics",
+  "pages": [
+    "tracing-styles-in-real-apps",
+    "custom-style-builders",
+    "multiple-style-functions",
+    "custom-chain-methods",
+    "custom-style-fields",
+    "priority-and-rule-order",
+    "static-extraction",
+    "runtime-and-dynamic-styles",
+    "devtools-and-sourcemaps"
+  ]
+}

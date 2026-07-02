@@ -2,11 +2,17 @@
   "title": "Integrations",
   "pages": [
     "overview",
+    "options",
     "nextjs",
     "vite",
     "webpack",
     "rspack",
+    "farm",
+    "parcel",
     "babel",
-    "custom-compiler"
+    "custom-compiler",
+    "jsx-runtime-setup",
+    "runtime-only-mode",
+    "static-extraction"
   ]
 }

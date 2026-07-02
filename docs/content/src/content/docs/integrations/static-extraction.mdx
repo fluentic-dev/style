@@ -1,0 +1,25 @@
+---
+title: Static Extraction
+description: Compile supported static style chains into CSS at build time.
+---
+
+Static extraction is the production build path.
+
+You still write the same React and TypeScript:
+
+```txt
+style -> slot -> scope -> resolve
+```
+
+The bundler plugin analyzes supported Fluentic calls, emits atomic CSS, and
+keeps runtime support for values that depend on props, themes, or app
+composition.
+
+Use extraction when:
+
+- building a production app;
+- your bundler has a Fluentic adapter;
+- you want static CSS assets for supported styles;
+- you still need React render-time behavior for dynamic cases.
+
+See your bundler page for setup.

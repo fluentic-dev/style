@@ -1,0 +1,104 @@
+---
+title: Custom Style Fields
+description: Normalize controlled design-system fields into CSS properties.
+---
+
+A design system often wants authors to use product language, not raw CSS every
+time.
+
+Someone reaches for `paddingX`, `tone`, `elevation`, or a semantic spacing
+value.
+
+Those names can make component code easier to read.
+
+The hidden requirement is that they still need to become ordinary CSS output:
+
+```txt
+custom style object
+transform
+CSS properties
+Fluentic runtime/build output
+```
+
+Transforms work best when the custom field has a stable design-system meaning.
+
+If a field starts describing state, relationships, or component overrides, it
+probably belongs in a chain, slot, or scope instead.
+
+This page only covers custom style object fields. For custom selector/state
+methods, see [Custom Chain Methods](../custom-chain-methods).
+
+Start with a type:
+
+```ts
+import {
+  createStyleFn,
+  styleTransform,
+  type CSSProperties,
+} from '@fluentic/style';
+import { MinimalPrioritySelectors } from '@fluentic/style/selector';
+
+type LayoutStyle = CSSProperties & {
+  row?: boolean;
+  column?: boolean;
+  center?: boolean;
+  gapX?: CSSProperties['columnGap'];
+  gapY?: CSSProperties['rowGap'];
+};
+```
+
+Normalize it to CSS:
+
+```ts
+const layoutTransform = styleTransform<LayoutStyle>({
+  transform(style) {
+    const { row, column, center, gapX, gapY, ...css } = style;
+
+    if (row || column) {
+      css.display = 'flex';
+      css.flexDirection = row ? 'row' : 'column';
+    }
+
+    if (center) {
+      css.alignItems = 'center';
+      css.justifyContent = 'center';
+    }
+
+    if (gapX !== undefined) css.columnGap = gapX;
+    if (gapY !== undefined) css.rowGap = gapY;
+
+    return css;
+  },
+});
+
+export const { style: layout } = createStyleFn({
+  selectors: MinimalPrioritySelectors,
+  transform: layoutTransform,
+});
+```
+
+Use those fields in styles, slots, and scopes:
+
+```ts
+const cardStyles = {
+  root: layout.slot({
+    column: true,
+    gapY: 16,
+    padding: 20,
+  }),
+  actions: layout.slot({
+    row: true,
+    center: true,
+    gapX: 8,
+  }),
+};
+
+const compact = layout.scope().media('(max-width: 700px)', [
+  cardStyles.root({ gapY: 10, padding: 14 }),
+  cardStyles.actions({ column: true, gapY: 8 }),
+]);
+```
+
+The component author writes layout language.
+
+The transform keeps CSS output predictable.

@@ -3,14 +3,51 @@ title: Vite
 description: Configure Fluentic Style with Vite and React.
 ---
 
-```ts
-import { plugin as stylePlugin } from '@fluentic/style/plugin/vite';
-import react from '@vitejs/plugin-react';
+Install the package:
+
+<Tabs items={['pnpm', 'npm', 'Yarn', 'Bun']}>
+  <Tab>
+
+```sh
+pnpm add @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+npm install @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+yarn add @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+bun add @fluentic/style
+```
+
+  </Tab>
+</Tabs>
+
+Add the Vite plugin and configure React's automatic JSX runtime:
+
+```ts title="vite.config.ts"
 import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { plugin as stylePlugin } from '@fluentic/style/plugin/vite';
 
 export default defineConfig({
   plugins: [
-    stylePlugin(),
+    stylePlugin({
+      devSourcemap: 'sidecarServer',
+    }),
     react({
       jsxImportSource: '@fluentic/style/plugin/jsx',
     }),
@@ -18,11 +55,24 @@ export default defineConfig({
 });
 ```
 
-Import the virtual runtime module in your entry:
+Set the JSX import source in TypeScript too:
 
-```tsx
-import 'virtual:fluentic-style';
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
 ```
 
-In Vite, the plugin defaults to runtime-friendly behavior during development and
-build-aware behavior in production.
+Vite is the smallest full setup path: write styles in TypeScript, extract
+static CSS when possible, and keep runtime support for prop-driven or
+theme-driven styles.
+
+The plugin should run before `@vitejs/plugin-react` so Fluentic sees the source
+before the React JSX transform. If you intentionally run without the plugin,
+configure the style runtime yourself before rendering the app.
+
+See [Plugin Options](options) for `include`, `exclude`, `devSourcemap`,
+`getSourcemapFilePath`, and the development sourcemap modes.

@@ -1,656 +1,538 @@
-# @fluentic/style
+# @fluentic/style LLM Guide
 
-`@fluentic/style` is a React-focused atomic CSS-in-JS library with a fluent,
-chainable TypeScript API. Styles can run at runtime, and the package also ships
-compiler/bundler adapters that precompile static style chains into atomic class
-metadata plus collected CSS.
+This file is for LLMs and contributors choosing the right `@fluentic/style`
+API. It is not the full docs. Use it to understand the public surface, the
+composition model, and the default way to solve styling problems in this repo.
 
-Use this file as the high-signal guide for LLMs editing this repo or consuming
-the package.
+Mental model:
 
----
+1. `style(...)` creates one immutable style chain.
+2. `style.slot(...)` creates a component part that scopes can override.
+3. `style.scope(...)` groups overrides for slots.
+4. `combineStyle(...)` resolves a style map plus scopes/tokens into `css` prop
+   items.
+5. `createToken`/`createTokens`, `createValues`, and `createTheme` provide
+   themeable values.
 
-## Why Use Fluentic Style
-
-Fluentic Style is designed for teams that want the ergonomics of CSS-in-JS
-without paying a large runtime tax.
-
-Core advantages:
-
-- **Fluent TypeScript API**: write `style(...).hover(...).media(...)` instead of
-  learning a large config DSL or scattering class strings through components.
-- **Atomic CSS output**: every property/selector/at-rule combination is reusable,
-  deduped, and cache-friendly.
-- **Build-time path with runtime fallback**: static chains can be precompiled by
-  bundler plugins, while dynamic or unsupported cases still work at runtime.
-- **Small runtime surface**: runtime resolution mainly maps style metadata
-  to `className`, injects missing rules, and strips the `css` DOM prop.
-- **Component theming without global naming**: slots and scopes let components
-  expose precise override points without inventing BEM names or global CSS
-  contracts.
-- **Immutable composition**: builders never mutate, so variants can safely fork
-  from a shared base.
-- **Type-safe CSS values**: the default style function uses React CSS types and
-  accepts typed design tokens.
-- **Bundler coverage**: Vite, Webpack, Rspack, Farm, and Next.js app bundler
-  integrations are available from one package.
-- **No required app-wide config file**: ordinary TypeScript modules can define
-  styles, slots, scopes, and tokens.
-
-Good fit:
-
-- React component libraries that need override-friendly styling.
-- Apps that want CSS-in-JS ergonomics with atomic, deduped CSS.
-- Design systems that need typed tokens plus component slot theming.
-- Projects that want build-time extraction but cannot give up runtime escape
-  hatches.
-
-Less ideal:
-
-- Non-React applications that need first-class framework integrations.
-- Styles that must depend heavily on arbitrary runtime data in every render.
-- Teams that prefer authoring plain `.css` files and never want a JS styling API.
+Prefer the smallest API that solves the job. Do not invent global class names,
+manual selector contracts, or one-off styling conventions when slots, scopes,
+tokens, and `combineStyle` fit.
 
 ---
 
-## Install
+## Imports
 
-```bash
-pnpm add @fluentic/style
-```
-
-React 18+ is required. Bundler integrations are optional peer dependencies.
-
----
-
-## Public Imports
+Use the root import for app and component code:
 
 ```ts
 import {
-  DefaultPrioritySelectors,
-  DefaultSelectors,
-  MinimalPrioritySelectors,
-  MinimalSelectors,
-  configureRuntime,
-  createStyleFn,
-  createStyleSheet,
-  createStyleToken,
-  combineScope,
   bindScope,
-  selector,
-  selectorPriority,
-  setGlobalSheet,
-  style,
-  type,
+  combineScope,
   combineStyle,
+  createStyleFn,
+  createTheme,
+  createToken,
+  createTokens,
+  createValues,
+  getClassName,
+  getToken,
+  style,
+  styleTransform,
+  type,
   type CSSProperties,
+  type CombinedStyleFor,
   type StyleProp,
   type StyleTheme,
-  type RuntimeOptions,
-  type StyleObject,
-  type StyleToken,
 } from '@fluentic/style';
 ```
 
-Subpath exports:
+Use `@fluentic/style/selector` only when creating a custom style function:
 
-| Import | Purpose |
-|---|---|
-| `@fluentic/style` | Runtime API, default `style`, selectors, sheet utilities, React hooks/types |
-| `@fluentic/style/css` | CSS helper APIs |
-| `@fluentic/style/config` | Runtime configuration helpers |
-| `@fluentic/style/dev` | Development utilities |
-| `@fluentic/style/dev/rsc` | React Server Component dev client boundary |
-| `@fluentic/style/jsx` | JSX import source for runtime-only apps |
-| `@fluentic/style/plugin/jsx` | JSX import source for plugin-managed builds |
-| `@fluentic/style/plugin/nextjs` | Next.js App Router integration |
-| `@fluentic/style/plugin/vite` | Vite plugin, named export `plugin` |
-| `@fluentic/style/plugin/webpack` | Webpack plugin, named export `plugin` |
-| `@fluentic/style/plugin/rspack` | Rspack plugin, named export `plugin` |
-| `@fluentic/style/plugin/farm` | Farm plugin, named export `plugin` |
+```ts
+import {
+  MinimalSelectors,
+  PrioritySelectors,
+  Selectors,
+  assertEnumSelector,
+  selector,
+  selectorPriority,
+} from '@fluentic/style/selector';
+```
 
-Important: there is no top-level `select` export. Use the chain method
-`.select(...)` on a style or slot builder for custom self selectors only.
+Use `@fluentic/style/css` only for named CSS at-rule refs such as custom
+`@property`, `@font-face`, or raw `@keyframes`.
 
 ---
 
-## JSX Setup
+## 1. Start With `style`
 
-The custom JSX runtime enables the `css` prop on DOM/SVG elements and strips it
-before it hits the DOM.
-
-Vite example:
+Use `style(...)` for one element when no external slot override is needed.
+Builders are immutable: chaining returns a new builder.
 
 ```ts
-import { plugin as stylePlugin } from '@fluentic/style/plugin/vite';
-import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
-
-export default defineConfig({
-  plugins: [
-    stylePlugin(),
-    react({ jsxImportSource: '@fluentic/style/plugin/jsx' }),
-  ],
-});
-```
-
-Use `css` with resolved items from `combineStyle(...)`:
-
-```tsx
-import { style, combineStyle } from '@fluentic/style';
-
-const styles = {
-  root: style({ display: 'grid', gap: 12 }),
-  title: style({ margin: 0, fontWeight: 700 }),
-};
-
-export function Card() {
-  const css = combineStyle(styles);
-
-  return (
-    <section css={css.root}>
-      <h2 css={css.title}>Title</h2>
-    </section>
-  );
-}
-```
-
-`css` accepts a nested array of CSS items and falsy values:
-
-```tsx
-<button css={[css.root, isPrimary && css.primary, props.css]} />
-```
-
-Raw style and slot builders may also be passed directly to `css`; use
-`combineStyle(...)` when you need to combine scopes, slot overrides, token
-overrides, or a previously combined instance.
-
----
-
-## Styles
-
-`style(props?)` returns an immutable builder. Every chained method returns a new
-builder; the original is unchanged, so fork variants freely.
-
-```ts
-import { style } from '@fluentic/style';
-
-const base = style({
-  color: 'CanvasText',
-  padding: 8,
+const root = style({
+  display: 'grid',
+  gap: 12,
+  padding: 16,
 });
 
-const primary = base.hover({ color: 'Highlight' });
-const danger = base.hover({ color: 'red' });
+const interactive = root
+  .hover({ backgroundColor: 'Canvas' })
+  .focusVisible({ outline: '2px solid currentColor' })
+  .media('(max-width: 700px)', { padding: 10 });
 ```
 
-Numeric React CSS values follow React semantics. A value can also be a priority
-tuple:
+Use built-in selector and at-rule methods directly:
 
 ```ts
-const importantPadding = style({
-  padding: [2, 12],
-});
+style().hover({ color: 'red' });
+style().active({ transform: 'translateY(1px)' });
+style().disabled({ opacity: 0.5 });
+style().before({ content: '""' });
+style().nthChild('2n', { backgroundColor: 'Canvas' });
+style().is(['button', 'a'], { cursor: 'pointer' });
+style().not('[hidden]', { display: 'block' });
+style().attr('[aria-current="page"]', { fontWeight: 700 });
+style().select('& > * + *', { marginTop: 8 });
+style().media('(max-width: 700px)', { padding: 12 });
+style().container('(min-width: 420px)', { gap: 16 });
+style().supports('(display: grid)', { display: 'grid' });
 ```
 
-Later classes with the same property + selector + at-rule dedupe key replace
-earlier classes in `css` arrays. This gives normal last-write-wins composition.
+Use `.select(...)` only for local selectors targeting the current element or
+descendants. Use slots and scopes for component part overrides.
+
+Useful helpers:
+
+```ts
+style.raw({ display: 'flex' });       // typed object for spreading
+style.plain({ opacity: [1, 0.8] });   // plain CSS values and priority tuples
+style.value('red', 2);                // explicit priority tuple
+style.keyframes({ from: { opacity: 0 }, to: { opacity: 1 } });
+style.merge(target, a, b);            // merge full chains into target
+```
 
 ---
 
-## Built-In Selectors
+## 2. Use `style.slot` For Components
 
-Default selector methods:
-
-```ts
-style({}).hover({ color: 'red' });
-style({}).active({ color: 'red' });
-style({}).focus({ outline: '2px solid currentColor' });
-style({}).focusVisible({ outline: '2px solid currentColor' });
-style({}).focusWithin({ borderColor: 'currentColor' });
-style({}).visited({ color: 'purple' });
-style({}).link({ color: 'blue' });
-style({}).anyLink({ textDecoration: 'underline' });
-style({}).target({ scrollMarginTop: 64 });
-style({}).disabled({ opacity: 0.5 });
-style({}).enabled({ opacity: 1 });
-style({}).checked({ background: 'Highlight' });
-style({}).indeterminate({ opacity: 0.8 });
-style({}).invalid({ color: 'red' });
-style({}).valid({ color: 'green' });
-style({}).required({ borderColor: 'red' });
-style({}).optional({ borderColor: 'gray' });
-style({}).readOnly({ opacity: 0.7 });
-style({}).readWrite({ opacity: 1 });
-style({}).inRange({ color: 'green' });
-style({}).outOfRange({ color: 'red' });
-style({}).default({ fontWeight: 700 });
-style({}).placeholderShown({ color: 'gray' });
-style({}).autofill({ boxShadow: '0 0 0 999px Canvas inset' });
-style({}).empty({ display: 'none' });
-style({}).root({ colorScheme: 'light dark' });
-style({}).firstChild({ marginTop: 0 });
-style({}).lastChild({ marginBottom: 0 });
-style({}).onlyChild({ margin: 0 });
-style({}).firstOfType({ marginTop: 0 });
-style({}).lastOfType({ marginBottom: 0 });
-style({}).onlyOfType({ margin: 0 });
-style({}).fullscreen({ background: 'black' });
-style({}).modal({ outline: 'none' });
-style({}).before({ content: '""' });
-style({}).after({ content: '""' });
-```
-
-Parametric selectors:
+Use slots for reusable component parts. A slot is a style builder plus a stable
+override target.
 
 ```ts
-style({}).not(':first-child', { marginTop: 8 });
-style({}).is(':button', { cursor: 'pointer' });
-style({}).where(':focus-visible', { outline: '2px solid currentColor' });
-style({}).has('> img', { padding: 0 });
-style({}).nthChild('2n', { background: 'Canvas' });
-style({}).nthLastChild('1', { marginBottom: 0 });
-style({}).nthOfType('2n + 1', { background: 'Canvas' });
-style({}).nthLastOfType('1', { marginBottom: 0 });
-style({}).lang('en', { quotes: '"\\201C" "\\201D"' });
-style({}).dir('rtl', { textAlign: 'right' });
-```
-
-Special selectors:
-
-```ts
-style({}).attr('[data-active]', { fontWeight: 700 });
-style({}).select('&[aria-selected="true"]', { fontWeight: 700 });
-style({}).merge(otherStyle);
-```
-
-At-rules:
-
-```ts
-style({}).media('(max-width: 768px)', { fontSize: 14 });
-style({}).media(1, '(max-width: 768px)', { fontSize: 14 });
-style({}).container('(min-width: 480px)', { padding: 16 });
-style({}).container(1, 'sidebar (min-width: 480px)', { padding: 16 });
-style({}).supports('(display: grid)', { display: 'grid' });
-```
-
-`media` and `container` accept an optional numeric priority as the first
-argument. `supports` does not.
-
-For default cascade priority, `DefaultPrioritySelectors` orders:
-`link`, `visited`, `hover`, `focusWithin`, `focus`, `focusVisible`, `active`,
-`disabled`.
-
----
-
-## Slots
-
-Use slots for component-owned style regions that consumers can override.
-
-```ts
-const buttonStyles = {
+export const buttonStyles = {
   root: style.slot({
+    alignItems: 'center',
     border: 0,
-    borderRadius: 6,
+    borderRadius: 8,
+    cursor: 'pointer',
+    display: 'inline-flex',
+    gap: 8,
     padding: '8px 12px',
   }),
+  icon: style.slot({
+    flex: '0 0 auto',
+  }),
   label: style.slot({
-    fontWeight: 600,
+    fontWeight: 700,
   }),
 };
 ```
 
-A slot is callable. Calling it creates a slot override for that exact slot:
+Calling a slot creates an override for that exact slot:
 
 ```ts
-const biggerLabel = buttonStyles.label({ fontSize: 16 });
-const hoverRoot = buttonStyles.root.hover({ opacity: 0.86 });
-const mobileRoot = buttonStyles.root.media('(max-width: 700px)', { padding: 8 });
+buttonStyles.root({ backgroundColor: 'black' });
+buttonStyles.label({ color: 'white' });
 ```
 
-Slots support the same selector methods as `style()`. Chained slot builders stay
-callable, so this is valid:
-
-```ts
-const emphasisSlot = style.slot({ color: 'CanvasText' }).hover({ color: 'Highlight' });
-const emphasisOverride = emphasisSlot({ fontWeight: 700 });
-```
+Slot overrides belong inside `style.scope(...)` or `bindScope(...)`. Do not pass
+slot overrides directly to DOM `css`.
 
 ---
 
-## Scopes And Themes
+## 3. Use `style.scope` For Slot Overrides
 
-A scope stores slot overrides. At render time, scope overrides are applied only
-to matching slots.
+A scope groups overrides and applies them to a target slot.
 
 ```ts
-const buttonTheme = style.scope([
+export const primaryButtonTheme = style.scope([
   buttonStyles.root({
-    backgroundColor: 'ButtonFace',
-    color: 'ButtonText',
+    backgroundColor: '#2563eb',
+    color: 'white',
   }),
   buttonStyles.label({
-    fontWeight: 700,
+    letterSpacing: 0,
   }),
 ]);
+```
 
-const buttonState = style.scope()
+Scopes can express parent state and media variants:
+
+```ts
+export const buttonState = style.scope()
   .hover([
     buttonStyles.root({ opacity: 0.86 }),
   ])
   .active([
     buttonStyles.root({ transform: 'translateY(1px)' }),
   ]);
+
+export const compactButtonTheme = style.scope([
+  buttonStyles.root({ minHeight: 36 }),
+]).media('(max-width: 700px)', [
+  buttonStyles.root({ width: '100%' }),
+  buttonStyles.label({ fontSize: 13 }),
+]);
 ```
 
-When a component exposes a themed slot, resolve a `StyleTheme` into scope targets
-for that slot:
+Apply a scope to a concrete slot:
+
+```ts
+const target = primaryButtonTheme(buttonStyles.root);
+```
+
+For component props, use `StyleTheme` and `bindScope`:
 
 ```tsx
-import { bindScope, combineStyle, type StyleTheme } from '@fluentic/style';
-
-type ButtonBaseProps = {
+type ButtonProps = {
   theme?: StyleTheme;
+  css?: StyleProp;
 };
 
-export function ButtonBase(props: ButtonBaseProps) {
-  const target = buttonStyles.root;
+function Button(props: ButtonProps) {
   const css = combineStyle(
     buttonStyles,
-    buttonState(target),
-    ...bindScope(target, props.theme),
+    bindScope(buttonStyles.root, buttonState, props.theme),
   );
 
   return (
-    <button css={css.root}>
+    <button css={[css.root, props.css]}>
       <span css={css.label}>Save</span>
     </button>
   );
 }
 ```
 
-`StyleTheme` accepts a scope, nested arrays of scopes, and falsy values. Use this
-shape for component `theme` props:
+Use `combineScope(...scopes)` when you need to pre-compose scopes and apply the
+result later:
 
 ```ts
-type ButtonProps = {
-  theme?: StyleTheme;
-  css?: StyleProp;
+const interactiveTheme = combineScope(buttonState, primaryButtonTheme);
+const css = combineStyle(buttonStyles, interactiveTheme(buttonStyles.root));
+```
+
+---
+
+## 4. Slot Override Patterns
+
+Parent overrides child:
+
+```tsx
+const childStyles = {
+  root: style.slot({ padding: 8 }),
+  label: style.slot({ fontWeight: 700 }),
+};
+
+const childTheme = style.scope([
+  childStyles.root({ color: 'purple' }),
+  childStyles.label({ color: 'teal' }),
+]);
+
+const combineChildStyle = combineStyle.for(childStyles);
+type ChildStyle = CombinedStyleFor<typeof combineChildStyle>;
+
+function Child(props: { styles?: ChildStyle; theme?: StyleTheme }) {
+  const css = combineChildStyle(
+    props.styles,
+    bindScope(childStyles.root, props.theme),
+  );
+
+  return <article css={css.root}><span css={css.label}>Label</span></article>;
+}
+
+function Parent() {
+  const childCss = combineChildStyle(childTheme(childStyles.root));
+  return <Child styles={childCss} />;
+}
+```
+
+Parent state changes descendant slots:
+
+```ts
+const parentHover = style.scope().hover([
+  cardStyles.title({ color: '#2563eb' }),
+  cardStyles.action({ opacity: 1 }),
+]);
+
+const css = combineStyle(
+  cardStyles,
+  bindScope(cardStyles.root, parentHover),
+);
+```
+
+Variant props:
+
+```ts
+const danger = style.scope([
+  buttonStyles.root({ backgroundColor: '#dc2626' }),
+]);
+
+const css = combineStyle(
+  buttonStyles,
+  bindScope(buttonStyles.root, props.danger && danger, props.theme),
+);
+```
+
+Later scopes win when they set the same property at the same selector/at-rule.
+
+---
+
+## 5. Use `combineStyle` For Rendering
+
+`combineStyle(styles, ...args)` returns a lazy object with the same shape as the
+styles object. Each slot/style field is ready for the JSX `css` prop.
+
+```tsx
+const styles = {
+  root: style.slot({ display: 'grid', gap: 8 }),
+  title: style.slot({ margin: 0 }),
+};
+
+function Card(props: { css?: StyleProp }) {
+  const css = combineStyle(styles);
+
+  return (
+    <section css={[css.root, props.css]}>
+      <h2 css={css.title}>Title</h2>
+    </section>
+  );
+}
+```
+
+`css` accepts recursive arrays and falsy values:
+
+```tsx
+<button css={[css.root, isActive && css.active, props.css]} />
+```
+
+`combineStyle` args may include scope targets, `bindScope(...)` results, token
+overrides, nested arrays, falsy values, and a `CombinedStyle` made from the same
+styles object.
+
+Rules:
+
+- Use `StyleProp` for direct `css` prop plumbing.
+- Use `StyleTheme` for scope/theme prop plumbing.
+- Use `combineStyle.for(styles)` for child components that accept pre-combined
+  styles.
+- Do not carry a `CombinedStyle` from one styles object into a combiner for a
+  different styles object.
+- Prefer JSX `css`; use `getClassName(...)` only when a class string is really
+  needed.
+
+---
+
+## 6. Tokens
+
+Tokens are themeable CSS-variable-backed values.
+
+```ts
+const accent = createToken('#2563eb', 'accent');
+
+const styles = {
+  root: style.slot({
+    color: accent,
+  }),
+};
+
+const css = combineStyle(styles, accent('#dc2626'));
+```
+
+Use `createTokens` for semantic token trees:
+
+```ts
+export const tokens = createTokens({
+  color: {
+    canvas: '#ffffff',
+    text: '#17201b',
+    accent: '#0f766e',
+  },
+  radius: {
+    panel: 8,
+    pill: 999,
+  },
+});
+
+const cardStyles = {
+  root: style.slot({
+    backgroundColor: tokens.color.canvas,
+    borderRadius: tokens.radius.panel,
+    color: tokens.color.text,
+  }),
 };
 ```
 
-Pass theme props explicitly to descendants that should receive the same slot
-overrides.
+A token call creates an override:
+
+```ts
+tokens.color.accent('#5eead4');
+```
+
+Token overrides can be passed to `combineStyle`, included in `style.scope`, or
+collected by `createTheme`.
 
 ---
 
-## Static Combination
+## 7. Values And `createValues`
 
-`combineStyle(styles, ...items)` returns a cached proxy of the same shape as `styles`.
-Style and slot builders become resolved CSS items with class metadata.
+Use `createValues` for constrained scales.
+
+```ts
+const space = createValues([0, 4, 8, 12, 16, 24] as const, 'space');
+
+const styles = {
+  root: style.slot({
+    gap: space(12),
+    padding: space(16),
+  }),
+};
+
+const dense = combineStyle(styles, space(16, 12));
+```
+
+Use the `Number` overload when keys are strings but provided CSS values are
+numbers:
+
+```ts
+const z = createValues(Number, ['base', 'overlay', 'modal'] as const, 'z');
+const css = combineStyle(styles, z('modal', 1000));
+```
+
+Use `createTokens` for semantic trees. Use `createValues` when a known scale
+should reject unknown keys.
+
+---
+
+## 8. Themes
+
+`createTheme([...tokenOverrides], stableId?)` creates a class that provides token
+values for a subtree.
+
+```ts
+export const lightTheme = createTheme([
+  tokens.color.canvas('#ffffff'),
+  tokens.color.text('#17201b'),
+  tokens.color.accent('#0f766e'),
+], 'light');
+
+export const darkTheme = createTheme([
+  tokens.color.canvas('#101715'),
+  tokens.color.text('#eef8f4'),
+  tokens.color.accent('#5eead4'),
+], 'dark');
+```
+
+Apply themes through `css`:
 
 ```tsx
-const css = combineStyle(styles, theme(styles.root));
-
-<div css={css.root}>
-  <span css={css.label} />
-</div>
+function App() {
+  const css = combineStyle(appStyles);
+  return <main css={[darkTheme, css.page]} />;
+}
 ```
 
-## Tokens
-
-Tokens emit CSS custom properties. Assigning a token as a style value emits
-`var(--<tokenVarPrefix><id>)` in generated CSS.
-
-```ts
-import { createStyleToken, style } from '@fluentic/style';
-
-const colorPrimary = createStyleToken('blue');
-const colorHover = colorPrimary('darkblue');
-
-const button = style({ color: colorPrimary })
-  .hover({ color: colorHover });
-```
-
-`createStyleToken(otherToken)` creates a derived token that references the
-original token value. A token is also callable, which creates another token with
-the same token id and a new value/ref chain.
-
----
-
-## Runtime Configuration
-
-Call `configureRuntime()` once at app startup, before creating or resolving
-styles, when you need non-default behavior.
-
-```ts
-import { configureRuntime } from '@fluentic/style';
-
-configureRuntime({
-  dev: true,
-  trace: true,
-  selectorCheck: true,
-  sourcemap: true,
-  classNamePrefix: 'fs-',
-  tokenVarPrefix: 'token-',
-  layers: ['reset', 'components', 'utilities'],
-  layerNamespace: 'style',
-  sheetMaxRules: 1000,
-  nonce: '<csp-nonce>',
-  localClassName: true,
-  debugClassName: true,
-  debugPropertyLength: 4,
-  debugValueLength: 8,
-  debugSelectorLength: 8,
-  debugParentSelectorLength: 8,
-  debugAtRuleLength: 10,
-});
-```
-
-Defaults: `dev`, `trace`, `selectorCheck`, `sourcemap`, `localClassName`, and
-`debugClassName` are false unless enabled. When `dev: true`, trace, selector
-checks, sourcemaps, local class names, and debug class names default to true.
-
-Use `createStyleSheet()` plus `setGlobalSheet()` to replace the global sheet
-used by runtime style resolution.
+Use `createTheme` for app/page/subtree token values. Use `style.scope` for
+component slot changes. They can be applied together.
 
 ---
 
 ## Custom Style Functions
 
-Use `createStyleFn` to define a custom typed style function and selector set.
+Use `createStyleFn` only when a design system needs custom style properties,
+selectors, or transforms.
 
 ```ts
-import {
-  DefaultSelectors,
-  createStyleFn,
-  selector,
-  selectorPriority,
-  type,
-  type CSSProperties,
-} from '@fluentic/style';
-
-const selectors = selectorPriority(
-  {
-    ...DefaultSelectors,
-    groupHover: selector('.group:hover &'),
-    dataActive: selector('[data-active] &'),
-    rtl: selector('[dir="rtl"] &'),
-    sm: selector('@media (min-width: 640px)'),
-  },
-  ['link', 'visited', 'hover', 'focus', 'active', 'disabled'],
-);
-
-export const { style: appStyle } = createStyleFn({
-  style: type<CSSProperties>,
-  selectors,
-});
-
-appStyle({ color: 'black' }).groupHover({ color: 'red' });
-```
-
-Selector signature inference:
-
-| Selector pattern | Method signature |
-|---|---|
-| `:hover` | `.hover(style)` |
-| `:not($$)` | `.not(selectorOrSelectors, style)` |
-| `$$` anywhere | `.method(string \| string[], style)` |
-| `$` anywhere | `.method(string, style)` |
-| `@media $$` | `.media(query, style)` or `.media(priority, query, style)` |
-| `@container $$` | `.container(query, style)` or `.container(priority, query, style)` |
-| `@supports $$` | `.supports(query, style)` |
-| `...` | `.merge(styleOrStyles)` |
-
-`selector(pattern, assert?)` and `selector(pattern, priority, assert?)` are both
-valid. Built-in assert types include `local`, `arg`, `tag`, `attr`, `value`,
-`media`, `supports`, and `container`.
-
----
-
-## Compiler And Bundler Plugins
-
-Bundler plugins are thin wrappers around `createCompiler()`.
-
-```ts
-import { plugin as stylePlugin } from '@fluentic/style/plugin/vite';
-
-stylePlugin({
-  classNamePrefix: 'fs-',
-  debug: true,
-  include: /\.[jt]sx?$/,
-  exclude: /node_modules/,
-});
-```
-
-Compiler options:
-
-```ts
-type CompilerOptions = {
-  classNamePrefix?: string;
-  debug?: boolean;
-  include?: RegExp | RegExp[];
-  exclude?: RegExp | RegExp[];
+type UiStyle = CSSProperties & {
+  elevated?: boolean;
+  pill?: boolean;
 };
+
+const uiSelectors = selectorPriority({
+  ...MinimalSelectors,
+  pressed: selector('[aria-pressed="true"]'),
+  tone: selector('[data-tone="$"]', assertEnumSelector('brand', 'danger')),
+}, [
+  'hover',
+  'pressed',
+  'active',
+  'disabled',
+]);
+
+const uiTransform = styleTransform<UiStyle>({
+  transform(style) {
+    const { elevated, pill, ...css } = style;
+    if (elevated) css.boxShadow = '0 18px 44px rgba(15, 23, 42, 0.12)';
+    if (pill) css.borderRadius = 999;
+    return css;
+  },
+});
+
+export const { style: ui } = createStyleFn({
+  style: type<UiStyle>,
+  selectors: uiSelectors,
+  transform: uiTransform,
+});
 ```
 
-Default transform include is `/\.[jt]sx?$/`; files in `node_modules` are skipped.
-The unplugin exposes a virtual CSS module at `virtual:fluentic-style.css`.
-Import that virtual CSS from an app entry when the bundler setup needs collected
-CSS to be emitted.
+Custom builders expose the same shape as `style`: `ui(...)`, `ui.slot(...)`,
+`ui.scope(...)`, `ui.raw(...)`, `ui.plain(...)`, `ui.keyframes(...)`, and
+`ui.merge(...)`.
 
-Current compiler behavior is intentionally conservative:
-
-- It recognizes imports of the default `style` API and chains starting from
-  `style(...)`, `style.slot(...)`, and `style.scope(...)`.
-- It statically evaluates simple style objects and supported references.
-- It supports default selectors, simple pseudo selectors, and at-rule chains.
-- If a style chain cannot be evaluated safely, it leaves runtime behavior to
-  the runtime fallback.
-
-Do not document unsupported compiler magic as guaranteed. Prefer runtime-safe
-patterns unless you have verified compiler support in `packages/style/plugin`.
+Register custom style functions with compiler plugins through `importSources`.
 
 ---
 
-## Atomic Output Model
+## Decision Guide
 
-Every property + selector + at-rule combination becomes one atomic rule and one
-dedupe key.
+Use `style(...)` when styling one element directly.
 
-```ts
-style({ color: 'blue', padding: 8 }).hover({ color: 'red' });
-```
+Use `style.slot(...)` when the style is part of a reusable component or may need
+slot-aware overrides.
 
-Conceptually emits:
+Use `style.scope(...)` when changing slots for variants, themes, media, or
+parent states.
 
-```css
-.a{color:blue}
-.b{padding:8px}
-.c:hover{color:red}
-```
+Use `combineStyle(...)` when rendering a styles object or applying scopes/token
+overrides.
 
-When debug class names are enabled, class names include shortened property,
-value, selector, parent selector, at-rule, and hash fragments according to the
-configured debug lengths.
+Use `StyleProp` for direct CSS escape hatches and `StyleTheme` for slot-aware
+component theming.
 
----
+Use `createToken`/`createTokens` when values should be themeable.
 
-## Best Practices
+Use `createValues` when values must come from a constrained scale.
 
-Authoring:
+Use `createTheme` when many token overrides should apply to an app, page, or
+subtree.
 
-- Define `style(...)`, `style.slot(...)`, `style.scope(...)`, and tokens at module
-  scope whenever possible. This gives the compiler the best chance to precompile
-  and keeps runtime class generation stable.
-- Build variants by forking immutable builders: `const danger = base.hover(...)`.
-  Do not mutate or rebuild base styles inside render.
-- Prefer style arrays for composition: `css={[css.root, active && css.active]}`.
-  Do not manually concatenate Fluentic class names.
-- Use `.merge(...)` when composing style builders outside JSX; use `css={[...]}`
-  when composing rendered CSS items.
-- Use `.select(...)` for custom self selectors. Do not import a top-level
-  `select`. Use `style.slot(...)` and `style.scope(...)` for nested component
-  parts.
-- Keep dynamic values near component edges. Stable, static style chains are the
-  fastest path and the easiest path for bundler extraction.
-
-Component APIs:
-
-- Use `StyleProp` for a direct visual override of the component root or a documented
-  part.
-- Use `StyleTheme` for explicit slot-level theming props.
-- Use slots for component internals. A slot is the library's clean replacement for
-  ad-hoc global class names like `.Button-label`.
-- Expose a small number of intentional slots instead of making every DOM node a
-  public override point.
-- In components with slots, call `combineStyle(styles, ...targets)` where the
-  styles are rendered, and pass theme props explicitly to descendants.
-- Use `bindScope(targetSlot, props.theme)` when turning public theme props
-  into slot-specific scope targets.
-
-Runtime and JSX:
-
-- Configure `jsxImportSource: '@fluentic/style/plugin/jsx'` when a Fluentic Style compiler plugin is enabled.
-- Configure `jsxImportSource: '@fluentic/style/jsx'` for runtime-only usage without a compiler plugin.
-- Keep raw DOM `className` for external or framework classes; the JSX runtime
-  appends Fluentic classes after existing `className`.
-- Call `configureRuntime()` before styles are resolved. Runtime config is global,
-  so do not toggle it from inside components.
-- Enable `dev`, `selectorCheck`, and `sourcemap` in development when debugging
-  selectors or class output; avoid debug class names in production unless you
-  intentionally need readable classes.
-
-Compiler:
-
-- Add the bundler plugin before relying on build-time extraction, and keep the JSX
-  runtime configured separately.
-- Import `virtual:fluentic-style.css` from the app entry when the bundler needs a
-  concrete CSS module for collected rules.
-- Prefer simple object literals, constants, tokens, slots, and scopes that can be
-  statically evaluated.
-- Treat unsupported compiler cases as runtime fallback, not as a failure. Do not
-  remove runtime-safe code just to satisfy extraction.
-- Use `include`/`exclude` options to keep transforms focused on source files.
-
-Selector safety:
-
-- Keep selector strings valid for their selector type when `selectorCheck` is on.
-- Prefer built-in selector methods over custom selectors unless a design system
-  needs a reusable semantic selector like `groupHover`.
-- Give custom selector priorities only when cascade order matters; otherwise let
-  atomic dedupe and array order handle overrides.
+Use custom style functions sparingly and only for reusable design-system syntax.
 
 ---
 
-## Known Invariants
+## Guardrails
 
-- Builders are immutable.
-- Slots are identified by callsite/debug data when available, otherwise by a
-  per-builder counter.
-- A slot override only applies to the slot it was created from.
-- Combined styles are keyed by the original `styles` object passed to `combineStyle`.
-- `css` props may be nested arrays and may contain falsy values.
-- Runtime CSS is inserted when `combineStyle` or the JSX `css` prop resolves styles.
-- Runtime code does not import compiler or bundler adapter code from the root
-  export.
+- Keep style definitions at module scope when possible.
+- Prefer slots and scopes over deep selectors into component internals.
+- Do not pass raw scope objects to `css`; pass scope targets or use
+  `bindScope`.
+- Do not pass slot overrides directly to DOM `css`.
+- Do not manually concatenate Fluentic class names.
+- Do not add broad abstractions until a real repeated pattern appears.
+- Mirror existing examples before inventing a new pattern:
+  `examples/basic/src/styles.ts`,
+  `examples/basic/src/button-base.tsx`,
+  `examples/snapshots/data/003-explicit-scope/source.tsx`,
+  `examples/theme/src/tokens.ts`,
+  `examples/theme/src/themes.ts`,
+  `examples/custom/src/style.ts`.

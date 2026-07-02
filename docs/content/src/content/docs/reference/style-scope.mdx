@@ -1,0 +1,25 @@
+---
+title: style.scope
+description: Group slot overrides into a reusable component theme.
+---
+
+```ts
+const primary = style.scope([
+  styles.root({ backgroundColor: '#2563eb' }),
+  styles.label({ color: 'white' }),
+]);
+```
+
+Scopes can use selector and at-rule chains:
+
+```ts
+const interactive = style.scope().hover([
+  styles.root({ opacity: 0.86 }),
+]);
+```
+
+Apply a scope to a target slot:
+
+```ts
+primary(styles.root);
+```

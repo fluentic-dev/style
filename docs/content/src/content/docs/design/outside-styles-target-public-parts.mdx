@@ -1,0 +1,22 @@
+---
+title: Outside Styles Target Public Parts
+description: Let outside styling target public component parts instead of private DOM.
+---
+
+A component theme is usually written outside the component.
+
+That means it cannot safely know the component's DOM.
+
+It should not know which element is the root, where the title is rendered, or
+how many wrappers exist.
+
+It should only describe what it wants to change.
+
+The component should decide where that outside styling attaches.
+
+Scopes target slots and wait for the component to attach them.
+
+The scope groups the requested overrides. It does not pick DOM nodes.
+
+That leads to the next question: who owns the place where outside overrides
+attach?

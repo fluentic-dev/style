@@ -5,19 +5,15 @@ description: Public subpath exports and when to use them.
 
 | Import | Use |
 | --- | --- |
-| `@fluentic/style` | Runtime API, default style builder, sheet utilities, React hooks and types. |
-| `@fluentic/style/css` | CSS helper APIs for keyframes, font faces, and at-rules. |
+| `@fluentic/style` | Runtime API, style builder, tokens, themes, and types. |
+| `@fluentic/style/utils` | Utilities such as `exposeStyle`. |
 | `@fluentic/style/selector` | Selector constructors, validators, presets, and priority helpers. |
-| `@fluentic/style/config` | Runtime configuration helpers. |
-| `@fluentic/style/dev` | Development utilities. |
-| `@fluentic/style/dev/rsc` | React Server Component dev client boundary. |
-| `@fluentic/style/jsx` | JSX import source for runtime-only apps. |
-| `@fluentic/style/plugin/jsx` | JSX import source for plugin-managed builds. |
-| `@fluentic/style/plugin/nextjs` | Next.js App Router adapter. |
+| `@fluentic/style/css` | CSS helper APIs. |
+| `@fluentic/style/dev/rsc` | Next.js App Router and RSC development bridge. |
+| `@fluentic/style/plugin/jsx` | JSX runtime import source. |
 | `@fluentic/style/plugin/vite` | Vite adapter. |
 | `@fluentic/style/plugin/webpack` | Webpack adapter. |
 | `@fluentic/style/plugin/rspack` | Rspack adapter. |
 | `@fluentic/style/plugin/farm` | Farm adapter. |
-
-Prefer the root import for app and component code. Use subpaths for tooling and
-build configuration.
+| `@fluentic/style/plugin/parcel/config` | Parcel config. |
+| `@fluentic/style/plugin/nextjs` | Next.js adapter. |

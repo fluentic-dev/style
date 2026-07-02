@@ -1,23 +1,65 @@
 ---
 title: Next.js
-description: Configure Fluentic Style with the Next.js App Router, RSC, production builds, and static export.
+description: Configure Fluentic Style for the Next.js App Router.
 ---
 
-Fluentic Style ships a dedicated Next.js integration for App Router projects.
-It wires the runtime, development CSS, source maps, production extraction, and
-static export support through one config helper.
+Use the Next.js integration when your app uses the App Router and you want the
+runtime entries, development CSS, sourcemaps, production extraction, and static
+export support wired through one config helper. The adapter patches both the
+Webpack and Turbopack paths that Next uses internally.
 
-## Setup
+Install the package:
 
-Install Fluentic Style:
+<Tabs items={['pnpm', 'npm', 'Yarn', 'Bun']}>
+  <Tab>
 
-```bash
+```sh
 pnpm add @fluentic/style
 ```
 
-Configure the JSX runtime:
+  </Tab>
+  <Tab>
 
-```json
+```sh
+npm install @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+yarn add @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+bun add @fluentic/style
+```
+
+  </Tab>
+</Tabs>
+
+Configure Next:
+
+```js title="next.config.mjs"
+import stylePlugin from '@fluentic/style/plugin/nextjs';
+
+const nextConfig = {
+  // your Next config
+};
+
+export default stylePlugin(nextConfig);
+```
+
+The second argument accepts shared plugin options such as `include`, `exclude`,
+`css`, `dev`, `importSources`, and `getSourcemapFilePath`. See
+[Plugin Options](options) for the common option shape and sourcemap details.
+
+Configure TypeScript JSX import source:
+
+```json title="tsconfig.json"
 {
   "compilerOptions": {
     "jsx": "react-jsx",
@@ -26,161 +68,100 @@ Configure the JSX runtime:
 }
 ```
 
-Add the Next.js integration:
+Add the development RSC bridge in your root layout:
 
-```js
-// next.config.mjs
-import style from '@fluentic/style/plugin/nextjs';
+```tsx title="app/layout.tsx"
+import { StyleDev } from '@fluentic/style/dev/rsc';
+import type { ReactNode } from 'react';
 
-/** @type {import('next').NextConfig} */
-let nextConfig = {};
+import './globals.css';
 
-nextConfig = style(nextConfig, {
-  include: /\.[jt]sx?$/,
-  exclude: /node_modules/,
-});
-
-export default nextConfig;
-```
-
-The integration uses webpack in current examples. Run Next with webpack while
-using this adapter:
-
-```bash
-next dev --webpack
-next build --webpack
-```
-
-## Root Layout
-
-Import the RSC StyleDev for dev mode from the runtime package:
-
-```tsx
-// app/layout.tsx
-import { StyleDev } from '@fluentic/style/runtime/rsc';
-
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout(props: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body>
-        {children}
-        {process.env.NODE_ENV === 'development' && <StyleDev />}
-      </body>
+      <body>{props.children}</body>
+
+      {process.env.NODE_ENV === 'development' && <StyleDev enableStyleDevUtils />}
     </html>
   );
 }
 ```
 
-The plugin also injects the Fluentic runtime module in development and wires the
-server-side package alias needed for RSC.
+`StyleDev` does two development-only jobs:
 
-## Development
+- starts the RSC development style observer on the client;
+- inserts changed server-rendered Fluentic CSS during render with
+  `useServerInsertedHTML`.
 
-In development, the Next.js integration keeps style chains live at runtime and
-injects debug metadata into style calls. That lets DevTools sourcemaps point
-back to the exact style property:
+It returns `null`, so it does not render visible UI.
+
+## StyleDev Props
+
+`StyleDev` accepts one main prop:
 
 ```ts
-const styles = {
-  heading: style.slot({
-    backgroundColor: 'red',
-  }),
+type StyleDevProps = {
+  enableStyleDevUtils?: boolean | {
+    name?: string;
+    silent?: boolean;
+  };
 };
 ```
 
-The generated CSS rule for `background-color: red` maps back to the
-`backgroundColor` line instead of the render site.
+`enableStyleDevUtils` controls the browser console helper:
 
-Development CSS uses two paths:
+| Value | Behavior |
+| --- | --- |
+| omitted | Enables the helper as `window.StyleDevUtils`. |
+| `true` | Enables the helper as `window.StyleDevUtils`. |
+| `false` | Starts the RSC style observer, but does not install the console helper. |
+| `{ name: 'MyStyleTools' }` | Installs the helper on `window.MyStyleTools`. |
+| `{ silent: true }` | Installs the helper without the startup console message. |
 
-- a pre-collected CSS link for fast first paint;
-- `data-css-dev` payloads consumed by the client observer for the real dev
-  sheet and CSS sourcemaps.
+For example:
 
-The pre-collected CSS path is an optimization. If the browser misses it during a future
-framework change, the `data-css-dev` observer still inserts the rules after the
-page loads.
-
-## Production Build
-
-In production builds, the integration runs the full Fluentic compiler. Static
-style chains are evaluated, atomic CSS is collected, and the CSS is written into
-Next's emitted CSS assets. Extraction is always enabled for Next.js production
-builds and is not configurable on the Next.js plugin.
-
-```bash
-pnpm --filter @fluentic/style build
-next build --webpack
-next start
+```tsx title="app/layout.tsx"
+{process.env.NODE_ENV === 'development' && (
+  <StyleDev enableStyleDevUtils={{ name: 'FluenticStyleDev', silent: true }} />
+)}
 ```
 
-Runtime behavior remains available for dynamic values and cases the compiler
-cannot statically evaluate.
+With the default helper enabled, you can inspect and change development
+debugging behavior from the browser console:
 
-## Static Export
+```ts
+StyleDevUtils.info();
+StyleDevUtils.usage();
+StyleDevUtils.getConfig();
+StyleDevUtils.setSourcemapMode.toStyle();
+StyleDevUtils.setSourcemapMode.toValue();
+StyleDevUtils.setElementMarker.toOn();
+StyleDevUtils.setElementMarker.toOff();
+StyleDevUtils.setPriorityMode.toLayer();
+StyleDevUtils.setPriorityMode.toSort();
+StyleDevUtils.reset();
+```
 
-Static export works with the same plugin. Configure your Next app for export:
+The plugin owns the Fluentic CSS entry in development and production. Keep your
+normal app CSS imports in `app/layout.tsx`; you do not need to import a Fluentic
+plugin CSS file manually.
 
-```js
-// next.config.mjs
-import style from '@fluentic/style/plugin/nextjs';
+For production builds, run your normal Next build:
 
-let nextConfig = {
+```sh
+next build
+```
+
+Static export works through normal Next configuration:
+
+```js title="next.config.mjs"
+import stylePlugin from '@fluentic/style/plugin/nextjs';
+
+export default stylePlugin({
   output: 'export',
   trailingSlash: true,
-};
-
-nextConfig = style(nextConfig);
-
-export default nextConfig;
-```
-
-Build with webpack:
-
-```bash
-next build --webpack
-```
-
-Next writes the exported site to `out`, including the extracted CSS assets.
-
-## Sourcemap Paths
-
-In development, CSS sourcemaps use Fluentic's Next.js source URLs by default, so
-DevTools can jump from generated CSS back to the original style property. The
-integration serves those sources through its dev sidecar.
-
-Use `getSourcemapFilePath` only when the CSS sourcemap `sources[]` entry should
-match a bundler-specific path:
-
-```js
-style(nextConfig, {
-  getSourcemapFilePath({ relativePath, sourceUrl }) {
-    return `webpack://_N_E/./${relativePath}`;
-  },
 });
 ```
 
-The callback receives:
-
-```ts
-{
-  filePath: string;
-  absolutePath: string;
-  relativePath: string;
-  rootDir?: string;
-  sourceUrl?: string | null;
-}
-```
-
-Return `null` or `undefined` to keep the integration default.
-
-## Example
-
-The repository includes a complete App Router example:
-
-```bash
-pnpm --filter @fluentic/style build
-pnpm --filter @example/nextjs dev
-pnpm --filter @example/nextjs build
-pnpm --filter @example/nextjs ssg:build
-```
+Supported static style chains are extracted into CSS. Values that depend on
+props, themes, or app composition continue to resolve through the runtime.

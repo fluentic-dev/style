@@ -1,0 +1,196 @@
+---
+title: Runtime And Dynamic Styles
+description: What still happens while React renders.
+---
+
+Static extraction does not mean "no runtime."
+
+It means: move the CSS rules that are already known at build time into a CSS
+file.
+
+React still renders components. Props still change. Themes still change.
+Callers can still pass `css`. Those parts need a small runtime resolver.
+
+For the detailed resolver and cache path, see
+[Style Resolution And Cache](../design/style-resolution-and-cache).
+
+## The Short Version
+
+| Mode | Where CSS rules come from | What the runtime does |
+| --- | --- | --- |
+| Extracted production | CSS file emitted by the build | Resolves class names, token overrides, scopes, themes, and `css` props. |
+| Runtime-only | Browser runtime | Resolves class names and inserts rules as components render. |
+| Development | Runtime plus debug metadata | Keeps source tracing, element markers, and readable debugging output. |
+
+The important detail: extracted production does not insert the already-extracted
+static rules again.
+
+## Static CSS, Dynamic Choice
+
+This style is static:
+
+```ts
+export const button = style({
+  border: 0,
+  borderRadius: 8,
+  padding: '8px 12px',
+}).hover({
+  opacity: 0.86,
+});
+```
+
+In an extracted production build, those rules can live in the CSS asset.
+
+But the component may still choose which styles to use at render time:
+
+```tsx
+export function Button(props: ButtonProps) {
+  return (
+    <button css={[
+      button,
+      props.danger && dangerButton,
+      props.css,
+    ]}>
+      {props.children}
+    </button>
+  );
+}
+```
+
+The build can extract `button` and `dangerButton`.
+
+The build cannot know whether `props.danger` is true for this render, or what
+`props.css` will be when another app uses the component.
+
+That is runtime work, but it is not the same as generating every CSS rule in the
+browser.
+
+## Themes Are Render-Time Choices
+
+Themes are the clearest example.
+
+The style can be extracted:
+
+```ts
+const color = createValues([
+  '#ffffff | Surface',
+  '#111827 | Text',
+]);
+
+const page = style({
+  backgroundColor: color('#ffffff | Surface'),
+  color: color('#111827 | Text'),
+});
+```
+
+The theme choice happens when the app renders:
+
+```tsx
+export function App(props: { dark?: boolean }) {
+  return (
+    <main css={[
+      props.dark && darkTheme,
+      page,
+    ]}>
+      {props.children}
+    </main>
+  );
+}
+```
+
+In extracted production:
+
+- the `page` CSS rule is already in the CSS file;
+- the theme class or token override is chosen while React renders;
+- the browser applies the current CSS variable values.
+
+No duplicate static rule insertion is needed.
+
+## Dynamic Values
+
+If the value can be anything, prefer CSS variables.
+
+Good dynamic value pattern:
+
+```tsx
+const swatch = style({
+  backgroundColor: 'var(--swatch-color)',
+});
+
+export function Swatch(props: { color: string }) {
+  return (
+    <span
+      css={swatch}
+      style={{ '--swatch-color': props.color }}
+    />
+  );
+}
+```
+
+The CSS rule is stable. Only the inline custom property changes.
+
+Avoid generating a new style object for every possible value:
+
+```tsx
+export function Swatch(props: { color: string }) {
+  return (
+    <span css={style({ backgroundColor: props.color })} />
+  );
+}
+```
+
+That asks the runtime to deal with many unique rules. It can be useful for
+small cases, but it is not the main path for open-ended app values like colors,
+positions, opacity, or transforms.
+
+## Component Libraries
+
+Libraries are another reason runtime resolution remains.
+
+A library can publish:
+
+```ts
+export const cardStyles = {
+  root: style.slot({
+    borderRadius: 8,
+    padding: 16,
+  }),
+  title: style.slot({
+    fontWeight: 800,
+  }),
+};
+```
+
+The app decides how to customize those slots:
+
+```tsx
+<Card
+  css={style.scope([
+    cardStyles.title({ color: '#2563eb' }),
+  ])}
+/>
+```
+
+The component library did not know that app override when it was built. The
+runtime combines the component's extracted classes with the app's scopes and
+caller styles.
+
+## What To Remember
+
+Extracted production is the normal fast path:
+
+```txt
+static declarations -> CSS file
+render-time choices -> class/token/scope resolution
+```
+
+Runtime-only mode is the fallback or deliberate setup:
+
+```txt
+style declarations -> browser rule insertion
+render-time choices -> class/token/scope resolution
+```
+
+Use extraction for production apps when you can. Use CSS variables for
+open-ended dynamic values. Let runtime resolution handle the parts that only
+React can know at render time.

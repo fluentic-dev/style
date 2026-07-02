@@ -6,9 +6,16 @@ import {
   getLayerBundleCss,
   type LayerPriority,
 } from '../../../../packages/style/atomic/layer';
-import { configureRuntime } from '../../../../packages/style/config';
-import { RUNTIME_CONFIG } from '../../../../packages/style/config/config';
+import { createDebugPlugin } from '../../../../packages/style/compiler/transform/debug';
+import { configureStyleRuntime } from '../../../../packages/style/config';
+import { CSS_CONFIG, CSS_CONFIG_DEFAULT } from '../../../../packages/style/config/config/css';
+import { DEV_CONFIG, IS_DEV, setDevRuntimeOptions } from '../../../../packages/style/config/config/dev';
 import { getClassName } from '../../../../packages/style/runtime/core';
+import { createTransformElement } from '../../../../packages/style/runtime/core/createTransformElement';
+import {
+  createElementMarkerRuleFromDebug,
+  splitElementMarkerStyleProp,
+} from '../../../../packages/style/runtime/core/elementMarker';
 import { collectStylePropSheetRules } from '../../../../packages/style/runtime/sheet';
 import { bindScope, combineStyle } from '../../../../packages/style/runtime/style';
 import type { StyleProp } from '../../../../packages/style/runtime/types';
@@ -21,7 +28,16 @@ import { createToken } from '../../../../packages/style/style/value';
 
 type PlaygroundFile = { name: string; code: string; };
 type RuntimeRequest = { files: PlaygroundFile[]; config: Record<string, unknown>; };
-type RuntimeResult = { html: string; css: string; };
+type RuntimeSourcemapMode = 'style' | 'value';
+export type RuntimeMarker = {
+  className: string;
+  css: string;
+  filePath: string;
+  html?: string;
+  line: number;
+  column: number;
+};
+type RuntimeResult = { html: string; css: string; markers: RuntimeMarker[]; };
 type VNode = string | number | boolean | null | undefined | VElement | VNode[];
 type VElement = {
   type: string | ((props: Record<string, unknown>) => VNode) | typeof Fragment;
@@ -50,24 +66,48 @@ export function runRuntime(request: RuntimeRequest): RuntimeResult {
   resetStyleTokenIdCounter();
   resetStyleThemeIdCounter();
 
-  // Force options needed for the playground trace panel and class name readability
-  configureRuntime({ ...request.config, dev: true, localClassName: true, debugClassName: true });
+  // Force options needed for the playground trace panel and class name readability.
+  IS_DEV.isDev = true;
+  configureStyleRuntime({ css: request.config });
+  setDevRuntimeOptions({
+    elementClassName: true,
+    priorityMode: request.config.priorityMode === 'sort' ? 'sort' : 'layer',
+    sourcemapMode: getRuntimeSourcemapMode(request.config.sourcemapMode),
+  });
 
   const source = transformRuntimeSource(
-    request.files
-      .map((file) => `/* ${file.name} */\n${stripModuleSyntax(file.code)}`)
-      .join('\n\n'),
+    request.files,
+    getRuntimeSourcemapMode(request.config.sourcemapMode),
   );
 
   const cssRules: SheetRule[] = [];
+  const markerRules: SheetRule[] = [];
   const seen = new Set<string>();
+  const seenMarkers = new Set<string>();
+  const markerHtmlByKey = new Map<string, string>();
 
   function collectFromStyleProp(styleProp: StyleProp) {
     for (const rule of collectStylePropSheetRules(styleProp)) {
+      if (isElementMarkerRule(rule)) {
+        collectMarkerRule(rule);
+        continue;
+      }
       if (seen.has(rule.css)) continue;
       seen.add(rule.css);
       cssRules.push(rule);
     }
+  }
+
+  function collectMarkerRule(rule: SheetRule, html?: string) {
+    const key = getMarkerRuleKey(rule);
+
+    if (html) markerHtmlByKey.set(key, html);
+    if (seenMarkers.has(key)) return key;
+
+    seenMarkers.add(key);
+    markerRules.push(rule);
+
+    return key;
   }
 
   // Real getClassName wrapped to also collect CSS rules for the iframe stylesheet
@@ -75,6 +115,8 @@ export function runRuntime(request: RuntimeRequest): RuntimeResult {
     collectFromStyleProp(styleProp);
     return getClassName(styleProp, props as Parameters<typeof getClassName>[1]);
   }
+
+  const transformPlaygroundElement = createTransformElement(wrappedGetClassName);
 
   // Real combineStyle wrapped to collect CSS for all slots up front
   function wrappedCombineStyle<T extends object>(styles: T, ...args: unknown[]): T {
@@ -93,7 +135,24 @@ export function runRuntime(request: RuntimeRequest): RuntimeResult {
     props: Record<string, unknown> | null,
     ...children: VNode[]
   ): VElement {
-    return { type, props: props ?? {}, children };
+    if (typeof type !== 'string') return { type, props: props ?? {}, children };
+
+    const marker = splitElementMarkerStyleProp((props ?? {}).css as StyleProp);
+    const markerRule = createElementMarkerRuleFromDebug(marker.debug);
+
+    const transformed = transformPlaygroundElement({
+      type: type as Parameters<typeof transformPlaygroundElement>[0]['type'],
+      props: (props ?? {}) as Parameters<typeof transformPlaygroundElement>[0]['props'],
+    });
+
+    if (markerRule) {
+      collectMarkerRule(
+        markerRule.rule,
+        createSimulatedElementHtml(type, transformed.props as Record<string, unknown>),
+      );
+    }
+
+    return { type: transformed.type as string, props: transformed.props as Record<string, unknown> ?? {}, children };
   }
 
   const entry = new Function(
@@ -126,6 +185,7 @@ return typeof renderApp === "function" ? renderApp
   return {
     html: entry ? renderVNode(entry()) : '',
     css: formatRuntimeCss(cssRules),
+    markers: formatMarkers(markerRules, markerHtmlByKey),
   };
 
   function renderVNode(value: VNode): string {
@@ -192,26 +252,93 @@ return typeof renderApp === "function" ? renderApp
   }
 }
 
+function getMarkerRuleKey(rule: SheetRule) {
+  return `${rule.key ?? rule.css}-${rule.callsite?.filePath ?? ''}-${rule.callsite?.line ?? 0}-${
+    rule.callsite?.column ?? 0
+  }`;
+}
+
+function isElementMarkerRule(rule: SheetRule) {
+  return typeof rule.key === 'string' && rule.key.startsWith('element-marker:');
+}
+
+function formatMarkers(rules: SheetRule[], htmlByKey: ReadonlyMap<string, string>): RuntimeMarker[] {
+  return rules
+    .map((rule) => {
+      const callsite = rule.callsite;
+      const key = typeof rule.key === 'string' ? rule.key : '';
+      if (!callsite || !key.startsWith('element-marker:')) return null;
+
+      const marker: RuntimeMarker = {
+        className: key.slice('element-marker:'.length),
+        css: rule.css,
+        filePath: callsite.filePath,
+        line: callsite.line,
+        column: callsite.column,
+      };
+      const html = htmlByKey.get(getMarkerRuleKey(rule));
+      if (html) marker.html = html;
+
+      return marker;
+    })
+    .filter((marker): marker is RuntimeMarker => marker !== null);
+}
+
+function createSimulatedElementHtml(type: string, props: Record<string, unknown> | null | undefined) {
+  const attrs = getSimulatedElementAttrs(props);
+
+  return VOID_ELEMENTS.has(type)
+    ? `<${type}${attrs}>`
+    : `<${type}${attrs}>...</${type}>`;
+}
+
+function getSimulatedElementAttrs(props: Record<string, unknown> | null | undefined) {
+  if (!props) return '';
+
+  const attrs: string[] = [];
+
+  for (const [key, value] of Object.entries(props)) {
+    if (value === null || value === undefined || value === false) continue;
+    if (key === 'children' || key === 'key' || key === 'css' || key.startsWith('on')) continue;
+
+    if (key === 'style' && value && typeof value === 'object') {
+      attrs.push(`style="${escapeAttr(styleObjectToString(value as Record<string, unknown>))}"`);
+      continue;
+    }
+
+    if (value === true) {
+      attrs.push(toHtmlAttrName(key));
+      continue;
+    }
+
+    attrs.push(`${toHtmlAttrName(key)}="${escapeAttr(String(value))}"`);
+  }
+
+  return attrs.length ? ' ' + attrs.join(' ') : '';
+}
+
 function formatRuntimeCss(rules: SheetRule[]) {
-  const layerState = createLayerPool(RUNTIME_CONFIG.layerNamespace);
+  const layerNamespace = CSS_CONFIG.layerNamespace ?? CSS_CONFIG_DEFAULT.layerNamespace ?? '';
+  const layers = CSS_CONFIG.layers ?? CSS_CONFIG_DEFAULT.layers ?? [];
+  const layerState = createLayerPool(layerNamespace);
   const sortedRules = rules
     .filter(hasLayerPriority)
     .slice()
     .sort((a, b) => compareLayerPriority(a.priority, b.priority));
 
-  if (RUNTIME_CONFIG.priorityMode === 'layer') {
+  if (DEV_CONFIG.stylePriorityMode === 'layer') {
     return sortedRules
       .map((rule) => getLayerBlockCss(layerState.getName(rule.priority), rule.css))
       .join('\n');
   }
 
-  if (RUNTIME_CONFIG.layer === false) {
+  if (CSS_CONFIG.layer === false) {
     return sortedRules.map((rule) => rule.css).join('\n');
   }
 
   return getLayerBundleCss(
-    RUNTIME_CONFIG.layers,
-    RUNTIME_CONFIG.layerNamespace,
+    layers,
+    layerNamespace,
     sortedRules.map((rule) => rule.css),
   );
 }
@@ -223,15 +350,36 @@ function hasLayerPriority(rule: SheetRule): rule is SheetRule & { priority: Laye
 function stripModuleSyntax(code: string) {
   return code
     .replace(/import\s+[^;]+;\n?/g, '')
+    .replace(/const\s+(_styleDebugSource(?:Url|Content)\b)/g, 'var $1')
     .replace(/export\s+function\s+/g, 'function ')
     .replace(/export\s+const\s+/g, 'const ')
     .replace(/export\s+let\s+/g, 'let ')
     .replace(/export\s+var\s+/g, 'var ');
 }
 
-function transformRuntimeSource(source: string) {
-  const result = Babel.transform(source, {
-    filename: 'playground.tsx',
+function transformRuntimeSource(files: PlaygroundFile[], sourcemapMode: RuntimeSourcemapMode) {
+  return files.map((file) => transformRuntimeFile(file, sourcemapMode)).join('\n\n');
+}
+
+function transformRuntimeFile(file: PlaygroundFile, sourcemapMode: RuntimeSourcemapMode) {
+  const result = Babel.transform(file.code, {
+    filename: file.name,
+    plugins: [
+      createDebugPlugin({
+        options: {
+          css: {},
+          dev: { elementClassName: true, sourcemapMode },
+        },
+        projectDir: '/',
+        sourceUrl: file.name,
+        sourceContent: file.code,
+        tracer: {
+          resolveImport() {
+            return null;
+          },
+        },
+      }),
+    ],
     presets: [
       ['typescript', { allExtensions: true, isTSX: true }],
       ['react', { pragma: 'h', pragmaFrag: 'Fragment', runtime: 'classic' }],
@@ -239,7 +387,11 @@ function transformRuntimeSource(source: string) {
     sourceMaps: false,
   });
 
-  return result.code ?? source;
+  return `/* ${file.name} */\n${stripModuleSyntax(result.code ?? file.code)}`;
+}
+
+function getRuntimeSourcemapMode(mode: unknown): RuntimeSourcemapMode {
+  return mode === 'value' ? 'value' : 'style';
 }
 
 function toHtmlAttrName(name: string) {

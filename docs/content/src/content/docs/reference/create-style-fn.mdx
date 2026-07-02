@@ -1,0 +1,15 @@
+---
+title: createStyleFn
+description: Create a custom style builder for design systems.
+---
+
+```ts
+const customStyle = createStyleFn({
+  transform(input) {
+    return input;
+  },
+});
+```
+
+Use `createStyleFn(...)` to define custom style types, transforms, selectors,
+and priority behavior.

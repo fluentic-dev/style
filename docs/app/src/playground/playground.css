@@ -13,7 +13,7 @@
   --pg-surface-2: #f7f8fc;
   --pg-surface-3: #f0f2f7;
   --pg-code-font: "JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-  --pg-ui-font: Inter, ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --pg-ui-font: var(--font-sans, "Source Sans 3", ui-sans-serif, system-ui, -apple-system, sans-serif);
 }
 
 *,
@@ -68,7 +68,7 @@
 
 /* "Playground" title — rainbow flash */
 .pg-brand-title {
-  animation: pg-rainbow-flash 3.2s ease-in-out infinite;
+  animation: brand-rainbow-flash 3.2s ease-in-out infinite;
   background: linear-gradient(90deg,
       #f43f5e 0%,
       #f97316 12%,
@@ -965,8 +965,32 @@
   white-space: nowrap;
 }
 
+.pg-marker-overlay button {
+  gap: 0.32rem;
+}
+
+.pg-trace-html {
+  background: #f8fafc;
+  border: 1px solid rgba(203, 213, 225, 0.7);
+  border-radius: 5px;
+  color: #475569;
+  display: block;
+  font-family: var(--pg-code-font);
+  font-size: 0.7rem;
+  line-height: 1.45;
+  overflow: hidden;
+  padding: 0.34rem 0.5rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .pg-trace-overlay button[aria-selected='true'] .pg-trace-css {
   background: rgba(124, 58, 237, 0.06);
+}
+
+.pg-trace-overlay button[aria-selected='true'] .pg-trace-html {
+  background: rgba(248, 250, 252, 0.72);
+  border-color: #d8c8fb;
 }
 
 /* Trace CSS syntax tokens */

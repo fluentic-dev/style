@@ -1,42 +1,106 @@
 ---
 title: Webpack
-description: Configure Fluentic Style with Webpack.
+description: Configure Fluentic Style with the Webpack adapter.
 ---
 
-```js
-import { plugin as stylePlugin } from '@fluentic/style/plugin/webpack';
+Install the package:
 
-export default {
-  module: {
-    rules: [
-      {
-        test: /\.[jt]sx?$/,
-        exclude: /node_modules/,
-        use: {
-          loader: 'babel-loader',
-          options: {
-            presets: [
-              ['@babel/preset-react', {
-                runtime: 'automatic',
-                importSource: '@fluentic/style/plugin/jsx',
-              }],
-              ['@babel/preset-typescript', {
-                isTSX: true,
-                allExtensions: true,
-              }],
-            ],
+<Tabs items={['pnpm', 'npm', 'Yarn', 'Bun']}>
+  <Tab>
+
+```sh
+pnpm add @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+npm install @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+yarn add @fluentic/style
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+bun add @fluentic/style
+```
+
+  </Tab>
+</Tabs>
+
+Add the Fluentic Webpack plugin and keep your normal TypeScript/JSX loader for
+React:
+
+```js title="webpack.config.mjs"
+import { plugin as stylePlugin } from '@fluentic/style/plugin/webpack';
+import MiniCssExtractPlugin from 'mini-css-extract-plugin';
+
+export default (_, argv) => {
+  const dev = argv.mode === 'development';
+
+  return {
+    devtool: dev ? 'cheap-module-source-map' : 'source-map',
+    resolve: {
+      extensions: ['.tsx', '.ts', '.jsx', '.js'],
+    },
+    module: {
+      rules: [
+        {
+          test: /\.[jt]sx?$/,
+          exclude: /node_modules/,
+          use: {
+            loader: 'babel-loader',
+            options: {
+              presets: [
+                ['@babel/preset-env', { targets: 'defaults' }],
+                ['@babel/preset-react', {
+                  runtime: 'automatic',
+                  importSource: '@fluentic/style/plugin/jsx',
+                  development: dev,
+                }],
+                ['@babel/preset-typescript', { isTSX: true, allExtensions: true }],
+              ],
+            },
           },
         },
-      },
-    ],
-  },
-  plugins: [
-    stylePlugin({
-      extract: true,
-    }),
-  ],
+        {
+          test: /\.css$/i,
+          use: [dev ? 'style-loader' : MiniCssExtractPlugin.loader, 'css-loader'],
+        },
+      ],
+    },
+    plugins: [
+      stylePlugin({
+        devSourcemap: dev ? 'sidecarServer' : 'sourceUrl',
+      }),
+      !dev && new MiniCssExtractPlugin(),
+    ].filter(Boolean),
+  };
 };
 ```
 
-For development, you may choose `extract: false` to lean on runtime insertion.
-For production, extraction is usually preferred.
+Keep TypeScript aligned with the same JSX import source:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+Make sure Webpack handles CSS imports. The Fluentic plugin emits CSS through
+Webpack so your existing CSS extraction, hashing, and runtime loading stay in
+one place.
+
+See [Plugin Options](options) for `include`, `exclude`, `devSourcemap`,
+`getSourcemapFilePath`, and the development sourcemap modes.

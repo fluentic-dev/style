@@ -1,0 +1,222 @@
+---
+title: Custom Chain Methods
+description: Turn repeated selector conventions into typed chain methods.
+---
+
+Raw selectors work well locally.
+
+One component can write one selector and move on.
+
+Across a design system, the same selector starts appearing in many places.
+
+At that point, repeated strings become convention by memory.
+
+Design systems often have semantic states:
+
+```txt
+pressed
+selected
+invalid
+expanded
+current
+```
+
+When those states show up across many components, the selector starts to feel
+less like a local implementation detail and more like shared language.
+
+Instead of repeating:
+
+```ts
+style().select('&[data-state="open"]', { opacity: 1 });
+```
+
+A design system can provide:
+
+```ts
+style().open({ opacity: 1 });
+```
+
+If a state is part of your design-system language, a named method makes that
+language visible.
+
+If the selector belongs to one component only, local `.select(...)` is usually
+enough.
+
+Selectors are one kind of vocabulary. Custom style fields are another.
+This page only covers selector vocabulary. For custom style object fields, see
+[Custom Style Fields](../custom-style-fields).
+
+Define the method once:
+
+```ts
+import { createStyleFn, type CSSProperties, type } from '@fluentic/style';
+import {
+  assertEnumSelector,
+  selector,
+  selectorPriority,
+} from '@fluentic/style/selector';
+
+const selectors = {
+  hover: selector(':hover'),
+  focusVisible: selector(':focus-visible'),
+  open: selector('[data-state="open"]'),
+  tone: selector('[data-tone="$"]', assertEnumSelector('neutral', 'danger')),
+};
+
+const prioritySelectors = selectorPriority(selectors, [
+  'hover',
+  'focusVisible',
+  'open',
+]);
+
+export const { style: ui } = createStyleFn({
+  style: type<CSSProperties>,
+  selectors: prioritySelectors,
+});
+```
+
+Use it like any other chain method:
+
+```ts
+const menuButton = ui({
+  border: 0,
+  padding: '8px 12px',
+}).open({
+  backgroundColor: '#eef2ff',
+}).tone('danger', {
+  color: '#b91c1c',
+}).focusVisible({
+  outline: '2px solid currentColor',
+});
+```
+
+The selector stays centralized:
+
+```txt
+open() -> [data-state="open"]
+tone('danger') -> [data-tone="danger"]
+```
+
+If the app later changes its state attributes, update the selector map instead
+of every component.
+
+## Responsive Methods
+
+Selector methods can also wrap media queries.
+
+Use fixed at-rule selectors when a design system wants named breakpoint
+methods:
+
+```ts
+import { createStyleFn, type CSSProperties, type } from '@fluentic/style';
+import { selector } from '@fluentic/style/selector';
+
+const selectors = {
+  sm: selector('@media (480px <= width < 768px)', 'media'),
+  md: selector('@media (768px <= width < 1024px)', 'media'),
+  lg: selector('@media (1024px <= width < 1280px)', 'media'),
+  xl: selector('@media (min-width: 1280px)', 'media'),
+};
+
+export const { style: sx } = createStyleFn({
+  style: type<CSSProperties>,
+  selectors,
+});
+```
+
+Now responsive styling is a typed chain:
+
+```ts
+const grid = sx({
+  display: 'grid',
+  gridTemplateColumns: '1fr',
+}).md({
+  gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+}).lg({
+  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+});
+```
+
+Use argument selectors when the method should accept part of the query:
+
+```ts
+const selectors = {
+  below: selector('@media (max-width: $$)', 'media'),
+  above: selector('@media (min-width: $$)', 'media'),
+};
+
+const panel = sx({
+  padding: 16,
+}).below('700px', {
+  padding: 10,
+});
+```
+
+## Selector Arguments
+
+Selector templates support three placeholders:
+
+```txt
+$    one argument
+$$   one argument, or an array that expands into multiple rules
+...  merge another style data object
+```
+
+Examples:
+
+```ts
+const selectors = {
+  tone: selector('[data-tone="$"]', assertEnumSelector('neutral', 'danger')),
+  not: selector(':not($$)', 'arg'),
+  media: selector('@media $$', 'media'),
+  merge: selector('...'),
+};
+```
+
+An array passed to a `$$` selector writes multiple rules:
+
+```ts
+const item = ui().not(['[hidden]', '[aria-disabled="true"]'], {
+  cursor: 'pointer',
+});
+```
+
+That is equivalent to writing `.not(...)` twice.
+
+## Validators
+
+Use validators whenever a method accepts user input.
+
+```ts
+const selectors = {
+  select: selector('$$', 'local'),
+  attr: selector('$', 'attr'),
+  nthChild: selector(':nth-child($)', 'value'),
+  media: selector('@media $$', 'media'),
+  supports: selector('@supports $$', 'supports'),
+  container: selector('@container $$', 'container'),
+};
+```
+
+Use `assertEnumSelector(...)` when the argument should be a fixed vocabulary.
+
+```ts
+const selectors = {
+  tone: selector('[data-tone="$"]', assertEnumSelector('neutral', 'danger')),
+  state: selector('[data-state="$"]', assertEnumSelector('open', 'closed')),
+};
+```
+
+The validator runs at runtime and during static extraction. TypeScript also
+narrows the chain method argument to the allowed literal values.
+
+## Compiler Checks
+
+The compiler can check selector arguments while extracting CSS.
+
+Non-static selector arguments are allowed by default. Set
+`checkSelector: 'force'` when a project wants selector arguments to be
+statically analyzable so invalid selectors can fail at build time.
+
+Use `checkSelector: false` only when a project intentionally owns selector
+validation somewhere else.

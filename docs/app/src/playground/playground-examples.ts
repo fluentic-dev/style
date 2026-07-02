@@ -19,6 +19,7 @@ export const compilerConfig = {
     layers: ['reset', 'fluentic', 'override'],
     classNamePrefix: '',
     scopeTargetPrefix: '-',
+    elementMarkerPrefix: '@',
     themeNamePrefix: 'theme-',
     tokenVarPrefix: 'token-',
     localClassName: true,
@@ -73,7 +74,7 @@ export const space = {
 };
 
 export const textBase = {
-  fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+  fontFamily: '"Source Sans 3", ui-sans-serif, system-ui, sans-serif',
   letterSpacing: 0,
 };
 
@@ -101,6 +102,27 @@ const labelText = {
   letterSpacing: '0.08em',
   textTransform: 'uppercase',
 };
+
+const actionBase = style.raw({
+  ...textBase,
+  alignItems: 'center',
+  border: 0,
+  cursor: 'pointer',
+  display: 'inline-flex',
+  fontWeight: 780,
+  justifyContent: 'center',
+  minHeight: '44px',
+  transition: 'filter 140ms, transform 140ms',
+});
+
+const actionInteraction = style({
+  outline: '2px solid transparent',
+  outlineOffset: 3,
+}).hover({
+  opacity: 0.88,
+}).active({
+  transform: 'translateY(1px)',
+});
 
 export const card = {
   root: style.slot({
@@ -143,20 +165,12 @@ export const card = {
     padding: '7px 11px',
   }),
   action: style.slot({
-    ...textBase,
-    alignItems: 'center',
+    ...actionBase,
     backgroundColor: tokens.color.accent,
-    border: 0,
     borderRadius: tokens.radius.control,
     color: tokens.color.accentText,
-    cursor: 'pointer',
-    display: 'inline-flex',
-    fontWeight: 780,
-    justifyContent: 'center',
-    minHeight: '44px',
     padding: '0 16px',
-    transition: 'filter 140ms, transform 140ms',
-  }).hover({ opacity: 0.88 }).active({ transform: 'translateY(1px)' }),
+  }).merge(actionInteraction),
 };
 
 export const themes = {
@@ -262,7 +276,7 @@ export const space = { 2: '8px', 3: '12px', 4: '16px' };`,
 import { color, radius, space } from './tokens';
 
 const text = {
-  fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif',
+  fontFamily: '"Source Sans 3", ui-sans-serif, system-ui, sans-serif',
   letterSpacing: 0,
 };
 
@@ -372,7 +386,7 @@ export const shadow = { card: '0 4px 24px rgba(15, 23, 42, 0.08)' };`,
     code: `import { style } from '@fluentic/style';
 import { color, radius, shadow, space } from './tokens';
 
-const text = { fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif', letterSpacing: 0 };
+const text = { fontFamily: '"Source Sans 3", ui-sans-serif, system-ui, sans-serif', letterSpacing: 0 };
 
 export const profile = {
   card: style.slot({

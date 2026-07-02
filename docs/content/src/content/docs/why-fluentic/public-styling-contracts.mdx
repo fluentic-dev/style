@@ -1,0 +1,46 @@
+---
+title: Public Styling Contracts
+description: Decide which component parts consumers are allowed to style.
+---
+
+A reusable component usually has more than one part.
+
+A `Button` may have a root, icon, label, loading spinner, and maybe an internal
+measurement wrapper.
+
+If another team needs to customize it, they should not have to know which parts
+are DOM details and which parts are supported.
+
+React developers already understand this for props. A component does not expose
+every local variable. It exports the props it supports.
+
+Styling eventually asks for the same kind of boundary.
+
+If a `Button` supports styling its root, icon, and label, those become public
+styling contracts. If it has an internal measurement wrapper, that wrapper can
+remain private.
+
+Selectors are sometimes exactly the right tool.
+
+The question for a reusable component is different:
+
+> Which styling details can callers depend on months from now?
+
+The component author can publish the supported styling surface deliberately:
+
+```txt
+Button.root
+Button.icon
+Button.label
+```
+
+CSS still has all of its power.
+
+The question is which customization the component is willing to support over
+time.
+
+Contracts keep a question visible: which parts can callers depend on, and
+which parts should stay free to change?
+
+The same contract-first shape also matters when generated or quickly-written
+code has to be reviewed later.

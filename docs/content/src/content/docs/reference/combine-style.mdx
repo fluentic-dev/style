@@ -1,0 +1,33 @@
+---
+title: combineStyle
+description: Merge component styles, slot themes, token themes, and css props.
+---
+
+Pass plain styles directly to the `css` prop:
+
+```tsx
+<button css={styles.root}>Save</button>
+```
+
+Use `combineStyle` when a render also needs scopes, incoming themes, or token
+overrides:
+
+```ts
+import { combineStyle } from '@fluentic/style';
+
+const css = combineStyle(styles, primary(styles.root));
+```
+
+The returned object mirrors the input style object and carries the combined
+inputs:
+
+```tsx
+<button css={css.root}>
+  <span css={css.label}>Save</span>
+</button>
+```
+
+Use `combineStyle.for(styles)` to create a reusable combiner.
+
+For how `combineStyle(...)` and the `css` prop walk and cache style graphs, see
+[Style Resolution And Cache](../design/style-resolution-and-cache).
