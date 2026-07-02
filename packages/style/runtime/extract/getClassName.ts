@@ -1,3 +1,4 @@
+import { getTokenVar as getAtomicTokenVar, getTokenVarName as getAtomicTokenVarName } from '../../atomic/token';
 import {
   BUILDER_STATE,
   BUILDER_TYPE,
@@ -11,12 +12,8 @@ import {
 } from '../../builder/data/const';
 import type { StateItem } from '../../builder/data/state';
 import { getExtractedTokenBoundData, isExtractedTokenBoundData } from '../../builder/extract/withTokens';
-import { RUNTIME_CONFIG } from '../../config/config/runtime';
-import {
-  getTokenVarName as getAtomicTokenVarName,
-  getTokenVar as getAtomicTokenVar,
-} from '../../atomic/token';
 import { CSS_CONFIG } from '../../config/config/css';
+import { RUNTIME_CONFIG } from '../../config/config/runtime';
 import {
   getStyleTokenId,
   isStyleTokenData,

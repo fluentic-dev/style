@@ -1,5 +1,5 @@
-import type { BabelCore, BabelTypes, NodePath } from '../utils/babel';
 import type { CheckSelectorMode, SourcemapLocationMode } from '../../../config/types';
+import { SELECTOR_MERGE } from '../../../builder/data/selector';
 import type { StyleFnMeta } from '../../../style/style';
 import type { CompilerOptions } from '../../compiler/types';
 import {
@@ -23,6 +23,7 @@ import {
   getImportedName,
   isStyleChainCall,
 } from '../syntax';
+import type { BabelCore, BabelTypes, NodePath } from '../utils/babel';
 import { babelPlugin } from '../utils/babel';
 import { getProjectFileId } from '../utils/path';
 import { getSelectorArgIndex, validateResolvedSelectorValue, validateSelectorDefinition } from '../utils/selector';
@@ -167,6 +168,7 @@ export function createDebugPlugin(args: PluginArgs) {
               sourceContentRef,
               options.css?.tokenNameFormat ?? DEFAULT_CONFIG.tokenNameFormat,
               getDebugStyleArg(t, path, state, options.dev?.sourcemapMode ?? 'style'),
+              getDebugCallLoc(path, state),
             ),
           );
         },
@@ -175,6 +177,7 @@ export function createDebugPlugin(args: PluginArgs) {
           path: NodePath<BabelTypes.JSXOpeningElement>,
           state: PluginState,
         ) {
+          if (options.dev?.elementClassName === false) return;
           if (!isHostJsxElement(path.node.name)) return;
 
           const cssAttr = getJsxAttribute(path.node, 'css');
@@ -190,11 +193,10 @@ export function createDebugPlugin(args: PluginArgs) {
 
           const debugInfo = getElementDebugInfo(cssAttr);
           const label = debugInfo.label || getShortFileLabel(state.fileId);
-          const debugLoc = debugInfo.loc ?? loc;
           const debug = buildElementDebugDataObject(
             t,
-            debugLoc.line,
-            debugLoc.column + 1,
+            loc.line,
+            loc.column + 1,
             label,
             sourceUrlRef,
             sourceContentRef,
@@ -462,7 +464,11 @@ function getDebugStyleArg(
   sourcemapTrace: SourcemapTrace,
 ) {
   const arg = path.node.arguments[0];
-  if (!arg || arg.type !== 'ObjectExpression') return arg;
+  if (!arg) return arg;
+
+  if (arg.type !== 'ObjectExpression') {
+    return resolveDebugMergeObject(t, arg, path, state, sourcemapTrace) ?? arg;
+  }
 
   return flattenDebugObjectExpression(
     t,
@@ -472,6 +478,152 @@ function getDebugStyleArg(
     sourcemapTrace,
     new Set(),
   );
+}
+
+function getDebugCallLoc(
+  path: NodePath<BabelTypes.CallExpression>,
+  state: PluginState,
+) {
+  return isMergeSelectorCall(path.node.callee, state)
+    ? getMergeStyleLoc(path.node.callee)
+    : null;
+}
+
+function resolveDebugMergeObject(
+  t: typeof BabelTypes,
+  arg: BabelTypes.Node,
+  path: NodePath<BabelTypes.CallExpression>,
+  state: PluginState,
+  sourcemapTrace: SourcemapTrace,
+) {
+  if (!isMergeSelectorCall(path.node.callee, state)) return null;
+
+  const loc = getMergeStyleLoc(path.node.callee);
+  if (sourcemapTrace === 'style' && !loc) return null;
+
+  const source = resolveStyleDebugObject(t, arg, path, state, sourcemapTrace, new Set());
+  if (!source) return null;
+
+  return createTraceDebugObject(t, source, loc ?? arg.loc?.start ?? null, sourcemapTrace);
+}
+
+function isMergeSelectorCall(
+  callee: BabelTypes.CallExpression['callee'],
+  state: PluginState,
+) {
+  const methodName = getSelectorMethodName(callee);
+  if (!methodName) return false;
+
+  const rootName = getStyleChainRootName(callee, state.styleNames);
+  if (!rootName) return false;
+
+  return state.styleMetas.get(rootName)?.selectors[methodName]?.selector.trim() === SELECTOR_MERGE;
+}
+
+function getMergeStyleLoc(callee: BabelTypes.CallExpression['callee']) {
+  const node = getSelectorMethodNode(callee);
+  return node?.loc?.start ?? callee.loc?.start ?? null;
+}
+
+function resolveStyleDebugObject(
+  t: typeof BabelTypes,
+  node: BabelTypes.Node,
+  path: NodePath,
+  state: PluginState,
+  sourcemapTrace: SourcemapTrace,
+  seen: Set<string>,
+): BabelTypes.ObjectExpression | null {
+  if (node.type === 'Identifier') {
+    if (seen.has(node.name)) return null;
+
+    const binding = path.scope.getBinding(node.name);
+    const init = binding?.path.isVariableDeclarator()
+      ? binding.path.node.init
+      : null;
+
+    if (!init) return null;
+
+    seen.add(node.name);
+    try {
+      return resolveStyleDebugObject(t, init, path, state, sourcemapTrace, seen);
+    } finally {
+      seen.delete(node.name);
+    }
+  }
+
+  if (node.type === 'ArrayExpression') {
+    const properties: BabelTypes.ObjectExpression['properties'] = [];
+
+    for (const element of node.elements) {
+      if (!element || element.type === 'SpreadElement') continue;
+
+      const resolved = resolveStyleDebugObject(t, element, path, state, sourcemapTrace, seen);
+      if (resolved) properties.push(...resolved.properties);
+    }
+
+    return properties.length ? t.objectExpression(properties) : null;
+  }
+
+  if (node.type !== 'CallExpression') return null;
+
+  if (
+    isStyleUtilityCall(node.callee, state.styleNames) &&
+    node.arguments[0]?.type === 'ObjectExpression'
+  ) {
+    return flattenDebugObjectExpression(
+      t,
+      node.arguments[0],
+      path,
+      state,
+      sourcemapTrace,
+      seen,
+    );
+  }
+
+  if (!isStyleChainCall(node.callee, state.styleNames)) return null;
+
+  const properties: BabelTypes.ObjectExpression['properties'] = [];
+  collectStyleChainDebugProperties(t, node, path, state, sourcemapTrace, seen, properties);
+
+  return properties.length ? t.objectExpression(properties) : null;
+}
+
+function collectStyleChainDebugProperties(
+  t: typeof BabelTypes,
+  node: BabelTypes.CallExpression,
+  path: NodePath,
+  state: PluginState,
+  sourcemapTrace: SourcemapTrace,
+  seen: Set<string>,
+  properties: BabelTypes.ObjectExpression['properties'],
+) {
+  const callee = node.callee;
+
+  if (callee.type === 'MemberExpression' && callee.object.type === 'CallExpression') {
+    collectStyleChainDebugProperties(
+      t,
+      callee.object,
+      path,
+      state,
+      sourcemapTrace,
+      seen,
+      properties,
+    );
+  }
+
+  const arg = node.arguments[0];
+  if (!arg) return;
+
+  if (arg.type === 'ObjectExpression') {
+    const flattened = flattenDebugObjectExpression(t, arg, path, state, sourcemapTrace, seen);
+    properties.push(...flattened.properties);
+    return;
+  }
+
+  if (isMergeSelectorCall(callee, state)) {
+    const merged = resolveStyleDebugObject(t, arg, path, state, sourcemapTrace, seen);
+    if (merged) properties.push(...merged.properties);
+  }
 }
 
 function flattenDebugObjectExpression(
@@ -554,6 +706,15 @@ function createSpreadDebugObject(
   sourcemapTrace: SourcemapTrace,
 ) {
   const loc = spread.loc?.start;
+  return createTraceDebugObject(t, source, loc ?? null, sourcemapTrace);
+}
+
+function createTraceDebugObject(
+  t: typeof BabelTypes,
+  source: BabelTypes.ObjectExpression,
+  loc: BabelTypes.SourceLocation['start'] | null,
+  sourcemapTrace: SourcemapTrace,
+) {
   if (sourcemapTrace === 'style' && !loc) return null;
 
   const properties: BabelTypes.ObjectExpression['properties'] = [];
@@ -564,7 +725,9 @@ function createSpreadDebugObject(
     if (property.computed) continue;
 
     const clone = t.cloneNode(property);
-    (clone as DebugTraceProperty).__styleSourcemapStyleLoc = loc;
+    if (loc) {
+      (clone as DebugTraceProperty).__styleSourcemapStyleLoc = loc;
+    }
     (clone as DebugTraceProperty).__styleSourcemapValueLoc = property.loc?.start;
 
     if (sourcemapTrace === 'style' && loc) {

@@ -1,6 +1,13 @@
 import emotionStyled from '@emotion/styled';
 import { combineStyle, createElement as fluenticCreateElement, style } from '@fluentic/style';
-import { createExtractedScope, createExtractedSlot } from '@fluentic/style/builder/extract';
+import {
+  createExtractedScope,
+  createExtractedSlot,
+  createExtractedStyle,
+  createExtractedStyleMerge,
+  createExtractedToken,
+  withTokens,
+} from '@fluentic/style/builder/extract';
 import { createElement as fluenticServerExtractedCreateElement } from '@fluentic/style/jsx-runtime/server/extracted';
 import {
   bindScope,
@@ -204,6 +211,29 @@ const fluenticCompiledStaticCss = combineStyleServerExtracted(
 const fluenticCompiledStaticClassName = getClassNameServerExtracted(
   fluenticCompiledStaticCss.root,
 ).className;
+
+const fluenticRuntimeRenderLocalMergedBase = style({
+  gap: 12,
+  padding: 24,
+});
+const fluenticCompiledWithTokensColor = createExtractedToken('ssr-dynamic-color', null);
+const fluenticCompiledWithTokensBorderColor = createExtractedToken('ssr-dynamic-border-color', null);
+const fluenticCompiledWithTokensBase = createExtractedStyle([
+  ['ssr-gap', 'ssr-gap', [1, '--ssr-dynamic-gap', 12, 1]],
+  ['ssr-padding', 'ssr-padding', [1, '--ssr-dynamic-padding', 24, 1]],
+]);
+const fluenticCompiledWithTokensStyle = createExtractedStyleMerge(
+  [
+    ['ssr-color', 'ssr-color', [1, '--ssr-dynamic-color', fluenticCompiledWithTokensColor, 1]],
+    ['ssr-background-white', 'ssr-background-white'],
+    [
+      'ssr-hover-border-color',
+      'ssr-hover-border-color',
+      [1, '--ssr-dynamic-border-color', fluenticCompiledWithTokensBorderColor, 1],
+    ],
+  ],
+  fluenticCompiledWithTokensBase,
+);
 const stylexCompiledInactive = {
   alignItems: 'stylex-align-items-center',
   border: 'stylex-border-neutral',
@@ -297,6 +327,18 @@ function FluenticRuntimeDynamic(props) {
   return fluenticCreateElement('div', { css: css.root });
 }
 
+function FluenticRuntimeRenderLocalMergedDynamic(props) {
+  const color = isActive(props) ? '#16a34a' : '#d4d4d8';
+  const localDynamic = style({
+    color,
+    backgroundColor: 'white',
+  }).hover({
+    borderColor: color,
+  }).merge(fluenticRuntimeRenderLocalMergedBase);
+
+  return fluenticCreateElement('div', { css: localDynamic });
+}
+
 function FluenticRuntimeHoisted(props) {
   const css = combineStyle(isActive(props) ? fluenticStyles1 : fluenticStyles0);
 
@@ -357,6 +399,16 @@ function FluenticCompiledExtractedStaticCombineStyle() {
   return fluenticServerExtractedCreateElement('div', { css: css.root });
 }
 
+function FluenticCompiledExtractedWithTokensDynamic(props) {
+  const color = isActive(props) ? '#16a34a' : '#d4d4d8';
+  const localDynamic = withTokens(fluenticCompiledWithTokensStyle, [
+    fluenticCompiledWithTokensColor(color),
+    fluenticCompiledWithTokensBorderColor(color),
+  ]);
+
+  return fluenticServerExtractedCreateElement('div', { css: localDynamic });
+}
+
 let counter = 0;
 function renderComponent(Component) {
   counter += 1;
@@ -391,6 +443,7 @@ addBench('fluenticServerExtractedStaticClassName', () => renderComponent(Fluenti
 addBench('stylexPrecomputedStaticPropsBaseline', () => renderComponent(StyleXPrecomputedStaticPropsBaseline));
 addBench('stylexCompiledStyleqHoistedSwitch', () => renderComponent(StyleXCompiledStyleqHoistedSwitch));
 addBench('fluenticRuntimeDynamicObject', () => renderComponent(FluenticRuntimeDynamic));
+addBench('fluenticRuntimeRenderLocalMergedDynamic', () => renderComponent(FluenticRuntimeRenderLocalMergedDynamic));
 addBench('fluenticRuntimeHoistedSwitch', () => renderComponent(FluenticRuntimeHoisted));
 addBench('fluenticServerExtractedDynamicObject', () => renderComponent(FluenticServerExtractedDynamic));
 addBench('fluenticServerExtractedHoistedSwitch', () => renderComponent(FluenticServerExtractedHoisted));
@@ -400,6 +453,10 @@ addBench('fluenticCompiledExtractedDirectStyleSwitch', () => renderComponent(Flu
 addBench(
   'fluenticCompiledExtractedStaticCombineStyle',
   () => renderComponent(FluenticCompiledExtractedStaticCombineStyle),
+);
+addBench(
+  'fluenticCompiledExtractedWithTokensDynamic',
+  () => renderComponent(FluenticCompiledExtractedWithTokensDynamic),
 );
 
 suite

@@ -9,7 +9,6 @@ import {
   ITEM_VALUE_TYPE_VARIABLE,
 } from '../../../builder/data/const';
 import type { StateItem } from '../../../builder/data/state';
-import { RUNTIME_CONFIG } from '../../../config/config/runtime';
 import { CSS_CONFIG } from '../../../config/config/css';
 import { getStyleTokenId, isStyleTokenData, isStyleTokenOverrideData, type StyleTokenData } from '../../../style/token';
 import type { AtRuleRefData } from '../../../style/valueRef';

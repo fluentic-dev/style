@@ -1,5 +1,5 @@
-import type { BabelTypes } from '../../utils/babel';
 import { FN_STYLE_MERGE, FN_STYLE_SCOPE, FN_STYLE_SLOT } from '../../../utils/constants';
+import type { BabelTypes } from '../../utils/babel';
 
 export const STATIC_MERGE_METHOD = '$$style.merge';
 
@@ -44,8 +44,12 @@ export function extractStyleChain(
     const obj = callee.object;
 
     if (obj.type === 'Identifier' && styleNames.has(obj.name)) {
-      if (prop === FN_STYLE_SLOT) return { kind: 'slot', rootName: obj.name, baseArgs: node.arguments as BabelTypes.Node[], methods: [] };
-      if (prop === FN_STYLE_SCOPE) return { kind: 'scope', rootName: obj.name, baseArgs: node.arguments as BabelTypes.Node[], methods: [] };
+      if (prop === FN_STYLE_SLOT) {
+        return { kind: 'slot', rootName: obj.name, baseArgs: node.arguments as BabelTypes.Node[], methods: [] };
+      }
+      if (prop === FN_STYLE_SCOPE) {
+        return { kind: 'scope', rootName: obj.name, baseArgs: node.arguments as BabelTypes.Node[], methods: [] };
+      }
       if (prop !== FN_STYLE_MERGE) return null;
 
       const target = node.arguments[0] as BabelTypes.Node | undefined;

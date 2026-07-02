@@ -1,5 +1,5 @@
-import type { BabelTypes } from '../utils/babel';
 import { FN_STYLE_VALUE } from '../../utils/constants';
+import type { BabelTypes } from '../utils/babel';
 
 export function isStaticStyleValue(value: BabelTypes.Node): boolean {
   if (

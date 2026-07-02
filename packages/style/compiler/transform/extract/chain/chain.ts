@@ -1,11 +1,10 @@
-import type { BabelTypes } from '../../utils/babel';
 import { getAtomicClassName, getClassNameDedupe } from '../../../../atomic/className';
 import { LayerDefaultPriority } from '../../../../atomic/layer';
 import { buildAtomicRule, getAtomicRuleLayerPriority } from '../../../../atomic/rule';
-import { getLocalVarName } from '../../../../atomic/var';
 import { getTokenVar, getTokenVarName } from '../../../../atomic/token';
 import { getCssVarRawFallback } from '../../../../atomic/utils/css';
 import { shouldAppendCssPx } from '../../../../atomic/value';
+import { getLocalVarName } from '../../../../atomic/var';
 import {
   normalizeSelectorArg,
   SELECTOR_ARG,
@@ -55,9 +54,16 @@ import {
   evaluateNode,
 } from '../../evaluator/evaluator';
 import type { EvalResult } from '../../evaluator/types';
+import type { BabelTypes } from '../../utils/babel';
 import { validateResolvedSelectorValue, validateSelectorDefinition } from '../../utils/selector';
 import { extractStyleChain, STATIC_MERGE_METHOD, type StyleChainParseResult } from './extract_chain';
-import type { CompiledChainData, CompiledCssItem, CompiledItem, CssExtractRule } from './types';
+import type {
+  CompiledChainData,
+  CompiledCssItem,
+  CompiledItem,
+  CompiledStyleSpreadItem,
+  CssExtractRule,
+} from './types';
 
 type SelectorsMap = Record<string, Selector>;
 
@@ -83,6 +89,8 @@ type StyleChainBuilderType =
 type ExtractedCssBuilderType =
   | StyleChainBuilderType
   | typeof BUILDER_TYPE_SCOPE;
+
+type TraceCallsiteOverride = RuntimeStyleItem['callsite'];
 
 function applyTransform(
   styleObj: Record<string, unknown>,
@@ -200,6 +208,7 @@ function compileStyleChainInto(
   rules: CssExtractRule[],
   styleNames: Set<string>,
   options: CompilerOptions,
+  callsiteOverride: TraceCallsiteOverride = null,
 ): boolean {
   if (chain.baseArgs.length > 0) {
     const styleArg = evaluateNode(chain.baseArgs[0], scope);
@@ -208,7 +217,19 @@ function compileStyleChainInto(
       return false;
     }
     const styleObj = applyTransform(styleArg.value as Record<string, unknown>, transform);
-    if (!addStyleItems(styleObj, null, null, atRules, fileId, type, slotId, items, rules, cssConfig)) {
+    if (!addStyleItems(
+      styleObj,
+      null,
+      null,
+      atRules,
+      fileId,
+      type,
+      slotId,
+      items,
+      rules,
+      cssConfig,
+      callsiteOverride,
+    )) {
       return false;
     }
   }
@@ -231,6 +252,7 @@ function compileStyleChainInto(
       atRules,
       styleNames,
       options,
+      callsiteOverride,
     );
     if (!result) return false;
     i++;
@@ -428,7 +450,13 @@ function compileScopeMethod(
     const [before, after] = selectorStr.split(splitToken);
 
     const selectorArg = evaluateNode(method.args[0], scope);
-    validateResolvedSelectorValue(options.dev?.checkSelector, `style.${method.name}`, selector, selectorArg, method.args[0]);
+    validateResolvedSelectorValue(
+      options.dev?.checkSelector,
+      `style.${method.name}`,
+      selector,
+      selectorArg,
+      method.args[0],
+    );
     if (!selectorArg.ok) return false;
 
     const itemsArg = method.args[1];
@@ -860,10 +888,13 @@ function compileChainMethod(
   atRules: ItemSelector[] | null,
   styleNames: Set<string>,
   options: CompilerOptions,
+  callsiteOverride: TraceCallsiteOverride = null,
 ): boolean {
   if (method.name === STATIC_MERGE_METHOD) {
+    const mergeCallsite = callsiteOverride ?? getMergeStyleCallsite(method.nameNode, scope, options);
     return compileMergeArg(
       method.args[0],
+      method.nameNode,
       fileId,
       scope,
       type,
@@ -874,6 +905,7 @@ function compileChainMethod(
       cssRules,
       styleNames,
       options,
+      mergeCallsite,
     );
   }
 
@@ -884,8 +916,10 @@ function compileChainMethod(
   const selectorStr = selector.selector.trim();
 
   if (selectorStr === SELECTOR_MERGE) {
+    const mergeCallsite = callsiteOverride ?? getMergeStyleCallsite(method.nameNode, scope, options);
     return compileMergeArg(
       method.args[0],
+      method.nameNode,
       fileId,
       scope,
       type,
@@ -896,6 +930,7 @@ function compileChainMethod(
       cssRules,
       styleNames,
       options,
+      mergeCallsite,
     );
   }
 
@@ -948,11 +983,24 @@ function compileChainMethod(
   }
   const styleObj = applyTransform(styleArg.value as Record<string, unknown>, transform);
 
-  return addStyleItems(styleObj, itemSelector, null, atRules, fileId, type, slotId, items, cssRules, cssConfig);
+  return addStyleItems(
+    styleObj,
+    itemSelector,
+    null,
+    atRules,
+    fileId,
+    type,
+    slotId,
+    items,
+    cssRules,
+    cssConfig,
+    callsiteOverride,
+  );
 }
 
 function compileMergeArg(
   styleArgNode: BabelTypes.Node | undefined,
+  mergeNode: BabelTypes.Node | undefined,
   fileId: string,
   scope: EvalScope,
   type: StyleChainBuilderType,
@@ -963,8 +1011,34 @@ function compileMergeArg(
   cssRules: CssExtractRule[],
   styleNames: Set<string>,
   options: CompilerOptions,
+  callsiteOverride: TraceCallsiteOverride = null,
 ): boolean {
   if (!styleArgNode) return false;
+  const styleCallsite = callsiteOverride ?? getMergeStyleCallsite(mergeNode, scope, options);
+
+  if (styleCallsite) {
+    const localChain = getLocalStyleChainArg(styleArgNode, scope, styleNames);
+    const localMeta = localChain ? scope.styleMetas?.get(localChain.rootName) : null;
+
+    if (localChain?.kind === 'style' && localMeta) {
+      return compileStyleChainInto(
+        localChain,
+        localMeta.selectors,
+        fileId,
+        scope,
+        cssConfig,
+        localMeta.transform,
+        type,
+        slotId,
+        atRules,
+        items,
+        cssRules,
+        styleNames,
+        options,
+        styleCallsite,
+      );
+    }
+  }
 
   if (styleArgNode.type === 'CallExpression') {
     const nestedChain = extractStyleChain(styleArgNode, styleNames);
@@ -985,6 +1059,7 @@ function compileMergeArg(
         cssRules,
         styleNames,
         options,
+        styleCallsite,
       );
     }
   }
@@ -993,6 +1068,23 @@ function compileMergeArg(
   if (!styleArg.ok) {
     throwIfRequiredStaticStyleValue(styleArg);
     return false;
+  }
+
+  if (isStyleData(styleArg.value) && isStyleDataSpreadExpression(styleArgNode)) {
+    return addStyleDataSpreadItems(
+      styleArg.value,
+      styleArgNode,
+      null,
+      null,
+      atRules,
+      fileId,
+      type,
+      slotId,
+      items,
+      cssRules,
+      cssConfig,
+      styleCallsite,
+    );
   }
 
   return addStyleDataItems(
@@ -1006,7 +1098,56 @@ function compileMergeArg(
     items,
     cssRules,
     cssConfig,
+    styleCallsite,
   );
+}
+
+function getLocalStyleChainArg(
+  node: BabelTypes.Node,
+  scope: EvalScope,
+  styleNames: Set<string>,
+) {
+  if (node.type !== 'Identifier') return null;
+
+  const init = scope.bindingNodes?.get(node.name);
+  if (!init) return null;
+
+  return extractStyleChain(init, styleNames);
+}
+
+function getMergeStyleCallsite(
+  node: BabelTypes.Node | undefined,
+  scope: EvalScope,
+  options: CompilerOptions,
+): TraceCallsiteOverride {
+  if (options.dev?.sourcemapMode !== 'style') return null;
+
+  const loc = node?.loc?.start;
+  if (!loc) return null;
+
+  return {
+    stack: '',
+    filePath: scope.styleFilePath ?? scope.filePath,
+    line: loc.line,
+    column: loc.column + 1,
+  };
+}
+
+function isStyleDataSpreadExpression(
+  node: BabelTypes.Node,
+): node is BabelTypes.Expression {
+  switch (node.type) {
+    case 'Identifier':
+    case 'MemberExpression':
+    case 'OptionalMemberExpression':
+    case 'ParenthesizedExpression':
+    case 'TSAsExpression':
+    case 'TSNonNullExpression':
+    case 'TSTypeAssertion':
+      return true;
+    default:
+      return false;
+  }
 }
 
 function compileAtRuleMethod(
@@ -1390,6 +1531,7 @@ function addStyleDataItems(
   items: CompiledItem[],
   cssRules: CssExtractRule[],
   cssConfig: CssConfig,
+  callsiteOverride: TraceCallsiteOverride = null,
 ): boolean {
   const values = Array.isArray(value) ? value : [value];
 
@@ -1424,6 +1566,7 @@ function addStyleDataItems(
         items,
         cssRules,
         cssConfig,
+        callsiteOverride,
       );
 
       j++;
@@ -1431,6 +1574,55 @@ function addStyleDataItems(
 
     i++;
   }
+
+  return true;
+}
+
+function addStyleDataSpreadItems(
+  value: unknown,
+  expression: BabelTypes.Expression,
+  selector: ItemSelector | null,
+  parentSelector: ItemSelector | null,
+  atRules: ItemSelector[] | null,
+  fileId: string,
+  type: ExtractedCssBuilderType,
+  slotId: string | null,
+  items: CompiledItem[],
+  cssRules: CssExtractRule[],
+  cssConfig: CssConfig,
+  callsiteOverride: TraceCallsiteOverride = null,
+): boolean {
+  const start = items.length;
+
+  if (
+    !addStyleDataItems(
+      value,
+      selector,
+      parentSelector,
+      atRules,
+      fileId,
+      type,
+      slotId,
+      items,
+      cssRules,
+      cssConfig,
+      callsiteOverride,
+    )
+  ) {
+    return false;
+  }
+
+  const fallbackItems = items
+    .splice(start)
+    .filter(Array.isArray) as CompiledCssItem[];
+
+  const spreadItem: CompiledStyleSpreadItem = {
+    kind: 'style-spread',
+    expression,
+    items: fallbackItems,
+  };
+
+  items.push(spreadItem);
 
   return true;
 }
@@ -1450,6 +1642,11 @@ function addExtractedStyleItem(
 
   if (value !== undefined && type !== BUILDER_TYPE_SCOPE) {
     setCompiledItemValue(item, value as ExtractedItemValue);
+
+    if (Array.isArray(value) && value[0] === ITEM_VALUE_TYPE_VARIABLE) {
+      const runtimeValue = getCompiledRuntimeValue(value[2]);
+      if (runtimeValue) item.valueNode = runtimeValue;
+    }
   }
 
   items.push(item);
@@ -1466,6 +1663,7 @@ function addRuntimeStyleItem(
   items: CompiledItem[],
   cssRules: CssExtractRule[],
   cssConfig: CssConfig,
+  callsiteOverride: TraceCallsiteOverride = null,
 ) {
   let priority: number | null = null;
   let value = sourceItem.value;
@@ -1487,6 +1685,8 @@ function addRuntimeStyleItem(
     itemAtRules,
   );
 
+  const traceCallsite = callsiteOverride ?? sourceItem.callsite;
+
   const className = getAtomicClassName(
     sourceItem.property,
     priority,
@@ -1494,7 +1694,7 @@ function addRuntimeStyleItem(
     itemSelector,
     parentSelector,
     itemAtRules,
-    sourceItem.callsite,
+    traceCallsite,
     cssConfig.localClassName,
     cssConfig.debugClassName,
     cssConfig.classNameFormat,
@@ -1541,11 +1741,11 @@ function addRuntimeStyleItem(
     className,
     css,
     priority: layerPriority,
-    trace: sourceItem.callsite
+    trace: traceCallsite
       ? {
-        filePath: sourceItem.callsite.filePath ?? fileId,
-        line: sourceItem.callsite.line,
-        column: sourceItem.callsite.column,
+        filePath: traceCallsite.filePath ?? fileId,
+        line: traceCallsite.line,
+        column: traceCallsite.column,
       }
       : undefined,
   });
@@ -1572,6 +1772,7 @@ function addStyleItems(
   items: CompiledItem[],
   cssRules: CssExtractRule[],
   cssConfig: CssConfig,
+  callsiteOverride: TraceCallsiteOverride = null,
 ): boolean {
   if (!styleObj || typeof styleObj !== 'object') return false;
 
@@ -1605,14 +1806,14 @@ function addStyleItems(
 
     const propertyLoc = propertyLocations?.[property];
 
-    const propertyCallsite = propertyLoc
+    const propertyCallsite = callsiteOverride ?? (propertyLoc
       ? {
         stack: '',
         filePath: propertyLoc.filePath ?? fileId,
         line: propertyLoc.line,
         column: propertyLoc.column,
       }
-      : null;
+      : null);
 
     const variableName = (token || runtimeValue) && propertyLoc
       ? getLocalVarName(
@@ -1707,12 +1908,12 @@ function addStyleItems(
       className,
       css,
       priority: layerPriority,
-      trace: propertyLoc
+      trace: propertyCallsite
         ? {
-          filePath: propertyLoc.filePath ?? fileId,
-          line: propertyLoc.line,
-          column: propertyLoc.column,
-          trace: propertyLoc.trace,
+          filePath: propertyCallsite.filePath ?? fileId,
+          line: propertyCallsite.line,
+          column: propertyCallsite.column,
+          trace: callsiteOverride ? undefined : propertyLoc?.trace,
         }
         : undefined,
     });
@@ -1723,11 +1924,11 @@ function addStyleItems(
         className: ref.value,
         css: ref.css,
         priority: LayerDefaultPriority,
-        trace: propertyLoc
+        trace: propertyCallsite
           ? {
-            filePath: propertyLoc.filePath ?? fileId,
-            line: propertyLoc.line,
-            column: propertyLoc.column,
+            filePath: propertyCallsite.filePath ?? fileId,
+            line: propertyCallsite.line,
+            column: propertyCallsite.column,
           }
           : undefined,
       });

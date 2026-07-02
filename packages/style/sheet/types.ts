@@ -19,10 +19,13 @@ export type SheetOptions = {
   maxRules?: number;
   nonce?: string | null;
   sourcemap?: boolean;
+  tagName?: string;
+  top?: boolean;
 };
 
 export type StyleSheet = {
   updateLayers(layers: readonly string[]): void;
   insert(rule: SheetRule | string): void;
   flush(): void;
+  destroy?(): void;
 };

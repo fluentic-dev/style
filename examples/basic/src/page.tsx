@@ -35,11 +35,19 @@ const mergedButtonStyle = style({
 });
 
 const pulseIn = createKeyframes({
-  from: {
+  '0%': {
+    opacity: 1,
+    transform: 'translateY(0) scale(1)',
+  },
+  '10%': {
     opacity: 0.35,
     transform: 'translateY(10px) scale(0.98)',
   },
-  to: {
+  '31%': {
+    opacity: 1,
+    transform: 'translateY(0) scale(1)',
+  },
+  '100%': {
     opacity: 1,
     transform: 'translateY(0) scale(1)',
   },
@@ -54,10 +62,9 @@ const keyframeBadge = style({
   fontSize: 13,
   fontWeight: 700,
   animationName: pulseIn,
-  animationDuration: '900ms',
-  animationTimingFunction: 'ease-out',
-  animationIterationCount: 3,
-  animationDirection: 'alternate',
+  animationDuration: '2900ms',
+  animationTimingFunction: 'ease-in-out',
+  animationIterationCount: 'infinite',
 });
 
 export function Page(props: PageProps) {
@@ -75,10 +82,10 @@ export function Page(props: PageProps) {
         <div css={css.actions}>
           <Button>Save</Button>
           <Button theme={mergedCancelButtonTheme}>
-            Cancel
+            Scope merge
           </Button>
           <Button css={mergedButtonStyle}>
-            Merge
+            Style merge
           </Button>
         </div>
       </div>

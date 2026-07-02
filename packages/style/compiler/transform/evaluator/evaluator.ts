@@ -1,4 +1,3 @@
-import type { BabelTypes } from '../utils/babel';
 import { buildCounterStyleCss, formatCounterStyleName } from '../../../atomic/atRule/counterStyle';
 import { buildFontFaceCss, type FontFaceObject, formatFontFaceName } from '../../../atomic/atRule/fontFace';
 import { buildFontPaletteValuesCss, formatFontPaletteValuesName } from '../../../atomic/atRule/fontPaletteValues';
@@ -7,11 +6,18 @@ import { buildKeyframesCss, formatKeyFramesName, type KeyframesObject } from '..
 import { buildPositionTryCss, formatPositionTryName } from '../../../atomic/atRule/positionTry';
 import { buildPropertyCss, formatPropertyName, type PropertyObject } from '../../../atomic/atRule/property';
 import { TRACE_STYLE, TRACE_VALUE } from '../../../builder/data/debug';
-import { createExtractedScope, createExtractedSlot, createExtractedStyle } from '../../../builder/extract';
+import {
+  createExtractedScope,
+  createExtractedSlot,
+  createExtractedStyle,
+  createExtractedStyleMerge,
+  getExtractedStyleItems,
+} from '../../../builder/extract';
 import { CSS_CONFIG } from '../../../config/config/css';
 import { CSS_EXTRA_CONFIG } from '../../../config/config/css_extra';
 import type { NamedAtRuleFormat, TokenNameFormat } from '../../../config/types';
 import { transformKeyframes } from '../../../style/keyframes';
+import type { StyleFnMeta } from '../../../style/style';
 import {
   getStyleTokenId,
   isStyleTokenData,
@@ -21,7 +27,7 @@ import {
   TOKEN_OVERRIDE,
 } from '../../../style/token';
 import type { StyleTransform } from '../../../style/transform';
-import type { StyleFnMeta } from '../../../style/style';
+import { exposeStyle } from '../../../style/utils';
 import { type AtRuleRef, createAtRuleRef } from '../../../style/valueRef';
 import { hashString } from '../../../utils/hash';
 import type { StableId } from '../../../utils/id';
@@ -30,6 +36,7 @@ import {
   FN_CREATE_EXTRACTED_SCOPE,
   FN_CREATE_EXTRACTED_SLOT,
   FN_CREATE_EXTRACTED_STYLE,
+  FN_CREATE_EXTRACTED_STYLE_MERGE,
   FN_CREATE_FONT_FACE,
   FN_CREATE_FONT_PALETTE_VALUES,
   FN_CREATE_KEYFRAMES,
@@ -38,14 +45,18 @@ import {
   FN_CREATE_TOKEN,
   FN_CREATE_TOKENS,
   FN_CREATE_VALUES,
+  FN_EXPOSE_STYLE,
   FN_FONT_SRC,
+  FN_GET_EXTRACTED_STYLE_ITEMS,
   FN_STYLE_KEYFRAMES,
   FN_STYLE_PLAIN,
   FN_STYLE_RAW,
   FN_STYLE_VALUE,
   IMPORT_EXTRACT,
   IMPORT_PATHS,
+  STYLE_UTILS_IMPORT_PATH,
 } from '../../utils/constants';
+import type { BabelTypes } from '../utils/babel';
 import type { EvalFail, EvalModuleBindings, EvalOk, EvalResult, ImportMap, ResolveImportFn } from './types';
 
 const STYLE_IMPORT_PATHS = new Set(IMPORT_PATHS);
@@ -90,6 +101,7 @@ export type EvalScope = {
   styleFilePath?: string;
   styleNames?: Set<string>;
   styleMetas?: Map<string, StyleFnMeta>;
+  bindingNodes?: Map<string, BabelTypes.Node>;
   styleTransform?: StyleTransform | null;
   sourcemapTrace?: 'style' | 'value';
 };
@@ -146,6 +158,48 @@ export function evaluateNode(
     default:
       return evalFail(`Cannot statically evaluate: ${node.type}`);
   }
+}
+
+export function evaluateEnumDeclaration(
+  node: BabelTypes.TSEnumDeclaration,
+  scope: EvalScope,
+): EvalResult {
+  const result: Record<string, string | number> = {};
+  let nextNumber = 0;
+
+  for (const member of node.members) {
+    const key = getEnumMemberKey(member.id);
+    if (key === null) return evalFail('Unsupported enum member key');
+
+    let value: string | number;
+
+    if (member.initializer) {
+      const resolved = evaluateNode(member.initializer, scope);
+      if (!resolved.ok) return resolved;
+      if (typeof resolved.value !== 'string' && typeof resolved.value !== 'number') {
+        return evalFail('Enum member value must be a string or number');
+      }
+      value = resolved.value;
+    } else {
+      value = nextNumber;
+    }
+
+    result[key] = value;
+    if (typeof value === 'number') {
+      result[value] = key;
+      nextNumber = value + 1;
+    }
+  }
+
+  return evalOk(result);
+}
+
+function getEnumMemberKey(
+  node: BabelTypes.TSEnumMember['id'],
+): string | null {
+  if (node.type === 'Identifier') return node.name;
+  if (node.type === 'StringLiteral') return node.value;
+  return null;
 }
 
 function evaluateTemplate(node: BabelTypes.TemplateLiteral, scope: EvalScope): EvalResult {
@@ -370,6 +424,24 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
       return evalOk(createExtractedStyle(items.value as Parameters<typeof createExtractedStyle>[0]));
     }
 
+    if (imp && imp.source === IMPORT_EXTRACT && imp.name === FN_GET_EXTRACTED_STYLE_ITEMS) {
+      const style = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+      if (!style.ok) return style;
+
+      return evalOk(getExtractedStyleItems(style.value as Parameters<typeof getExtractedStyleItems>[0]));
+    }
+
+    if (imp && imp.source === IMPORT_EXTRACT && imp.name === FN_CREATE_EXTRACTED_STYLE_MERGE) {
+      const parts: Parameters<typeof createExtractedStyleMerge> = [];
+      for (const arg of node.arguments) {
+        const part = evaluateNode(arg as BabelTypes.Node, scope);
+        if (!part.ok) return part;
+        parts.push(part.value as Parameters<typeof createExtractedStyleMerge>[number]);
+      }
+
+      return evalOk(createExtractedStyleMerge(...parts));
+    }
+
     if (imp && imp.source === IMPORT_EXTRACT && imp.name === FN_CREATE_EXTRACTED_SLOT) {
       const slotId = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
       if (!slotId.ok) return slotId;
@@ -533,6 +605,16 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
       if (!debugId.ok) return debugId;
 
       return evalOk(createCompiledTokens(value.value, scope, node.loc?.start, node, debugId.value));
+    }
+
+    if (imp && imp.source === STYLE_UTILS_IMPORT_PATH && imp.name === FN_EXPOSE_STYLE) {
+      const styles = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+      if (!styles.ok) return styles;
+      if (!styles.value || typeof styles.value !== 'object') {
+        return evalFail('exposeStyle input must be a static object');
+      }
+
+      return evalOk(exposeStyle(styles.value as object));
     }
 
     if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_VALUES) {

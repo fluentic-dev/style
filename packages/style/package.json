@@ -133,6 +133,22 @@
       "types": "./css/index.ts",
       "import": "./dist/css.js"
     },
+    "./utils": {
+      "types": "./style/utils/index.ts",
+      "import": "./dist/utils.js"
+    },
+    "./builder/extract": {
+      "types": "./builder/extract/index.ts",
+      "import": "./dist/entry/prod/extract.js"
+    },
+    "./server/extracted": {
+      "types": "./entry/rsc_prod/server.ts",
+      "import": "./dist/entry/rsc-prod.js"
+    },
+    "./jsx-runtime/server/extracted": {
+      "types": "./entry/rsc_prod/jsx_runtime.ts",
+      "import": "./dist/entry/rsc-prod/jsx-runtime.js"
+    },
     "./jsx/jsx-runtime": {
       "types": "./jsx/runtime/jsx_runtime.ts",
       "react-server": null,
@@ -162,6 +178,10 @@
     "./entry/rsc-prod": {
       "types": "./entry/rsc_prod/index.ts",
       "import": "./dist/entry/rsc-prod.js"
+    },
+    "./entry/rsc-prod/runtime": {
+      "types": "./entry/rsc_prod/runtime.ts",
+      "import": "./dist/entry/rsc-prod/runtime.js"
     },
     "./entry/dev/css": {
       "types": "./entry/dev/css.ts",

@@ -8,6 +8,7 @@ import {
   getSheetRulePriority,
   getStyleLayerName,
   insertStyleTagAfter,
+  insertStyleTagAtTop,
   normalizeRule,
   resolveDocument,
 } from '../utils';
@@ -37,12 +38,17 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
   const groups: SortGroup[] = [];
   const shouldLayer = CSS_CONFIG.layer !== false;
   const layerName = getStyleLayerName();
-  const layerTag = shouldLayer ? createStyleTag(document, 'layers', options.nonce) : null;
+  const tagPrefix = options.tagName ? options.tagName + ' ' : '';
+  const layerTag = shouldLayer ? createStyleTag(document, tagPrefix + 'layers', options.nonce) : null;
   let activeLayers: readonly string[] = CSS_CONFIG.layers ?? CSS_CONFIG_DEFAULT.layers ?? [];
   let layerText = '';
 
   if (layerTag) {
-    insertStyleTagAfter(document, layerTag, null);
+    if (options.top) {
+      insertStyleTagAtTop(document, layerTag);
+    } else {
+      insertStyleTagAfter(document, layerTag, null);
+    }
   }
 
   return {
@@ -105,6 +111,8 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
           flushFragment();
           active = createGroupTag(document, groups, group, {
             previous: layerTag,
+            className: tagPrefix + 'rules ' + group.key,
+            top: options.top,
             layerName: shouldLayer ? layerName : null,
             sourcemap,
             nonce: options.nonce,
@@ -179,6 +187,8 @@ function createGroupTag(
   group: SortGroup,
   options: {
     previous: HTMLStyleElement | null;
+    className: string;
+    top?: boolean;
     layerName: string | null;
     sourcemap: boolean;
     nonce?: string | null;
@@ -188,8 +198,9 @@ function createGroupTag(
   const before = getNextTag(groups, group);
   const item = createDevTag(document, previous, {
     ...options,
-    className: 'rules ' + group.key,
+    className: options.className,
     before: before?.tag ?? null,
+    top: options.top,
     wrapper: options.layerName
       ? {
         before: '@layer ' + options.layerName + ' {\n',

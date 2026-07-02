@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { compareLayerPriority } from '../../../atomic/layer';
-import { extractCss, type CompilerExtractCssArgs, type CssExtractRule } from '../../../compiler/extract';
+import { type CompilerExtractCssArgs, type CssExtractRule, extractCss } from '../../../compiler/extract';
 import { normalizePath } from '../../../compiler/utils/path';
 
 export type FileCssCacheRule = CssExtractRule;

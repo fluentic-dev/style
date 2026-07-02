@@ -6,9 +6,11 @@ const pkg = '@fluentic/style';
 
 export const STYLE_IMPORT_PATH = pkg;
 export const STYLE_CSS_IMPORT_PATH = pkg + '/css';
+export const STYLE_UTILS_IMPORT_PATH = pkg + '/utils';
 export const STYLE_DEV_RSC_IMPORT_PATH = pkg + '/dev/rsc';
 export const STYLE_ENTRY_PROD_EXTRACT_IMPORT_PATH = pkg + '/entry/prod/extract';
 export const STYLE_EXTRACT_RUNTIME_IMPORT_PATH = pkg + '/entry/prod/runtime';
+export const STYLE_RSC_EXTRACT_RUNTIME_IMPORT_PATH = pkg + '/entry/rsc-prod/runtime';
 
 export const DEFAULT_CONFIG = {
   ...CSS_CONFIG_DEFAULT,
@@ -38,6 +40,7 @@ export const FN_CREATE_TOKEN = 'createToken';
 export const FN_CREATE_TOKENS = 'createTokens';
 export const FN_CREATE_VALUES = 'createValues';
 export const FN_CREATE_THEME = 'createTheme';
+export const FN_EXPOSE_STYLE = 'exposeStyle';
 
 export const FN_BIND_SCOPE = 'bindScope';
 export const FN_COMBINE_SCOPE = 'combineScope';
@@ -58,6 +61,8 @@ export const FN_CREATE_EXTRACTED_SLOT = 'createExtractedSlot';
 export const FN_CREATE_EXTRACTED_SCOPE = 'createExtractedScope';
 export const FN_CREATE_EXTRACTED_TOKEN = 'createExtractedToken';
 export const FN_CREATE_EXTRACTED_THEME = 'createExtractedTheme';
+export const FN_GET_EXTRACTED_STYLE_ITEMS = 'getExtractedStyleItems';
+export const FN_CREATE_EXTRACTED_STYLE_MERGE = 'createExtractedStyleMerge';
 export const FN_WITH_TOKENS = 'withTokens';
 
 export const DEBUG_SOURCE_URL_VAR = '_styleDebugSourceUrl';

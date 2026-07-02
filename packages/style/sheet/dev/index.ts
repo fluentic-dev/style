@@ -53,6 +53,12 @@ export function createDevSheet(options: SheetOptions = {}): StyleSheet {
       ensureActiveMode();
       active.flush();
     },
+
+    destroy() {
+      DEV_SHEETS.delete(state);
+      removeDevSheetTags(options.document, options.tagName);
+      pruneDevSourcemapTags();
+    },
   };
 
   function ensureActiveMode() {
@@ -63,7 +69,7 @@ export function createDevSheet(options: SheetOptions = {}): StyleSheet {
 
   function rebuild() {
     activeMode = DEV_CONFIG.stylePriorityMode;
-    removeDevSheetTags(options.document);
+    removeDevSheetTags(options.document, options.tagName);
     active = createDevSheetForMode(activeMode, options);
     active.updateLayers(activeLayers);
 
@@ -89,7 +95,7 @@ function getStoredRuleKey(rule: SheetRule | string) {
   return typeof rule === 'string' ? rule : rule.key ?? rule.css;
 }
 
-function removeDevSheetTags(documentOverride?: Document | null) {
+function removeDevSheetTags(documentOverride?: Document | null, tagName?: string) {
   const document = documentOverride === undefined
     ? typeof globalThis.document === 'undefined'
       ? null
@@ -105,10 +111,19 @@ function removeDevSheetTags(documentOverride?: Document | null) {
     const node = nodes[i] as HTMLElement;
 
     if (typeof node.getAttribute !== 'function') continue;
-    if (!node.getAttribute('data-css-sheet')) continue;
+    const sheetName = node.getAttribute('data-css-sheet');
+
+    if (!sheetName) continue;
+    if (!matchesDevSheetTag(sheetName, tagName)) continue;
 
     node.parentNode?.removeChild(node);
   }
 
   pruneDevSourcemapTags();
+}
+
+function matchesDevSheetTag(sheetName: string, tagName?: string) {
+  if (tagName) return sheetName === tagName || sheetName.startsWith(tagName + ' ');
+
+  return sheetName === 'layers' || sheetName === 'rules' || sheetName.startsWith('rules ');
 }

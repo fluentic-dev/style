@@ -1,6 +1,6 @@
-import { createCompiler } from '../../packages/style/compiler';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createCompiler } from '../../packages/style/compiler';
 import { style, sx, ui } from './src/style.ts';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));

@@ -1,10 +1,18 @@
-import type { ScopeTargetData } from '../../../builder/data/data';
+import { BUILDER_STATE } from '../../../builder/data/const';
+import type { ScopeData, ScopeTargetData } from '../../../builder/data/data';
 import { getScopeTargetScope, getScopeTargetSlotId, isScopeTargetData } from '../../../builder/data/is';
+import { CSS_CONFIG } from '../../../config/config/css';
 import { RUNTIME_CONFIG } from '../../../config/config/runtime';
 import type { Falsy, StyleItem } from '../../types';
 import type { CombinedStyle } from '../combinedStyle';
 import { createCombinedStyleFacade } from './item';
-import { addTokenOverride, createMutableTokenValues, finishTokenValues, type StyleTokenValues } from './tokenValues';
+import {
+  addTokenOverride,
+  addTokenValues,
+  createMutableTokenValues,
+  finishTokenValues,
+  type StyleTokenValues,
+} from './tokenValues';
 import { type CacheTreeNode, createCacheTreeNode, getCacheTreeChild } from './utils/tree';
 
 export type CombinedStylePool = {
@@ -25,6 +33,9 @@ export type CombinedStylePoolResult<Styles = unknown> = {
 
 type PoolValue = {
   style: CombinedStyle | null;
+  isScopeTokensCached: boolean;
+  scopeTokens: StyleTokenValues | null;
+  scopeTokenNameFormat: typeof CSS_CONFIG.tokenNameFormat;
   updatedAt: number;
 };
 
@@ -56,7 +67,7 @@ export function createCombinedStylePool(ttl = DEFAULT_TTL): CombinedStylePool {
   return {
     get(styles, inheritedScopes, items, prevTokensData = null) {
       if (ttl === 0) {
-        const collected = collectItems(items, prevTokensData);
+        const collected = collectItems(null, items, prevTokensData);
         const allScopes = concatScopes(inheritedScopes, collected.scopes);
 
         return {
@@ -68,10 +79,11 @@ export function createCombinedStylePool(ttl = DEFAULT_TTL): CombinedStylePool {
 
       const now = Date.now();
       let node = getPoolChild(root, styles);
-      const collected = collectItems(items, prevTokensData);
 
       node = walkScopes(node, inheritedScopes);
-      node = walkScopes(node, collected.scopes);
+
+      const collected = collectItems(node, items, prevTokensData);
+      node = collected.node ?? node;
       node.value.updatedAt = now;
 
       if (node.value.style) {
@@ -114,11 +126,13 @@ export function createCombinedStylePool(ttl = DEFAULT_TTL): CombinedStylePool {
 }
 
 function collectItems(
+  node: PoolNode | null,
   items: readonly (StyleItem | Falsy)[],
   prevTokensData: StyleTokenValues | null,
 ) {
   const scopes: ScopeTargetData[] = [];
   const tokens = createMutableTokenValues(prevTokensData);
+  let currentNode = node;
 
   for (let i = 0, len = items.length; i < len; i++) {
     const item = items[i];
@@ -127,6 +141,8 @@ function collectItems(
 
     if (isScopeTargetData(item)) {
       scopes.push(item);
+      currentNode = currentNode ? walkScope(currentNode, item) : null;
+      addTokenValues(tokens, getScopeTokenValues(currentNode, getScopeTargetScope(item)));
     }
   }
 
@@ -134,6 +150,7 @@ function collectItems(
 
   if (!tokensData) {
     return {
+      node: currentNode,
       scopes,
       tokensData: null,
       isTokenDataChanged: !!prevTokensData,
@@ -141,6 +158,7 @@ function collectItems(
   }
 
   return {
+    node: currentNode,
     scopes,
     tokensData,
     isTokenDataChanged: tokensData !== prevTokensData,
@@ -155,11 +173,48 @@ function walkScopes(
     const scope = scopes[i];
     if (!scope) continue;
 
-    node = getPoolChild(node, getScopeTargetScope(scope));
-    node = getPoolChild(node, getScopeTargetSlotId(scope));
+    node = walkScope(node, scope);
   }
 
   return node;
+}
+
+function walkScope(
+  node: PoolNode,
+  scope: ScopeTargetData,
+) {
+  node = getPoolChild(node, getScopeTargetScope(scope));
+  node = getPoolChild(node, getScopeTargetSlotId(scope));
+
+  return node;
+}
+
+function getScopeTokenValues(
+  node: PoolNode | null,
+  scope: ScopeData,
+) {
+  const tokenNameFormat = CSS_CONFIG.tokenNameFormat;
+
+  if (node && node.value.isScopeTokensCached && node.value.scopeTokenNameFormat === tokenNameFormat) {
+    return node.value.scopeTokens;
+  }
+
+  const values = createMutableTokenValues(null);
+  const items = scope[BUILDER_STATE].items;
+
+  for (let i = 0, len = items.length; i < len; i++) {
+    addTokenOverride(values, items[i]);
+  }
+
+  const tokens = finishTokenValues(null, values);
+
+  if (node) {
+    node.value.isScopeTokensCached = true;
+    node.value.scopeTokens = tokens;
+    node.value.scopeTokenNameFormat = tokenNameFormat;
+  }
+
+  return tokens;
 }
 
 function concatScopes(
@@ -192,6 +247,9 @@ function createPoolNode(): PoolNode {
 function createPoolValue(): PoolValue {
   return {
     style: null,
+    isScopeTokensCached: false,
+    scopeTokens: null,
+    scopeTokenNameFormat: undefined,
     updatedAt: Date.now(),
   };
 }

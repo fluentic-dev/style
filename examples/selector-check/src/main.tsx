@@ -1,5 +1,4 @@
-import { configureRuntime } from '@fluentic/style';
-import { enableStyleDevUtils } from '@fluentic/style/dev';
+import { configureStyleDev } from '@fluentic/style/dev';
 import React, { useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { cases, type SelectorCase } from './selector-cases';
@@ -15,8 +14,7 @@ type CaseResult = {
 };
 
 if (import.meta.env.DEV) {
-  configureRuntime({ dev: true });
-  enableStyleDevUtils();
+  configureStyleDev({ utils: {} });
 }
 
 function App() {

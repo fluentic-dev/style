@@ -1,4 +1,3 @@
-import type { BabelTypes } from './babel';
 import {
   SELECTOR_ARG,
   SELECTOR_ARGS,
@@ -11,6 +10,7 @@ import type { CheckSelectorMode } from '../../../config/types';
 import { assertLocalSelector, assertSelector } from '../../../selector/assert';
 import type { Selector } from '../../../selector/types';
 import type { EvalResult } from '../evaluator/types';
+import type { BabelTypes } from './babel';
 
 export const NonStaticSelectorValue = Symbol('NonStaticSelectorValue');
 

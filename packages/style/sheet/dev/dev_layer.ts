@@ -7,7 +7,9 @@ import {
   createSheetLayerState,
   createStyleTag,
   getSheetRulePriority,
+  getStyleLayerName,
   insertStyleTagAfter,
+  insertStyleTagAtTop,
   normalizeRule,
   resolveDocument,
 } from '../utils';
@@ -29,7 +31,9 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
   const sourcemap = options.sourcemap ?? DEV_CONFIG.isSourcemapEnabled;
   const inserted = new Set<string>();
   const layerState = createSheetLayerState();
-  const layerTag = createStyleTag(document, 'layers', options.nonce);
+  const tagPrefix = options.tagName ? options.tagName + ' ' : '';
+  const rootLayer = tagPrefix === 'element-marker ' ? getStyleLayerName() : null;
+  const layerTag = createStyleTag(document, tagPrefix + 'layers', options.nonce);
   const queued: QueuedRule[] = [];
 
   let layerText = '';
@@ -37,12 +41,16 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
   let active: DevRuleTag | null = null;
   let lastTag: HTMLStyleElement = layerTag;
 
-  insertStyleTagAfter(document, layerTag, null);
+  if (options.top) {
+    insertStyleTagAtTop(document, layerTag);
+  } else {
+    insertStyleTagAfter(document, layerTag, null);
+  }
 
   return {
     updateLayers(layers) {
       activeLayers = layers;
-      const next = getLayerOrderCss(layers, layerState.getNames());
+      const next = getLayerOrderCss(layers, rootLayer ?? layerState.getNames());
 
       if (next === layerText) return;
 
@@ -57,8 +65,11 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
       if (ruleKey && inserted.has(ruleKey)) return;
 
       const priority = typeof rule === 'string' ? null : rule.priority;
-      const layerName = layerState.getName(getSheetRulePriority(priority));
-      const nextLayerText = getLayerOrderCss(activeLayers, layerState.getNames());
+      const layerName = rootLayer ?? layerState.getName(getSheetRulePriority(priority));
+      const nextLayerText = getLayerOrderCss(
+        activeLayers,
+        rootLayer ?? layerState.getNames(),
+      );
 
       if (nextLayerText !== layerText) {
         layerText = nextLayerText;
@@ -108,6 +119,8 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
           active = createDevTag(document, lastTag, {
             sourcemap,
             nonce: options.nonce,
+            className: tagPrefix + 'rules',
+            top: options.top,
           });
           lastTag = active.tag;
         }

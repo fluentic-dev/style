@@ -1,11 +1,11 @@
-import type { BabelTypes } from '../../utils/babel';
-import { basename } from 'node:path';
 import { getLocalVarName } from '../../../../atomic/var';
 import { TRACE_STYLE, TRACE_VALUE } from '../../../../builder/data/debug';
 import type { TokenNameFormat } from '../../../../config/types';
 import { DEFAULT_CONFIG } from '../../../utils/constants';
+import { getBasename } from '../../../utils/path';
 import { getCallLabel, getObjectPropertyKey, isStaticStyleValue } from '../../syntax';
 import type { CallArg, CallArgs } from '../../syntax/types';
+import type { BabelTypes } from '../../utils/babel';
 
 export type DebugTraceProperty = BabelTypes.ObjectProperty & {
   __styleSourcemapStyleLoc?: BabelTypes.SourceLocation['start'];
@@ -20,8 +20,9 @@ export function buildDebugDataObject(
   sourceContentRef: BabelTypes.Expression | null,
   tokenNameFormat: TokenNameFormat = DEFAULT_CONFIG.tokenNameFormat!,
   styleArg: CallArg = node.arguments[0],
+  locOverride?: BabelTypes.SourceLocation['start'] | null,
 ) {
-  const loc = node.loc?.start;
+  const loc = locOverride ?? node.loc?.start;
   const line = loc?.line ?? 1;
   const column = (loc?.column ?? 0) + 1;
   const longLabel = getCallLabel(node.callee);
@@ -41,7 +42,7 @@ export function buildDebugDataObject(
       t.arrayExpression([
         t.stringLiteral(shortLabel),
         t.stringLiteral(longLabel),
-        t.stringLiteral(basename(fileId)),
+        t.stringLiteral(getBasename(fileId)),
       ]),
     ),
     t.objectProperty(

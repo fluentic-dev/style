@@ -3,8 +3,7 @@ import { CSS_CONFIG } from '../../config/config/css';
 import { DEV_CONFIG } from '../../config/config/dev';
 import type { ElementClassNameFormat } from '../../config/types';
 import type { SheetCallsite, SheetRule } from '../../sheet';
-import { createSourceMapComment, type SourcemapRule } from '../../sheet/sourcemap';
-import { createStyleTag } from '../../sheet/utils';
+import { createDevSheet } from '../../sheet';
 import { globalData } from '../../utils/global';
 import { createElementMarkerRule } from '../sheet/element';
 import type { ElementDebugData, StyleProp } from '../types';
@@ -15,9 +14,8 @@ export type ElementMarkerStyleProp = {
 };
 
 type ElementMarkerSheet = {
-  tag: HTMLStyleElement;
-  rules: SourcemapRule[];
-  inserted: Set<string>;
+  document: Document;
+  sheet: ReturnType<typeof createDevSheet>;
   classNames: Set<string>;
 };
 
@@ -31,18 +29,12 @@ export function createElementMarkerClassName(
 ) {
   if (!DEV_CONFIG.isDev || !DEV_CONFIG.isElementClassNameEnabled) return null;
 
-  const callsite = getElementCallsite(debug);
-  if (!callsite) return null;
+  const marker = createElementMarkerRuleFromDebug(debug);
+  if (!marker) return null;
 
-  const className = getElementClassName(
-    debug?.label,
-    getElementCallsiteId(callsite),
-    CSS_CONFIG.elementClassNameFormat as ElementClassNameFormat | undefined || null,
-  );
+  insertElementMarkerSheetRule(marker.rule);
 
-  insertElementMarkerRule(className, callsite);
-
-  return className;
+  return marker.className;
 }
 
 export function splitElementMarkerStyleProp(styleProp: StyleProp): ElementMarkerStyleProp {
@@ -66,51 +58,75 @@ export function isElementDebugData(value: unknown): value is ElementDebugData {
   return (value as Partial<ElementDebugData>).$$elementDebug === true;
 }
 
-function insertElementMarkerRule(
-  className: string,
-  callsite: SheetCallsite,
+export function insertElementMarkerSheetRule(
+  rule: SheetRule,
+  documentOverride?: Document,
 ) {
-  if (typeof document === 'undefined') return;
+  const document = documentOverride ?? (
+    typeof globalThis.document === 'undefined' ? null : globalThis.document
+  );
+  if (!document) return;
 
-  const rule: SheetRule = createElementMarkerRule(className, callsite);
+  const className = getElementMarkerClassNameFromRule(rule);
+  if (!className) return;
 
   const sheet = getElementMarkerSheet(document);
 
-  if (rule.key && sheet.inserted.has(rule.key)) return;
-  if (rule.key) sheet.inserted.add(rule.key);
-
   sheet.classNames.add(className);
+  sheet.sheet.insert(rule);
+  sheet.sheet.flush();
+}
 
-  sheet.rules.push({
-    css: rule.css,
-    callsite,
-  });
+export function createElementMarkerRuleFromDebug(
+  debug: ElementDebugData | undefined,
+) {
+  const callsite = getElementCallsite(debug);
+  if (!callsite) return null;
 
-  sheet.tag.textContent = getElementMarkerCss(sheet.rules);
+  const className = getElementClassName(
+    debug?.label,
+    getElementCallsiteId(callsite),
+    CSS_CONFIG.elementClassNameFormat as ElementClassNameFormat | undefined || null,
+  );
+
+  return {
+    className,
+    rule: createElementMarkerRule(className, callsite),
+  };
+}
+
+export function isElementMarkerRule(rule: SheetRule) {
+  return typeof rule.key === 'string' && rule.key.startsWith('element-marker:');
+}
+
+export function getElementMarkerClassNameFromRule(rule: SheetRule) {
+  if (!isElementMarkerRule(rule)) return null;
+
+  return rule.key!.slice('element-marker:'.length) || null;
 }
 
 function getElementMarkerSheet(document: Document) {
   const current = ELEMENT_MARKER_SHEET.sheet;
-  if (current?.tag.ownerDocument === document && current.tag.parentNode) return current;
+  if (current?.document === document) return current;
 
-  const tag = createStyleTag(document, 'element-marker');
   const sheet: ElementMarkerSheet = {
-    tag,
-    rules: [],
-    inserted: new Set(),
+    document,
+    sheet: createDevSheet({
+      document,
+      tagName: 'element-marker',
+      top: true,
+    }),
     classNames: new Set(),
   };
 
   ELEMENT_MARKER_SHEET.sheet = sheet;
-
-  insertElementMarkerTag(document, tag);
 
   return sheet;
 }
 
 export function clearElementMarkers(documentOverride?: Document | null) {
   const sheet = ELEMENT_MARKER_SHEET.sheet;
-  const document = documentOverride ?? sheet?.tag.ownerDocument ?? (
+  const document = documentOverride ?? sheet?.document ?? (
     typeof globalThis.document === 'undefined' ? null : globalThis.document
   );
 
@@ -120,42 +136,9 @@ export function clearElementMarkers(documentOverride?: Document | null) {
   }
 
   stripElementMarkerClasses(document, sheet.classNames);
-  sheet.tag.parentNode?.removeChild(sheet.tag);
-  sheet.rules.length = 0;
-  sheet.inserted.clear();
+  sheet.sheet.destroy?.();
   sheet.classNames.clear();
   ELEMENT_MARKER_SHEET.sheet = null;
-}
-
-function insertElementMarkerTag(
-  document: Document,
-  tag: HTMLStyleElement,
-) {
-  const head = document.head || document.getElementsByTagName('head')[0] || document.documentElement;
-  const firstSheet = getFirstCssSheetTag(head);
-
-  head.insertBefore(tag, firstSheet);
-}
-
-function getFirstCssSheetTag(head: HTMLElement) {
-  const nodes = head.childNodes;
-
-  for (let i = 0, len = nodes.length; i < len; i++) {
-    const node = nodes[i] as HTMLElement;
-
-    if (typeof node.getAttribute !== 'function') continue;
-    if (node.getAttribute('data-css-sheet')) return node;
-  }
-
-  return null;
-}
-
-function getElementMarkerCss(rules: SourcemapRule[]) {
-  const css = rules.map((rule) => rule.css).join('\n');
-
-  if (!DEV_CONFIG.isSourcemapEnabled) return css;
-
-  return css + '\n' + createSourceMapComment(rules);
 }
 
 function removeElementMarkerTags(document: Document | null | undefined) {
@@ -168,7 +151,8 @@ function removeElementMarkerTags(document: Document | null | undefined) {
     const node = nodes[i] as HTMLElement;
 
     if (typeof node.getAttribute !== 'function') continue;
-    if (node.getAttribute('data-css-sheet') !== 'element-marker') continue;
+    const sheetName = node.getAttribute('data-css-sheet');
+    if (sheetName !== 'element-marker' && !sheetName?.startsWith('element-marker ')) continue;
 
     node.parentNode?.removeChild(node);
   }

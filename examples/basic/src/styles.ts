@@ -20,6 +20,11 @@ const pageTitleTokens = style.plain({
   margin: 0,
 });
 
+const actionRowBase = style.raw({
+  display: 'flex',
+  flexWrap: 'wrap',
+});
+
 export const pageStyles = {
   container: style.slot({
     ...sharedTextBase,
@@ -70,8 +75,7 @@ export const pageStyles = {
     fontWeight: pageTypography.bodyWeight,
   }),
   actions: style.slot({
-    display: 'flex',
-    flexWrap: 'wrap',
+    ...actionRowBase,
     gap: spacing.buttonGap,
   }),
 };

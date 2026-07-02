@@ -1,6 +1,6 @@
-import type { BabelTypes } from '../../utils/babel';
 import type { StyleTokenOverride } from '../../../../style/token';
 import type { CssExtractItem, CssExtractRule } from '../../../extract';
+import type { BabelTypes } from '../../utils/babel';
 
 export type { CssExtractItem, CssExtractRule };
 
@@ -18,7 +18,13 @@ export type CompiledTokenItem = {
   valueNode: BabelTypes.Expression;
 };
 
-export type CompiledItem = CompiledCssItem | CompiledTokenItem;
+export type CompiledStyleSpreadItem = {
+  kind: 'style-spread';
+  expression: BabelTypes.Expression;
+  items: CompiledCssItem[];
+};
+
+export type CompiledItem = CompiledCssItem | CompiledTokenItem | CompiledStyleSpreadItem;
 
 export type CompiledChainData = {
   type: CompiledChainType;

@@ -1,4 +1,3 @@
-import type { BabelTypes, NodePath } from '../../utils/babel';
 import { getThemeRuleCss } from '../../../../atomic/theme';
 import { CSS_CONFIG } from '../../../../config/config/css';
 import { isStyleTokenOverrideData, type StyleTokenOverride } from '../../../../style/token';
@@ -7,6 +6,7 @@ import type { CssExtractRule } from '../../../extract/types';
 import { FN_CREATE_THEME, IMPORT_PATHS } from '../../../utils/constants';
 import { evaluateNode } from '../../evaluator/evaluator';
 import { getStableThemeClassName, getStableThemeId } from '../../syntax/static_ids';
+import type { BabelTypes, NodePath } from '../../utils/babel';
 import { type ExtractPluginState, getEvalScope } from './state';
 
 export function compileThemeCall(

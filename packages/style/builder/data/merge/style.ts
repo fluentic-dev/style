@@ -19,7 +19,14 @@ import {
   ITEM_VALUE_TYPE_VARIABLE,
 } from '../const';
 import type { BuilderCallsite, BuilderData, StyleData } from '../data';
-import { type DebugData, getDebugFieldCallsite, getDebugFieldVarName } from '../debug';
+import {
+  type DebugData,
+  type DebugLoc,
+  getDebugFieldCallsite,
+  getDebugFieldVarName,
+  TRACE_STYLE,
+  TRACE_VALUE,
+} from '../debug';
 import { isSlotData, isSlotOverrideData, isStyleData } from '../is';
 import type { BuilderType, ItemSelector, ItemValue, RuntimeItem, RuntimeItemData, StateItem } from '../state';
 import { cloneData, logInvalidData } from './utils';
@@ -91,6 +98,16 @@ export function mergeBuilderData<Data extends BuilderData>(
         item = Object.assign({}, item, { type: BUILDER_TYPE_SLOT, slotId });
       } else if (type === BUILDER_TYPE_SLOT_OVERRIDE && slotId !== null) {
         item = Object.assign({}, item, { type: BUILDER_TYPE_SLOT_OVERRIDE, slotId });
+      }
+
+      const itemDebug = getMergedStyleDebug(debug, item);
+      const debugCallsite = getDebugFieldCallsite(itemDebug, item.property);
+      if (debugCallsite) {
+        item = Object.assign({}, item, {
+          callsite: debugCallsite,
+          debug: itemDebug,
+          debugField: item.property,
+        });
       }
 
       items.push(item);
@@ -225,4 +242,45 @@ export function mergeBuilderData<Data extends BuilderData>(
   }
 
   return data;
+}
+
+function getMergedStyleDebug(
+  debug: DebugData | null,
+  item: RuntimeItem,
+) {
+  if (!debug) return null;
+  if (debug.fields?.[item.property]) return debug;
+
+  const valueLoc = getMergedItemValueLoc(item);
+  if (!valueLoc) return debug;
+
+  return {
+    ...debug,
+    fields: {
+      ...debug.fields,
+      [item.property]: {
+        [TRACE_STYLE]: withDebugSource(debug.loc, debug),
+        [TRACE_VALUE]: valueLoc,
+      },
+    },
+  };
+}
+
+function getMergedItemValueLoc(item: RuntimeItem): DebugLoc | null {
+  if (item.debug && item.debugField) {
+    const loc = item.debug.fields?.[item.debugField];
+    if (Array.isArray(loc)) return withDebugSource(loc, item.debug);
+    if (loc) {
+      const traceLoc = loc[TRACE_VALUE] ?? loc[TRACE_STYLE] ?? null;
+      return traceLoc ? withDebugSource(traceLoc, item.debug) : null;
+    }
+  }
+
+  return item.callsite
+    ? [item.callsite.line, item.callsite.column, undefined, item.callsite.sourceUrl, item.callsite.sourceContent]
+    : null;
+}
+
+function withDebugSource(loc: DebugLoc, debug: DebugData): DebugLoc {
+  return loc[3] ? loc : [loc[0], loc[1], loc[2], debug.sourceUrl, debug.code];
 }

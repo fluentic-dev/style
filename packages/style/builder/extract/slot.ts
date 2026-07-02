@@ -1,7 +1,7 @@
 import { BUILDER_STATE, BUILDER_TYPE_SLOT, BUILDER_TYPE_SLOT_OVERRIDE } from '../data/const';
 import type { SlotData, SlotOverrideData } from '../data/data';
 import type { ExtractedItemValue } from '../data/state';
-import { createExtractedData, normalizeExtractedItems } from './utils';
+import { copyExtractedData, createExtractedData, normalizeExtractedItems } from './utils';
 
 export type ExtractedSlotTuple = [
   dedupe: string,
@@ -17,7 +17,7 @@ export function createExtractedSlot(
     return createExtractedSlotOverride(slotId, items ?? []);
   }) as unknown as SlotData;
 
-  Object.assign(slot, createExtractedData(BUILDER_TYPE_SLOT, slotId));
+  copyExtractedData(slot, createExtractedData(BUILDER_TYPE_SLOT, slotId));
 
   slot[BUILDER_STATE].items = normalizeExtractedItems(BUILDER_TYPE_SLOT, slotId, items);
 

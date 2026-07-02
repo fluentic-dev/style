@@ -1,5 +1,6 @@
 import type { StyleTokenOverride } from '../../style/token';
 import type { ScopeData, ScopeTargetData, SlotData, SlotOverrideData, StyleData } from '../data';
+import { copyExtractedData } from './utils';
 
 export type ExtractedTokenBoundData<T = ExtractedTokenBoundValue> = {
   data: T;
@@ -26,7 +27,7 @@ export function withTokens<T extends ExtractedTokenBoundValue>(
     : {};
 
   if (typeof data === 'function') {
-    Object.assign(bound, data);
+    copyExtractedData(bound, data as unknown as Parameters<typeof copyExtractedData>[1]);
   }
 
   tokenBoundData.set(bound, { data, tokens });
@@ -52,9 +53,12 @@ function createCallableTokenBoundData<T extends ExtractedTokenBoundValue>(
   data: T,
   tokens: readonly StyleTokenOverride[],
 ) {
-  return (...args: unknown[]) =>
-    withTokens(
-      (data as (...args: unknown[]) => ExtractedTokenBoundValue)(...args),
+  return function(this: unknown) {
+    const fn = data as unknown as Function;
+
+    return withTokens(
+      fn.apply(this, arguments) as ExtractedTokenBoundValue,
       tokens,
     );
+  };
 }

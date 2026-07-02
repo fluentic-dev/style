@@ -1,4 +1,4 @@
-import { CompilerRuntimeMode, type CompilerCssOptions, type CompilerDevOptions } from '../../compiler';
+import { type CompilerCssOptions, type CompilerDevOptions, CompilerRuntimeMode } from '../../compiler';
 import type { BuildConfig, BuildDevConfig } from '../../config/build';
 import type { PluginOptions } from './compiler';
 

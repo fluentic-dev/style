@@ -1,14 +1,6 @@
 import type { Plugin } from 'vite';
-import {
-  invalidateFiles,
-  PLUGIN_NAME,
-  type PluginCssOptions,
-  type PluginOptions,
-} from '../../utils';
-import {
-  hasCssMarker,
-  replaceCssMarker,
-} from '../../utils/cssMarker';
+import { invalidateFiles, PLUGIN_NAME, type PluginCssOptions, type PluginOptions } from '../../utils';
+import { hasCssMarker, replaceCssMarker } from '../../utils/cssMarker';
 import { formatError } from '../../utils/misc';
 import { getVirtualModuleId, RESOLVED_RUNTIME_MODULE_ID } from '../../utils/virtual';
 import { createVitePluginState } from './state';

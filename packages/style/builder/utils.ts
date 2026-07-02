@@ -1,4 +1,3 @@
-import { DEV_CONFIG } from '../config/config/dev';
 import type { StyleObject, StyleTransform } from '../style';
 import { traceCallsite } from '../utils/trace';
 import { type DebugData, getDebugCallsite } from './data/debug';

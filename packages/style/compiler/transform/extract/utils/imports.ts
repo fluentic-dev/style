@@ -1,4 +1,3 @@
-import type { BabelTypes, NodePath } from '../../utils/babel';
 import {
   FN_BIND_SCOPE,
   FN_COMBINE_SCOPE,
@@ -7,10 +6,11 @@ import {
   FN_GET_CLASS_NAME,
   FN_GET_TOKEN,
   IMPORT_PATHS,
-  STYLE_EXTRACT_RUNTIME_IMPORT_PATH,
   STYLE_IMPORT_PATH,
 } from '../../../utils/constants';
+import { getStyleExtractRuntimeImportPath } from '../../../utils/imports';
 import { getImportedName } from '../../syntax';
+import type { BabelTypes, NodePath } from '../../utils/babel';
 import type { ExtractPluginState } from './state';
 
 const EXTRACT_RUNTIME_IMPORT_NAMES = new Set([
@@ -109,7 +109,7 @@ export function pruneUnusedStyleImports(
       sourceName === STYLE_IMPORT_PATH &&
       keptSpecifiers.every(isExtractRuntimeImportSpecifier)
     ) {
-      importDecl.source.value = STYLE_EXTRACT_RUNTIME_IMPORT_PATH;
+      importDecl.source.value = getStyleExtractRuntimeImportPath(state.runtimeMode);
     }
 
     i++;

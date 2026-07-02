@@ -1,25 +1,34 @@
 @layer reset, css, override;
 @layer css {
-.width-rb3ea60{width: 20px}
-.display-none-bu9x92t{display: none}
-.color-red-edc9wv0{color: red}
-.opacity-b6dkdy0{opacity: 0.5}
-.font-family-times-bk33r00{font-family: Times}
-.background-color-coral-gncb830{background-color: coral}
-.background-image-bfbvbk7{background-image: var(--var-nu9tao0)}
-.color-pink-b12pukf{color: pink}
-.border-pink-bpl0n30{border: pink}
-.background-color-pink-vr50690{background-color: pink}
-@media (max-width: 600px){.max-600px-width-jp9itr0{width: 16px}}
-@media (max-width: 600px){.max-600px-color-green-bhrg44d{color: green}}
-@media (max-width: 600px){.max-600px-opacity-baxdw2g{opacity: 0.3}}
-.hover-width-bhkn4c2:where(.-hover-width-bhkn4c2:hover),:where(.-hover-width-bhkn4c2:hover) .hover-width-bhkn4c2{width: 20px}
-.hover-color-blue-hvsmdy0:where(.-hover-color-blue-hvsmdy0:hover),:where(.-hover-color-blue-hvsmdy0:hover) .hover-color-blue-hvsmdy0{color: blue}
-.hover-opacity-bp5k2nd:where(.-hover-opacity-bp5k2nd:hover),:where(.-hover-opacity-bp5k2nd:hover) .hover-opacity-bp5k2nd{opacity: 0.8}
-.width-hover-iypmcb0:hover{width: 20px}
-.width-hover-bxsbosn:hover{width: 22px}
-.background-color-hover-xwndrc0:hover{background-color: var(--var-brjxzfr, var(--token-token-1jb1zmc-v95nzv0, blue))}
-.hover-outline-color-active-yellow-jvtcnq0:where(.-hover-outline-color-active-yellow-jvtcnq0:hover):active,:where(.-hover-outline-color-active-yellow-jvtcnq0:hover) .hover-outline-color-active-yellow-jvtcnq0:active{outline-color: yellow}
-.width-d3rssn0{width: 18px}
-.display-flex-b4d2b3w{display: flex}
+.gap-i7zidj0{gap: var(--var-iafi210)}
+.padding-nnpbz40{padding: var(--var-ba7b46t)}
+.gap-badsgnp{gap: var(--var-lh6v6q0)}
+.width-buon3mh{width: 20px}
+.display-none-bhqaive{display: none}
+.color-red-bb9v15p{color: red}
+.opacity-b7c68l1{opacity: 0.5}
+.padding-bjwfq6q{padding: 4px}
+.color-be29slu{color: var(--var-jg49df0)}
+.font-family-times-bh6sooa{font-family: Times}
+.background-color-coral-b5gfi79{background-color: coral}
+.background-image-bgpbm97{background-image: var(--var-npc2ze0)}
+.background-color-white-b302ar4{background-color: white}
+.color-pink-vz3qz90{color: pink}
+.border-pink-mby7f50{border: pink}
+.background-color-pink-bxqz2c8{background-color: pink}
+@media (max-width: 600px){.max-600px-width-b393o3d{width: 16px}}
+@media (max-width: 600px){.max-600px-color-green-bin7rdb{color: green}}
+@media (max-width: 600px){.max-600px-opacity-e19pu10{opacity: 0.3}}
+.hover-width-g3m8co0:where(.-hover-width-g3m8co0:hover),:where(.-hover-width-g3m8co0:hover) .hover-width-g3m8co0{width: 20px}
+.hover-color-blue-fyds800:where(.-hover-color-blue-fyds800:hover),:where(.-hover-color-blue-fyds800:hover) .hover-color-blue-fyds800{color: blue}
+.hover-opacity-jvsghe0:where(.-hover-opacity-jvsghe0:hover),:where(.-hover-opacity-jvsghe0:hover) .hover-opacity-jvsghe0{opacity: 0.8}
+.width-hover-b2h7o2d:hover{width: 20px}
+.gap-hover-bhikf0l:hover{gap: var(--var-cap3zp0)}
+.width-hover-tcygwp0:hover{width: 22px}
+.padding-hover-bh5secb:hover{padding: 8px}
+.border-color-hover-bioffha:hover{border-color: var(--var-bjwbpju)}
+.background-color-hover-bhw6uzz:hover{background-color: var(--var-cap3zp0, var(--token-token-1jb1zmc-v95nzv0, blue))}
+.hover-outline-color-active-yellow-beaqvf8:where(.-hover-outline-color-active-yellow-beaqvf8:hover):active,:where(.-hover-outline-color-active-yellow-beaqvf8:hover) .hover-outline-color-active-yellow-beaqvf8:active{outline-color: yellow}
+.width-bg3jsj8{width: 18px}
+.display-flex-bk1kjox{display: flex}
 }

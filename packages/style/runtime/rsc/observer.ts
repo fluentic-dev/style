@@ -1,7 +1,13 @@
 import { LayerDefaultLayers } from '../../atomic/layer';
 import { isDebugData } from '../../builder/data/debug';
 import { CSS_CONFIG } from '../../config/config/css';
-import type { SheetRule } from '../../sheet';
+import { DEV_CONFIG } from '../../config/config/dev';
+import type { SheetCallsite, SheetRule } from '../../sheet';
+import {
+  getElementMarkerClassNameFromRule,
+  insertElementMarkerSheetRule,
+  isElementMarkerRule,
+} from '../core/elementMarker';
 import { getGlobalSheet } from '../sheet';
 import { ELEMENT_CSS_DATA_ATTR, PRECOLLECT_LINK_TAG_ATTR, SEED_STYLE_TAG_ATTR, SEED_STYLE_TAG_HREF } from './constants';
 import type { RscStylePayloadRule } from './getClassName';
@@ -115,6 +121,16 @@ function flush() {
       if (!rule.key || !rule.css || inserted.has(rule.key)) continue;
 
       inserted.add(rule.key);
+
+      if (isElementMarkerRule(rule)) {
+        if (DEV_CONFIG.isElementClassNameEnabled) {
+          insertElementMarkerSheetRule(rule);
+        } else {
+          removeElementMarkerClass(element, rule);
+        }
+        continue;
+      }
+
       sheet.insert(rule);
     }
 
@@ -175,7 +191,48 @@ function normalizePayloadItem(value: unknown): SheetRule | null {
     key: rule.key,
     css: rule.css,
     priority: rule.priority,
+    callsite: normalizePayloadCallsite(rule.callsite),
     debug: rule.debug,
     debugField: rule.debugField,
   };
+}
+
+function normalizePayloadCallsite(value: unknown): SheetCallsite | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+
+  const callsite = value as Partial<SheetCallsite>;
+
+  if (typeof callsite.filePath !== 'string') return undefined;
+  if (typeof callsite.sourceUrl !== 'string') return undefined;
+  if (typeof callsite.line !== 'number') return undefined;
+  if (typeof callsite.column !== 'number') return undefined;
+
+  return {
+    filePath: callsite.filePath,
+    sourceUrl: callsite.sourceUrl,
+    sourceContent: typeof callsite.sourceContent === 'string' ? callsite.sourceContent : undefined,
+    line: callsite.line,
+    column: callsite.column,
+  };
+}
+
+function removeElementMarkerClass(element: Element, rule: SheetRule) {
+  const className = getElementMarkerClassNameFromRule(rule);
+  if (!className) return;
+
+  if ('classList' in element && element.classList) {
+    element.classList.remove(className);
+    return;
+  }
+
+  const value = element.getAttribute('class');
+  if (!value) return;
+
+  const next = value.split(/\s+/).filter((item) => item !== className).join(' ');
+
+  if (next) {
+    element.setAttribute('class', next);
+  } else {
+    element.removeAttribute('class');
+  }
 }

@@ -12,10 +12,12 @@ export const LABEL_SHORT = 0;
 export const LABEL_LONG = 1;
 export const LABEL_FILE = 2;
 
-type DebugLoc = [
+export type DebugLoc = [
   line: number,
   column: number,
   trace?: number,
+  sourceUrl?: string,
+  sourceContent?: string,
 ];
 
 type DebugLabel = [
@@ -97,12 +99,14 @@ export function getDebugFieldLoc(
 
 function createDebugCallsite(loc: DebugLoc, debug: DebugData): TraceCallsite {
   const [line, column] = loc;
+  const sourceUrl = loc[3] ?? debug.sourceUrl;
+  const sourceContent = loc[4] ?? debug.code;
 
   return {
-    stack: `Error\n    at ${debug.sourceUrl}:${line}:${column}`,
-    filePath: debug.sourceUrl,
-    sourceUrl: debug.sourceUrl,
-    sourceContent: debug.code,
+    stack: `Error\n    at ${sourceUrl}:${line}:${column}`,
+    filePath: sourceUrl,
+    sourceUrl,
+    sourceContent,
     line,
     column,
   };

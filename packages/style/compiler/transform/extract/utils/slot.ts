@@ -1,4 +1,3 @@
-import type { BabelTypes, NodePath } from '../../utils/babel';
 import { BUILDER_TYPE_SCOPE, BUILDER_TYPE_SLOT, BUILDER_TYPE_STYLE } from '../../../../builder/data/const';
 import {
   createExtractedScope,
@@ -10,6 +9,7 @@ import {
 import { evalOk } from '../../evaluator/evaluator';
 import type { EvalSlotRef } from '../../evaluator/types';
 import { getObjectPropertyKey } from '../../syntax';
+import type { BabelTypes, NodePath } from '../../utils/babel';
 import type { CompiledChainData, CompiledCssItem, CompiledItem } from '../chain';
 import type { ExtractPluginState } from './state';
 
@@ -100,18 +100,14 @@ function recordCompiledValueBinding(
 function getCompiledBindingValue(chain: CompiledChainData) {
   if (chain.type === 'style') {
     return createExtractedStyle(
-      chain.items.filter(Array.isArray).map((item) =>
-        toExtractedTuple(item as CompiledCssItem)
-      ) as ExtractedStyleTuple[],
+      getCompiledCssItems(chain.items).map((item) => toExtractedTuple(item)) as ExtractedStyleTuple[],
     );
   }
 
   if (chain.type === 'slot' && chain.slotId) {
     return createExtractedSlot(
       chain.slotId,
-      chain.items.filter(Array.isArray).map((item) =>
-        toExtractedTuple(item as CompiledCssItem)
-      ) as ExtractedSlotTuple[],
+      getCompiledCssItems(chain.items).map((item) => toExtractedTuple(item)) as ExtractedSlotTuple[],
     );
   }
 
@@ -122,8 +118,23 @@ function getCompiledBindingValue(chain: CompiledChainData) {
   return null;
 }
 
+function getCompiledCssItems(items: CompiledItem[]): CompiledCssItem[] {
+  const result: CompiledCssItem[] = [];
+
+  items.forEach((item) => {
+    if (Array.isArray(item)) {
+      result.push(item);
+    } else if (item.kind === 'style-spread') {
+      result.push(...item.items);
+    }
+  });
+
+  return result;
+}
+
 function toExtractedScopeItem(item: CompiledItem): Parameters<typeof createExtractedScope>[0][number] | null {
   if (!Array.isArray(item)) {
+    if (item.kind === 'style-spread') return null;
     return item.kind === 'token' ? item.value : null;
   }
 

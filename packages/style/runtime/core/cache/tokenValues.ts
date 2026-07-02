@@ -9,7 +9,7 @@ export type StyleTokenValues = {
   lookup: Record<string, unknown>;
 };
 
-type MutableTokenValues = {
+export type MutableTokenValues = {
   ids: string[] | null;
   values: unknown[] | null;
   lookup: Record<string, unknown> | null;
@@ -31,6 +31,15 @@ export function addTokenOverride(values: MutableTokenValues, item: unknown) {
   const id = getStyleTokenId(item);
   const value = getTokenOverrideValue(item, CSS_CONFIG.tokenNameFormat ?? null);
 
+  addTokenValue(values, id, value);
+  return true;
+}
+
+export function addTokenValue(
+  values: MutableTokenValues,
+  id: string,
+  value: unknown,
+) {
   if (!values.ids) values.ids = [];
   if (!values.values) values.values = [];
   if (!values.lookup) values.lookup = Object.create(null);
@@ -50,7 +59,26 @@ export function addTokenOverride(values: MutableTokenValues, item: unknown) {
   }
 
   lookup[id] = value;
-  return true;
+}
+
+export function addTokenValues(
+  values: MutableTokenValues,
+  next: StyleTokenValues | null,
+) {
+  if (!next) return;
+
+  for (let i = 0, len = next.ids.length; i < len; i++) {
+    addTokenValue(values, next.ids[i], next.values[i]);
+  }
+}
+
+export function addTokenOverrides(
+  values: MutableTokenValues,
+  overrides: readonly StyleTokenOverride[],
+) {
+  for (let i = 0, len = overrides.length; i < len; i++) {
+    addTokenOverride(values, overrides[i]);
+  }
 }
 
 export function finishTokenValues(
@@ -76,30 +104,7 @@ export function mergeTokenValues(
 
   const values = createMutableTokenValues(base);
 
-  for (let i = 0, len = next.ids.length; i < len; i++) {
-    const id = next.ids[i];
-    const value = next.values[i];
-
-    if (!values.ids) values.ids = [];
-    if (!values.values) values.values = [];
-    if (!values.lookup) values.lookup = Object.create(null);
-    if (!values.indexLookup) values.indexLookup = Object.create(null);
-
-    const ids = values.ids!;
-    const tokenValues = values.values!;
-    const lookup = values.lookup!;
-    const indexLookup = values.indexLookup!;
-    const index = indexLookup[id];
-
-    if (index === undefined) {
-      indexLookup[id] = ids.push(id) - 1;
-      tokenValues.push(value);
-    } else {
-      tokenValues[index] = value;
-    }
-
-    lookup[id] = value;
-  }
+  addTokenValues(values, next);
 
   return finishTokenValues(base, values);
 }
@@ -112,9 +117,7 @@ export function mergeTokenOverrides(
 
   const values = createMutableTokenValues(base);
 
-  for (let i = 0, len = overrides.length; i < len; i++) {
-    addTokenOverride(values, overrides[i]);
-  }
+  addTokenOverrides(values, overrides);
 
   return finishTokenValues(base, values);
 }

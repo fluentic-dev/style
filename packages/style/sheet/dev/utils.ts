@@ -1,7 +1,7 @@
 import { globalData } from '../../utils/global';
 import { createSourceMapComment, type SourcemapRule } from '../sourcemap';
 import type { SheetRule } from '../types';
-import { createStyleTag, insertStyleTagAfter } from '../utils';
+import { createStyleTag, insertStyleTagAfter, insertStyleTagAtTop } from '../utils';
 
 export type DevRuleTag = {
   tag: HTMLStyleElement;
@@ -43,6 +43,7 @@ export function createDevTag(
     nonce?: string | null;
     className?: string;
     before?: HTMLStyleElement | Text | null;
+    top?: boolean;
     wrapper?: {
       before: string;
       after: string;
@@ -62,6 +63,8 @@ export function createDevTag(
 
   if (options.before) {
     options.before.parentNode?.insertBefore(tag, options.before);
+  } else if (options.top && (!previous || !previous.parentNode)) {
+    insertStyleTagAtTop(document, tag);
   } else {
     insertStyleTagAfter(document, tag, previous);
   }

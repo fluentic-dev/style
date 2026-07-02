@@ -1,11 +1,6 @@
-import { replaceCssMarker } from '../../utils/cssMarker';
 import { EXTRACTED_CSS_MARKER } from '../../utils';
-import {
-  ensureParcelSidecarStarted,
-  getParcelExtractedCss,
-  getParcelState,
-  Optimizer,
-} from './shared';
+import { replaceCssMarker } from '../../utils/cssMarker';
+import { ensureParcelSidecarStarted, getParcelExtractedCss, getParcelState, Optimizer } from './shared';
 
 export default new Optimizer({
   async optimize({ bundle, contents, map, options }: any) {
@@ -22,8 +17,8 @@ export default new Optimizer({
     const text = typeof contents === 'string'
       ? contents
       : Buffer.isBuffer(contents)
-        ? contents.toString('utf8')
-        : null;
+      ? contents.toString('utf8')
+      : null;
 
     if (text === null) return { contents, map };
 

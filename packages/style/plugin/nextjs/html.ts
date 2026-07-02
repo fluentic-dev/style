@@ -1,7 +1,7 @@
 import {
+  type BabelCore,
   babelPlugin,
   babelTransform,
-  type BabelCore,
   type BabelTypes,
   type NodePath,
 } from '../../compiler/transform/utils/babel';

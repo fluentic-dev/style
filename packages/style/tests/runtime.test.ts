@@ -1,6 +1,10 @@
+import { DEV_CONFIG } from '../config/config/dev';
+import { clearElementMarkers } from '../runtime/core/elementMarker';
 import { transformElement as transformExtractedElement } from '../runtime/extract/jsx';
 import { ArgSelectors } from '../selector/presets';
+import { style as publicStyle } from '../style';
 import { getStyleTokenId, getStyleTokenOverrideDebug } from '../style/token';
+import { exposeStyle } from '../style/utils';
 import {
   before,
   bindScope,
@@ -37,9 +41,11 @@ import {
   getCombinedStyleScopes,
   getGlobalSheet,
   getLayerNameForRule,
+  getRuleCallsite,
   getRscClassName,
   getRscDevInitialStyleSelector,
   getRscStyleCss,
+  getSheetRules,
   getToken,
   hoverTheme,
   includes,
@@ -132,6 +138,47 @@ test('style prop resolver accepts direct raw style and slot data', () => {
   equal(result, cached);
 });
 
+test('exposeStyle keeps tokens and slots from nested style objects', () => {
+  const tokens = createTokens({
+    color: 'red',
+    nested: {
+      gap: 8,
+    },
+  });
+  const directStyles = {
+    tokens,
+    container: style.slot({
+      color: tokens.color,
+    }),
+    internal: style({
+      color: 'blue',
+    }),
+    nested: {
+      label: style.slot({
+        color: tokens.color,
+      }),
+      internal: style({
+        color: 'green',
+      }),
+      empty: {
+        internal: style({
+          color: 'yellow',
+        }),
+      },
+    },
+  };
+
+  const exposed = exposeStyle(directStyles);
+
+  equal(exposed.tokens.color, tokens.color);
+  equal(exposed.tokens.nested.gap, tokens.nested.gap);
+  equal(exposed.container, directStyles.container);
+  equal(exposed.nested.label, directStyles.nested.label);
+  equal('internal' in exposed, false);
+  equal('internal' in exposed.nested, false);
+  equal('empty' in exposed.nested, false);
+});
+
 test('static merge helper uses selector spread primitive at runtime', () => {
   const custom = createStyleFn({
     style: null as any,
@@ -152,6 +199,89 @@ test('static merge helper uses selector spread primitive at runtime', () => {
   );
 
   equal(rule[BUILDER_STATE].items.length, 4);
+});
+
+test('runtime merge debug sourcemap maps merged style data through merge debug fields', () => {
+  configureTestRuntime({ dev: true, sourcemapMode: 'style' });
+
+  const sharedDebug: DebugData = {
+    $$debug: true,
+    loc: [3, 16],
+    label: ['shared', 'style', 'styles.ts'],
+    sourceUrl: '/src/styles.ts',
+    fields: {
+      outline: [4, 3],
+    },
+  };
+  const mergeDebug: DebugData = {
+    $$debug: true,
+    loc: [10, 4],
+    label: ['merge', 'style.merge', 'styles.ts'],
+    sourceUrl: '/src/styles.ts',
+    fields: {
+      outline: {
+        0: [10, 4],
+        1: [4, 3],
+      },
+    },
+  };
+
+  const shared = (publicStyle as any)({ outline: '2px solid transparent' }, sharedDebug);
+  const merged = (publicStyle({ color: 'red' }) as any).merge(shared, mergeDebug);
+  const outlineRule = getSheetRules(merged).find((rule) => rule.css.includes('outline:'));
+
+  if (!outlineRule) throw new Error('expected outline rule');
+  equal(outlineRule.debug, mergeDebug);
+  equal(outlineRule.debugField, 'outline');
+  equal(getRuleCallsite(outlineRule.callsite, outlineRule.debug, outlineRule.debugField)?.line, 10);
+
+  configureTestRuntime({ dev: true, sourcemapMode: 'value' });
+  equal(getRuleCallsite(outlineRule.callsite, outlineRule.debug, outlineRule.debugField)?.line, 4);
+});
+
+test('runtime merge debug sourcemap composes latest style site with previous value site', () => {
+  configureTestRuntime({ dev: true, sourcemapMode: 'style' });
+
+  const baseDebug: DebugData = {
+    $$debug: true,
+    loc: [3, 16],
+    label: ['base', 'style', 'merge-common.ts'],
+    sourceUrl: '/src/merge-common.ts',
+    fields: {
+      outline: [4, 3],
+    },
+  };
+  const intermediateDebug: DebugData = {
+    $$debug: true,
+    loc: [10, 4],
+    label: ['merge', 'style.merge', 'merge-common.ts'],
+    sourceUrl: '/src/merge-common.ts',
+    fields: {
+      outline: {
+        0: [10, 4],
+        1: [4, 3],
+      },
+    },
+  };
+  const leafDebug: DebugData = {
+    $$debug: true,
+    loc: [30, 4],
+    label: ['merge', 'style.merge', 'page.tsx'],
+    sourceUrl: '/src/page.tsx',
+  };
+
+  const base = (publicStyle as any)({ outline: '2px solid transparent' }, baseDebug);
+  const intermediate = (publicStyle({ transition: 'opacity 160ms' }) as any).merge(base, intermediateDebug);
+  const leaf = (publicStyle({ color: 'purple' }) as any).merge(intermediate, leafDebug);
+  const outlineRule = getSheetRules(leaf).find((rule) => rule.css.includes('outline:'));
+
+  if (!outlineRule) throw new Error('expected outline rule');
+  equal(getRuleCallsite(outlineRule.callsite, outlineRule.debug, outlineRule.debugField)?.line, 30);
+  equal(getRuleCallsite(outlineRule.callsite, outlineRule.debug, outlineRule.debugField)?.sourceUrl, '/src/page.tsx');
+
+  configureTestRuntime({ dev: true, sourcemapMode: 'value' });
+  equal(getRuleCallsite(outlineRule.callsite, outlineRule.debug, outlineRule.debugField)?.line, 4);
+  equal(getRuleCallsite(outlineRule.callsite, outlineRule.debug, outlineRule.debugField)?.sourceUrl, '/src/merge-common.ts');
 });
 
 test('style prop resolver strips debug element marker before walking css items', () => {
@@ -330,6 +460,126 @@ test('jsx style prop prepends debug element marker class in dev', () => {
     equal(props.css, undefined);
   } finally {
     setBuildMeta(null);
+  }
+});
+
+test('jsx element marker rules use top dev sheet tags with chunking', () => {
+  const document = createFakeDocument();
+  const root = globalThis as typeof globalThis & { document?: Document; };
+  const previousDocument = root.document;
+  const previousSheet = getGlobalSheet();
+  const sheet = createDevSheet({
+    document: document as unknown as Document,
+    sourcemap: false,
+  });
+  const one = style({ color: 'plum' });
+  const two = style({ color: 'teal' });
+
+  root.document = document as unknown as Document;
+  setGlobalSheet(sheet);
+
+  try {
+    setBuildMeta({
+      dev: true,
+      extract: false,
+      hoist: false,
+      rsc: false,
+      css: {
+        debugElementClassName: true,
+        elementClassNameFormat: 'elm-(name)',
+      },
+    });
+    DEV_CONFIG.sheetMaxRules = 1;
+
+    transformElement({
+      type: 'div',
+      props: {
+        css: [{
+          $$elementDebug: true,
+          loc: [1, 1],
+          label: 'one',
+          sourceUrl: 'source:///src/One.tsx',
+        }, one],
+      },
+    });
+    transformElement({
+      type: 'div',
+      props: {
+        css: [{
+          $$elementDebug: true,
+          loc: [2, 1],
+          label: 'two',
+          sourceUrl: 'source:///src/Two.tsx',
+        }, two],
+      },
+    });
+
+    equal(document.head.childNodes[0].getAttribute('data-css-sheet'), 'element-marker layers');
+    equal(document.head.childNodes[1].getAttribute('data-css-sheet'), 'element-marker rules');
+    equal(document.head.childNodes[2].getAttribute('data-css-sheet'), 'element-marker rules');
+    equal(document.head.childNodes[3].getAttribute('data-css-sheet'), 'layers');
+    includes(document.head.childNodes[0].textContent, '@layer css;');
+    includes(document.head.childNodes[1].textContent, '@layer css {');
+    notIncludes(document.head.childNodes[1].textContent, '@layer css.p');
+    includes(document.head.childNodes[1].textContent, '--fluentic-element-marker:0');
+    includes(document.head.childNodes[2].textContent, '--fluentic-element-marker:0');
+  } finally {
+    clearElementMarkers(document as unknown as Document);
+    setGlobalSheet(previousSheet);
+    setBuildMeta(null);
+    root.document = previousDocument;
+  }
+});
+
+test('jsx element marker rules stay before later runtime dev sheet tags', () => {
+  const document = createFakeDocument();
+  const root = globalThis as typeof globalThis & { document?: Document; };
+  const previousDocument = root.document;
+
+  root.document = document as unknown as Document;
+
+  try {
+    setBuildMeta({
+      dev: true,
+      extract: false,
+      hoist: false,
+      rsc: false,
+      css: {
+        debugElementClassName: true,
+      },
+    });
+
+    transformElement({
+      type: 'div',
+      props: {
+        css: {
+          $$elementDebug: true,
+          loc: [1, 1],
+          label: 'only-marker',
+          sourceUrl: 'source:///src/OnlyMarker.tsx',
+        },
+      },
+    });
+
+    const sheet = createDevSheet({
+      document: document as unknown as Document,
+      sourcemap: false,
+    });
+
+    sheet.insert({
+      key: 'rule-after-marker',
+      css: '.rule-after-marker{color:red}',
+    });
+    sheet.flush();
+
+    equal(document.head.childNodes[0].getAttribute('data-css-sheet'), 'element-marker layers');
+    equal(document.head.childNodes[1].getAttribute('data-css-sheet'), 'element-marker rules');
+    equal(document.head.childNodes[2].getAttribute('data-css-sheet'), 'layers');
+    equal(document.head.childNodes[3].getAttribute('data-css-sheet'), 'rules');
+  } finally {
+    clearElementMarkers(document as unknown as Document);
+    setBuildMeta(null);
+    root.document = previousDocument;
   }
 });
 
@@ -920,7 +1170,9 @@ test('local token overrides beat theme class via inline variable', () => {
 
   if (!result.style) throw new Error('expected local token variable style');
 
-  const varName = Object.keys(result.style as Record<string, unknown>).find((key) => key.startsWith('--token-theme-local-'));
+  const varName = Object.keys(result.style as Record<string, unknown>).find((key) =>
+    key.startsWith('--token-theme-local-')
+  );
   if (!varName) throw new Error('expected local theme token variable');
   equal((result.style as Record<string, unknown>)[varName], 'green');
 });
@@ -1253,6 +1505,28 @@ test('rsc dev payload is emitted by getClassName', () => {
   equal('css' in props, false);
 });
 
+test('rsc dev payload includes element marker rule and class', () => {
+  clearRscStyleStore();
+  setBuildMeta({ dev: true, extract: false, hoist: false, rsc: true, css: { elementClassNameFormat: 'elm-(name)' } });
+
+  const result = getRscClassName([{
+    $$elementDebug: true,
+    loc: [7, 3],
+    label: 'card',
+    sourceUrl: 'source://@app/Card.tsx',
+  }] as any) as Record<string, string>;
+  const payload = JSON.parse(result[ELEMENT_CSS_DATA_ATTR]);
+
+  setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
+  configureTestRuntime({ dev: false });
+  clearRscStyleStore();
+
+  equal(result.className.startsWith('elm-card'), true);
+  equal(payload.length, 1);
+  equal(payload[0].key.startsWith('element-marker:'), true);
+  equal(payload[0].callsite.sourceUrl, 'source://@app/Card.tsx');
+});
+
 test('rsc dev payload trims bulky debug metadata', () => {
   const payload = createRscStylePayload([{
     key: 'color-test',
@@ -1356,6 +1630,25 @@ test('rsc dev compact payload is accepted by client observer parser', () => {
   equal(rules[0].debug?.sourceUrl, 'http://127.0.0.1:1234/app/page.tsx');
   equal(rules[0].debugField, 'color');
   equal('code' in rules[0].debug!, false);
+});
+
+test('rsc dev marker payload preserves callsite for marker sourcemaps', () => {
+  const payload = createRscStylePayload([{
+    key: 'element-marker:elm-card',
+    css: '.elm-card{--fluentic-element-marker:0}',
+    callsite: {
+      filePath: 'source://@app/Card.tsx',
+      sourceUrl: 'source://@app/Card.tsx',
+      sourceContent: 'export function Card() {}',
+      line: 7,
+      column: 3,
+    },
+  }]);
+  const parsed = JSON.parse(payload);
+  const rules = parseRscStylePayload(payload);
+
+  equal(parsed[0].callsite.sourceUrl, 'source://@app/Card.tsx');
+  equal(rules[0].callsite?.sourceContent, 'export function Card() {}');
 });
 
 test('rsc dev payload preserves debug source urls without callsites', () => {

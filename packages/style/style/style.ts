@@ -3,11 +3,11 @@ import { isStyleData } from '../builder/data';
 import { mergeStyleData } from '../builder/style_data';
 import { createDefaultFnResult } from '../builder/style_fns';
 import type { typeAliases } from '../builder/types/alias';
+import type { StableIdInput } from '../css/utils';
 import { PrioritySelectors } from '../selector/presets';
 import { symbol } from '../utils/global';
 import { type } from '../utils/type';
 import type { Type } from '../utils/type';
-import type { StableIdInput } from '../css/utils';
 import { createStyleKeyframes } from './keyframes';
 import type { StyleTransform } from './transform';
 import type { CSSProperties } from './types';
@@ -50,7 +50,9 @@ export function createStyleFn<
   const fnRaw: Types['RawFn'] = (style) => style;
   const fnPlain: Types['PlainFn'] = (style) => style;
   const fnKeyframes: Types['KeyframesFn'] =
-    ((frames, stableId?: StableIdInput) => createStyleKeyframes(frames, transform ?? null, stableId)) as Types['KeyframesFn'];
+    ((frames, stableId?: StableIdInput) => createStyleKeyframes(frames, transform ?? null, stableId)) as Types[
+      'KeyframesFn'
+    ];
   const fnMerge: Types['MergeFn'] = ((target: unknown, ...styles: unknown[]) => {
     let result = target;
 

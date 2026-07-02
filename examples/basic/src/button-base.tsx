@@ -14,8 +14,7 @@ export function ButtonBase(props: ButtonBaseProps) {
 
   const css = combineStyle(
     buttonBaseStyles,
-    buttonBaseState(target),
-    ...bindScope(target, props.theme),
+    bindScope(target, buttonBaseState, props.theme),
   );
 
   return (

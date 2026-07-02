@@ -1,6 +1,6 @@
 import {
-  assertEnum,
   assertCompileError,
+  assertEnum,
   assertRunTestsCallsite,
   bindScope,
   BUILDER_SLOT_ID,
@@ -14,9 +14,9 @@ import {
   createDebugStyle,
   createStyleFn,
   CSS_CONFIG,
-  DEV_CONFIG,
   type DebugData,
   deepEqual,
+  DEV_CONFIG,
   equal,
   getClassName,
   getRuntimeCallsite,
@@ -33,7 +33,6 @@ import {
   notEqual,
   notIncludes,
   resolveStyleProp,
-  RUNTIME_CONFIG,
   selector,
   setBuildMeta,
   style,
@@ -336,6 +335,32 @@ const pageStyles = {
   includes(result.code, `"color": [19, 5]`);
 });
 
+test('dev debug transform traces chain merge to style or value sites', () => {
+  const result = injectStyleDebugData(
+    `import { style } from '@fluentic/style';
+
+const shared = style({
+  display: 'flex',
+  color: 'blue',
+});
+
+const button = style({
+  backgroundColor: 'white',
+}).merge(shared);
+`,
+    '/src/merge.ts',
+    {
+      sourcemapTrace: 'value',
+    },
+    'http://127.0.0.1:4321/src/merge.ts',
+  );
+
+  includes(result.code, `"backgroundColor": [9, 3]`);
+  includes(result.code, `.merge(shared, { $$debug: true, loc: [10, 4]`);
+  includes(result.code, `"display": { 0: [10, 4], 1: [4, 3] }`);
+  includes(result.code, `"color": { 0: [10, 4], 1: [5, 3] }`);
+});
+
 test('dev debug transform injects scope item override callsites', () => {
   const result = injectStyleDebugData(
     `
@@ -500,7 +525,8 @@ test('custom selector assert can carry typed enum args', () => {
   custom().tone('brand', { color: 'blue' });
   custom().state(['open', 'closed'], { opacity: 1 });
 
-  if (false) {
+  const checkTypesOnly = false as boolean;
+  if (checkTypesOnly) {
     // @ts-expect-error enum assert narrows single selector arg
     custom().tone('neutral', { color: 'gray' });
     // @ts-expect-error enum assert narrows array selector args

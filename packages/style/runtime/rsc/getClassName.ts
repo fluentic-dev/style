@@ -4,6 +4,11 @@ import { DEV_CONFIG } from '../../config/config/dev';
 import type { SheetRule } from '../../sheet';
 import type { StylePropItem } from '../core/cache/prop';
 import type { ClassNameProps, ClassNameResult } from '../core/className';
+import {
+  createElementMarkerRuleFromDebug,
+  isElementMarkerRule,
+  splitElementMarkerStyleProp,
+} from '../core/elementMarker';
 import { resolveClassNameRuntime } from '../core/resolveClassNameRuntime';
 import { collectStylePropItemsSheetRulesWithThemes } from '../sheet/rules';
 import type { StyleProp } from '../types';
@@ -14,6 +19,7 @@ export type RscStylePayloadRule = {
   key?: string | null;
   css: string;
   priority?: LayerPriority | null;
+  callsite?: SheetRule['callsite'];
   debug?: DebugData | null;
   debugField?: string | null;
 };
@@ -26,26 +32,35 @@ export function getClassName(
   styleProp: StyleProp,
   props: ClassNameProps = {},
 ): ClassNameResultRSC {
-  const resolved = resolveClassNameRuntime(styleProp, props);
+  const marker = splitElementMarkerStyleProp(styleProp);
+  const resolved = resolveClassNameRuntime(marker.styleProp as StyleProp, props);
 
   return DEV_CONFIG.isDev
-    ? getClassNameRSC(resolved.result, resolved.items)
+    ? getClassNameRSC(resolved.result, resolved.items, marker.debug)
     : resolved.result;
 }
 
 export function getClassNameRSC(
   result: ClassNameResult,
   items: readonly StylePropItem[],
+  markerDebug?: ReturnType<typeof splitElementMarkerStyleProp>['debug'],
 ): ClassNameResultRSC {
   const rules = collectStylePropItemsSheetRulesWithThemes(items);
+  const marker = createElementMarkerRuleFromDebug(markerDebug);
 
-  if (!rules.length) return result;
+  if (!rules.length && !marker) return result;
 
   addRscStyleRules(rules);
 
+  if (marker) {
+    result.className = result.className
+      ? `${marker.className} ${result.className}`
+      : marker.className;
+  }
+
   return {
     ...result,
-    [ELEMENT_CSS_DATA_ATTR]: createRscStylePayload(rules),
+    [ELEMENT_CSS_DATA_ATTR]: createRscStylePayload(marker ? [marker.rule, ...rules] : rules),
   };
 }
 
@@ -58,6 +73,7 @@ function createRscStylePayloadRule(rule: SheetRule): RscStylePayloadRule {
     key: rule.key,
     css: rule.css,
     priority: rule.priority,
+    callsite: isElementMarkerRule(rule) ? rule.callsite : undefined,
     debug: rule.debug ? createRscDebugPayload(rule.debug, rule.debugField) : undefined,
     debugField: rule.debugField,
   };

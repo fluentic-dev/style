@@ -1,18 +1,18 @@
 import { type StyleToken, type StyleTokenData, TOKEN_ID, TOKEN_OVERRIDE } from '../../style/token';
 
-export type ExtractedTokenInput<T> = {
+export type ExtractedTokenInput = {
   id: string;
-  value: T;
-  ref?: StyleTokenData<T> | null;
+  value: unknown;
+  ref?: StyleTokenData | null;
 };
 
-export function createExtractedToken<T>(
+export function createExtractedToken(
   id: string,
-  value: T,
-  ref: StyleTokenData<T> | null = null,
-): StyleToken<T> {
-  const token = ((value: T | StyleTokenData<T>) => {
-    return isExtractedTokenRef<T>(value)
+  value: unknown,
+  ref: StyleTokenData | null = null,
+): StyleToken<unknown> {
+  const token = ((value: unknown | StyleTokenData) => {
+    return isExtractedTokenRef(value)
       ? {
         [TOKEN_ID]: token[TOKEN_ID],
         [TOKEN_OVERRIDE]: true,
@@ -25,7 +25,7 @@ export function createExtractedToken<T>(
         value,
         ref: null,
       };
-  }) as StyleToken<T>;
+  }) as StyleToken<unknown>;
 
   token[TOKEN_ID] = id;
   token.value = ref ? ref.value : value;
@@ -34,7 +34,7 @@ export function createExtractedToken<T>(
   return token;
 }
 
-function isExtractedTokenRef<T>(value: unknown): value is StyleTokenData<T> {
+function isExtractedTokenRef(value: unknown): value is StyleTokenData {
   return !!value &&
     typeof (value as StyleTokenData)[TOKEN_ID] === 'string' &&
     (value as { [TOKEN_OVERRIDE]?: true; })[TOKEN_OVERRIDE] !== true;

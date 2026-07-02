@@ -1,0 +1,13 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "types": ["node", "react"],
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": [
+    "../assets.d.ts",
+    "**/*"
+  ]
+}

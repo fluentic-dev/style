@@ -22,6 +22,7 @@ export function transformExtract(
     collector: collector,
     mode: deps.mode,
     projectDir: internal.projectDir,
+    runtimeMode: internal.runtimeMode,
     styleFilePath: deps.styleFilePath,
     tracer: tracer,
   });

@@ -1,12 +1,11 @@
-import { LayerPlaceholder } from '../../packages/style/config';
-import { type CompilerCssOptions, type CompilerOptions, createCompiler } from '../../packages/style/compiler';
-import type { ImportSource } from '../../packages/style/compiler/utils/import_source';
 import { constants } from 'node:fs';
-import { access, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { access, mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import ts from 'typescript';
+import { type CompilerCssOptions, type CompilerOptions, createCompiler } from '../../packages/style/compiler';
+import type { ImportSource } from '../../packages/style/compiler/utils/import_source';
+import { LayerPlaceholder } from '../../packages/style/config';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -17,7 +16,7 @@ const cssOptions: CompilerCssOptions = {
   layers: ['reset', LayerPlaceholder, 'override'],
 };
 
-const generatedJsHeader = '/* eslint-disable */\n';
+const generatedTsHeader = '/* eslint-disable */\n';
 
 async function resolveIds() {
   if (requestedId) {
@@ -35,12 +34,34 @@ async function resolveIds() {
   return ids.sort((a, b) => a.localeCompare(b));
 }
 
-function getPaths(itemId: string) {
+async function resolveSourcePath(snapshotDir: string) {
+  const tsxPath = path.join(snapshotDir, 'source.tsx');
+  const tsPath = path.join(snapshotDir, 'source.ts');
+
+  try {
+    await access(tsxPath, constants.F_OK);
+    return tsxPath;
+  } catch {
+    await access(tsPath, constants.F_OK);
+    return tsPath;
+  }
+}
+
+function getCompiledExtension(sourcePath: string) {
+  return sourcePath.endsWith('.tsx') ? '.tsx' : '.ts';
+}
+
+async function getPaths(itemId: string) {
   const snapshotDir = path.join(snapshotsDir, itemId);
+  const sourcePath = await resolveSourcePath(snapshotDir);
+  const compiledExtension = getCompiledExtension(sourcePath);
+
   return {
-    sourcePath: path.join(snapshotDir, 'source.tsx'),
-    compiledPath: path.join(snapshotDir, 'compiled.js'),
-    compiledDebugPath: path.join(snapshotDir, 'compiled.debug.js'),
+    sourcePath,
+    compiledPath: path.join(snapshotDir, `compiled${compiledExtension}`),
+    compiledDebugPath: path.join(snapshotDir, `compiled.debug${compiledExtension}`),
+    legacyCompiledPath: path.join(snapshotDir, 'compiled.js'),
+    legacyCompiledDebugPath: path.join(snapshotDir, 'compiled.debug.js'),
     cssPath: path.join(snapshotDir, 'extracted.css'),
     cssDebugPath: path.join(snapshotDir, 'extracted.debug.css'),
     snapshotDir,
@@ -65,9 +86,9 @@ async function getSnapshotImportSources(snapshotDir: string): Promise<ImportSour
 }
 
 async function runForId(itemId: string) {
-  const { snapshotDir, sourcePath, compiledPath, compiledDebugPath, cssPath, cssDebugPath } = getPaths(itemId);
+  let paths: Awaited<ReturnType<typeof getPaths>>;
   try {
-    await access(sourcePath, constants.F_OK);
+    paths = await getPaths(itemId);
   } catch {
     if (requestedId) {
       throw new Error(`Missing source.tsx for snapshot id: ${itemId}`);
@@ -75,36 +96,45 @@ async function runForId(itemId: string) {
     return;
   }
 
+  const {
+    snapshotDir,
+    sourcePath,
+    compiledPath,
+    compiledDebugPath,
+    legacyCompiledPath,
+    legacyCompiledDebugPath,
+    cssPath,
+    cssDebugPath,
+  } = paths;
   const importSources = await getSnapshotImportSources(snapshotDir);
 
   let compilerOptions: CompilerOptions = {
-    layer: true,
-    css: { ...cssOptions },
+    css: { ...cssOptions, layer: true, debugClassName: false, localClassName: false },
   };
   let debugCompilerOptions: CompilerOptions = {
-    layer: true,
-    css: { ...cssOptions, debugClassName: true },
+    css: { ...cssOptions, layer: true, debugClassName: true, localClassName: true },
   };
 
   if (importSources) {
     compilerOptions = {
-      layer: true,
-      css: { ...cssOptions },
+      css: { ...cssOptions, layer: true, debugClassName: false, localClassName: false },
       importSources,
     };
     debugCompilerOptions = {
       ...compilerOptions,
-      css: { ...cssOptions, debugClassName: true },
+      css: { ...cssOptions, debugClassName: true, localClassName: true },
     };
   }
 
   const snapshotCompiler = createCompiler({
     projectDir: __dirname,
     cacheDir: path.join(snapshotDir, '.snapshot-cache'),
+    runtimeMode: null,
   }, compilerOptions);
   const snapshotDebugCompiler = createCompiler({
     projectDir: __dirname,
     cacheDir: path.join(snapshotDir, '.snapshot-cache-debug'),
+    runtimeMode: null,
   }, debugCompilerOptions);
 
   const source = await readFile(sourcePath, 'utf8');
@@ -127,30 +157,23 @@ async function runForId(itemId: string) {
   }
 
   await mkdir(snapshotDir, { recursive: true });
-  await writeFile(compiledPath, toSnapshotJs(result.code ?? ''), 'utf8');
-  await writeFile(compiledDebugPath, toSnapshotJs(debugResult.code ?? ''), 'utf8');
+  await writeFile(compiledPath, toSnapshotTs(result.code ?? ''), 'utf8');
+  await writeFile(compiledDebugPath, toSnapshotTs(debugResult.code ?? ''), 'utf8');
   await writeFile(cssPath, snapshotCompiler.getExtractedCss(), 'utf8');
   await writeFile(cssDebugPath, snapshotDebugCompiler.getExtractedCss(), 'utf8');
+  await rm(legacyCompiledPath, { force: true });
+  await rm(legacyCompiledDebugPath, { force: true });
 
   console.log(`Generated snapshot ${itemId}${importSources ? ' (with custom import sources)' : ''}`);
-  console.log(`- source.tsx:          ${sourcePath}`);
-  console.log(`- compiled.js:         ${compiledPath}`);
-  console.log(`- compiled.debug.js:   ${compiledDebugPath}`);
+  console.log(`- source:              ${sourcePath}`);
+  console.log(`- compiled:            ${compiledPath}`);
+  console.log(`- compiled.debug:      ${compiledDebugPath}`);
   console.log(`- extracted.css:       ${cssPath}`);
   console.log(`- extracted.debug.css: ${cssDebugPath}`);
 }
 
-function toSnapshotJs(code: string) {
-  const output = ts.transpileModule(code, {
-    compilerOptions: {
-      jsx: ts.JsxEmit.Preserve,
-      module: ts.ModuleKind.ESNext,
-      target: ts.ScriptTarget.ES2020,
-      verbatimModuleSyntax: true,
-    },
-  });
-
-  return `${generatedJsHeader}${output.outputText}`;
+function toSnapshotTs(code: string) {
+  return `${generatedTsHeader}${code}`;
 }
 
 const ids = await resolveIds();

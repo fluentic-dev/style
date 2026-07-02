@@ -1,5 +1,6 @@
 import { combineStyle } from '@fluentic/style';
 import { useState } from 'react';
+import { Card } from './components/Card';
 import { appStyles, themes } from './theme';
 
 const metrics = [
@@ -49,24 +50,12 @@ export function ThemeApp() {
         </header>
 
         <div css={css.board}>
-          <section css={[css.panel, css.preview]}>
-            <div css={css.panelHeader}>
-              <span css={css.badge}>{theme.label}</span>
-              <span css={css.tag}>createTheme</span>
-            </div>
-            <div css={css.metricGrid}>
-              {metrics.map(([label, value]) => (
-                <article css={css.metric} key={label}>
-                  <span css={css.metricLabel}>{label}</span>
-                  <strong css={css.metricValue}>{value}</strong>
-                </article>
-              ))}
-            </div>
-            <div css={css.actionRow}>
-              <button css={css.primaryAction} type='button'>Publish</button>
-              <button css={css.secondaryAction} type='button'>Compare</button>
-            </div>
-          </section>
+          <Card
+            label={theme.label}
+            metrics={metrics.map(([label, value]) => ({ label, value }))}
+            tag='exposeStyle'
+            theme={theme.card}
+          />
 
           <section css={css.panel}>
             <div css={css.panelHeader}>

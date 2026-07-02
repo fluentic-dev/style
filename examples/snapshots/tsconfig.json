@@ -10,5 +10,9 @@
     "assets.d.ts",
     "generate.ts",
     "data/**/*"
+  ],
+  "exclude": [
+    "data/**/compiled*.ts",
+    "data/**/compiled*.tsx"
   ]
 }

@@ -5,13 +5,13 @@ import type { Compilation, Compiler, WebpackPluginInstance } from 'webpack';
 import type { Compiler as PluginCompiler } from '../../compiler';
 import { normalizePath } from '../../compiler/utils/path';
 import type { BuildConfig, BuildDevConfig } from '../../config/build';
+import { createWebpackRegistry } from '../bundler/webpack/shared/registry';
 import type { FileCssCache } from '../utils/cache';
 import type { PluginOptions as BasePluginOptions } from '../utils/compiler';
 import type { TransformFilter } from '../utils/filter';
+import { getPluginBuildConfig, getPluginBuildDevConfig } from '../utils/runtimeEntry';
 import type { SourcemapSidecar } from '../utils/sidecar';
 import { resolvePluginSourcemapOptions } from '../utils/sourcemap';
-import { getPluginBuildConfig, getPluginBuildDevConfig } from '../utils/runtimeEntry';
-import { createWebpackRegistry } from '../bundler/webpack/shared/registry';
 import { LOADER_IMPORT_PATH } from './constants';
 import type { PluginOptions, WebpackConfiguration } from './types';
 

@@ -50,6 +50,11 @@ export const DEV_CONFIG = globalData<DevConfig>(
   () => ({ ...DEV_CONFIG_DEFAULT }),
 );
 
+export const configPlugin = globalData<PartialDevConfig>(
+  'config.dev.plugin',
+  () => ({ config: null }),
+);
+
 const configBase = globalData<PartialDevConfig>(
   'config.dev.base',
   () => ({ config: null }),
@@ -67,12 +72,17 @@ export type DevRuntimeOptions = {
   checkSelector?: boolean | null;
 };
 
+export function getBuildDevConfig() {
+  return configPlugin.config;
+}
+
 export function setBuildDevConfig(config: BuildDevConfig) {
   const checkSelector = config.checkSelector === 'force' ? false : config.checkSelector;
 
   IS_DEV.isDev = true;
 
-  setDevRuntimeOptions({ ...config, checkSelector });
+  setOptions(configPlugin, { ...config, checkSelector }, null);
+  rebuildDevConfig();
 }
 
 export function setDevUtilsRuntimeOptions(options: DevRuntimeOptions | null) {
@@ -90,7 +100,9 @@ function rebuildDevConfig() {
 
   Object.assign(
     DEV_CONFIG,
+    DEV_CONFIG_DEFAULT,
     configBase.config,
+    configPlugin.config,
     configUtils.config,
   );
 

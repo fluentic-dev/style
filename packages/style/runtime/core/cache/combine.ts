@@ -1,20 +1,11 @@
-import { BUILDER_STATE } from '../../../builder/data/const';
 import type { ScopeTargetData } from '../../../builder/data/data';
-import { getScopeTargetScope, isScopeTargetData } from '../../../builder/data/is';
 import { getExtractedTokenBoundData, isExtractedTokenBoundData } from '../../../builder/extract/withTokens';
 import { RUNTIME_CONFIG } from '../../../config/config/runtime';
 import type { Falsy, StyleItem } from '../../types';
 import { type CombinedStyle, getCombinedStyleScopes, getCombinedStyleStyles, isCombinedStyle } from '../combinedStyle';
 import { createCombinedStyleTokenWrapper, getStyleTokenValues } from './item';
 import { getCombinedStylePool } from './pool';
-import {
-  addTokenOverride,
-  createMutableTokenValues,
-  finishTokenValues,
-  mergeTokenOverrides,
-  mergeTokenValues,
-  type StyleTokenValues,
-} from './tokenValues';
+import { mergeTokenOverrides, mergeTokenValues, type StyleTokenValues } from './tokenValues';
 
 export type CombinedStyleArg<T extends object> =
   | Falsy
@@ -103,28 +94,5 @@ function collectStyleArg<T extends object>(
     return;
   }
 
-  if (addTokenToResult(result, arg)) return;
-
-  if (isScopeTargetData(arg)) {
-    const scope = getScopeTargetScope(arg);
-    const items = scope[BUILDER_STATE].items;
-
-    for (let i = 0, len = items.length; i < len; i++) {
-      addTokenToResult(result, items[i]);
-    }
-  }
-
   result.items.push(arg as StyleItem);
-}
-
-function addTokenToResult(
-  result: NormalizedStyleItems,
-  item: unknown,
-) {
-  const values = createMutableTokenValues(result.tokens);
-
-  if (!addTokenOverride(values, item)) return false;
-
-  result.tokens = finishTokenValues(result.tokens, values);
-  return true;
 }

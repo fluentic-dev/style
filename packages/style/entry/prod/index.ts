@@ -1,1 +1,3 @@
-export * from './runtime';
+import './config';
+
+export * from '../../index';

@@ -7,8 +7,8 @@ import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 const motion = {
-  enterTransform: createToken('scale(0.96) translateY(18px)', 'static-enter-transform'),
-  liftTransform: createToken('translateY(-4px)', 'static-lift-transform'),
+  enterTransform: createToken('scale(0.96) translateY(18px)'),
+  liftTransform: createToken('translateY(-4px)'),
 };
 
 const enter = createKeyframes({
@@ -40,14 +40,14 @@ const themes = [
     theme: createTheme([
       motion.enterTransform('scale(0.96) translateY(18px)'),
       motion.liftTransform('translateY(-4px)'),
-    ], 'static-soft-motion'),
+    ]),
   },
   {
     label: 'Snappy',
     theme: createTheme([
       motion.enterTransform('scale(0.9) translateY(28px)'),
       motion.liftTransform('translateY(-8px)'),
-    ], 'static-snappy-motion'),
+    ]),
   },
 ];
 

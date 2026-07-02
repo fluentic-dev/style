@@ -1,12 +1,12 @@
-import type { BabelCore, BabelTypes } from '../utils/babel';
 import * as crypto from 'node:crypto';
+import * as fs from 'node:fs';
 import { BUILDER_TYPE_SCOPE } from '../../../builder/data';
 import { createExtractedScope, createExtractedStyle } from '../../../builder/extract';
 import type { ExtractedStyleTuple } from '../../../builder/extract';
 import type { CompilerInternal } from '../../compiler';
 import type { CompilerOptions } from '../../compiler/types';
-import { createImportSourceMatcher } from '../../utils/import_source';
 import { resolveFile } from '../../utils/file_resolver';
+import { createImportSourceMatcher } from '../../utils/import_source';
 import {
   compileChain,
   type CompiledChainData,
@@ -15,19 +15,31 @@ import {
   computeSlotId,
   extractStyleChain,
 } from '../extract/chain';
+import type { BabelCore, BabelTypes } from '../utils/babel';
 import { babelTransformOptions } from '../utils/babel';
 import { getProjectFileId } from '../utils/path';
 import type { EvalScope } from './evaluator';
-import { evalFail, evalOk, evaluateNode } from './evaluator';
+import { evalFail, evalOk, evaluateEnumDeclaration, evaluateNode } from './evaluator';
 import type { EvalModuleBindings, EvalResult, EvalSlotRef, ImportMap, ResolveImportFn } from './types';
 
 export type Tracer = ReturnType<typeof createTracer>;
 
 type TraceCacheContent = {
   bindings: Array<[string, EvalResult]>;
+  dependencies?: TraceDependency[];
 };
 
 const CACHE_TYPE = 'transform-trace';
+
+type TraceDependency = {
+  filePath: string;
+  contentHash: string;
+};
+
+type TraceResult = TraceDependency & {
+  bindings: EvalModuleBindings;
+  dependencies: TraceDependency[];
+};
 
 export function createTracer(internal: CompilerInternal) {
   const active = new Set<string>();
@@ -37,14 +49,14 @@ export function createTracer(internal: CompilerInternal) {
     source: string,
     fromFile: string,
   ): EvalModuleBindings | null => {
-    return traceModule(babel, source, fromFile);
+    return traceModuleResult(babel, source, fromFile)?.bindings ?? null;
   };
 
-  const traceModule = (
+  const traceModuleResult = (
     babel: typeof BabelCore,
     source: string,
     fromFile: string,
-  ): EvalModuleBindings | null => {
+  ): TraceResult | null => {
     const resolved = resolveFile(source, fromFile);
     if (!resolved) return null;
 
@@ -56,23 +68,38 @@ export function createTracer(internal: CompilerInternal) {
       cacheType: CACHE_TYPE,
     });
 
-    if (cached) {
-      return new Map(cached.bindings);
+    if (cached && areDependenciesFresh(cached.dependencies ?? [])) {
+      return {
+        filePath: resolved.filePath,
+        contentHash,
+        bindings: new Map(cached.bindings),
+        dependencies: cached.dependencies ?? [],
+      };
     }
 
     if (active.has(resolved.filePath)) return null;
     active.add(resolved.filePath);
 
     try {
+      const dependencies = new Map<string, TraceDependency>();
+      const resolveDependency: ResolveImportFn = (source, fromFile) => {
+        const traced = traceModuleResult(babel, source, fromFile);
+        if (!traced) return null;
+
+        return createTrackedBindings(traced, dependencies);
+      };
+
       const bindings = parseAndExtractModule(
         internal.projectDir,
         resolved.filePath,
         resolved.content,
         babel,
-        (source, fromFile) => resolveImport(babel, source, fromFile),
+        resolveDependency,
         internal.options,
       );
       if (!bindings) return null;
+
+      const dependencyList = [...dependencies.values()];
 
       internal.cache.setItem<TraceCacheContent>({
         filePath: resolved.filePath,
@@ -81,13 +108,27 @@ export function createTracer(internal: CompilerInternal) {
         persistent: false,
         cacheContent: {
           bindings: [...bindings.entries()],
+          dependencies: dependencyList,
         },
       });
 
-      return bindings;
+      return {
+        filePath: resolved.filePath,
+        contentHash,
+        bindings,
+        dependencies: dependencyList,
+      };
     } finally {
       active.delete(resolved.filePath);
     }
+  };
+
+  const traceModule = (
+    babel: typeof BabelCore,
+    source: string,
+    fromFile: string,
+  ): EvalModuleBindings | null => {
+    return traceModuleResult(babel, source, fromFile)?.bindings ?? null;
   };
 
   return {
@@ -156,7 +197,33 @@ function parseAndExtractModule(
       continue;
     }
 
+    if (stmt.type === 'TSEnumDeclaration') {
+      bindings.set(
+        stmt.id.name,
+        evaluateEnumDeclaration(stmt, {
+          bindings,
+          imports,
+          filePath,
+          resolveImport,
+        }),
+      );
+      continue;
+    }
+
     if (stmt.type === 'ExportNamedDeclaration') {
+      if (stmt.declaration?.type === 'TSEnumDeclaration') {
+        bindings.set(
+          stmt.declaration.id.name,
+          evaluateEnumDeclaration(stmt.declaration, {
+            bindings,
+            imports,
+            filePath,
+            resolveImport,
+          }),
+        );
+        continue;
+      }
+
       if (stmt.declaration?.type === 'VariableDeclaration') {
         collectVariableBindings(rawBindings, stmt.declaration);
         continue;
@@ -189,6 +256,10 @@ function parseAndExtractModule(
           if (key !== 'default') bindings.set(key, value);
         });
       }
+    }
+
+    if (stmt.type === 'ExportDefaultDeclaration') {
+      rawBindings.set('default', stmt.declaration);
     }
   }
 
@@ -373,4 +444,66 @@ function createSlotRef(
 
 function hashContent(content: string): string {
   return crypto.createHash('sha256').update(content).digest('hex').slice(0, 16);
+}
+
+function addTraceDependency(
+  dependencies: Map<string, TraceDependency>,
+  dependency: TraceDependency,
+) {
+  dependencies.set(dependency.filePath, dependency);
+}
+
+function createTrackedBindings(
+  traced: TraceResult,
+  dependencies: Map<string, TraceDependency>,
+): EvalModuleBindings {
+  const track = () => {
+    addTraceDependency(dependencies, traced);
+    traced.dependencies.forEach((dependency) => addTraceDependency(dependencies, dependency));
+  };
+
+  return new class extends Map<string, EvalResult> {
+    constructor() {
+      super(traced.bindings);
+    }
+
+    override get(key: string): EvalResult | undefined {
+      const value = super.get(key);
+      if (value !== undefined || super.has(key)) track();
+      return value;
+    }
+
+    override has(key: string): boolean {
+      const result = super.has(key);
+      if (result) track();
+      return result;
+    }
+
+    override forEach(
+      callbackfn: (value: EvalResult, key: string, map: Map<string, EvalResult>) => void,
+      thisArg?: unknown,
+    ): void {
+      track();
+      super.forEach(callbackfn, thisArg);
+    }
+  }();
+}
+
+function areDependenciesFresh(
+  dependencies: TraceDependency[],
+): boolean {
+  for (const dependency of dependencies) {
+    const currentHash = hashFileContent(dependency.filePath);
+    if (currentHash !== dependency.contentHash) return false;
+  }
+
+  return true;
+}
+
+function hashFileContent(filePath: string): string | null {
+  try {
+    return hashContent(fs.readFileSync(filePath, 'utf8'));
+  } catch {
+    return null;
+  }
 }

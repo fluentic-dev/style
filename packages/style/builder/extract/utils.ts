@@ -23,13 +23,37 @@ type ExtractedItemType =
   | typeof BUILDER_TYPE_SLOT
   | typeof BUILDER_TYPE_SLOT_OVERRIDE;
 
-export function createExtractedData(type: number, slotId?: string) {
-  return {
+type ExtractedDataShape = {
+  [BUILDER_TYPE]: number;
+  [BUILDER_STATE]: { items: StateItem[]; lookup: {}; };
+  [BUILDER_CALLSITE]: null;
+  [BUILDER_SLOT_ID]?: string;
+};
+
+export function createExtractedData(type: number, slotId?: string): ExtractedDataShape {
+  const data: ExtractedDataShape = {
     [BUILDER_TYPE]: type,
     [BUILDER_STATE]: { items: [], lookup: {} },
     [BUILDER_CALLSITE]: null,
-    ...(slotId === undefined ? null : { [BUILDER_SLOT_ID]: slotId }),
   };
+
+  if (slotId !== undefined) {
+    data[BUILDER_SLOT_ID] = slotId;
+  }
+
+  return data;
+}
+
+export function copyExtractedData(target: object, source: ExtractedDataShape) {
+  const mutable = target as ExtractedDataShape;
+
+  mutable[BUILDER_TYPE] = source[BUILDER_TYPE];
+  mutable[BUILDER_STATE] = source[BUILDER_STATE];
+  mutable[BUILDER_CALLSITE] = source[BUILDER_CALLSITE];
+
+  if (source[BUILDER_SLOT_ID] !== undefined) {
+    mutable[BUILDER_SLOT_ID] = source[BUILDER_SLOT_ID];
+  }
 }
 
 export function createExtractedScopeTarget(scope: object, slot: { [BUILDER_SLOT_ID]: string; }) {

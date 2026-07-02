@@ -1,6 +1,6 @@
-import { createCompiler } from '../../../packages/style/compiler';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createCompiler } from '../../../packages/style/compiler';
 import { cases } from '../src/selector-cases.ts';
 
 type PluginMode = {

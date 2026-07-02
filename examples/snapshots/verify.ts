@@ -1,4 +1,5 @@
-import { readFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { access, readFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +14,19 @@ type Check = {
 
 async function readSnapshot(id: string, file: string) {
   return readFile(path.join(snapshotsDir, id, file), 'utf8');
+}
+
+async function resolveCompiledSnapshot(id: string) {
+  const snapshotDir = path.join(snapshotsDir, id);
+  const tsxFile = 'compiled.tsx';
+  const tsFile = 'compiled.ts';
+
+  try {
+    await access(path.join(snapshotDir, tsxFile), constants.F_OK);
+    return tsxFile;
+  } catch {
+    return tsFile;
+  }
 }
 
 function check(id: string, file: string, content: string, checks: Check[]) {
@@ -33,7 +47,8 @@ async function verify002() {
 
   const id = '002-transform';
   const css = await readSnapshot(id, 'extracted.css');
-  const compiled = await readSnapshot(id, 'compiled.js');
+  const compiledFile = await resolveCompiledSnapshot(id);
+  const compiled = await readSnapshot(id, compiledFile);
 
   const cssChecks: Check[] = [
     {
@@ -74,7 +89,7 @@ async function verify002() {
   ];
 
   const cssOk = check(id, 'extracted.css', css, cssChecks);
-  const compiledOk = check(id, 'compiled.js', compiled, compiledChecks);
+  const compiledOk = check(id, compiledFile, compiled, compiledChecks);
 
   return cssOk && compiledOk;
 }
@@ -84,7 +99,8 @@ async function verify003() {
 
   const id = '003-explicit-scope';
   const css = await readSnapshot(id, 'extracted.css');
-  const compiled = await readSnapshot(id, 'compiled.js');
+  const compiledFile = await resolveCompiledSnapshot(id);
+  const compiled = await readSnapshot(id, compiledFile);
 
   const cssChecks: Check[] = [
     {
@@ -117,7 +133,7 @@ async function verify003() {
   ];
 
   const cssOk = check(id, 'extracted.css', css, cssChecks);
-  const compiledOk = check(id, 'compiled.js', compiled, compiledChecks);
+  const compiledOk = check(id, compiledFile, compiled, compiledChecks);
 
   return cssOk && compiledOk;
 }
@@ -127,7 +143,8 @@ async function verify004() {
 
   const id = '004-nested-tokens';
   const css = await readSnapshot(id, 'extracted.css');
-  const compiled = await readSnapshot(id, 'compiled.js');
+  const compiledFile = await resolveCompiledSnapshot(id);
+  const compiled = await readSnapshot(id, compiledFile);
 
   const cssChecks: Check[] = [
     {
@@ -167,7 +184,7 @@ async function verify004() {
   ];
 
   const cssOk = check(id, 'extracted.css', css, cssChecks);
-  const compiledOk = check(id, 'compiled.js', compiled, compiledChecks);
+  const compiledOk = check(id, compiledFile, compiled, compiledChecks);
 
   return cssOk && compiledOk;
 }
@@ -177,7 +194,8 @@ async function verify005() {
 
   const id = '005-custom-design-system';
   const css = await readSnapshot(id, 'extracted.css');
-  const compiled = await readSnapshot(id, 'compiled.js');
+  const compiledFile = await resolveCompiledSnapshot(id);
+  const compiled = await readSnapshot(id, compiledFile);
 
   const cssChecks: Check[] = [
     {
@@ -186,7 +204,7 @@ async function verify005() {
     },
     {
       description: 'fixed responsive selector emits md media query',
-      pass: (s) => s.includes('@media (min-width: 768px) and (max-width: 1023.98px)'),
+      pass: (s) => s.includes('@media (768px <= width < 1024px)'),
     },
     {
       description: 'ui transform emits elevation and pill radius',
@@ -210,7 +228,7 @@ async function verify005() {
   ];
 
   const cssOk = check(id, 'extracted.css', css, cssChecks);
-  const compiledOk = check(id, 'compiled.js', compiled, compiledChecks);
+  const compiledOk = check(id, compiledFile, compiled, compiledChecks);
 
   return cssOk && compiledOk;
 }

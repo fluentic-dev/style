@@ -218,7 +218,8 @@ export function App() {
           </div>
         </div>
         <p css={styles.body}>
-          Compose slots, layout shorthands, responsive rules, and semantic selector tones without handwritten selector strings.
+          Compose slots, layout shorthands, responsive rules, and semantic selector tones without handwritten selector
+          strings.
         </p>
         <div css={styles.grid}>
           <div css={styles.row}>

@@ -11,6 +11,7 @@ export default [
       'index': 'index.ts',
       'server': 'entry/rsc_dev/server.ts',
       'css': 'css/index.ts',
+      'utils': 'style/utils/index.ts',
       'config/index': 'config/index.ts',
       'selector/index': 'selector/index.ts',
       'dev': 'dev/index.ts',
@@ -38,6 +39,7 @@ export default [
     'entry/prod/jsx-dev-runtime': 'entry/prod/jsx_dev_runtime.ts',
     'entry/rsc-prod': 'entry/rsc_prod/index.ts',
     'entry/rsc-prod/css': 'entry/rsc_prod/css.ts',
+    'entry/rsc-prod/runtime': 'entry/rsc_prod/runtime.ts',
     'entry/rsc-prod/jsx-runtime': 'entry/rsc_prod/jsx_runtime.ts',
     'entry/rsc-prod/jsx-dev-runtime': 'entry/rsc_prod/jsx_dev_runtime.ts',
   }, {

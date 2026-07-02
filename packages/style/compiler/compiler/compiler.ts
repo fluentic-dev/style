@@ -5,10 +5,12 @@ import { rewriteImportSources } from '../transform/utils/import';
 import {
   STYLE_CSS_IMPORT_PATH,
   STYLE_DEV_RSC_IMPORT_PATH,
+  STYLE_EXTRACT_RUNTIME_IMPORT_PATH,
   STYLE_IMPORT_PATH,
 } from '../utils/constants';
 import { clearResolverCache } from '../utils/file_resolver';
 import {
+  getStyleExtractRuntimeImportPath,
   getStyleRuntimeCssImportPath,
   getStyleRuntimeDevRscImportPath,
   getStyleRuntimeImportPath,
@@ -162,6 +164,7 @@ function rewriteCompilerRuntimeImports(code: string, runtimeMode: CompilerRuntim
 function getCompilerRuntimeImportSource(source: string, runtimeMode: CompilerRuntimeMode) {
   if (source === STYLE_IMPORT_PATH) return getStyleRuntimeImportPath(runtimeMode);
   if (source === STYLE_CSS_IMPORT_PATH) return getStyleRuntimeCssImportPath(runtimeMode);
+  if (source === STYLE_EXTRACT_RUNTIME_IMPORT_PATH) return getStyleExtractRuntimeImportPath(runtimeMode);
   if (runtimeMode === CompilerRuntimeMode.RscDev && source === STYLE_DEV_RSC_IMPORT_PATH) {
     return getStyleRuntimeDevRscImportPath(runtimeMode);
   }

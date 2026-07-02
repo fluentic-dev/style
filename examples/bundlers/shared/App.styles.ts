@@ -82,7 +82,7 @@ const defaultTheme = createTheme([
   themeTokens.shadow.heroCompact('0 0 0 4px rgba(245, 158, 11, 0.18), 0 14px 34px rgba(15, 23, 42, 0.08)'),
   themeTokens.shadow.panel('0 12px 34px rgba(15, 23, 42, 0.08)'),
   themeTokens.shadow.scopedCompact('inset 0 0 0 3px rgba(34, 197, 94, 0.22), 0 14px 30px rgba(77, 124, 15, 0.16)'),
-], 'bundler-shared-default');
+]);
 
 const duskTheme = createTheme([
   themeTokens.color.pageBg('linear-gradient(180deg, #111827, #312e81)'),
@@ -122,7 +122,7 @@ const duskTheme = createTheme([
   themeTokens.shadow.heroCompact('0 0 0 4px rgba(251, 191, 36, 0.22), 0 14px 34px rgba(0, 0, 0, 0.28)'),
   themeTokens.shadow.panel('0 12px 34px rgba(0, 0, 0, 0.28)'),
   themeTokens.shadow.scopedCompact('inset 0 0 0 3px rgba(251, 191, 36, 0.18), 0 14px 30px rgba(0, 0, 0, 0.28)'),
-], 'bundler-shared-dusk');
+]);
 
 const mintTheme = createTheme([
   themeTokens.color.pageBg('linear-gradient(180deg, #ecfdf5, #ccfbf1)'),
@@ -162,7 +162,7 @@ const mintTheme = createTheme([
   themeTokens.shadow.heroCompact('0 0 0 4px rgba(20, 184, 166, 0.18), 0 14px 34px rgba(15, 118, 110, 0.12)'),
   themeTokens.shadow.panel('0 12px 34px rgba(15, 118, 110, 0.12)'),
   themeTokens.shadow.scopedCompact('inset 0 0 0 3px rgba(20, 184, 166, 0.18), 0 14px 30px rgba(15, 118, 110, 0.14)'),
-], 'bundler-shared-mint');
+]);
 
 export const appThemes = [
   { label: 'Default', theme: defaultTheme },

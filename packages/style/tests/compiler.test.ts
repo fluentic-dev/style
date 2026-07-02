@@ -1,4 +1,4 @@
-import { mkdtempSync, statSync, utimesSync } from 'node:fs';
+import { mkdtempSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { formatClassName } from '../atomic/debug/className';
@@ -161,6 +161,31 @@ export function App() {
   includes(result.code, 'loc: [');
 });
 
+test('debug transform points element marker metadata at host element', () => {
+  const result = injectStyleDebugData(
+    `
+import { style } from '@fluentic/style';
+
+const css = { root: style({ color: 'red' }) };
+
+export function App() {
+  return (
+    <main
+      id="demo"
+      css={css.root}
+    />
+  );
+}
+`,
+    '/project/src/App.tsx',
+    { rootDir: '/project' },
+  );
+
+  includes(result.code, '$$elementDebug: true');
+  includes(result.code, 'label: "root"');
+  includes(result.code, 'loc: [8, 5]');
+});
+
 test('debug transform accepts top-level element marker option', () => {
   const result = injectStyleDebugData(
     `
@@ -198,6 +223,27 @@ export function App() {
   );
 
   includes(result.code, '$$elementDebug: true');
+});
+
+test('debug transform skips host element marker metadata when explicitly disabled', () => {
+  const result = injectStyleDebugData(
+    `
+import { style } from '@fluentic/style';
+
+const container = style({ color: 'red' });
+
+export function App() {
+  return <main css={container} />;
+}
+`,
+    '/project/src/App.tsx',
+    {
+      rootDir: '/project',
+      dev: { elementClassName: false },
+    },
+  );
+
+  notIncludes(result.code, '$$elementDebug: true');
 });
 
 test('compiler extracts scope base and parent selector rules', () => {
@@ -268,6 +314,188 @@ const button = style({ color: 'black' })
   includes(css, 'color: red');
   includes(css, ':focus-visible');
   includes(css, 'outline-color: purple');
+});
+
+test('compiler preserves extracted style merge item order', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const shared = style({ color: 'blue' });
+
+export const button = style({ color: 'black' })
+  .merge(shared)
+  .hover({ color: 'red' });
+`,
+    '/tmp/compiler-merge-style-order.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  notIncludes(result.code, '.merge(');
+  includes(result.code, 'createExtractedStyleMerge');
+
+  const mergeCall = result.code.slice(result.code.indexOf('= createExtractedStyleMerge'));
+  const localBaseIndex = mergeCall.indexOf('color-black');
+  const sharedIndex = mergeCall.indexOf('shared');
+  const localHoverIndex = mergeCall.indexOf('color-hover-red');
+
+  if (
+    localBaseIndex === -1 ||
+    sharedIndex === -1 ||
+    localHoverIndex === -1 ||
+    !(localBaseIndex < sharedIndex && sharedIndex < localHoverIndex)
+  ) {
+    throw new Error(`expected merge output to preserve base -> merged style -> hover order:\n${result.code}`);
+  }
+});
+
+test('compiler detects chain merge methods from selector config', () => {
+  const ui = createStyleFn({
+    style: null as any,
+    selectors: {
+      compose: selector('...'),
+      hover: selector(':hover'),
+    },
+  }).style;
+
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+    importSources: [{
+      source: /ui-style$/,
+      name: 'ui',
+      styleFn: ui,
+    }],
+  });
+  const result = compiler.transform(
+    `
+import { ui } from './ui-style';
+
+const shared = ui({ borderColor: 'gray' })
+  .hover({ color: 'blue' });
+
+export const button = ui({ color: 'black' })
+  .compose(shared);
+`,
+    '/tmp/compiler-selector-merge-alias.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  notIncludes(result.code, '.compose(');
+  includes(css, 'color: black');
+  includes(css, 'border-color: gray');
+  includes(css, ':hover');
+  includes(css, 'color: blue');
+});
+
+test('compiler sourcemap toStyle traces merged rules to the merge call', () => {
+  const code = [
+    `import { style } from '@fluentic/style';`,
+    ``,
+    `const base = style.raw({`,
+    `  color: 'blue',`,
+    `});`,
+    ``,
+    `const interaction = style({`,
+    `  ...base,`,
+    `  borderColor: 'gray',`,
+    `});`,
+    ``,
+    `export const button = style({ backgroundColor: 'white' })`,
+    `  .merge(interaction);`,
+  ].join('\n');
+  const mergeLine = code.split('\n').findIndex((line) => line.includes('.merge')) + 1;
+  const mergeColumn = code.split('\n')[mergeLine - 1].indexOf('merge') + 1;
+  const compiler = createPluginCompiler({
+    dev: false,
+    projectDir: testDir,
+    cacheDir: testDir + '.test-cache',
+    runtimeMode: null,
+    options: {
+      css: { layer: false, debugClassName: true, localClassName: true },
+      dev: { sourcemapMode: 'style' },
+    },
+  });
+  const result = compiler.compiler.compileExtract({
+    code,
+    filePath: '/tmp/compiler-merge-trace-style.ts',
+    sourcemap: null,
+  });
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  equal(
+    result.rules.some((rule) =>
+      rule.css.includes('color: blue') &&
+      rule.trace?.line === mergeLine &&
+      rule.trace?.column === mergeColumn),
+    true,
+  );
+  equal(
+    result.rules.some((rule) =>
+      rule.css.includes('border-color: gray') &&
+      rule.trace?.line === mergeLine &&
+      rule.trace?.column === mergeColumn),
+    true,
+  );
+});
+
+test('compiler sourcemap toValue traces merged rules to original fields', () => {
+  const code = [
+    `import { style } from '@fluentic/style';`,
+    ``,
+    `const base = style.raw({`,
+    `  color: 'blue',`,
+    `});`,
+    ``,
+    `const interaction = style({`,
+    `  ...base,`,
+    `  borderColor: 'gray',`,
+    `});`,
+    ``,
+    `export const button = style({ backgroundColor: 'white' })`,
+    `  .merge(interaction);`,
+  ].join('\n');
+  const compiler = createPluginCompiler({
+    dev: false,
+    projectDir: testDir,
+    cacheDir: testDir + '.test-cache',
+    runtimeMode: null,
+    options: {
+      css: { layer: false, debugClassName: true, localClassName: true },
+      dev: { sourcemapMode: 'value' },
+    },
+  });
+  const result = compiler.compiler.compileExtract({
+    code,
+    filePath: '/tmp/compiler-merge-trace-value.ts',
+    sourcemap: null,
+  });
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  equal(
+    result.rules.some((rule) =>
+      rule.css.includes('color: blue') &&
+      rule.trace?.line === 4 &&
+      rule.trace?.column === 3),
+    true,
+  );
+  equal(
+    result.rules.some((rule) =>
+      rule.css.includes('border-color: gray') &&
+      rule.trace?.line === 9 &&
+      rule.trace?.column === 3),
+    true,
+  );
 });
 
 test('compiler extracts merged style chains into slots', () => {
@@ -498,6 +726,8 @@ export const button = style({ color: '#0f172a' })
   const css = result.css.join('\n');
 
   notIncludes(result.code, '.merge(');
+  includes(result.code, 'createExtractedStyleMerge');
+  includes(result.code, 'sharedInteractive');
   includes(css, 'color: #0f172a');
   includes(css, 'background-color: #ffffff');
   includes(css, 'border-color: #94a3b8');
@@ -507,6 +737,65 @@ export const button = style({ color: '#0f172a' })
   includes(css, 'color: #dc2626');
   includes(css, ':focus-visible');
   includes(css, 'outline-color: #7c3aed');
+});
+
+test('compiler trace cache invalidates when transitive imported values change', () => {
+  const root = mkdtempSync(path.join(tmpdir(), 'fluentic-style-trace-cache-'));
+  const constantsPath = path.join(root, 'constants.ts');
+  const sharedPath = path.join(root, 'shared.ts');
+  const entryPath = path.join(root, 'entry.ts');
+
+  writeFileSync(constantsPath, `export const sharedColor = 'red';\n`, 'utf8');
+  writeFileSync(
+    sharedPath,
+    [
+      `import { style } from '@fluentic/style';`,
+      `import { sharedColor } from './constants';`,
+      `export const shared = style.raw({ color: sharedColor });`,
+    ].join('\n'),
+    'utf8',
+  );
+
+  const code = [
+    `import { style } from '@fluentic/style';`,
+    `import { shared } from './shared';`,
+    `export const rule = style({ ...shared, backgroundColor: 'white' });`,
+  ].join('\n');
+
+  const compiler = createPluginCompiler({
+    dev: false,
+    projectDir: root,
+    cacheDir: path.join(root, '.cache'),
+    runtimeMode: null,
+    options: {
+      css: {
+        layer: false,
+      },
+    },
+  });
+
+  const first = compiler.compiler.compileExtract({
+    code,
+    filePath: entryPath,
+    sourcemap: null,
+  });
+  if (!first) throw new Error('expected initial compiler transform result');
+  includes(first.rules.map((rule) => rule.css).join('\n'), 'color: red');
+
+  writeFileSync(constantsPath, `export const sharedColor = 'blue';\n`, 'utf8');
+  const changedTime = new Date(Date.now() + 10_000);
+  utimesSync(constantsPath, changedTime, changedTime);
+
+  const second = compiler.compiler.compileExtract({
+    code,
+    filePath: entryPath,
+    sourcemap: null,
+  });
+  if (!second) throw new Error('expected updated compiler transform result');
+
+  const secondCss = second.rules.map((rule) => rule.css).join('\n');
+  includes(secondCss, 'color: blue');
+  notIncludes(secondCss, 'color: red');
 });
 
 test('compiler sorts parent-scoped rules after child base and before child selectors', () => {
@@ -1100,11 +1389,11 @@ const scope = style.scope([
   if (!result) throw new Error('expected compiler transform result');
 
   includes(result.code, 'createExtractedScope');
-  includes(result.code, 'withTokens');
+  includes(result.code, 'const scope = createExtractedScope');
   includes(result.code, "token('green')");
   notIncludes(result.code, "token('red')");
-  notIncludes(result.code, 'createExtractedScope([token');
-  before(result.code, "const token = createToken('blue'", 'const scope = withTokens');
+  notIncludes(result.code, 'withTokens');
+  notIncludes(result.code, "createExtractedScope([token('red')");
 });
 
 test('compiler honors configured token variable prefix', () => {
@@ -1191,10 +1480,14 @@ const rule = style({
 
   const css = result.css.join('\n');
 
+  includes(result.code, 'const rule = createExtractedStyle');
   includes(result.code, 'createExtractedStyle');
   includes(result.code, 'bg from');
   includes(result.code, "'url(' + bg + ')'");
   includes(result.code, '[1, "--var-');
+  notIncludes(result.code, 'const _fluenticStyle');
+  notIncludes(result.code, 'withTokens');
+  notIncludes(result.code, 'createExtractedToken');
   includes(css, 'background-color: coral');
   includes(css, 'background-image: var(--var-');
 });
@@ -1229,6 +1522,49 @@ export function Card({ color }) {
   notIncludes(result.code, '/tmp/compiler-inline-dynamic-style.tsx:runtime');
   includes(css, 'color: var(--var-');
   includes(css, 'background-color: white');
+});
+
+test('compiler preserves merged extracted runtime values when hoisting after top-level deps', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true, localClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const compact = !!window.compact;
+const density = compact ? 8 : 12;
+const dynamicStyle = style({
+  gap: density,
+  padding: density * 2,
+});
+
+export function Card({ color }) {
+  return style({
+    color,
+    backgroundColor: 'white',
+  }).merge(dynamicStyle);
+}
+`,
+    '/tmp/compiler-hoisted-merged-runtime-values.tsx',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const dynamicStyleIndex = result.code.indexOf('const dynamicStyle = createExtractedStyle');
+  const mergedStyleIndex = result.code.indexOf('const _fluenticStyle');
+
+  notIncludes(result.code, '[object Object]');
+  includes(result.code, '[1, "--var-');
+  includes(result.code, 'density, 1]');
+  includes(result.code, 'density * 2, 1]');
+  includes(result.code, 'withTokens(_fluenticStyle');
+  includes(result.code, '_fluenticToken(color)');
+
+  if (dynamicStyleIndex === -1 || mergedStyleIndex === -1 || dynamicStyleIndex > mergedStyleIndex) {
+    throw new Error('expected merged hoist after dynamicStyle dependency');
+  }
 });
 
 test('compiler hoists inline dynamic extracted slot with token binding', () => {
@@ -1861,6 +2197,38 @@ test('plugin compiler rewrites rsc dev helper imports through runtime mode', () 
 
   includes(result.code, 'from "@fluentic/style/entry/rsc-dev/dev"');
   notIncludes(result.code, '@fluentic/style/dev/rsc');
+});
+
+test('plugin compiler rewrites rsc prod extracted runtime imports', () => {
+  const compiler = createPluginCompiler({
+    dev: false,
+    projectDir: testDir,
+    cacheDir: testDir + '.test-cache',
+    options: {},
+    runtimeMode: CompilerRuntimeMode.RscProd,
+  });
+
+  const result = compiler.transform(
+    `
+import { combineStyle, getClassName, style } from "@fluentic/style";
+
+const styles = {
+  card: style.slot({ color: "red" }),
+};
+
+export function render() {
+  const css = combineStyle(styles);
+  return getClassName(css.card);
+}
+`,
+    '/project/src/rsc-prod.tsx',
+  );
+
+  if (!result) throw new Error('expected transform result');
+
+  includes(result.code, 'from "@fluentic/style/entry/rsc-prod/runtime"');
+  includes(result.code, 'getClassName(css.card)');
+  notIncludes(result.code, 'from "@fluentic/style/entry/prod/runtime"');
 });
 
 test('webpack loader rewrites dev style imports to the dev runtime', async () => {

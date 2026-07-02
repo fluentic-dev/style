@@ -7,7 +7,10 @@ import type { BabelTransformSourceMap } from '../transform/utils/babel';
 import type { ImportSource } from '../utils/import_source';
 import type { GetSourcemapFilePathFn } from '../utils/sourcemap';
 
-export type CompilerCssOptions = Partial<CssConfig>;
+export type CompilerCssOptions = Partial<CssConfig> & {
+  localClassName?: boolean;
+  debugClassName?: boolean;
+};
 
 export type CompilerDevOptions = ReplaceProps<DevRuntimeOptions, {
   checkSelector?: CheckSelectorMode;

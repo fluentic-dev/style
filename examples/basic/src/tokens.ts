@@ -22,7 +22,7 @@ export const colorTokens = {
 export const appTheme = createTheme([
   colorTokens.background(palette.background),
   colorTokens.text(palette.text),
-], 'basic-app-theme');
+]);
 
 export const spacing = {
   container: 52,

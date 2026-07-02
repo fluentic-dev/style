@@ -20,9 +20,9 @@ export function getRuleCallsite(
 
     if (loc) {
       return normalizeRuleCallsite({
-        filePath: debug.sourceUrl,
-        sourceUrl: debug.sourceUrl,
-        sourceContent: debug.code,
+        filePath: loc[3] ?? debug.sourceUrl,
+        sourceUrl: loc[3] ?? debug.sourceUrl,
+        sourceContent: loc[4] ?? debug.code,
         line: loc[LOC_LINE],
         column: loc[LOC_COL],
       });

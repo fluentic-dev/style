@@ -31,7 +31,10 @@ export function createStyleKeyframes<Style>(
   transform: StyleTransform<Style> | null,
   stableId?: StableId,
 ): ReturnType<typeof createKeyframes> {
-  const create = createKeyframes as (frames: KeyframesObject, stableId?: StableId) => ReturnType<typeof createKeyframes>;
+  const create = createKeyframes as (
+    frames: KeyframesObject,
+    stableId?: StableId,
+  ) => ReturnType<typeof createKeyframes>;
 
   return create(transformKeyframes(frames, transform), stableId);
 }

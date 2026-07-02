@@ -1,7 +1,7 @@
 import picomatch from 'picomatch';
-import { isFunction, toArray } from '../../utils/object';
 import { PrioritySelectors } from '../../selector/presets';
 import { getStyleFnMeta, type StyleFn, type StyleFnMeta } from '../../style/style';
+import { isFunction, toArray } from '../../utils/object';
 import { FN_STYLE, IMPORT_PATHS } from './constants';
 
 export type ImportSourceInfo = {

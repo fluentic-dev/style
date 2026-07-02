@@ -1,9 +1,4 @@
-import {
-  createStyleFn,
-  styleTransform,
-  type,
-  type CSSProperties,
-} from '@fluentic/style';
+import { createStyleFn, type CSSProperties, styleTransform, type } from '@fluentic/style';
 import { assertEnumSelector, MinimalSelectors, selector, selectorPriority } from '@fluentic/style/selector';
 
 type AppStyle = CSSProperties;

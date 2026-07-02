@@ -1,5 +1,11 @@
+import {
+  DEV_CONFIG,
+  IS_DEV,
+  setBuildDevConfig,
+  setDevRuntimeOptions,
+  setDevUtilsRuntimeOptions,
+} from '../config/config/dev';
 import { SIDECAR_URL_GLOBAL_SYMBOL } from '../config/utils';
-import { DEV_CONFIG, IS_DEV, setBuildDevConfig, setDevRuntimeOptions, setDevUtilsRuntimeOptions } from '../config/config/dev';
 import {
   configureTestRuntime,
   createDevSheet,
@@ -68,8 +74,104 @@ test('dev sheet keeps layer tag first and chunks rule tags', () => {
   equal(getInlineSourceMap(document.head.childNodes[2].textContent).sources[0], '/src/two.ts');
 });
 
-function createFakeStorage() {
-  const data = new Map<string, string>();
+test('build dev config preserves default sourcemap settings', () => {
+  IS_DEV.isDev = false;
+  setDevRuntimeOptions(null);
+  setDevUtilsRuntimeOptions(null);
+
+  setBuildDevConfig({});
+
+  equal(DEV_CONFIG.isDev, true);
+  equal(DEV_CONFIG.isSourcemapEnabled, true);
+  equal(DEV_CONFIG.sourcemapLocationMode, 'style');
+  equal(DEV_CONFIG.stylePriorityMode, 'layer');
+
+  IS_DEV.isDev = false;
+  setDevRuntimeOptions(null);
+  setDevUtilsRuntimeOptions(null);
+});
+
+test('dev sheet top tags stay before normal tags and still chunk', () => {
+  const document = createFakeDocument();
+  const normal = createDevSheet({
+    document: document as unknown as Document,
+    sourcemap: false,
+  });
+  const top = createDevSheet({
+    document: document as unknown as Document,
+    maxRules: 1,
+    sourcemap: false,
+    tagName: 'top',
+    top: true,
+  });
+
+  normal.updateLayers(['$layer']);
+  normal.insert({ key: 'normal', css: '.normal{color:red}' });
+  normal.flush();
+
+  top.updateLayers(['$layer']);
+  top.insert({ key: 'top-one', css: '.top-one{color:blue}' });
+  top.insert({ key: 'top-two', css: '.top-two{color:green}' });
+  top.flush();
+
+  equal(document.head.childNodes[0].getAttribute('data-css-sheet'), 'top layers');
+  equal(document.head.childNodes[1].getAttribute('data-css-sheet'), 'top rules');
+  equal(document.head.childNodes[2].getAttribute('data-css-sheet'), 'top rules');
+  equal(document.head.childNodes[3].getAttribute('data-css-sheet'), 'layers');
+  equal(document.head.childNodes[4].getAttribute('data-css-sheet'), 'rules');
+  includes(document.head.childNodes[1].textContent, '.top-one{color:blue}');
+  includes(document.head.childNodes[2].textContent, '.top-two{color:green}');
+});
+
+test('dev sort sheet top tags stay before normal tags when layers are disabled', () => {
+  const document = createFakeDocument();
+
+  try {
+    configureTestRuntime({ dev: true, css: { layer: false }, priorityMode: 'sort' });
+
+    const normal = createDevSheet({
+      document: document as unknown as Document,
+      sourcemap: false,
+    });
+    const top = createDevSheet({
+      document: document as unknown as Document,
+      maxRules: 1,
+      sourcemap: false,
+      tagName: 'top',
+      top: true,
+    });
+
+    normal.insert({
+      key: 'normal',
+      css: '.normal{color:red}',
+      priority: [1, 0, 0, 0, 0, 0, 0],
+    });
+    normal.flush();
+
+    top.insert({
+      key: 'top-one',
+      css: '.top-one{color:blue}',
+      priority: [1, 0, 0, 0, 0, 0, 0],
+    });
+    top.insert({
+      key: 'top-two',
+      css: '.top-two{color:green}',
+      priority: [1, 0, 0, 0, 0, 0, 0],
+    });
+    top.flush();
+
+    equal(document.head.childNodes[0].getAttribute('data-css-sheet'), 'top rules p-1-0-0-0-0-0-0');
+    equal(document.head.childNodes[1].getAttribute('data-css-sheet'), 'top rules p-1-0-0-0-0-0-0');
+    equal(document.head.childNodes[2].getAttribute('data-css-sheet'), 'rules p-1-0-0-0-0-0-0');
+    includes(document.head.childNodes[0].textContent, '.top-one{color:blue}');
+    includes(document.head.childNodes[1].textContent, '.top-two{color:green}');
+  } finally {
+    configureTestRuntime({ dev: false, css: { layer: true }, priorityMode: 'layer' });
+  }
+});
+
+function createFakeStorage(initial?: Record<string, string>) {
+  const data = new Map<string, string>(Object.entries(initial ?? {}));
 
   return {
     get length() {
@@ -722,6 +824,7 @@ test('enableStyleDevUtils works without a window global', () => {
 
 test('style dev utils preserves build dev mode', () => {
   const root = globalThis as typeof globalThis & {
+    CssDevUtils?: unknown;
     localStorage?: Storage;
     window?: Window & typeof globalThis;
   };
@@ -758,6 +861,44 @@ test('style dev utils preserves build dev mode', () => {
     DEV_CONFIG.isDev = previousIsDev;
     root.localStorage = previousStorage;
     root.window = previousWindow;
+  }
+});
+
+test('style dev utils warns when plugin disables element marker', () => {
+  const root = globalThis as typeof globalThis & {
+    CssDevUtils?: unknown;
+    localStorage?: Storage;
+    window?: Window & typeof globalThis;
+  };
+  const previousStorage = root.localStorage;
+  const previousWindow = root.window;
+  const previousUtils = root.CssDevUtils;
+
+  try {
+    root.localStorage = createFakeStorage({
+      '@fluentic/style.dev.elementMarker': 'true',
+    }) as unknown as Storage;
+    delete (root as { window?: unknown; }).window;
+    configureTestRuntime({ dev: true });
+    setBuildDevConfig({ elementClassName: false });
+
+    const startupLogs = captureConsoleLogs(() => {
+      enableStyleDevUtils({ name: 'CssDevUtils', silent: true });
+    });
+    const toggleLogs = captureConsoleLogs(() => {
+      const utils = root.CssDevUtils as { setElementMarker?: { toOn?: () => null; }; };
+      equal(utils.setElementMarker?.toOn?.(), null);
+    });
+
+    includes(startupLogs.map((item) => item.args.join(' ')).join('\n'), 'disabled by plugin options');
+    includes(toggleLogs.map((item) => item.args.join(' ')).join('\n'), 'disabled by plugin options');
+  } finally {
+    configureTestRuntime({ dev: false });
+    setBuildDevConfig({ elementClassName: true });
+    setDevUtilsRuntimeOptions(null);
+    root.localStorage = previousStorage;
+    root.window = previousWindow;
+    root.CssDevUtils = previousUtils;
   }
 });
 

@@ -1,4 +1,3 @@
-import type { BabelTypes } from '../utils/babel';
 import { createThemeClassName } from '../../../atomic/theme';
 import { sanitizeCssIdentName } from '../../../atomic/utils/css';
 import type { ThemeNameFormat } from '../../../config/types';
@@ -16,6 +15,7 @@ import {
   FN_STYLE_KEYFRAMES,
   IMPORT_PATHS,
 } from '../../utils/constants';
+import type { BabelTypes } from '../utils/babel';
 import { getObjectPropertyKey } from './utils';
 
 export type StaticIdImport = {

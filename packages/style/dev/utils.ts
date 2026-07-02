@@ -1,7 +1,7 @@
 import { CSS_CONFIG } from '../config/config/css';
 import { CSS_EXTRA_CONFIG } from '../config/config/css_extra';
 import { DEBUG_CONFIG } from '../config/config/debug';
-import { DEV_CONFIG, setDevUtilsRuntimeOptions } from '../config/config/dev';
+import { DEV_CONFIG, getBuildDevConfig, setDevUtilsRuntimeOptions } from '../config/config/dev';
 import { RUNTIME_CONFIG } from '../config/config/runtime';
 import type { SourcemapLocationMode, StylePriorityMode } from '../config/types';
 import { clearElementMarkers } from '../runtime/core/elementMarker';
@@ -176,12 +176,23 @@ function setPriorityMode(mode: StylePriorityMode) {
 }
 
 function setElementMarkerMode(enabled: boolean) {
+  const wasEnabled = DEV_CONFIG.isElementClassNameEnabled;
+
+  if (enabled && isElementMarkerDisabledByPlugin()) {
+    logElementMarkerDisabledByPlugin();
+    return;
+  }
+
   setDevUtilsRuntimeOptions({ elementClassName: enabled });
 
   if (!enabled) clearElementMarkers();
   saveDevConfig();
 
   logElementMarkerMode(enabled);
+
+  if (enabled && !wasEnabled) {
+    logElementMarkerReload();
+  }
 }
 
 function applyPersistentDevConfig() {
@@ -190,6 +201,11 @@ function applyPersistentDevConfig() {
   const priorityMode = parsePriorityMode(storage.getItem(StorageKeys.priorityMode));
   const sourcemapMode = parseSourcemapMode(storage.getItem(StorageKeys.sourcemapMode));
   const elementClassName = parseElementMarker(storage.getItem(StorageKeys.elementMarker));
+  const isDisabledByPlugin = isElementMarkerDisabledByPlugin();
+
+  if (elementClassName === true && isDisabledByPlugin) {
+    logElementMarkerDisabledByPlugin();
+  }
 
   if (
     !priorityMode &&
@@ -200,7 +216,7 @@ function applyPersistentDevConfig() {
   setDevUtilsRuntimeOptions({
     priorityMode,
     sourcemapMode,
-    elementClassName,
+    elementClassName: elementClassName === true && isDisabledByPlugin ? null : elementClassName,
   });
 
   if (elementClassName === false) clearElementMarkers();
@@ -292,6 +308,18 @@ function logPriorityMode(mode: StylePriorityMode) {
 function logElementMarkerMode(enabled: boolean) {
   console.log(
     `\x1b[32m✔\x1b[0m \x1b[1m\x1b[36m[element-marker]\x1b[0m ${enabled ? 'on' : 'off'}`,
+  );
+}
+
+function logElementMarkerReload() {
+  console.log(
+    '\x1b[33m!\x1b[0m \x1b[1m\x1b[36m[element-marker]\x1b[0m reload the page to mark already-rendered elements',
+  );
+}
+
+function logElementMarkerDisabledByPlugin() {
+  console.log(
+    '\x1b[33m!\x1b[0m \x1b[1m\x1b[36m[element-marker]\x1b[0m disabled by plugin options',
   );
 }
 
@@ -416,8 +444,8 @@ function getSourcemapDetail() {
   }
 
   return DEV_CONFIG.sourcemapLocationMode === 'style'
-    ? 'Spread values trace to the style site.'
-    : 'Spread values trace to the value source.';
+    ? 'Spread or merged values trace to the style site.'
+    : 'Spread or merged values trace to the value source.';
 }
 
 function getClassNameLabel() {
@@ -441,11 +469,16 @@ function getElementMarkerLabel() {
 }
 
 function getElementMarkerDetail() {
+  if (isElementMarkerDisabledByPlugin()) return 'Disabled by plugin options.';
   if (!DEV_CONFIG.isElementClassNameEnabled) return 'Element marker classes are disabled.';
 
   return CSS_CONFIG.elementClassNameFormat
     ? `Format ${CSS_CONFIG.elementClassNameFormat}`
     : '';
+}
+
+function isElementMarkerDisabledByPlugin() {
+  return getBuildDevConfig()?.isElementClassNameEnabled === false;
 }
 
 function getUsageCommands(displayName: string) {
@@ -464,8 +497,8 @@ function getUsageCommands(displayName: string) {
 
   if (!enableRuntimeTraceSourcemap()) {
     commands.push(
-      [`${displayName}.setSourcemapMode.toStyle()`, 'Map spread values to the style site'],
-      [`${displayName}.setSourcemapMode.toValue()`, 'Map spread values to the value source'],
+      [`${displayName}.setSourcemapMode.toStyle()`, 'Map spread or merged values to the style site'],
+      [`${displayName}.setSourcemapMode.toValue()`, 'Map spread or merged values to the value source'],
     );
   } else {
     commands.push([`${displayName}.traceSourcemap()`, 'Trace runtime sourcemaps']);

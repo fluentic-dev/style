@@ -112,12 +112,35 @@ const entries = [
     ],
   },
   {
-    name: 'server extracted production runtime',
+    name: 'server production runtime',
     imports: [
       [
         'entry/rsc-prod.js',
         [
+          'bindScope',
+          'combineScope',
+          'combineStyle',
+          'createStyleFn',
+          'createTheme',
+          'createToken',
+          'createTokens',
+          'createValues',
           'getClassName',
+          'getToken',
+          'style',
+        ],
+      ],
+    ],
+  },
+  {
+    name: 'server extracted production runtime',
+    imports: [
+      [
+        'entry/rsc-prod/runtime.js',
+        [
+          'getClassName',
+          'combineStyle',
+          'bindScope',
         ],
       ],
     ],

@@ -1,6 +1,5 @@
-import path from 'node:path';
 import type { CompilerOptions } from '../../../compiler';
-import { normalizePath } from '../../../utils/path';
+import { getRelativePath } from '../../../utils/path';
 import { getDefaultSourcemapUrl, normalizeSourcemapSourcePath } from '../../../utils/sourcemap';
 
 export function getDebugSourceUrl(
@@ -9,7 +8,7 @@ export function getDebugSourceUrl(
   projectDir: string,
   options: CompilerOptions,
 ) {
-  const relativePath = normalizePath(path.relative(projectDir, filePath));
+  const relativePath = getRelativePath(projectDir, filePath);
   const sourcePath = normalizeSourcemapSourcePath(relativePath);
   const defaultSourceUrl = getDefaultSourcemapUrl({
     absolutePath: filePath,

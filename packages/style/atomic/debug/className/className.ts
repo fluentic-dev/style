@@ -1,9 +1,4 @@
-import type {
-  ClassNameFormat,
-  ClassNameInfo,
-  ScopeClassNameFormat,
-  ScopeClassNameInfo,
-} from '../../../config/types';
+import type { ClassNameFormat, ClassNameInfo, ScopeClassNameFormat, ScopeClassNameInfo } from '../../../config/types';
 import { createNameFormatter } from '../../utils/format';
 
 export const CLASS_NAME_FORMAT = '[(atRule)-][(scopeSelector)-](property)[-(selector)][-(value)]-$hash';

@@ -6,10 +6,11 @@ export function createExtractedTheme(
   id: string,
   className: string,
 ): ThemeData {
-  return {
-    ...createExtractedData(BUILDER_TYPE_THEME),
-    id,
-    className,
-    tokens: [],
-  } as unknown as ThemeData;
+  const data = createExtractedData(BUILDER_TYPE_THEME) as unknown as ThemeData;
+
+  data.id = id;
+  data.className = className;
+  data.tokens = [];
+
+  return data;
 }
