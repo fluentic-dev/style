@@ -440,6 +440,27 @@ export const pageTheme = style.scope([
   includes(result.code, `sourceUrl: _styleDebugSourceUrl`);
 });
 
+test('dev debug transform does not inject provider debug into token getter values', () => {
+  const result = injectStyleDebugData(
+    `
+import { createTokens, createValues, style } from '@fluentic/style';
+
+const vars = createTokens({ color: '#0f766e' });
+const linkedColors = createValues(['brand | mint']);
+
+export const theme = style.scope([
+  vars.color(linkedColors('brand | mint')),
+]);
+`,
+    '/src/styles.ts',
+    {},
+    'http://127.0.0.1:4321/src/styles.ts',
+  );
+
+  includes(result.code, `vars.color(linkedColors('brand | mint'), {`);
+  notIncludes(result.code, `linkedColors('brand | mint', {`);
+});
+
 test('dev debug transform treats static style.value values as static', () => {
   const result = injectStyleDebugData(
     `

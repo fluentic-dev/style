@@ -1,6 +1,7 @@
-import { combineStyle } from '@fluentic/style';
+import { combineStyle, createTheme, createValues, style } from '@fluentic/style';
 import { useState } from 'react';
 import { Card } from './components/Card';
+import { deepLinkedCardVars, DeepLinkedTokenCard } from './components/DeepLinkedTokenCard';
 import { appStyles, themes } from './theme';
 
 const metrics = [
@@ -14,6 +15,51 @@ const feed = [
   ['Theme audit', 'Nested token aliases stayed stable through extraction.', 'Clean'],
   ['Preview ready', 'Runtime switching keeps component class data reusable.', 'Fast'],
 ];
+
+const linkedColors = createValues(
+  [
+    'brand | mint',
+    'alert | amber',
+    'focus | violet',
+  ] as const,
+  'linked-colors',
+);
+
+const linkedThemeCards = [
+  {
+    label: 'Mint',
+    title: 'Value token resolves through parent scope',
+    value: 'brand | mint',
+    theme: createTheme([
+      linkedColors('brand | mint', '#0f766e'),
+    ]),
+    scope: style.scope([
+      deepLinkedCardVars.color(linkedColors('brand | mint')),
+    ]),
+  },
+  {
+    label: 'Amber',
+    title: 'Component var follows app theme',
+    value: 'alert | amber',
+    theme: createTheme([
+      linkedColors('alert | amber', '#b45309'),
+    ]),
+    scope: style.scope([
+      deepLinkedCardVars.color(linkedColors('alert | amber')),
+    ]),
+  },
+  {
+    label: 'Violet',
+    title: 'Deep link stays stable per item',
+    value: 'focus | violet',
+    theme: createTheme([
+      linkedColors('focus | violet', '#7c3aed'),
+    ]),
+    scope: style.scope([
+      deepLinkedCardVars.color(linkedColors('focus | violet')),
+    ]),
+  },
+] as const;
 
 export function ThemeApp() {
   const [themeIndex, setThemeIndex] = useState(0);
@@ -77,6 +123,24 @@ export function ThemeApp() {
             </div>
           </section>
         </div>
+
+        <section css={css.linkedSection}>
+          <div css={css.panelHeader}>
+            <span css={css.badge}>Deep linked tokens</span>
+            <span css={css.tag}>createValues</span>
+          </div>
+          <div css={css.linkedGrid}>
+            {linkedThemeCards.map((item) => (
+              <div css={item.theme} key={item.value}>
+                <DeepLinkedTokenCard
+                  label={item.label}
+                  scope={item.scope}
+                  title={item.title}
+                />
+              </div>
+            ))}
+          </div>
+        </section>
       </section>
     </main>
   );

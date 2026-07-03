@@ -1,6 +1,7 @@
-import type { CheckSelectorMode, SourcemapLocationMode } from '../../../config/types';
 import { SELECTOR_MERGE } from '../../../builder/data/selector';
+import type { CheckSelectorMode, SourcemapLocationMode } from '../../../config/types';
 import type { StyleFnMeta } from '../../../style/style';
+import { isStyleTokenData } from '../../../style/token';
 import type { CompilerOptions } from '../../compiler/types';
 import {
   DEBUG_SOURCE_CONTENT_VAR,
@@ -152,6 +153,8 @@ export function createDebugPlugin(args: PluginArgs) {
               !isScopeItemCall(path, state)
             )
           ) return;
+          const evaluated = evaluateNode(path.node, getDebugEvalScope(state));
+          if (evaluated.ok && isStyleTokenData(evaluated.value)) return;
           if (hasDebugArgument(path.node.arguments)) return;
 
           const sourceUrlRef = getSourceUrlId(t, state);

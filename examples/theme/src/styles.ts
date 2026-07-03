@@ -92,6 +92,24 @@ export const appStyles = {
   }).media('(max-width: 820px)', {
     gridTemplateColumns: '1fr',
   }),
+  linkedSection: style.slot({
+    alignContent: 'start',
+    backgroundColor: tokens.color.surface,
+    border: '1px solid',
+    borderColor: tokens.color.border,
+    borderRadius: tokens.radius.panel,
+    boxShadow: tokens.shadow.panel,
+    display: 'grid',
+    gap: tokens.space.panel,
+    padding: 24,
+  }),
+  linkedGrid: style.slot({
+    display: 'grid',
+    gap: 12,
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  }).media('(max-width: 820px)', {
+    gridTemplateColumns: '1fr',
+  }),
   panel: style.slot({
     alignContent: 'start',
     backgroundColor: tokens.color.surface,
