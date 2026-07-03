@@ -8,6 +8,25 @@ Priority answers one question:
 When two generated rules target the same property on the same element, which one
 should win?
 
+That question becomes more important when a project customizes the builder.
+Custom chain methods can introduce states like `pressed`, `open`, `selected`,
+or named breakpoints. Those methods still need predictable behavior in runtime
+mode and in extracted CSS.
+
+```ts
+const button = ui({
+  color: 'black',
+}).open({
+  color: 'blue',
+}).below('700px', {
+  color: 'red',
+});
+```
+
+The generated CSS should not depend on whether this value was resolved by the
+runtime or extracted by the compiler. The same authored chain needs the same
+cascade path.
+
 Fluentic does not treat priority as one large number.
 
 It treats priority as a path through a few ordered buckets.
@@ -118,6 +137,7 @@ import { selector, selectorPriority } from '@fluentic/style/selector';
 const selectors = {
   hover: selector(':hover'),
   focusVisible: selector(':focus-visible'),
+  active: selector(':active'),
   pressed: selector('[aria-pressed="true"]'),
   disabled: selector(':disabled'),
 };
@@ -125,6 +145,7 @@ const selectors = {
 const prioritySelectors = selectorPriority(selectors, [
   'hover',
   'focusVisible',
+  'active',
   'pressed',
   'disabled',
 ]);

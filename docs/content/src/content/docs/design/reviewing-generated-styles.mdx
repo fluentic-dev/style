@@ -27,8 +27,18 @@ Slots are supported styling hooks. Scopes are grouped overrides. Components
 decide where overrides attach. `combineStyle` merges the inputs before render.
 Debugging traces generated CSS back to the TypeScript that produced it.
 
+That means a review can stay close to the authored decision:
+
+```ts
+const holidayTheme = style.scope([
+  ProductCardStyle.root({ borderColor: '#dc2626' }),
+  ProductCardStyle.title({ color: '#991b1b' }),
+]);
+```
+
+The reviewer can see which component parts changed without reverse-engineering
+a generated selector or a DOM path.
+
 AI can draft.
 
 Humans can trace.
-
-The last page gives those review questions a small set of names.

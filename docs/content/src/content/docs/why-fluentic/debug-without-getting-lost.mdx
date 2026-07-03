@@ -1,0 +1,279 @@
+---
+title: Debug Without Getting Lost
+description: See how Fluentic keeps generated CSS connected to the style, slot, scope, token, and JSX that produced it.
+---
+
+Styling bugs often start in the browser.
+
+An element has the wrong color, spacing, or state rule. DevTools shows the CSS
+that won. In many styling systems, that is where the useful trail starts to get
+thin: you can see the generated class, but you still have to search for the
+component, the helper object, the variant, or the parent override that produced
+it.
+
+Fluentic keeps that trail attached. The real question is usually one step
+higher than the final CSS rule:
+
+```txt
+Which style value produced this rule?
+Which component part did it target?
+Did it come from base styles, a variant, a theme, or a token?
+Which JSX element received the final css prop?
+```
+
+Fluentic is designed so those identities survive compilation, composition, and
+rendering long enough to debug.
+
+```txt
+style()       -> element style identity
+style.slot()  -> component part identity
+style.scope() -> grouped override identity
+token         -> shared value identity
+css prop      -> rendered JSX element identity
+```
+
+The point is not to hide CSS. The point is to make generated CSS lead back to
+the authored TypeScript decision without turning debugging into a search
+project.
+
+## A Debug Trace
+
+Imagine this component:
+
+```tsx
+import { combineStyle, style } from '@fluentic/style';
+
+const reset = style.raw({
+  margin: 0,
+  lineHeight: 1.4,
+});
+
+const cardStyles = {
+  root: style.slot({
+    ...reset,
+    borderRadius: 8,
+    padding: 16,
+  }),
+  title: style.slot({
+    ...reset,
+    fontWeight: 700,
+  }),
+};
+
+const danger = style.scope([
+  cardStyles.root({ borderColor: '#dc2626' }),
+  cardStyles.title({ color: '#dc2626' }),
+]);
+
+function Card(props: { danger?: boolean }) {
+  const css = combineStyle(
+    cardStyles,
+    props.danger && danger(cardStyles.root),
+  );
+
+  return (
+    <article css={css.root}>
+      <h2 css={css.title}>Payment failed</h2>
+    </article>
+  );
+}
+```
+
+In DevTools, the generated CSS is still CSS. The difference is that development
+sourcemaps, element markers, slots, and scopes keep links back to the code that
+produced it.
+
+<p>
+  <a className="docs-trace-playground" href="../../../playground/">Open the playground to see debugging in action</a>
+</p>
+
+<div className="docs-trace-demo" aria-label="Debug trace visual">
+  <article>
+    <div className="docs-trace-head">
+      <span>Property trace</span>
+      <code>card.styles.ts:24:5</code>
+    </div>
+    <div className="docs-trace-path">
+      <span>.background-color-f7gmmz0</span>
+      <i aria-hidden="true" />
+      <span>backgroundColor</span>
+    </div>
+    <div className="docs-trace-code">
+      <span>container: <span className="tok-call">style</span>({'{'}</span>
+      <span className="is-target"><span className="tok-id">backgroundColor</span>: <span className="tok-str">'#ffffff'</span>,</span>
+      <span>{'}'});</span>
+    </div>
+  </article>
+  <article>
+    <div className="docs-trace-head">
+      <span>Element marker</span>
+      <code>Card.tsx:44:5</code>
+    </div>
+    <div className="docs-trace-path">
+      <span>@container-a8f3c2d</span>
+      <i aria-hidden="true" />
+      <span>{'<article css>'}</span>
+    </div>
+    <div className="docs-trace-code">
+      <span><span className="tok-key">return</span> (</span>
+      <span className="is-target">&lt;<span className="tok-jsx-tag">article</span> <span className="tok-jsx-attr">css</span>={'{'}[css.container, props.css]{'}'} /&gt;</span>
+      <span>);</span>
+    </div>
+  </article>
+  <article>
+    <div className="docs-trace-head">
+      <span>Spread value trace</span>
+      <code>card-base.ts:7:3</code>
+    </div>
+    <div className="docs-trace-path">
+      <span>.padding-a8f3c2d</span>
+      <i aria-hidden="true" />
+      <span>base.padding</span>
+    </div>
+    <div className="docs-trace-code">
+      <span className="docs-trace-code-label">card-base.ts</span>
+      <span><span className="tok-key">const</span> base = {'{'}</span>
+      <span className="is-target"><span className="tok-id">padding</span>: <span className="tok-num">20</span>,</span>
+      <span>{'}'};</span>
+      <span className="docs-trace-code-label">card.styles.ts</span>
+      <span>container: <span className="tok-call">style</span>({'{'}</span>
+      <span>...base,</span>
+      <span>{'}'});</span>
+    </div>
+  </article>
+  <article>
+    <div className="docs-trace-head">
+      <span>Spread usage trace</span>
+      <code>card.styles.ts:24:18</code>
+    </div>
+    <div className="docs-trace-path">
+      <span>.padding-a8f3c2d</span>
+      <i aria-hidden="true" />
+      <span>...base</span>
+    </div>
+    <div className="docs-trace-code">
+      <span className="docs-trace-code-label">card-base.ts</span>
+      <span><span className="tok-key">const</span> base = {'{'}</span>
+      <span><span className="tok-id">padding</span>: <span className="tok-num">20</span>,</span>
+      <span>{'}'};</span>
+      <span className="docs-trace-code-label">card.styles.ts</span>
+      <span>container: <span className="tok-call">style</span>({'{'}</span>
+      <span className="is-target">...base,</span>
+      <span>{'}'});</span>
+    </div>
+  </article>
+</div>
+
+That means the debugging path can stay close to the question you are asking:
+
+```txt
+wrong DOM element?
+  marker -> JSX element with the css prop
+
+wrong CSS property?
+  rule sourcemap -> the property where it was written in the style chain
+
+wrong shared value from a spread or merge?
+  toStyle() -> the leaf style call using the value
+  toValue() -> the original reusable value
+
+wrong component override?
+  scope -> slot override -> component part
+```
+
+The browser still shows the final rule. Fluentic keeps enough structure around
+that rule to tell whether it came from a base slot, a scope override, a spread
+helper, a merged style, or the JSX element that received the resolved `css`.
+
+## Reading A Bug
+
+Good styling DX is not only autocomplete while writing code. It is also being
+able to explain a visual bug after the UI is already on screen.
+
+These are the practical handles Fluentic keeps available while debugging:
+
+| When you are checking... | What to follow |
+| --- | --- |
+| The wrong DOM node | The element marker back to the JSX element with the `css` prop. |
+| The wrong generated CSS rule | The sourcemap back to the property written in the style chain. |
+| A value that was spread or merged | `toStyle()` to trace to the style call that used it, or `toValue()` to trace to the original reusable value. |
+| An override on a component part | The slot call that names the target part, such as `root`, `title`, or `label`. |
+| A variant or theme override | The scope that grouped those slot overrides before `combineStyle()` resolved them. |
+
+The result is a shorter debugging path: inspect the final CSS, then follow the
+sourcemap back to the source location or component styling input that should be
+changed.
+
+## Dev Utilities
+
+In development, Fluentic can expose a console helper:
+
+```ts
+StyleDevUtils.info();
+StyleDevUtils.usage();
+StyleDevUtils.getConfig();
+```
+
+`info()` is the quick orientation command. It shows the active debug modes,
+runtime mode, CSS mode, priority mode, sourcemap mode, element marker state,
+and plugin state.
+
+When a rule is hard to trace, you can change the debugging view without
+rewriting app code:
+
+```ts
+StyleDevUtils.setSourcemapMode.toStyle();
+StyleDevUtils.setSourcemapMode.toValue();
+
+StyleDevUtils.setElementMarker.toOn();
+StyleDevUtils.setElementMarker.toOff();
+
+StyleDevUtils.setPriorityMode.toLayer();
+StyleDevUtils.setPriorityMode.toSort();
+```
+
+Those modes are development tools, not separate styling APIs.
+
+- `toStyle()` points spread or merged rules at the style call that assembled
+  them.
+- `toValue()` points them at the original reusable value when possible.
+- element markers connect host elements with the JSX element that received
+  `css`.
+- layer priority mode makes cascade buckets easier to inspect.
+- sort priority mode shows output closer to compact generated CSS.
+
+Runtime-only development can also trace browser sourcemaps:
+
+```ts
+StyleDevUtils.traceSourcemap();
+```
+
+That lets a runtime setup fetch served JavaScript sourcemaps and remap
+development CSS comments closer to the original TypeScript.
+
+## React Server Components
+
+For Next.js App Router and RSC development, Fluentic provides a dev client:
+
+```tsx
+import { StyleDev } from '@fluentic/style/dev/rsc';
+
+export default function RootLayout(props: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {props.children}
+        {process.env.NODE_ENV === 'development'
+          ? <StyleDev enableStyleDevUtils />
+          : null}
+      </body>
+    </html>
+  );
+}
+```
+
+That keeps the same `StyleDevUtils` workflow available when styles are moving
+through a server/client boundary.
+
+The deeper setup and command reference live in
+[DevTools And Sourcemaps](../../beyond-the-basics/devtools-and-sourcemaps).

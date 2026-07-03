@@ -1,0 +1,174 @@
+---
+title: Extend Without Friction
+description: Add project-specific style fields, chain methods, and style functions without leaving the same styling model.
+---
+
+Most teams start with ordinary CSS properties.
+
+```tsx
+const card = style({
+  display: 'flex',
+  flexDirection: 'row',
+  columnGap: 12,
+});
+```
+
+Over time, a design system usually grows its own repeated language.
+
+```tsx
+const card = ui({
+  row: true,
+  gapX: 12,
+}).selected({
+  backgroundColor: '#eef2ff',
+});
+```
+
+That vocabulary can be useful, but it should not become a separate styling
+system. The same code still needs to produce CSS, work at runtime, move static
+rules into production CSS when the compiler can prove them, and compose with
+component slots and scopes.
+
+Fluentic puts that customization in the style builder.
+
+```txt
+custom fields      -> project words like row or gapX become CSS declarations
+custom methods     -> repeated selectors become typed chain methods
+multiple builders  -> separate vocabularies meet at the component boundary
+```
+
+## Custom Fields
+
+Custom fields are for project-specific style object properties.
+
+```tsx
+type LayoutStyle = CSSProperties & {
+  row?: boolean;
+  gapX?: CSSProperties['columnGap'];
+};
+
+const layoutTransform = styleTransform<LayoutStyle>({
+  transform(style) {
+    const { row, gapX, ...css } = style;
+
+    if (row) {
+      css.display = 'flex';
+      css.flexDirection = 'row';
+    }
+
+    if (gapX !== undefined) css.columnGap = gapX;
+
+    return css;
+  },
+});
+```
+
+The transform is the boundary: authors can write `row` and `gapX`, and the
+builder turns those fields into ordinary CSS.
+
+## Custom Chain Methods
+
+Custom chain methods are for repeated selector conventions.
+
+```tsx
+const selectors = {
+  hover: selector(':hover'),
+  selected: selector('[aria-selected="true"]'),
+  below: selector('@media (max-width: $$)', 'media'),
+};
+```
+
+Then component code can use the project terms directly:
+
+```tsx
+const tab = ui({
+  row: true,
+  gapX: 8,
+}).selected({
+  backgroundColor: '#eef2ff',
+}).below('700px', {
+  gapX: 4,
+});
+```
+
+The selector stays in one place. If the project changes from
+`aria-selected="true"` to another state attribute, update the builder instead
+of every component.
+
+For selector arguments like `$`, `$$`, merge placeholders, enum arguments, and
+validation, see
+[Selector Arguments](../../beyond-the-basics/custom-chain-methods#selector-arguments)
+and [Validators](../../beyond-the-basics/custom-chain-methods#validators).
+
+## Build The Style Function
+
+`createStyleFn(...)` puts the custom style type, transform, and selectors into
+one style function:
+
+```tsx
+export const { style: ui } = createStyleFn({
+  style: type<LayoutStyle>,
+  transform: layoutTransform,
+  selectors,
+});
+```
+
+Now `ui(...)`, `ui.slot(...)`, and `ui.scope(...)` all share the same fields and
+chain methods.
+
+## More Than One Builder
+
+A design system does not have to put every convention into one style function.
+
+```tsx
+const buttonStyles = {
+  root: style.merge(
+    style.slot({ border: 0, padding: '8px 12px' }),
+    layout({ row: true, gapX: 8 }),
+    ui().selected({ backgroundColor: '#eef2ff' }),
+  ),
+};
+```
+
+Each builder keeps its own rules:
+
+```txt
+style.slot(...) -> component part
+layout(...)     -> layout fields
+ui().selected() -> state selector
+```
+
+`style.merge(...)` combines the built style data without making one builder
+pretend to own another builder's vocabulary.
+
+## Component APIs Still Work
+
+Custom vocabulary is not only for local element styles. Slots and scopes come
+from the same builder, so component-aware styling can use the same project
+terms.
+
+```tsx
+const buttonStyles = {
+  root: ui.slot({ row: true, gapX: 8 }),
+  label: ui.slot({ fontWeight: 700 }),
+};
+
+const compact = ui.scope().below('700px', [
+  buttonStyles.root({ gapX: 4 }),
+  buttonStyles.label({ fontSize: 13 }),
+]);
+```
+
+That keeps the mental model stable:
+
+```txt
+local style -> slot -> scope -> combineStyle
+```
+
+The vocabulary can be project-specific, but the component boundary stays the
+same.
+
+For implementation details, see
+[Custom Style Builders](../../beyond-the-basics/custom-style-builders),
+[Custom Chain Methods](../../beyond-the-basics/custom-chain-methods), and
+[Multiple Style Functions](../../beyond-the-basics/multiple-style-functions).

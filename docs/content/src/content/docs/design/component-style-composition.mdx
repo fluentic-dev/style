@@ -1,0 +1,139 @@
+---
+title: Component Style Composition
+description: See why Fluentic treats element styling as the base case and component-aware styling as the larger React problem.
+---
+
+A style usually starts close to one element.
+
+Then the component gets reused.
+
+Then a product theme wants to reach it.
+
+Then the component needs to keep some markup private while still accepting
+outside styling.
+
+At that point, the practical question changes:
+
+> How do styles move through React components?
+
+That question changes what the system needs.
+
+Element-level styling is the base case. A rendered element needs a style, and
+Fluentic should make that part quick, typed, and natural to write.
+
+But React applications are not only trees of DOM elements. They are trees of
+components. Components own markup, expose props, hide implementation details,
+render named parts, and get reused in places the original author did not plan
+for.
+
+Many style composition APIs start from the element: they make it easy to pass
+more styles to the element being rendered.
+
+That usually looks like this:
+
+```tsx
+function Box(props: { css?: StyleProp }) {
+  return <div css={[boxStyle, props.css]} />;
+}
+```
+
+Fluentic keeps that convenience, then follows the same question across the
+component boundary:
+
+> Style composition should also be component-aware.
+
+That is not a new styling need. It is the shape component CSS already takes in
+real projects: a root, a few named parts, states that affect those parts,
+responsive rules, and outside customizations. Fluentic makes those
+relationships explicit, typed, and reviewable instead of leaving them as
+selector conventions or informal override layers.
+
+In ordinary CSS, teams already write this kind of component model:
+
+```css
+.card { ... }
+.card__title { ... }
+.card:hover .card__action { ... }
+@media (max-width: 700px) {
+  .card__title { ... }
+}
+```
+
+Fluentic does not try to replace that mental model. It gives the same shape a
+React-friendly path: named slots for component parts, scopes for grouped
+changes, and a resolve step where the component owns its render tree.
+
+The component-aware version can target more than the root:
+
+```tsx
+const dangerButton = style.scope([
+  buttonStyles.root({ backgroundColor: '#dc2626' }),
+  buttonStyles.label({ color: 'white' }),
+]);
+
+<Button theme={dangerButton}>Delete</Button>;
+```
+
+The caller does not need to know whether `label` renders as a `span`, a nested
+component, or something else later.
+
+A local element needs a style.
+
+A reusable component needs named public parts.
+
+A product theme needs to target those parts without knowing DOM.
+
+A component needs to decide where outside styling attaches.
+
+A render function needs to resolve all of that into `css` props.
+
+That gives the rest of the guide a path:
+
+```txt
+style -> slot -> scope -> resolve
+```
+
+Each step appears after styles start being reused.
+
+The names are secondary.
+
+What matters is the boundary each name protects.
+
+The model is explicit where the boundary matters, but it should not make the
+common path heavy. Define slots once, compose scopes as values, and let the
+component resolve the final styles where it owns the render tree.
+
+That gives Fluentic a simple split:
+
+```txt
+StyleProp  -> style one rendered element
+StyleTheme -> customize a component through its public parts
+```
+
+The first one should feel like no ceremony. The second one is where React
+components need more structure: which parts can be styled, where outside styles
+are allowed to attach, and how the final result can still be traced later.
+
+That gives Fluentic two useful modes instead of one:
+
+- element-aware when a rendered element just needs styles;
+- component-aware when a reusable React component needs public styling parts,
+  controlled attachment, and traceable overrides.
+
+Inside the component, both inputs resolve in one place:
+
+```tsx
+const css = combineStyle(
+  buttonStyles,
+  bindScope(buttonStyles.root, props.theme),
+);
+
+return (
+  <button css={[css.root, props.css]}>
+    <span css={css.label}>{props.children}</span>
+  </button>
+);
+```
+
+That is the component-aware layer: simple element styling remains available,
+but reusable components can also publish the parts callers are meant to style.

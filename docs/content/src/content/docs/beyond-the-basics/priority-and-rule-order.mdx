@@ -63,6 +63,7 @@ import { selector, selectorPriority } from '@fluentic/style/selector';
 const selectors = {
   hover: selector(':hover'),
   focusVisible: selector(':focus-visible'),
+  active: selector(':active'),
   pressed: selector('[aria-pressed="true"]'),
   disabled: selector(':disabled'),
 };
@@ -70,6 +71,7 @@ const selectors = {
 const prioritySelectors = selectorPriority(selectors, [
   'hover',
   'focusVisible',
+  'active',
   'pressed',
   'disabled',
 ]);
@@ -82,9 +84,9 @@ export const { style: ui } = createStyleFn({
 
 The list is ordered from lower to higher priority.
 
-In this example, `disabled` wins over `pressed`, `pressed` wins over
-`focusVisible`, and `focusVisible` wins over `hover` when they target the same
-property.
+In this example, `disabled` wins over `pressed`, `pressed` wins over `active`,
+`active` wins over `focusVisible`, and `focusVisible` wins over `hover` when
+they target the same property.
 
 During development, `StyleDevUtils` can switch priority output:
 

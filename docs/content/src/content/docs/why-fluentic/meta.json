@@ -1,13 +1,10 @@
 {
   "title": "Why Fluentic",
   "pages": [
-    "changing-existing-styles",
-    "local-change-in-react",
-    "when-styles-cross-boundaries",
-    "staying-in-typescript",
-    "component-style-composition",
-    "public-styling-contracts",
-    "reviewing-generated-styles",
-    "the-style-model"
+    "fluentic-approach",
+    "debug-without-getting-lost",
+    "extend-without-friction",
+    "override-without-guessing",
+    "extraction-without-lock-in"
   ]
 }

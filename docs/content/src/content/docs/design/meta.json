@@ -1,20 +1,28 @@
 {
   "title": "Design",
   "pages": [
-    "keeping-styles-as-data",
-    "separating-behavior-from-declarations",
+    "style-builder",
+    "chains-and-selectors",
+    "custom-style-vocabulary",
+    "priority-model",
+    "runtime-and-extraction-contract",
     "giving-component-parts-identity",
     "outside-styles-target-public-parts",
     "components-own-their-implementation",
     "resolving-at-component-boundaries",
     "style-resolution-and-cache",
-    "priority-model",
     "hoisting-inline-style-chains",
     "publishing-less-surface-area",
     "themes-as-style-data",
     "debugging-through-identity",
     "runtime-and-react",
-    "compiler-as-delivery",
+    "changing-existing-styles",
+    "local-change-in-react",
+    "when-styles-cross-boundaries",
+    "staying-in-typescript",
+    "component-style-composition",
+    "public-styling-contracts",
+    "reviewing-generated-styles",
     "tradeoffs"
   ]
 }

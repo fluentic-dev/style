@@ -18,5 +18,5 @@ React renders components.
 
 Style inputs need a place to meet too.
 
-That leads to the next question: what identity needs to survive so the result
-can still be debugged later?
+That is why `combineStyle(...)` lives at the component boundary: it is the
+first place with enough React context to resolve component-aware style inputs.

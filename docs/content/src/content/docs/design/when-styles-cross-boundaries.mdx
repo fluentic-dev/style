@@ -18,9 +18,9 @@ question:
 
 That selector may be the right local choice.
 
-It also carries a cost. It knows the wrapper. It knows the heading. It knows
-the nesting. If the component changes shape later, the selector may have been
-depending on more implementation than anyone intended.
+It also knows the wrapper. It knows the heading. It knows the nesting. If the
+component changes shape later, the selector may have been depending on more
+implementation than anyone intended.
 
 Teams have many reasonable ways to manage this:
 
@@ -42,5 +42,23 @@ One possible answer is small:
 External styling can then target those parts by identity instead of by DOM
 path.
 
-Once those parts have names, the next question is how to keep styling close to
-the component language React teams already use.
+In Fluentic, those named parts are slots:
+
+```ts
+import { style } from '@fluentic/style';
+
+export const cardStyles = {
+  root: style.slot({ borderRadius: 16 }),
+  title: style.slot({ fontWeight: 700 }),
+  body: style.slot({ lineHeight: 1.6 }),
+};
+```
+
+Outside code can now talk about `cardStyles.title` instead of
+`.product-card > div:first-child h2`.
+
+That does not remove CSS power. It moves the contract from the DOM path to the
+component API.
+
+Once those parts have names, styling can cross the component boundary through a
+contract instead of a DOM path.

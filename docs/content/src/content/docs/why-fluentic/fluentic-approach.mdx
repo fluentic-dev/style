@@ -1,0 +1,323 @@
+---
+title: The Fluentic Approach
+description: See the small shape Fluentic uses to move from element styles to component-aware styling.
+---
+
+Most styling work starts inside a screen or a component. There is a DOM node in
+the JSX, and it needs a few CSS declarations:
+
+```tsx
+<button className="save-button">Save changes</button>
+```
+
+```css
+.save-button {
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+```
+
+Then that markup becomes a reusable React component. The CSS is no longer only
+about one DOM node; it is about the component shape:
+
+```tsx
+function Button(props) {
+  return (
+    <button>
+      <span>{props.icon}</span>
+      <span>{props.children}</span>
+    </button>
+  );
+}
+```
+
+Now the component has parts. Frontend teams usually talk about those parts
+already: the root, the icon, the label, the action area, the content wrapper.
+Each part may need its own CSS, and component state may affect several of them.
+
+```css
+.button { ... }
+.button__icon { ... }
+.button__label { ... }
+.button[data-danger] .button__label { ... }
+```
+
+When the component needs to let callers customize those parts, the usual React
+API is to pass class names in. The root gets `className`, and named internal
+parts often get a `classNames` object:
+
+```tsx
+function Button(props) {
+  return (
+    <button className={cx('button', props.className)}>
+      <span className={cx('button__icon', props.classNames?.icon)}>
+        {props.icon}
+      </span>
+      <span className={cx('button__label', props.classNames?.label)}>
+        {props.children}
+      </span>
+    </button>
+  );
+}
+```
+
+That shape is important. The component is no longer saying "style any selector
+you can reach." It is saying "these are the parts I support: root, icon, label."
+
+CSS-in-JS keeps that same component-part API, but changes what travels through
+it. Instead of passing class name strings that point to CSS somewhere else,
+callers can pass style values that target the same known parts. A base style, a
+variant, a theme, or a wrapper override can all use the same part names without
+reaching through the DOM with selectors.
+
+In plain TypeScript, it looks something like this:
+
+```ts
+// Base component styles
+const base = {
+  root: { padding: '8px 12px' },
+  label: { fontWeight: 700 },
+};
+
+// A variant changes multiple parts together
+const danger = {
+  root: { backgroundColor: 'red' },
+  label: { color: 'white' },
+};
+
+// Another variant changes a different set of parts
+const compact = {
+  root: { padding: '4px 8px' },
+  label: { fontSize: 13 },
+};
+```
+
+The shape is:
+
+```txt
+change name -> component part -> CSS declarations
+```
+
+At first, the component can merge those inputs directly where each element
+renders:
+
+```tsx
+function Button(props) {
+  return (
+    <button
+      style={{
+        ...base.root,
+        ...(props.danger ? danger.root : null),
+        ...(props.compact ? compact.root : null),
+        ...props.theme?.root,
+      }}
+    >
+      <span
+        style={{
+          ...base.label,
+          ...(props.danger ? danger.label : null),
+          ...(props.compact ? compact.label : null),
+          ...props.theme?.label,
+        }}
+      >
+        {props.children}
+      </span>
+    </button>
+  );
+}
+```
+
+That works, but the render tree is now also doing style resolution. As the
+component gains more parts, variants, and incoming themes, it is cleaner to
+resolve the styles once and render the result:
+
+```tsx
+function Button(props) {
+  // base + variants + incoming theme -> styles for each rendered part
+  const styles = mergeButtonStyles(
+    base,
+    props.danger && danger,
+    props.compact && compact,
+    props.theme,
+  );
+
+  return (
+    <button style={styles.root}>
+      <span style={styles.label}>{props.children}</span>
+    </button>
+  );
+}
+```
+
+The exact merge helper is not the point yet. The useful shape is that changes
+are grouped by component part, and the component resolves them where it owns
+the markup.
+
+Those situations suggest a small set of front-end building blocks:
+
+```txt
+style -> slot -> scope -> resolve
+```
+
+Each piece answers one question.
+
+| Idea | Front-end question |
+| --- | --- |
+| Style | What does this element look like? |
+| Slot | Which component parts can callers style on purpose? |
+| Scope | Which variant, theme, or state changes those public parts together? |
+| Resolve | How do props, defaults, and overrides become final `css` props? |
+
+In Fluentic, the same path starts small.
+
+First, one element gets one style value:
+
+```tsx
+const saveButton = style({
+  borderRadius: 8,
+  padding: '8px 12px',
+});
+
+<button css={saveButton}>Save changes</button>;
+```
+
+If that same element needs to react to state, keep the change attached to the
+element style:
+
+```tsx
+const saveButton = style({
+  borderRadius: 8,
+  padding: '8px 12px',
+}).hover({
+  backgroundColor: '#f3f4f6',
+});
+
+<button css={saveButton}>Save changes</button>;
+```
+
+The mind shift happens when the element stops being the whole story. A reusable
+component has internal markup, public parts, and state that may need to change
+more than one part at the same time. The good part is that you do not need to
+turn every internal element into a public styling API.
+
+Internal elements can still use plain `style()` values:
+
+```tsx
+const icon = style({
+  flex: '0 0 auto',
+});
+```
+
+When a part needs to accept styles from outside the component, make that part a
+slot by simply changing `style(...)` to `style.slot(...)`. A slot does not apply
+outside styles by itself; it gives that part a stable target that variants and
+themes can refer to:
+
+```tsx
+const buttonStyles = {
+  root: style.slot({ borderRadius: 8, padding: '8px 12px' }),
+  icon,
+  label: style.slot({ fontWeight: 700 }),
+};
+```
+
+To provide styles for those slots from the outside, use a scope. A scope keeps
+all slot overrides for one variant, state, or theme together, so the component
+can receive that outside change as one styling input:
+
+```tsx
+const danger = style.scope([
+  buttonStyles.root({ backgroundColor: '#dc2626' }),
+  buttonStyles.label({ color: 'white' }),
+]);
+```
+
+Finally, resolve the slot-aware inputs inside the component and render the
+result:
+
+```tsx
+import {
+  bindScope,
+  combineStyle,
+  style,
+  type StyleProp,
+  type StyleTheme,
+} from '@fluentic/style';
+import type { ReactNode } from 'react';
+
+const buttonStyles = {
+  root: style.slot({ borderRadius: 8, padding: '8px 12px' }),
+  icon: style({ flex: '0 0 auto' }),
+  label: style.slot({ fontWeight: 700 }),
+};
+
+const danger = style.scope([
+  buttonStyles.root({ backgroundColor: '#dc2626' }),
+  buttonStyles.label({ color: 'white' }),
+]);
+
+type ButtonProps = {
+  children: ReactNode;
+  icon?: ReactNode;
+  danger?: boolean;
+  css?: StyleProp;
+  theme?: StyleTheme;
+};
+
+function Button(props: ButtonProps) {
+  const css = combineStyle(
+    buttonStyles,
+    props.danger && danger(buttonStyles.root),
+    props.theme?.(buttonStyles.root),
+  );
+
+  return (
+    <button css={[css.root, props.css]}>
+      {props.icon ? <span css={css.icon}>{props.icon}</span> : null}
+      <span css={css.label}>{props.children}</span>
+    </button>
+  );
+}
+```
+
+When several scopes should apply through the same slot, `bindScope()` lets you
+target the slot once and pass all of those inputs to `combineStyle()` together:
+
+```tsx
+const css = combineStyle(
+  buttonStyles,
+  bindScope(buttonStyles.root, props.danger && danger, props.theme),
+);
+```
+
+That is the full picture, but each piece appears only when the component needs
+it. `style()` covers ordinary element styling. `style.slot()` names public
+component parts. `style.scope()` groups changes across those parts.
+`combineStyle()` resolves the final styles where the component owns the markup.
+
+The benefit is practical rather than decorative:
+
+- start with the small element case;
+- expose component parts only when they become part of the contract;
+- compose variants, themes, states, and product tweaks through the same shape;
+- let the component decide where outside styles attach;
+- keep the final result typed, reviewable, and traceable.
+
+Most of the other pieces support that path.
+
+Tokens give shared values identity.
+
+Themes override tokens or public component parts.
+
+The compiler can move static styles into CSS during the production build.
+
+The runtime handles values that are still decided by React at render time.
+
+Debugging follows the style names, slots, and scopes you wrote.
+
+The next section turns that shape into practice. It starts with one styled
+element, then builds toward reusable components, app themes, debugging, and
+component libraries.
+
+Start with [Installation](../learn/installation), then write the smallest
+possible style before introducing any component concepts.

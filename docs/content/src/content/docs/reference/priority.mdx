@@ -111,15 +111,17 @@ import { selector, selectorPriority } from '@fluentic/style/selector';
 const selectors = {
   hover: selector(':hover'),
   focusVisible: selector(':focus-visible'),
-  pressed: selector('[aria-pressed="true"]'),
   active: selector(':active'),
+  pressed: selector('[aria-pressed="true"]'),
+  disabled: selector(':disabled'),
 };
 
 const prioritySelectors = selectorPriority(selectors, [
   'hover',
   'focusVisible',
-  'pressed',
   'active',
+  'pressed',
+  'disabled',
 ]);
 ```
 

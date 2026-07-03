@@ -25,8 +25,8 @@ starts behaving like another language inside TypeScript:
 }
 ```
 
-This pattern is familiar and productive. The tradeoff is that one object now
-describes declarations, behavior, and conditions at the same time.
+This pattern is familiar and productive. As a component grows, one object may
+start describing declarations, behavior, and conditions at the same time.
 
 Fluentic keeps those pieces closer to the code you already use for components:
 
@@ -35,9 +35,36 @@ Fluentic keeps those pieces closer to the code you already use for components:
 - component relationships are slots and scopes;
 - resolution happens where the component renders.
 
+For example, declarations stay plain:
+
+```ts
+const root = style({
+  borderRadius: 8,
+  padding: '8px 12px',
+});
+```
+
+State, selectors, and media become typed chains around those declarations:
+
+```ts
+const interactive = style({ backgroundColor: '#111827' })
+  .hover({ backgroundColor: '#374151' })
+  .media('(max-width: 700px)', { width: '100%' });
+```
+
+And component-level changes are values too:
+
+```ts
+const compactCard = style.scope([
+  cardStyles.root({ padding: 12 }),
+  cardStyles.title({ fontSize: 16 }),
+]);
+```
+
 The compiler can emit CSS later during the production build.
 
 The day-to-day workflow can stay in the language where the component system
 already lives.
 
-The next step is to give those TypeScript styles a small composition shape.
+The important constraint is that the style stays close to the same TypeScript
+tools developers already use for component code.

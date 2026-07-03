@@ -1,0 +1,344 @@
+---
+title: Override Without Guessing
+description: Keep generated rule order understandable when base styles, states, scopes, media, and themes meet.
+---
+
+Styling systems get harder to trust when the same property can come from many
+places.
+
+```txt
+base style
+hover state
+active state
+component scope
+theme override
+media rule
+caller css prop
+```
+
+All of those inputs can be valid. In plain CSS, the browser answers conflicts
+with specificity and source order. CSS-in-JS and component styling add another
+source of surprise: generated rules can arrive from different files, bundles,
+the code path that loaded first, runtime insertions, or extracted CSS. When that
+order is not obvious, teams often reach for extra specificity or `!important`.
+
+Fluentic keeps the normal CSS cascade, but it places each style in a known
+priority path. It also makes each source of priority visible in the style you
+wrote. A selector chain adds selector priority. A scope adds scope priority to
+the slot rules inside it. A media call adds media context, and can also carry
+explicit media priority. Shorthand and longhand properties keep their CSS-shaped
+declaration priority. A value can carry explicit value priority when it must sit
+above the normal path.
+
+The built-in model covers common UI cases, and the parts that usually need
+project control are configurable. You can set selector priority in your style
+builder, such as `hover`, `active`, `focusVisible`, or `firstChild`, and you can
+give media rules or property values explicit priority where the normal path is
+not enough.
+
+```txt
+value weight
+  selector context
+    scope context
+      media context
+        property order
+```
+
+Fluentic turns that path into a stable generated rule order, then the browser
+uses the normal CSS cascade. The important part is that you can see where
+priority was added, and the same authored style gets the same priority whether
+it is resolved at runtime or emitted as static CSS in production.
+
+## Atomic Output And Dedupe
+
+Fluentic emits atomic rules. A declaration becomes a small CSS rule for one
+property in one context.
+
+```txt
+backgroundColor: '#fff'
+  -> one atomic rule
+
+hover backgroundColor: '#fff'
+  -> another atomic rule, because the selector context is different
+```
+
+That shape helps repeated declarations share output. If two static styles
+produce the same atomic declaration in the same context, the extracted CSS does
+not need to emit that rule twice.
+
+```tsx
+const card = style({ color: '#111827' });
+const title = style({ color: '#111827' });
+```
+
+Those can point at the same generated color rule.
+
+Dedupe also keeps the rendered `css` prop smaller. When two inputs provide the
+same property in the same priority path, the later value is the one that needs
+to stay in the final class list.
+
+```tsx
+const css = combineStyle(
+  buttonStyles,
+  props.danger && danger(buttonStyles.root),
+  props.theme?.(buttonStyles.root),
+);
+```
+
+If both `danger` and `theme` set the root background in the same context, the
+later input wins there. If one value is base, one is hover, and one is media,
+they stay separate because they live in different priority paths.
+
+## State Order
+
+Element states need an order.
+
+```tsx
+const button = style({
+  color: 'black',
+}).hover({
+  color: 'blue',
+}).active({
+  color: 'red',
+});
+```
+
+If the button is both hovered and active, `active` should win because it is the
+later state in the selector order.
+
+That is the default behavior of the built-in `style` function.
+
+When you create a custom style function, you can define your own selector
+priority and pass it into `createStyleFn`:
+
+```tsx
+import { createStyleFn, type CSSProperties, type } from '@fluentic/style';
+import { selector, selectorPriority } from '@fluentic/style/selector';
+
+const selectors = {
+  hover: selector(':hover'),
+  focusVisible: selector(':focus-visible'),
+  active: selector(':active'),
+  pressed: selector('[aria-pressed="true"]'),
+  disabled: selector(':disabled'),
+};
+
+const prioritySelectors = selectorPriority(selectors, [
+  'hover',
+  'focusVisible',
+  'active',
+  'pressed',
+  'disabled',
+]);
+
+export const { style: ui } = createStyleFn({
+  style: type<CSSProperties>,
+  selectors: prioritySelectors,
+});
+```
+
+The list goes from lower priority to higher priority. Later names in the list
+win over earlier names when they target the same property. In that builder,
+`disabled` wins over `pressed`, `pressed` wins over `active`, and `active` wins
+over `focusVisible`. Selector methods that are not listed stay at the lowest
+selector priority, so a listed selector can beat them.
+
+## Scope Adds A Priority Context
+
+A scope adds priority around the slot styles inside it. For example, this rule
+targets the button slot while the card scope is hovered:
+
+```tsx
+const cardHover = style.scope().hover([
+  cardStyles.button({ color: 'blue' }),
+]);
+```
+
+That scoped hover rule does not automatically beat the button's direct active
+state. They are different priority paths:
+
+```txt
+button base
+card scope hover -> button slot
+button active
+```
+
+If the card-hover active case should win, write that case directly:
+
+```tsx
+const cardHoverActive = style.scope().hover([
+  cardStyles.button().active({ color: 'purple' }),
+]);
+```
+
+Priority follows the context you wrote: scope priority, then selector priority
+inside that scope. Overrides do not flatten into one global pile where every
+outside style simply beats every local state.
+
+## Media Stays In Context
+
+Media rules are compared inside their current selector and scope context.
+
+```tsx
+const button = style({
+  color: 'black',
+}).media('(max-width: 700px)', {
+  color: 'blue',
+}).hover({
+  color: 'red',
+});
+```
+
+At small widths, blue beats the base black. While hovered, red still wins
+because it is in the hover selector context.
+
+If hover should change at that breakpoint, put the hover rule in that same
+context:
+
+```tsx
+const button = style({
+  color: 'black',
+}).hover({
+  color: 'red',
+}).media(
+  '(max-width: 700px)',
+  style({
+    color: 'blue',
+  }).hover({
+    color: 'purple',
+  }),
+);
+```
+
+Now the purple rule wins only when both conditions match: the button is hovered
+and the media query applies.
+
+Media can also carry an explicit media priority:
+
+```tsx
+const panel = style().media(2, '(max-width: 700px)', {
+  padding: 12,
+});
+```
+
+That priority is still inside the current selector and scope context. It can
+help order media rules, but it does not jump over a direct selector state like
+hover or active.
+
+## Property Order Stays CSS-Shaped
+
+Property order is the innermost bucket. It keeps shorthand and longhand CSS
+predictable.
+
+```tsx
+const box = style({
+  marginTop: 8,
+  margin: 4,
+});
+```
+
+Even though `marginTop` is written before `margin`, Fluentic emits the shorthand
+first and the longhand after it:
+
+```css
+.margin-4 { margin: 4px; }
+.margin-top-8 { margin-top: 8px; }
+```
+
+That follows the CSS shape developers expect: the shorthand sets the general
+box, then the longhand refines one side. The longhand should not be accidentally
+erased just because the shorthand appeared later in the style object.
+
+This bucket is only for CSS declaration shape. If you need to decide that one
+component state, theme, breakpoint, or caller override should win, express that
+with the matching styling path instead of relying on where two properties happen
+to appear in the object.
+
+## Value Priority Is Explicit
+
+Value priority is the outermost bucket.
+
+```tsx
+const button = style({
+  color: style.value('#111827', 1),
+}).hover({
+  color: '#2563eb',
+});
+```
+
+`style.value(value, priority)` keeps the CSS value in the first position and
+the priority in the second. The unweighted form, `color: '#111827'`, uses
+priority `0`.
+
+The higher-priority base color can beat the normal hover color because it lives
+in a higher value-priority bucket.
+
+Under the hood, that value priority is represented as the tuple
+`[weight, cssValue]`. You may see or use that tuple form for simple values:
+
+```tsx
+const button = style({
+  color: [1, '#111827'],
+});
+```
+
+Prefer `style.value()` when you want explicit value priority. It reads as
+"this value has this priority":
+
+```tsx
+const layout = style({
+  display: style.value('flex', 1),
+  flexDirection: style.value('row', 1),
+});
+```
+
+That matters for literal values such as `'row'`. The tuple form is allowed, but
+`[1, 'row']` can widen the value to `[1, string]`. That may fail for typed CSS
+properties such as `flexDirection`, where TypeScript expects one of the known
+direction values instead of any string.
+
+Value priority is powerful because it lets one value sit above normal
+composition, selector, scope, and media behavior without turning the whole
+declaration into a broad `!important` escape hatch. However, use it sparingly:
+the default priority path should handle most cases, and explicit value priority
+should be reserved for overrides that really need it.
+
+## Style Composition Inside Component
+
+Inside a component, style composition order is explicit and user-controlled.
+When two styles land in the same priority path, the later argument passed to
+`combineStyle(...)` wins. The same is true for the `css` prop: later items in
+the array win.
+
+A typical component uses that order for base styles first, then variants, then
+theme scopes, then the caller's root `css` prop if the component allows one:
+
+```tsx
+const css = combineStyle(
+  buttonStyles,
+  props.danger && danger(buttonStyles.root),
+  props.compact && compact(buttonStyles.root),
+  props.theme?.(buttonStyles.root),
+);
+
+return <button css={[css.root, props.css]} />;
+```
+
+Here, `danger` can override `buttonStyles`, `compact` can override `danger`, and
+`theme` can override the earlier component styles when they touch the same
+slot and property path. You can choose a different order when your component
+needs different behavior.
+
+Each rendered element can also compose styles in its own `css` prop. In
+`css={[css.root, props.css]}`, `props.css` is a separate root-level override
+because it is the later item in that array. The same array order applies to
+other elements, such as `css={[css.label, css.other]}`. That array only orders
+the styles applied to that element; it does not change the order you already
+chose in `combineStyle(...)`.
+
+That makes boundary priority reviewable in the component code that owns the
+markup.
+
+For the full bucket model and development priority modes, see
+[Priority Model](../../design/priority-model) and
+[Priority And Rule Order](../../beyond-the-basics/priority-and-rule-order).

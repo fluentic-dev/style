@@ -16,6 +16,28 @@ A component owns its implementation. Props describe inputs. Context carries
 shared state. Composition makes larger interfaces from smaller pieces.
 TypeScript makes those contracts visible.
 
+That ownership lets a component change internally without making every caller
+learn the internal change:
+
+```tsx
+type ButtonProps = {
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+};
+
+export function Button(props: ButtonProps) {
+  return (
+    <button>
+      {props.icon ? <span>{props.icon}</span> : null}
+      <span>{props.children}</span>
+    </button>
+  );
+}
+```
+
+The caller depends on `icon` and `children`, not on whether the label is a
+`span`, whether an icon wrapper exists, or how the component organizes its DOM.
+
 That works because responsibilities are clear:
 
 - parents pass inputs;
@@ -39,6 +61,10 @@ That ownership instinct raises one styling question:
 Parents pass inputs. Children own implementation. Public contracts stay
 explicit. Private details remain free to change.
 
-That ownership boundary is ordinary in React code.
+Fluentic's styling model follows that same shape. Callers can pass style
+inputs, but the component still decides how those inputs attach to the elements
+it owns.
 
-The next page looks at what happens when styling has to cross that boundary.
+That ownership boundary is ordinary in React code. Fluentic carries the same
+instinct into styling: callers can pass styling inputs, while components keep
+control of their implementation.

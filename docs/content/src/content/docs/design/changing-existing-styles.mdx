@@ -1,6 +1,6 @@
 ---
 title: Changing Existing Styles
-description: Understand why styles become hard to change after they ship.
+description: Understand why Fluentic is designed for fast first-pass styling and controlled future change.
 ---
 
 Most of us do not spend much time wondering how to write a button anymore.
@@ -32,14 +32,40 @@ reaction to uncertainty. It feels safer to add one more layer than to touch the
 style that other screens already depend on.
 
 Over time those layers accumulate. Not because anyone set out to create a
-fragile styling system, but because confidence slowly gets replaced by caution.
+hard-to-change styling system, but because confidence slowly gets replaced by
+caution.
 
 ## The problem Fluentic starts from
 
-Fluentic begins with that later maintenance problem. It is not trying to prove
-that every other styling tool is wrong, or that writing CSS should feel novel
-again. The goal is narrower and more practical: make future changes easier to
-understand, review, and trust.
+Fluentic starts from a simple expectation: teams should be able to style
+quickly without losing control of what will need to change later. The first
+pass should feel fast, typed, and natural to write, and the result should still
+leave enough structure behind that future changes are easier to understand,
+review, and trust.
+
+The smallest Fluentic style is just a TypeScript value:
+
+```tsx
+import { style } from '@fluentic/style';
+
+const saveButton = style({
+  borderRadius: 8,
+  padding: '8px 12px',
+});
+
+export function SettingsPage() {
+  return <button css={saveButton}>Save changes</button>;
+}
+```
+
+That is the easy part. The harder part is what happens when this button becomes
+a shared component and callers need to customize it without turning the
+component's private markup into public API.
+
+The goal is not to make teams choose between moving quickly now and maintaining
+the code later. Fluentic's bet is that the same values can serve both moments:
+quick styles when the work is local, and enough structure left behind when the
+style becomes part of a reusable component.
 
 For that to work, a styling API needs to preserve a few important facts:
 
@@ -53,5 +79,4 @@ reviewer distinguish a local adjustment from a system-level change, and they
 help the next developer decide whether to change the original style or compose
 something around it.
 
-The next question is why React code often feels easier to evolve than styling
-code around it.
+That is the maintenance pressure the rest of the design tries to keep visible.

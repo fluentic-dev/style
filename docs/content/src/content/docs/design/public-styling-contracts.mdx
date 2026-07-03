@@ -34,6 +34,26 @@ Button.icon
 Button.label
 ```
 
+In code, that can be as small as exporting only the slots callers should
+depend on:
+
+```ts
+const styles = {
+  root: style.slot({ borderRadius: 8 }),
+  icon: style.slot({ flex: '0 0 auto' }),
+  label: style.slot({ fontWeight: 700 }),
+  measure: style({ position: 'absolute' }),
+};
+
+export const ButtonStyle = exposeStyle({
+  root: styles.root,
+  icon: styles.icon,
+  label: styles.label,
+});
+```
+
+`measure` can remain private because it is implementation, not contract.
+
 CSS still has all of its power.
 
 The question is which customization the component is willing to support over

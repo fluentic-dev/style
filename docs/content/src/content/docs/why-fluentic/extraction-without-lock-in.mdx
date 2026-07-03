@@ -1,0 +1,84 @@
+---
+title: Extraction Without Lock-In
+description: Use atomic CSS extraction as an optimization while keeping runtime, bundler, and RSC paths available.
+---
+
+Fluentic does not treat extraction as the foundation of the styling model.
+
+The foundation is the authored value:
+
+```txt
+style object -> chain -> slot -> scope -> combineStyle -> css prop
+```
+
+That value can run at runtime while a component is still dynamic. When the
+build can prove a chain is static, the compiler can move the generated atomic
+rules into CSS.
+
+```txt
+runtime path    -> React resolves values that depend on props and themes
+extraction path -> build emits static atomic CSS when it can
+```
+
+The component code does not need to become a different language when you move
+from runtime-only development to extracted production CSS.
+
+## Atomic CSS As Delivery
+
+Atomic output is useful because it can dedupe repeated declarations and keep
+rule order predictable.
+
+But it is delivery, not the authoring experience. Authors still write the
+component-level model:
+
+```tsx
+const css = combineStyle(
+  buttonStyles,
+  props.compact && compact(buttonStyles.root),
+  bindScope(buttonStyles.root, props.theme),
+);
+
+return <button css={[css.root, props.css]} />;
+```
+
+Static pieces can be extracted. Dynamic pieces can stay on the runtime path.
+Both use the same style data model.
+
+## Tooling Paths
+
+Fluentic ships adapters for common app shapes:
+
+| Environment | Path |
+| --- | --- |
+| Next.js App Router | [Next.js](../integrations/nextjs) |
+| Vite | [Vite](../integrations/vite) |
+| Webpack | [Webpack](../integrations/webpack) |
+| Rspack | [Rspack](../integrations/rspack) |
+| Farm | [Farm](../integrations/farm) |
+| Parcel 2 | [Parcel](../integrations/parcel) |
+| No compiler plugin | [Runtime-Only Mode](../integrations/runtime-only-mode) |
+| Custom build system | [Custom Compiler](../integrations/custom-compiler) |
+
+That matters for adoption. A component library should not be trapped in one app
+shape. You can start with runtime-only React, add extraction for a bundler, and
+still have a path for Next.js App Router and React Server Components.
+
+## Server And RSC
+
+The package exposes runtime entries for normal client apps, extracted builds,
+and RSC-aware paths. The Next.js integration wires the build, runtime entries,
+development CSS, and sourcemap sidecar so the same component model can work
+across server and client boundaries.
+
+The practical goal is simple:
+
+```txt
+do not make teams choose between
+  good React component ergonomics
+  debuggable development
+  extracted production CSS
+  server/RSC adoption later
+```
+
+Use extraction when it helps production output. Keep runtime support because
+React applications still have dynamic props, themes, and composition.
