@@ -1,7 +1,7 @@
 import { globalData } from '../utils/global';
 import type { ReplaceProps } from '../utils/type';
 import { CSS_CONFIG, type CssConfig } from './config/css';
-import { type DevRuntimeOptions } from './config/dev';
+import type { DevRuntimeOptions } from './config/dev';
 import { RUNTIME_CONFIG } from './config/runtime';
 import type { CheckSelectorMode } from './types';
 

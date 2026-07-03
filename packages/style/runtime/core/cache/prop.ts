@@ -13,7 +13,7 @@ import { DEV_CONFIG } from '../../../config/config/dev';
 import { RUNTIME_CONFIG } from '../../../config/config/runtime';
 import { isStyleTokenOverrideData } from '../../../style/token';
 import type { StyleProp } from '../../types';
-import { isElementDebugData, splitElementMarkerStyleProp } from '../elementMarker';
+import { isElementDebugData, splitElementMarkerStyleProp } from '../elementMarkerData';
 import {
   createResolvedStyleItem,
   createResolvedStyleItemFromItems,
@@ -71,13 +71,18 @@ export function resolveStylePropRuntime(styleProp: StyleProp | undefined): Resol
     () => warnUnsupportedStylePropItem(unsupportedItem),
   );
 
-  if (cache?.data) {
-    if (!tokenBindings.length) return cache.data;
+  if (cache?.d) {
+    if (!tokenBindings.length) {
+      return {
+        items: cache.d.i,
+        result: cache.d.r,
+      };
+    }
 
     return {
-      items: cache.data.items,
+      items: cache.d.i,
       result: createStylePropResult(
-        applyTokenBindings(cache.data.items, tokenBindings),
+        applyTokenBindings(cache.d.i, tokenBindings),
         getThemeClassName,
       ),
     };
@@ -85,11 +90,11 @@ export function resolveStylePropRuntime(styleProp: StyleProp | undefined): Resol
 
   const items = collectStylePropItems(styleProp, tokenBindings.length > 0);
   const result = createStylePropResult(items, getThemeClassName);
-  const data = { items, result };
+  const data = { i: items, r: result };
 
-  if (cache) cache.data = data;
+  if (cache) cache.d = data;
 
-  if (!tokenBindings.length) return data;
+  if (!tokenBindings.length) return { items: data.i, result: data.r };
 
   return {
     items,

@@ -3,21 +3,21 @@ import type { StyleProp } from '../../types';
 import type { ResolvedStyleProp } from './result';
 import { createWeakCacheTreeNode, getWeakCacheTreeChild, type WeakCacheTreeNode } from './utils/tree';
 
-type CacheValue = {
-  data: StylePropCacheData<object> | null;
-  changes: number;
+type CacheValue<Data = StylePropCacheData<object>> = {
+  d: Data | null;
+  c: number;
 };
 
 type CacheNode<Item extends object> = WeakCacheTreeNode<Item, CacheValue>;
 
 export type StylePropCacheData<Item extends object> = {
-  items: Item[];
-  result: ResolvedStyleProp;
+  i: Item[];
+  r: ResolvedStyleProp;
 };
 
 const root = createWeakCacheTreeNode<object, CacheValue>(createCacheValue());
 
-export function getStylePropCacheValue<Item extends object>(
+export function getStylePropCacheValue<Item extends object, Data = StylePropCacheData<Item>>(
   styleProp: StyleProp,
   walk: (
     styleProp: StyleProp,
@@ -44,11 +44,11 @@ export function getStylePropCacheValue<Item extends object>(
 
   if (!hasItem || !canCache) return null;
 
-  const value = node.value as CacheValue & { data: StylePropCacheData<Item> | null; };
+  const value = node.value as CacheValue<Data>;
 
-  if (value.changes !== RUNTIME_CONFIG.changes) {
-    value.data = null;
-    value.changes = RUNTIME_CONFIG.changes;
+  if (value.c !== RUNTIME_CONFIG.changes) {
+    value.d = null;
+    value.c = RUNTIME_CONFIG.changes;
   }
 
   return value;
@@ -56,7 +56,7 @@ export function getStylePropCacheValue<Item extends object>(
 
 function createCacheValue(): CacheValue {
   return {
-    data: null,
-    changes: RUNTIME_CONFIG.changes,
+    d: null,
+    c: RUNTIME_CONFIG.changes,
   };
 }

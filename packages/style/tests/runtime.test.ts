@@ -1,5 +1,6 @@
 import { DEV_CONFIG } from '../config/config/dev';
 import { clearElementMarkers } from '../runtime/core/elementMarker';
+import { getClassName as getExtractedClassName } from '../runtime/extract/getClassName';
 import { transformElement as transformExtractedElement } from '../runtime/extract/jsx';
 import { ArgSelectors } from '../selector/presets';
 import { style as publicStyle } from '../style';
@@ -1122,14 +1123,11 @@ test('pool token data compares by token id and primitive value', () => {
   };
   const pool = createCombinedStylePool();
   const first = pool.get(tokenStyles, [], [token('red')]);
-  const second = pool.get(tokenStyles, [], [token('red')], first.tokensData);
-  const third = pool.get(tokenStyles, [], [token('green')], second.tokensData);
+  const second = pool.get(tokenStyles, [], [token('red')], first.tokens);
+  const third = pool.get(tokenStyles, [], [token('green')], second.tokens);
 
-  equal(first.isTokenDataChanged, true);
-  equal(second.isTokenDataChanged, false);
-  equal(first.tokensData, second.tokensData);
-  equal(third.isTokenDataChanged, true);
-  notEqual(second.tokensData, third.tokensData);
+  equal(first.tokens, second.tokens);
+  notEqual(second.tokens, third.tokens);
 });
 
 test('dynamic token providers use last value for duplicate token ids', () => {
@@ -1306,6 +1304,80 @@ test('style prop cache keeps token-bound extracted style values dynamic', () => 
     equal(second.className, 'bound-style-cache-class');
     equal((first.style as Record<string, unknown>)['--bound-style-cache-value'], 'red');
     equal((second.style as Record<string, unknown>)['--bound-style-cache-value'], 'green');
+  } finally {
+    setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
+  }
+});
+
+test('extracted getClassName caches tokenized resolved leaves by stable data', () => {
+  const token = createExtractedToken('extracted-class-cache-token', 'blue');
+  const styles = {
+    container: createExtractedSlot('extracted-class-cache-slot', [
+      ['extracted-class-cache-dedupe', 'extracted-class-cache-class', [
+        1,
+        '--extracted-class-cache-value',
+        token,
+      ]],
+    ]),
+  };
+
+  try {
+    setBuildMeta({ dev: false, extract: true, hoist: true, rsc: false, css: null });
+
+    const first = combineStyle(styles, token('red'));
+    const second = combineStyle(styles, token('green'));
+    const firstResult = getExtractedClassName(first.container as any);
+    const secondResult = getExtractedClassName(second.container as any);
+
+    equal(firstResult.className, 'extracted-class-cache-class');
+    equal(secondResult.className, 'extracted-class-cache-class');
+    equal((firstResult.style as Record<string, unknown>)['--extracted-class-cache-value'], 'red');
+    equal((secondResult.style as Record<string, unknown>)['--extracted-class-cache-value'], 'green');
+  } finally {
+    setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
+  }
+});
+
+test('combineStyle reuses token wrappers for repeated token values', () => {
+  const token = createToken('blue');
+  const tokenStyles = {
+    container: style({ color: token }),
+  };
+
+  const first = combineStyle(tokenStyles, token('red'));
+  const second = combineStyle(tokenStyles, token('red'));
+  const third = combineStyle(tokenStyles, token('green'));
+
+  equal(first, second);
+  notEqual(first, third);
+});
+
+test('extracted getClassName merges token styles with caller style props', () => {
+  const token = createExtractedToken('extracted-class-style-merge-token', 'blue');
+  const styles = {
+    container: createExtractedSlot('extracted-class-style-merge-slot', [
+      ['extracted-class-style-merge-dedupe', 'extracted-class-style-merge-class', [
+        1,
+        '--extracted-class-style-merge-value',
+        token,
+      ]],
+    ]),
+  };
+
+  try {
+    setBuildMeta({ dev: false, extract: true, hoist: true, rsc: false, css: null });
+
+    const css = combineStyle(styles, token('red'));
+    const result = getExtractedClassName(css.container as any, {
+      style: [
+        { '--caller-dynamic-value': '12px' },
+        { '--extracted-class-style-merge-value': 'caller-wins' },
+      ] as any,
+    });
+
+    equal(result.className, 'extracted-class-style-merge-class');
+    equal((result.style as Record<string, unknown>)['--caller-dynamic-value'], '12px');
+    equal((result.style as Record<string, unknown>)['--extracted-class-style-merge-value'], 'caller-wins');
   } finally {
     setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
   }

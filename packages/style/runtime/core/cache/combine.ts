@@ -4,7 +4,7 @@ import { RUNTIME_CONFIG } from '../../../config/config/runtime';
 import type { Falsy, StyleItem } from '../../types';
 import { type CombinedStyle, getCombinedStyleScopes, getCombinedStyleStyles, isCombinedStyle } from '../combinedStyle';
 import { createCombinedStyleTokenWrapper, getStyleTokenValues } from './item';
-import { getCombinedStylePool } from './pool';
+import { getCachedTokenWrapper, getCombinedStylePool } from './pool';
 import { mergeTokenOverrides, mergeTokenValues, type StyleTokenValues } from './tokenValues';
 
 export type CombinedStyleArg<T extends object> =
@@ -31,8 +31,12 @@ export function getCombinedStyle<T extends object>(
     normalized.tokens,
   );
 
-  return result.tokensData
-    ? createCombinedStyleTokenWrapper(result.style, result.tokensData)
+  return result.tokens
+    ? getCachedTokenWrapper(
+      result.tokenCache,
+      result.tokens,
+      () => createCombinedStyleTokenWrapper(result.style, result.tokens!),
+    )
     : result.style;
 }
 

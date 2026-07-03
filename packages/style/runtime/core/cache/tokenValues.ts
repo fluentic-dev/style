@@ -13,7 +13,7 @@ export type MutableTokenValues = {
   ids: string[] | null;
   values: unknown[] | null;
   lookup: Record<string, unknown> | null;
-  indexLookup: Record<string, number> | null;
+  index: Record<string, number> | null;
 };
 
 export function createMutableTokenValues(base: StyleTokenValues | null): MutableTokenValues {
@@ -21,7 +21,7 @@ export function createMutableTokenValues(base: StyleTokenValues | null): Mutable
     ids: base ? base.ids.slice() : null,
     values: base ? base.values.slice() : null,
     lookup: base ? { ...base.lookup } : null,
-    indexLookup: base ? createTokenIndexLookup(base.ids) : null,
+    index: base ? createTokenIndexLookup(base.ids) : null,
   };
 }
 
@@ -43,12 +43,12 @@ export function addTokenValue(
   if (!values.ids) values.ids = [];
   if (!values.values) values.values = [];
   if (!values.lookup) values.lookup = Object.create(null);
-  if (!values.indexLookup) values.indexLookup = Object.create(null);
+  if (!values.index) values.index = Object.create(null);
 
   const ids = values.ids!;
   const tokenValues = values.values!;
   const lookup = values.lookup!;
-  const indexLookup = values.indexLookup!;
+  const indexLookup = values.index!;
   const index = indexLookup[id];
 
   if (index === undefined) {

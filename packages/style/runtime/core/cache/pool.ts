@@ -27,21 +27,25 @@ export type CombinedStylePool = {
 
 export type CombinedStylePoolResult<Styles = unknown> = {
   style: CombinedStyle<Styles>;
-  tokensData: StyleTokenValues | null;
-  isTokenDataChanged: boolean;
+  tokenCache: TokenWrapperCache | null;
+  tokens: StyleTokenValues | null;
 };
+
+export type TokenWrapperCache = Map<string, CombinedStyle>;
 
 type PoolValue = {
   style: CombinedStyle | null;
-  isScopeTokensCached: boolean;
-  scopeTokens: StyleTokenValues | null;
-  scopeTokenNameFormat: typeof CSS_CONFIG.tokenNameFormat;
+  tokenCache: TokenWrapperCache | null;
+  h: boolean;
+  s: StyleTokenValues | null;
+  f: typeof CSS_CONFIG.tokenNameFormat;
   updatedAt: number;
 };
 
 type PoolNode = CacheTreeNode<unknown, PoolValue>;
 
 const DEFAULT_TTL = 1000 * 60 * 5;
+const TOKEN_WRAPPER_CACHE_LIMIT = 32;
 
 let configuredPool: CombinedStylePool | null = null;
 let configuredPoolTTL = -1;
@@ -72,8 +76,8 @@ export function createCombinedStylePool(ttl = DEFAULT_TTL): CombinedStylePool {
 
         return {
           style: createCombinedStyleFacade(styles, allScopes) as CombinedStyle<typeof styles>,
-          tokensData: collected.tokensData,
-          isTokenDataChanged: collected.isTokenDataChanged,
+          tokenCache: null,
+          tokens: collected.tokens,
         };
       }
 
@@ -90,8 +94,8 @@ export function createCombinedStylePool(ttl = DEFAULT_TTL): CombinedStylePool {
         scheduleCleanup();
         return {
           style: node.value.style as CombinedStyle<typeof styles>,
-          tokensData: collected.tokensData,
-          isTokenDataChanged: collected.isTokenDataChanged,
+          tokenCache: collected.tokens ? getTokenWrapperCache(node.value) : null,
+          tokens: collected.tokens,
         };
       }
 
@@ -103,8 +107,8 @@ export function createCombinedStylePool(ttl = DEFAULT_TTL): CombinedStylePool {
 
       return {
         style: node.value.style as CombinedStyle<typeof styles>,
-        tokensData: collected.tokensData,
-        isTokenDataChanged: collected.isTokenDataChanged,
+        tokenCache: collected.tokens ? getTokenWrapperCache(node.value) : null,
+        tokens: collected.tokens,
       };
     },
 
@@ -123,6 +127,44 @@ export function createCombinedStylePool(ttl = DEFAULT_TTL): CombinedStylePool {
 
     (timer as { unref?: () => void; }).unref?.();
   }
+}
+
+export function getCachedTokenWrapper<T extends CombinedStyle>(
+  cache: TokenWrapperCache | null,
+  tokens: StyleTokenValues,
+  create: () => T,
+): T {
+  if (!cache) {
+    return create();
+  }
+
+  const key = getTokenWrapperCacheKey(tokens);
+  const cached = cache.get(key) as T | undefined;
+
+  if (cached) {
+    cache.delete(key);
+    cache.set(key, cached);
+    return cached;
+  }
+
+  const value = create();
+  cache.set(key, value);
+
+  if (cache.size > TOKEN_WRAPPER_CACHE_LIMIT) {
+    const oldest = cache.keys().next().value;
+    if (oldest !== undefined) cache.delete(oldest);
+  }
+
+  return value;
+}
+
+function getTokenWrapperCache(node: PoolValue) {
+  if (!node.tokenCache) node.tokenCache = new Map();
+  return node.tokenCache;
+}
+
+function getTokenWrapperCacheKey(tokens: StyleTokenValues) {
+  return tokens.ids.join('\x1f') + '\x1e' + tokens.values.join('\x1f');
 }
 
 function collectItems(
@@ -152,16 +194,14 @@ function collectItems(
     return {
       node: currentNode,
       scopes,
-      tokensData: null,
-      isTokenDataChanged: !!prevTokensData,
+      tokens: null,
     };
   }
 
   return {
     node: currentNode,
     scopes,
-    tokensData,
-    isTokenDataChanged: tokensData !== prevTokensData,
+    tokens: tokensData,
   };
 }
 
@@ -195,8 +235,8 @@ function getScopeTokenValues(
 ) {
   const tokenNameFormat = CSS_CONFIG.tokenNameFormat;
 
-  if (node && node.value.isScopeTokensCached && node.value.scopeTokenNameFormat === tokenNameFormat) {
-    return node.value.scopeTokens;
+  if (node && node.value.h && node.value.f === tokenNameFormat) {
+    return node.value.s;
   }
 
   const values = createMutableTokenValues(null);
@@ -209,9 +249,9 @@ function getScopeTokenValues(
   const tokens = finishTokenValues(null, values);
 
   if (node) {
-    node.value.isScopeTokensCached = true;
-    node.value.scopeTokens = tokens;
-    node.value.scopeTokenNameFormat = tokenNameFormat;
+    node.value.h = true;
+    node.value.s = tokens;
+    node.value.f = tokenNameFormat;
   }
 
   return tokens;
@@ -247,9 +287,10 @@ function createPoolNode(): PoolNode {
 function createPoolValue(): PoolValue {
   return {
     style: null,
-    isScopeTokensCached: false,
-    scopeTokens: null,
-    scopeTokenNameFormat: undefined,
+    tokenCache: null,
+    h: false,
+    s: null,
+    f: undefined,
     updatedAt: Date.now(),
   };
 }
