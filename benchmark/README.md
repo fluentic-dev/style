@@ -15,7 +15,7 @@ reports are local artifacts and are ignored by git.
 - `pnpm bench:stress` adds larger row-count scenarios so scaling issues do not hide behind a small dashboard.
 - `pnpm bench:fluentic-cache` runs a browser microbenchmark for warmed runtime style/cache behavior. It compares Fluentic parent/child `combineStyle` cache shapes, css-prop cache reuse, no-css JSX runtime overhead, and hoisted/inline dynamic Goober, Emotion, and styled-components variants.
 - `pnpm bench:dynamic-values` runs a browser microbenchmark for arbitrary values such as color, opacity, transform, and shadow width. It compares the recommended CSS-variable path across libraries against Fluentic inline dynamic style generation as the intentional cliff case.
-- `pnpm bench:ssr-style` runs a Goober-style SSR render-only microbenchmark for runtime styled/object resolution work. It compares Goober, styled-components, Emotion, Fluentic dynamic runtime style creation, and Fluentic hoisted runtime style switching without server stylesheet extraction.
+- `pnpm bench:ssr-style` compiles Fluentic source-shaped fixtures to production extracted output, then runs server-render style-resolution benchmarks for an app-shaped dashboard table and repeated component composition. It measures className, css-prop, `combineStyle()`, scope, and token override work during `renderToString()` without pretending Fluentic has a server stylesheet collection step.
 
 Fluentic is reported in separate build modes:
 
@@ -34,9 +34,30 @@ excluded unless `INCLUDE_EXPERIMENTAL=1` is set.
 - `runtime-css-prop`: Fluentic runtime path using `css` props and `combineStyle`; this is intentionally separated from the extracted/static lane.
 - `style-cache-browser`: warmed browser cache stress lane. Cross-library variants run in fresh browser contexts, initialize only the selected library family, and rotate variant order across repeats. Fluentic-specific variants cover repeated css-prop cache hits, precomputed className output, same-map and new-map `combineStyle` paths, inline dynamic style creation, and the no-css JSX runtime fast path.
 - `dynamic-value-browser`: arbitrary dynamic value lane. Recommended variants keep style rules static and move per-item values through CSS custom properties; inline dynamic style creation is retained as a warning/control variant.
-- `ssr-style-render-only`: `renderToString` microbenchmark inspired by Goober's benchmark shape. This is for runtime CSS-in-JS render/style resolution cost, not for static CSS modules, extraction-first libraries, or server stylesheet collection APIs.
+- `ssr-style-render-only`: `renderToString` dashboard/table and repeated composition benchmark for server-side className, css-prop, scope, merge, and style-prop resolution. Fluentic uses extracted CSS, so this lane measures the render work that remains after extraction rather than server stylesheet collection.
 - `stress-dashboard`: the same dashboard shape at larger row counts via `pnpm bench:stress`.
 - `build-output`: contract reports include build time, JS bytes, CSS bytes, file count, style tag count, and stylesheet rule count.
+
+## Current SSR Style Snapshot
+
+The latest default `pnpm bench:ssr-style` report is
+`benchmark/main/results/ssr-style-1783120218644.json`, created
+`2026-07-03T23:10:18.640Z`.
+
+At 500 table/dashboard rows, the plain React className plus style variables
+baseline rendered at 7.238 ms mean. The compiled Fluentic
+direct css-prop case measured 6.510 ms mean, or 0.90x that
+baseline. The compiled Fluentic scoped composition case measured 6.965 ms mean,
+or 0.96x baseline. The compiled StyleX dashboard case measured
+7.238 ms mean, or 1.00x baseline. The compiled Fluentic token
+override case measured 7.352 ms mean, or 1.02x baseline.
+
+At 500 composition rows, the plain React manual class/style merge baseline
+rendered at 8.760 ms mean. Compiled Fluentic direct css-prop composition measured
+7.026 ms mean, or 0.80x that baseline. Compiled Fluentic scoped composition
+measured 7.280 ms mean, or 0.83x baseline. Compiled StyleX composition measured
+8.480 ms mean, or 0.97x baseline. Compiled Fluentic scoped composition plus
+per-row token overrides measured 7.925 ms mean, or 0.90x baseline.
 
 ## Selection and Settings
 
@@ -57,7 +78,7 @@ excluded unless `INCLUDE_EXPERIMENTAL=1` is set.
 - Rotate app/variant order between repeats when a shared browser process is used.
 - For open-ended dynamic values, prefer CSS custom properties in the comparative lane so static/extracted libraries and runtime libraries are measured on their recommended survivable path.
 - Do not mix `bench:ssr-style` results with dashboard app results; they measure different bottlenecks.
-- Do not present render-only SSR microbenchmarks as full SSR CSS extraction numbers.
+- Do not present render-only SSR microbenchmarks as full page delivery, stylesheet collection, or hydration numbers.
 - Compare each library's documented best-practice path in the main app suite.
 - Keep API-parity or stress cases in separate lanes when a workload is not native to every library.
 - Keep extracted/static, runtime, and experimental apps labeled separately in reports.
@@ -70,5 +91,5 @@ The next useful additions are:
 
 - `variant-toggle`: known variants for size, tone, density, and active state. Runtime libraries should use documented prop/class APIs; static libraries should use recipe/class switching.
 - `wide-tree` and `deep-tree`: many sibling styled nodes and deeply nested styled nodes, matching common CSS-in-JS benchmark patterns.
-- SSR style collection/extraction paths for libraries that require an explicit server sheet or extraction API.
+- Explicit server stylesheet collection paths for libraries that require them, kept in a separate lane from Fluentic's extracted CSS class/style-prop resolution.
 - Chrome trace summaries for style recalculation, layout, paint, long tasks, and heap after repeated remount/update loops.
