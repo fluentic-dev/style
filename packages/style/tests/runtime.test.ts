@@ -41,10 +41,10 @@ import {
   getCombinedStyleScopes,
   getGlobalSheet,
   getLayerNameForRule,
-  getRuleCallsite,
   getRscClassName,
   getRscDevInitialStyleSelector,
   getRscStyleCss,
+  getRuleCallsite,
   getSheetRules,
   getToken,
   hoverTheme,
@@ -281,7 +281,10 @@ test('runtime merge debug sourcemap composes latest style site with previous val
 
   configureTestRuntime({ dev: true, sourcemapMode: 'value' });
   equal(getRuleCallsite(outlineRule.callsite, outlineRule.debug, outlineRule.debugField)?.line, 4);
-  equal(getRuleCallsite(outlineRule.callsite, outlineRule.debug, outlineRule.debugField)?.sourceUrl, '/src/merge-common.ts');
+  equal(
+    getRuleCallsite(outlineRule.callsite, outlineRule.debug, outlineRule.debugField)?.sourceUrl,
+    '/src/merge-common.ts',
+  );
 });
 
 test('style prop resolver strips debug element marker before walking css items', () => {

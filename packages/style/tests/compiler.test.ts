@@ -437,14 +437,16 @@ test('compiler sourcemap toStyle traces merged rules to the merge call', () => {
     result.rules.some((rule) =>
       rule.css.includes('color: blue') &&
       rule.trace?.line === mergeLine &&
-      rule.trace?.column === mergeColumn),
+      rule.trace?.column === mergeColumn
+    ),
     true,
   );
   equal(
     result.rules.some((rule) =>
       rule.css.includes('border-color: gray') &&
       rule.trace?.line === mergeLine &&
-      rule.trace?.column === mergeColumn),
+      rule.trace?.column === mergeColumn
+    ),
     true,
   );
 });
@@ -487,14 +489,16 @@ test('compiler sourcemap toValue traces merged rules to original fields', () => 
     result.rules.some((rule) =>
       rule.css.includes('color: blue') &&
       rule.trace?.line === 4 &&
-      rule.trace?.column === 3),
+      rule.trace?.column === 3
+    ),
     true,
   );
   equal(
     result.rules.some((rule) =>
       rule.css.includes('border-color: gray') &&
       rule.trace?.line === 9 &&
-      rule.trace?.column === 3),
+      rule.trace?.column === 3
+    ),
     true,
   );
 });

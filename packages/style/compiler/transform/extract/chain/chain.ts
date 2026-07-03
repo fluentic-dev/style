@@ -217,19 +217,21 @@ function compileStyleChainInto(
       return false;
     }
     const styleObj = applyTransform(styleArg.value as Record<string, unknown>, transform);
-    if (!addStyleItems(
-      styleObj,
-      null,
-      null,
-      atRules,
-      fileId,
-      type,
-      slotId,
-      items,
-      rules,
-      cssConfig,
-      callsiteOverride,
-    )) {
+    if (
+      !addStyleItems(
+        styleObj,
+        null,
+        null,
+        atRules,
+        fileId,
+        type,
+        slotId,
+        items,
+        rules,
+        cssConfig,
+        callsiteOverride,
+      )
+    ) {
       return false;
     }
   }
