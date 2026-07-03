@@ -67,8 +67,8 @@ export type ExtractedScopeItem = [
   slotId: string,
   dedupe: string,
   className: string,
-  valueOrHasParentSelector?: true | ExtractedItemValue,
-  hasParentSelector?: true,
+  valueOrHasParentSelector?: 1 | ExtractedItemValue,
+  hasParentSelector?: 1,
 ];
 
 export type RuntimeItemData = {

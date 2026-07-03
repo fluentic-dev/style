@@ -275,7 +275,7 @@ const scope = style.scope([
   const css = result.css.join('\\n');
 
   includes(result.code, 'createExtractedScope');
-  includes(result.code, 'true]');
+  includes(result.code, '1]');
   includes(css, 'color: pink');
   includes(css, 'color: blue');
   includes(css, ':where(');

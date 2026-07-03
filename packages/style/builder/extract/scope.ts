@@ -9,8 +9,8 @@ export type ExtractedScopeTuple = [
   slotId: string,
   dedupe: string,
   className: string,
-  valueOrHasParentSelector?: ExtractedItemValue | true,
-  hasParentSelector?: true,
+  valueOrHasParentSelector?: ExtractedItemValue | 1,
+  hasParentSelector?: 1,
 ];
 
 export type ExtractedScopeItem = ExtractedScopeTuple | StyleTokenOverride;

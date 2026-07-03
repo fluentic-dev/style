@@ -165,7 +165,7 @@ function buildItemsArray(
     }
 
     if (emitLegacyShape && item.hasParentSelector) {
-      elements.push(t.booleanLiteral(true));
+      elements.push(t.numericLiteral(1));
     }
 
     itemExpressions.push(t.arrayExpression(elements));
@@ -236,13 +236,21 @@ function getItemClassName(item: CompiledCssItem): string {
 function getItemValue(item: CompiledCssItem): ExtractedItemValue | undefined {
   const type = getItemType(item);
 
-  if (type === BUILDER_TYPE_SCOPE) return item[4] === true ? undefined : item[4] as ExtractedItemValue | undefined;
+  if (type === BUILDER_TYPE_SCOPE) {
+    return isExtractedScopeParentMarker(item[4])
+      ? undefined
+      : item[4] as ExtractedItemValue | undefined;
+  }
 
   if (type === BUILDER_TYPE_STYLE) {
     return (typeof item[0] === 'number' ? item[3] : item[2]) as ExtractedItemValue | undefined;
   }
 
   return item[4] as ExtractedItemValue | undefined;
+}
+
+function isExtractedScopeParentMarker(value: unknown) {
+  return value === 1 || value === true;
 }
 
 function buildItemValue(

@@ -197,7 +197,7 @@ function resolveItems(
           items.push(item);
         }
 
-        const hasParentSelector = item[4] === true || item[5] === true;
+        const hasParentSelector = isExtractedScopeParentMarker(item[4]) || isExtractedScopeParentMarker(item[5]);
         if (targetSlotId === slotId && hasParentSelector) {
           items.push(getScopeParentItem(String(item[3])));
         }
@@ -224,4 +224,8 @@ function getScopeParentItem(className: string): StateItem {
   const parentClassName = getScopeClassName(className, CSS_CONFIG.scopeClassNameFormat || null);
 
   return [parentClassName, parentClassName];
+}
+
+function isExtractedScopeParentMarker(value: unknown) {
+  return value === 1 || value === true;
 }

@@ -93,7 +93,7 @@ test('extracted scope parent selector applies target and child classes', () => {
     ['button-hover-bg', 'button-hover-bg-class'],
   ]);
   const extractedScope = createExtractedScope([
-    [BUILDER_TYPE_SCOPE, 'extracted-button', 'scope-button-bg', 'scope-button-bg-class', true],
+    [BUILDER_TYPE_SCOPE, 'extracted-button', 'scope-button-bg', 'scope-button-bg-class', 1],
   ]);
   const css = combineStyle(
     {

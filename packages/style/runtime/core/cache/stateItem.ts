@@ -168,7 +168,7 @@ function getStateItemValue(item: StateItem) {
         case BUILDER_TYPE_SLOT_OVERRIDE:
           return item[4];
         case BUILDER_TYPE_SCOPE:
-          return item[4] === true ? undefined : item[4];
+          return isExtractedScopeParentMarker(item[4]) ? undefined : item[4];
       }
     } else {
       return item[2];
@@ -176,6 +176,10 @@ function getStateItemValue(item: StateItem) {
   }
 
   return undefined;
+}
+
+function isExtractedScopeParentMarker(value: unknown) {
+  return value === 1 || value === true;
 }
 
 function resolveVariableValue(

@@ -414,7 +414,7 @@ function toExtractedScopeTuple(item: CompiledCssItem) {
   ];
 
   if (value !== undefined) tuple.push(value);
-  if (item.hasParentSelector) tuple.push(true);
+  if (item.hasParentSelector) tuple.push(1);
 
   return tuple as Parameters<typeof createExtractedScope>[0][number];
 }

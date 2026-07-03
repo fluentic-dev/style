@@ -1423,11 +1423,11 @@ function addExtractedScopeItem(
   const dedupe = String(sourceItem[2]);
   const className = String(sourceItem[3]);
   const value = sourceItem[4];
-  const hasParentSelector = value === true || sourceItem[5] === true;
+  const hasParentSelector = value === true || value === 1 || sourceItem[5] === true || sourceItem[5] === 1;
 
   const item = createCompiledItem(BUILDER_TYPE_SCOPE, slotId, dedupe, className, hasParentSelector);
 
-  if (value !== undefined && value !== true) {
+  if (value !== undefined && value !== true && value !== 1) {
     setCompiledItemValue(item, value as ExtractedItemValue);
   }
 

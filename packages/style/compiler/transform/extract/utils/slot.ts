@@ -180,7 +180,7 @@ function toExtractedScopeTuple(item: CompiledCssItem): Parameters<typeof createE
   ];
 
   if (item[4] !== undefined) tuple.push(item[4]);
-  if (item.hasParentSelector) tuple.push(true);
+  if (item.hasParentSelector) tuple.push(1);
 
   return tuple as Parameters<typeof createExtractedScope>[0][number];
 }
