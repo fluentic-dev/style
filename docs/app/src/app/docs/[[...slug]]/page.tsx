@@ -12,14 +12,11 @@ type PageProps = {
 };
 
 const docsOrder = [
-  ['why-fluentic', 'changing-existing-styles'],
-  ['why-fluentic', 'local-change-in-react'],
-  ['why-fluentic', 'when-styles-cross-boundaries'],
-  ['why-fluentic', 'staying-in-typescript'],
-  ['why-fluentic', 'component-style-composition'],
-  ['why-fluentic', 'public-styling-contracts'],
-  ['why-fluentic', 'reviewing-generated-styles'],
-  ['why-fluentic', 'the-style-model'],
+  ['why-fluentic', 'fluentic-approach'],
+  ['why-fluentic', 'debug-without-getting-lost'],
+  ['why-fluentic', 'extend-without-friction'],
+  ['why-fluentic', 'override-without-guessing'],
+  ['why-fluentic', 'extraction-without-lock-in'],
   ['learn', 'installation'],
   ['learn', 'styling-one-element'],
   ['learn', 'hover-focus-and-media'],
@@ -40,6 +37,7 @@ const docsOrder = [
   ['learn', 'recap'],
   ['beyond-the-basics', 'tracing-styles-in-real-apps'],
   ['beyond-the-basics', 'custom-style-builders'],
+  ['beyond-the-basics', 'multiple-style-functions'],
   ['beyond-the-basics', 'custom-chain-methods'],
   ['beyond-the-basics', 'custom-style-fields'],
   ['beyond-the-basics', 'priority-and-rule-order'],
@@ -47,26 +45,40 @@ const docsOrder = [
   ['beyond-the-basics', 'runtime-and-dynamic-styles'],
   ['beyond-the-basics', 'devtools-and-sourcemaps'],
   ['integrations', 'overview'],
+  ['integrations', 'options'],
   ['integrations', 'nextjs'],
   ['integrations', 'vite'],
   ['integrations', 'webpack'],
   ['integrations', 'rspack'],
+  ['integrations', 'farm'],
+  ['integrations', 'parcel'],
   ['integrations', 'babel'],
   ['integrations', 'custom-compiler'],
   ['integrations', 'jsx-runtime-setup'],
   ['integrations', 'runtime-only-mode'],
   ['integrations', 'static-extraction'],
-  ['design', 'keeping-styles-as-data'],
-  ['design', 'separating-behavior-from-declarations'],
+  ['design', 'style-builder'],
+  ['design', 'chains-and-selectors'],
+  ['design', 'custom-style-vocabulary'],
+  ['design', 'priority-model'],
+  ['design', 'runtime-and-extraction-contract'],
   ['design', 'giving-component-parts-identity'],
   ['design', 'outside-styles-target-public-parts'],
   ['design', 'components-own-their-implementation'],
   ['design', 'resolving-at-component-boundaries'],
+  ['design', 'style-resolution-and-cache'],
+  ['design', 'hoisting-inline-style-chains'],
   ['design', 'publishing-less-surface-area'],
   ['design', 'themes-as-style-data'],
   ['design', 'debugging-through-identity'],
   ['design', 'runtime-and-react'],
-  ['design', 'compiler-as-delivery'],
+  ['design', 'changing-existing-styles'],
+  ['design', 'local-change-in-react'],
+  ['design', 'when-styles-cross-boundaries'],
+  ['design', 'staying-in-typescript'],
+  ['design', 'component-style-composition'],
+  ['design', 'public-styling-contracts'],
+  ['design', 'reviewing-generated-styles'],
   ['design', 'tradeoffs'],
   ['reference', 'style'],
   ['reference', 'style-slot'],
@@ -85,6 +97,14 @@ const docsOrder = [
   ['reference', 'types'],
   ['reference', 'imports'],
   ['reference', 'plugin-options'],
+  ['benchmark', 'overview'],
+  ['benchmark', 'react-app'],
+  ['benchmark', 'contract'],
+  ['benchmark', 'style-cache'],
+  ['benchmark', 'dynamic-values'],
+  ['benchmark', 'ssr-style'],
+  ['benchmark', 'compiler'],
+  ['benchmark', 'bundle-size'],
 ];
 
 function renderInlineCode(value: string): ReactNode {
@@ -118,7 +138,7 @@ function getPager(slug: string[]) {
 
 export default async function Page(props: PageProps) {
   const params = await props.params;
-  const slug = params.slug?.length ? params.slug : ['why-fluentic', 'changing-existing-styles'];
+  const slug = params.slug?.length ? params.slug : ['why-fluentic', 'fluentic-approach'];
   const page = source.getPage(slug);
 
   if (!page) {
@@ -172,7 +192,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata(props: PageProps) {
   const params = await props.params;
-  const slug = params.slug?.length ? params.slug : ['why-fluentic', 'changing-existing-styles'];
+  const slug = params.slug?.length ? params.slug : ['why-fluentic', 'fluentic-approach'];
   const page = source.getPage(slug);
 
   if (!page) {

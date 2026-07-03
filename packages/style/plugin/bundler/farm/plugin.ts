@@ -9,6 +9,7 @@ import {
   type PluginCompiler,
   type PluginOptions,
   resolvePluginSourcemapFilePath,
+  transformCssOutput,
 } from '../../utils';
 import { hasCssMarker, replaceCssMarker } from '../../utils/cssMarker';
 import {
@@ -208,9 +209,13 @@ export function plugin(options: FarmPluginOptions = {}) {
     },
 
     finalizeResources: {
-      executor(param: { resourcesMap: FarmResourcesMap; }) {
+      async executor(param: { resourcesMap: FarmResourcesMap; }) {
         const current = state;
-        const css = current?.compiler.getExtractedCss();
+        const css = await transformCssOutput(
+          current?.compiler.getExtractedCss() ?? '',
+          options.cssOutput,
+          'fluentic-style.css',
+        );
         if (!css) return;
 
         return finalizeCssResources(param.resourcesMap, css);

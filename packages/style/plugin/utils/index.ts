@@ -1,6 +1,7 @@
 export * from './cache';
 export * from './compiler';
 export * from './constants';
+export * from './cssOutput';
 export * from './cssMarker';
 export * from './filter';
 export * from './injection';

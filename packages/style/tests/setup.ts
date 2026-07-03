@@ -43,7 +43,7 @@ import { createWebpackRuntimeModuleSource, prependWebpackRuntimeEntry } from '..
 import { injectDevCssLink } from '../plugin/nextjs/html';
 import nextLoader from '../plugin/nextjs/loader';
 import { nextRegistry } from '../plugin/nextjs/utils';
-import { createPluginCompiler, createTransformFilter } from '../plugin/utils';
+import { createPluginCompiler, createTransformFilter, transformCssOutput } from '../plugin/utils';
 import { normalizeSidecarRoutePath } from '../plugin/utils/sidecar/utils';
 import { createCombinedStylePool } from '../runtime/core/cache/pool';
 import { resolveStyleProp } from '../runtime/core/cache/prop';
@@ -132,6 +132,7 @@ export {
   setGlobalSheet,
   traceCallsite,
   traceDevSourcemaps,
+  transformCssOutput,
   transformElement,
   transformRscElement,
   viteStylePlugin,

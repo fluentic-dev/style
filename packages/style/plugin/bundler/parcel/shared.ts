@@ -12,6 +12,7 @@ import {
   getPluginBuildDevConfig,
   getPluginCacheDir,
   type PluginCompiler,
+  type PluginCssOutputOptions,
   type PluginOptions,
   resolvePluginSourcemapFilePath,
   writePluginCacheFile,
@@ -41,6 +42,7 @@ export type ParcelState = PluginCompiler & {
   cssCache: FileCssCache;
   cssConfig: BuildCssConfig;
   cssConfigHash: string;
+  cssOutput: PluginCssOutputOptions | undefined;
   sidecar: SourcemapSidecar | null;
 };
 
@@ -92,6 +94,7 @@ export function getParcelState(options: ParcelPluginOptions, pluginOptions: Plug
     cssCache,
     cssConfig: buildConfig.css,
     cssConfigHash,
+    cssOutput: pluginOptions.cssOutput,
     sidecar,
     entryDefines: getStyleEntryDefines(
       buildConfig,

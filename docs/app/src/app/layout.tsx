@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: ReactNode; }) {
   return (
     <html lang='en' data-scroll-behavior='smooth' suppressHydrationWarning>
       <body>
-        <RootProvider>{children}</RootProvider>
+        <RootProvider search={{ options: { type: 'static', api: `${basePath}/api/search` } }}>{children}</RootProvider>
       </body>
     </html>
   );

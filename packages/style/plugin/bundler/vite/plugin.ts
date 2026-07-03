@@ -1,5 +1,11 @@
 import type { Plugin } from 'vite';
-import { invalidateFiles, PLUGIN_NAME, type PluginCssOptions, type PluginOptions } from '../../utils';
+import {
+  invalidateFiles,
+  PLUGIN_NAME,
+  type PluginCssOptions,
+  type PluginOptions,
+  transformCssOutput,
+} from '../../utils';
 import { hasCssMarker, replaceCssMarker } from '../../utils/cssMarker';
 import { formatError } from '../../utils/misc';
 import { getVirtualModuleId, RESOLVED_RUNTIME_MODULE_ID } from '../../utils/virtual';
@@ -78,10 +84,14 @@ export function plugin(options: PluginOptions = {}): Plugin {
       };
     },
 
-    generateBundle(_, bundle) {
+    async generateBundle(_, bundle) {
       if (state.isServe()) return;
 
-      const css = state.getState().compiler.getExtractedCss();
+      const css = await transformCssOutput(
+        state.getState().compiler.getExtractedCss(),
+        options.cssOutput,
+        'fluentic-style.css',
+      );
       if (!css) return;
 
       let cssAsset: CssAsset | null = null;

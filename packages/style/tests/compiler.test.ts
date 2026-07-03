@@ -36,6 +36,7 @@ import {
   style,
   test,
   testDir,
+  transformCssOutput,
   viteStylePlugin,
 } from './setup';
 
@@ -1954,6 +1955,28 @@ test('vite plugin imports runtime once from html entry', () => {
   equal(tags[0].attrs.type, 'module');
   equal(tags[0].children, 'import "virtual:fluentic-style";');
   equal(tags[0].injectTo, 'head-prepend');
+});
+
+test('plugin cssOutput transforms final css with lightningcss', async () => {
+  const css = '.x{user-select: none}';
+
+  const prefixed = await transformCssOutput(
+    css,
+    { targets: { safari: 8 << 16 } },
+    'test.css',
+  );
+
+  includes(prefixed, '-webkit-user-select: none');
+  includes(prefixed, 'user-select: none');
+
+  const unprefixed = await transformCssOutput(
+    css,
+    { targets: { safari: 8 << 16 }, vendorPrefixes: false },
+    'test.css',
+  );
+
+  notIncludes(unprefixed, '-webkit-user-select');
+  includes(unprefixed, 'user-select: none');
 });
 
 test('next dev css link is appended after layout children', () => {

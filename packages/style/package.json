@@ -236,10 +236,11 @@
     "test": "tsx ./tests/run-tests.ts"
   },
   "dependencies": {
-    "@parcel/config-default": "^2.16.1",
     "@jridgewell/trace-mapping": "0.3.31",
+    "@parcel/config-default": "^2.16.1",
     "css-what": "8.0.0",
     "csstype": "3.2.3",
+    "lightningcss": "^1.32.0",
     "oxc-resolver": "11.20.0",
     "picomatch": "4.0.4"
   },

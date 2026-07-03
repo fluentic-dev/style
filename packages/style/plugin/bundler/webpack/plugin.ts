@@ -12,6 +12,7 @@ import {
   PLUGIN_NAME,
   type PluginOptions,
   resolvePluginSourcemapFilePath,
+  transformCssOutput,
   writePluginCacheFile,
 } from '../../utils';
 import { formatError } from '../../utils/misc';
@@ -166,13 +167,17 @@ class WebpackPlugin implements WebpackPluginInstance {
     compiler.hooks.thisCompilation.tap(PLUGIN_NAME, (compilation) => {
       if (dev) return;
 
-      compilation.hooks.processAssets.tap(
+      compilation.hooks.processAssets.tapPromise(
         {
           name: PLUGIN_NAME,
           stage: compiler.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONS,
         },
-        () => {
-          const css = state.compiler.getExtractedCss();
+        async () => {
+          const css = await transformCssOutput(
+            state.compiler.getExtractedCss(),
+            this.options.cssOutput,
+            BUNDLE_CSS_FILE,
+          );
           if (!css) return;
 
           for (const asset of compilation.getAssets()) {

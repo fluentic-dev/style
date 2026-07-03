@@ -16,6 +16,8 @@ import {
   invalidateFiles,
   PLUGIN_CACHE_DIR,
   PLUGIN_NAME,
+  type PluginCssOutputOptions,
+  transformCssOutput,
 } from '../utils';
 import { writeCacheFile } from '../utils/cache';
 import { getStyleEntryDefines, getStyleRuntimeMode } from '../utils/runtimeEntry';
@@ -47,6 +49,7 @@ import {
   type NextLoaderState,
   nextRegistry,
   removeUndefinedValues,
+  replaceCssMarkerAsset,
   resolveNextCompilerOptions,
 } from './utils';
 
@@ -215,11 +218,17 @@ function createFluenticNextConfigResolved(
 
         if (dev) return;
 
-        patchTurbopackExtractedCss({
-          css: cssCache.getCss({
+        const css = await transformCssOutput(
+          cssCache.getCss({
             ...phaseState.buildConfig.css,
             configHash: phaseState.configHash,
           }),
+          options.cssOutput,
+          BUNDLE_CSS_FILE,
+        );
+
+        patchTurbopackExtractedCss({
+          css,
           distDir: metadata.distDir,
           projectDir: metadata.projectDir,
         });
@@ -284,7 +293,10 @@ function createFluenticNextConfigResolved(
       addTransformLoader(config, options, compilerId);
 
       addLifecyclePlugin(config, {
+        buildConfig: phaseState.buildConfig,
+        configHash: phaseState.configHash,
         compiler: state.compiler,
+        cssOutput: options.cssOutput,
         cssCache,
         dev: context.dev,
         sidecar,
@@ -457,7 +469,10 @@ function findCssFiles(dir: string): string[] {
 function addLifecyclePlugin(
   config: WebpackConfiguration,
   args: {
+    buildConfig: BuildConfig;
+    configHash: string;
     compiler: NextLoaderState['compiler'];
+    cssOutput: PluginCssOutputOptions | undefined;
     cssCache: ReturnType<typeof createFileCssCache>;
     dev: boolean;
     sidecar: SourcemapSidecar | null;
@@ -481,6 +496,36 @@ function addLifecyclePlugin(
         if (!files || !files.size) return;
 
         invalidateFiles(args.compiler, files);
+      });
+
+      webpackCompiler.hooks.thisCompilation.tap(PLUGIN_NAME, (compilation) => {
+        if (args.dev) return;
+
+        compilation.hooks.processAssets.tapPromise(
+          {
+            name: PLUGIN_NAME,
+            stage: webpackCompiler.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONS,
+          },
+          async () => {
+            const css = await transformCssOutput(
+              args.cssCache.getCss({
+                ...args.buildConfig.css,
+                configHash: args.configHash,
+              }),
+              args.cssOutput,
+              BUNDLE_CSS_FILE,
+            );
+
+            if (!css) return;
+
+            replaceCssMarkerAsset({
+              compiler: webpackCompiler,
+              compilation,
+              css,
+              marker: EXTRACTED_CSS_MARKER,
+            });
+          },
+        );
       });
     },
   });
