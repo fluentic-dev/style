@@ -226,6 +226,24 @@ export function App() {
   includes(result.code, '$$elementDebug: true');
 });
 
+test('debug transform injects createTheme callsite metadata', () => {
+  const result = injectStyleDebugData(
+    `
+import { createTheme, createToken } from '@fluentic/style';
+
+const color = createToken('blue');
+export const theme = createTheme([color('red')]);
+`,
+    '/project/src/styles.ts',
+    { rootDir: '/project' },
+  );
+
+  includes(result.code, 'createTheme([color(\'red\')], "');
+  includes(result.code, 'filePath: _styleDebugSourceUrl');
+  includes(result.code, 'line: 5');
+  notIncludes(result.code, 'color(\'red\', {');
+});
+
 test('debug transform skips host element marker metadata when explicitly disabled', () => {
   const result = injectStyleDebugData(
     `

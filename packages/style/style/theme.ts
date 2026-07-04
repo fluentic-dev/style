@@ -1,5 +1,6 @@
 import { createThemeClassName } from '../atomic/theme';
 import { createThemeData } from '../builder/data/create';
+import type { BuilderCallsite } from '../builder/data/data';
 import type { ThemeData } from '../builder/data/data';
 import { CSS_CONFIG } from '../config/config/css';
 import { createIdCounter, getId, type StableId } from '../utils/id';
@@ -14,6 +15,11 @@ export function resetStyleThemeIdCounter() {
 export function createTheme(
   tokens: readonly StyleTokenOverride[],
   stableId?: StableId | string,
+): ThemeData;
+export function createTheme(
+  tokens: readonly StyleTokenOverride[],
+  stableId?: StableId | string,
+  callsite?: BuilderCallsite | null,
 ): ThemeData {
   const normalizedStableId = typeof stableId === 'string'
     ? { name: stableId, id: stableId }
@@ -26,5 +32,5 @@ export function createTheme(
     CSS_CONFIG.themeNameFormat || null,
   );
 
-  return createThemeData(null, id, className, tokens);
+  return createThemeData(callsite ?? null, id, className, tokens);
 }

@@ -12,6 +12,8 @@ import {
   FN_STYLE_PLAIN,
   FN_STYLE_RAW,
   FN_STYLE_SCOPE,
+  FN_CREATE_THEME,
+  IMPORT_PATHS,
 } from '../../utils/constants';
 import { createImportSourceMatcher, type ImportSourceMatcher } from '../../utils/import_source';
 import { type EvalScope, evaluateNode } from '../evaluator/evaluator';
@@ -142,6 +144,7 @@ export function createDebugPlugin(args: PluginArgs) {
           state: PluginState,
         ) {
           annotateThemeCall(path.node, state, t);
+          annotateThemeCallsite(t, path, state, sourceContent);
 
           if (!state.styleNames.size) return;
           validateStaticSelectorArg(path, state);
@@ -210,6 +213,65 @@ export function createDebugPlugin(args: PluginArgs) {
       },
     };
   });
+}
+
+function annotateThemeCallsite(
+  t: typeof BabelTypes,
+  path: NodePath<BabelTypes.CallExpression>,
+  state: PluginState,
+  sourceContent: string | null,
+) {
+  if (!isCreateThemeCall(path.node, state)) return;
+  if (path.node.arguments[2]) return;
+
+  const loc = path.node.loc?.start;
+  if (!loc) return;
+
+  while (path.node.arguments.length < 2) {
+    path.node.arguments.push(t.identifier('undefined'));
+  }
+
+  const line = loc.line;
+  const column = loc.column + 1;
+  const sourceUrlRef = getSourceUrlId(t, state);
+  const sourceContentRef = sourceContent ? getSourceContentId(t, state) : null;
+
+  path.node.arguments.push(t.objectExpression([
+    t.objectProperty(
+      t.identifier('stack'),
+      t.binaryExpression(
+        '+',
+        t.binaryExpression(
+          '+',
+          t.binaryExpression(
+            '+',
+            t.stringLiteral('Error\\n    at '),
+            sourceUrlRef,
+          ),
+          t.stringLiteral(':' + line + ':' + column),
+        ),
+        t.stringLiteral(''),
+      ),
+    ),
+    t.objectProperty(t.identifier('filePath'), sourceUrlRef),
+    t.objectProperty(t.identifier('sourceUrl'), sourceUrlRef),
+    ...(sourceContentRef
+      ? [t.objectProperty(t.identifier('sourceContent'), sourceContentRef)]
+      : []),
+    t.objectProperty(t.identifier('line'), t.numericLiteral(line)),
+    t.objectProperty(t.identifier('column'), t.numericLiteral(column)),
+  ]));
+}
+
+function isCreateThemeCall(
+  node: BabelTypes.CallExpression,
+  state: PluginState,
+) {
+  if (node.callee.type !== 'Identifier') return false;
+
+  const imp = state.imports.get(node.callee.name);
+
+  return !!imp && IMPORT_PATHS.includes(imp.source) && imp.name === FN_CREATE_THEME;
 }
 
 function isHostJsxElement(name: BabelTypes.JSXOpeningElement['name']) {
