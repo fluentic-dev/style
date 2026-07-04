@@ -1,4 +1,4 @@
-import { base, menu, mountSingleBench, palette, rows } from '@benchmark/main';
+import { base, getRowVars, menu, mountSingleBench, palette, rows } from '@benchmark/main';
 import React from 'react';
 import styled from 'styled-components';
 const Page = styled.div(base.page);
@@ -116,7 +116,11 @@ function AppLayout({ view, tick, liteStyle }) {
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <Row key={r.id} className={liteStyle && i === activeRow ? 'is-active' : undefined}>
+                <Row
+                  key={r.id}
+                  className={liteStyle && i === activeRow ? 'is-active' : undefined}
+                  style={getRowVars(r, tick)}
+                >
                   <Cell>{r.name}</Cell>
                   <Cell>{r.plan}</Cell>
                   <Cell>{r.usage}%</Cell>
@@ -189,7 +193,13 @@ function StressAppLayout({ view, tick, liteStyle }) {
                 const usage = (row.usage + tick + index) % 100;
 
                 return (
-                  <StressRow key={row.id} $active={active} $highlight={index % 3 === tick % 3} $tone={tone}>
+                  <StressRow
+                    key={row.id}
+                    $active={active}
+                    $highlight={index % 3 === tick % 3}
+                    $tone={tone}
+                    style={getRowVars(row, tick)}
+                  >
                     <StressCell $tone={tone}>{row.name}</StressCell>
                     <Cell>{row.plan}</Cell>
                     <StressCell $tone={tone}>{usage}%</StressCell>

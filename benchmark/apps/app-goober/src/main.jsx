@@ -1,4 +1,4 @@
-import { base, menu, mountSingleBench, palette, rows } from '@benchmark/main';
+import { base, getRowVars, menu, mountSingleBench, palette, rows } from '@benchmark/main';
 import { css, setup } from 'goober';
 import React from 'react';
 setup(React.createElement);
@@ -78,7 +78,7 @@ function AppLayout({ view, tick, liteStyle }) {
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <tr key={r.id} className={liteStyle && i === activeRow ? s.rowActive : ''}>
+                <tr key={r.id} className={liteStyle && i === activeRow ? s.rowActive : ''} style={getRowVars(r, tick)}>
                   <td className={s.thtd}>{r.name}</td>
                   <td className={s.thtd}>{r.plan}</td>
                   <td className={s.thtd}>{r.usage}%</td>

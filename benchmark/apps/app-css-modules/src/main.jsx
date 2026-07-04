@@ -1,4 +1,4 @@
-import { menu, mountSingleBench, rows } from '@benchmark/main';
+import { getRowVars, menu, mountSingleBench, rows } from '@benchmark/main';
 import React from 'react';
 import s from './styles.module.css';
 function AppLayout({ view, tick, liteStyle }) {
@@ -45,7 +45,7 @@ function AppLayout({ view, tick, liteStyle }) {
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <tr key={r.id} className={liteStyle && i === activeRow ? s.rowActive : ''}>
+                <tr key={r.id} className={liteStyle && i === activeRow ? s.rowActive : ''} style={getRowVars(r, tick)}>
                   <td className={s.thtd}>{r.name}</td>
                   <td className={s.thtd}>{r.plan}</td>
                   <td className={s.thtd}>{r.usage}%</td>

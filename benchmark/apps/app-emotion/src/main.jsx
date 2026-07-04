@@ -1,4 +1,4 @@
-import { base, menu, mountSingleBench, palette, rows } from '@benchmark/main';
+import { base, getRowVars, menu, mountSingleBench, palette, rows } from '@benchmark/main';
 import { css } from '@emotion/react';
 import React from 'react';
 const media900 = '@media (max-width: 900px)';
@@ -72,7 +72,7 @@ function AppLayout({ view, tick, liteStyle }) {
             </thead>
             <tbody>
               {rows.map((r, i) => (
-                <tr key={r.id} css={liteStyle && i === activeRow ? s.rowActive : undefined}>
+                <tr key={r.id} css={liteStyle && i === activeRow ? s.rowActive : undefined} style={getRowVars(r, tick)}>
                   <td css={s.thtd}>{r.name}</td>
                   <td css={s.thtd}>{r.plan}</td>
                   <td css={s.thtd}>{r.usage}%</td>

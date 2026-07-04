@@ -1,86 +1,91 @@
 export const benchmarkApps = [
   {
-    name: 'fluentic-style-extract-chain',
+    name: 'fluentic-style-extract-direct',
     filter: '@benchmark/app-fluentic-style',
     buildScript: 'build:extract',
     distDir: 'dist-extract',
     port: 5401,
-    extraQuery: '&fluenticMode=chain',
+    extraQuery: '&fluenticMode=direct',
     styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
   },
   {
-    name: 'fluentic-style-extract-chain-no-hoist',
-    filter: '@benchmark/app-fluentic-style',
-    buildScript: 'build:extract:no-hoist',
-    distDir: 'dist-extract-no-hoist',
-    port: 5412,
-    extraQuery: '&fluenticMode=chain',
-    lane: 'static-dashboard-no-hoist',
-    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
-  },
-  {
-    name: 'fluentic-style-inline-chain-hoist',
-    filter: '@benchmark/app-fluentic-style',
-    buildScript: 'build:extract',
-    distDir: 'dist-extract',
-    port: 5413,
-    extraQuery: '&fluenticMode=chain&inlineStyle=1',
-    lane: 'inline-extracted-dashboard',
-    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
-  },
-  {
-    name: 'fluentic-style-inline-chain-no-hoist',
-    filter: '@benchmark/app-fluentic-style',
-    buildScript: 'build:extract:no-hoist',
-    distDir: 'dist-extract-no-hoist',
-    port: 5414,
-    extraQuery: '&fluenticMode=chain&inlineStyle=1',
-    lane: 'inline-extracted-dashboard',
-    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
-  },
-  {
-    name: 'fluentic-style-inline-chain-hoist-stress',
-    filter: '@benchmark/app-fluentic-style',
-    buildScript: 'build:extract',
-    distDir: 'dist-extract',
-    port: 5415,
-    extraQuery: '&fluenticMode=chain&inlineStyle=1&stressStyle=1',
-    lane: 'inline-dynamic-style-stress',
-    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
-  },
-  {
-    name: 'fluentic-style-inline-chain-no-hoist-stress',
-    filter: '@benchmark/app-fluentic-style',
-    buildScript: 'build:extract:no-hoist',
-    distDir: 'dist-extract-no-hoist',
-    port: 5416,
-    extraQuery: '&fluenticMode=chain&inlineStyle=1&stressStyle=1',
-    lane: 'inline-dynamic-style-stress',
-    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
-  },
-  {
-    name: 'fluentic-style-extract-simple',
+    name: 'fluentic-style-extract-scoped',
     filter: '@benchmark/app-fluentic-style',
     buildScript: 'build:extract',
     distDir: 'dist-extract',
     port: 5402,
-    extraQuery: '&fluenticMode=simple',
+    extraQuery: '&fluenticMode=scoped',
+    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
+  },
+  {
+    name: 'fluentic-style-extract-token',
+    filter: '@benchmark/app-fluentic-style',
+    buildScript: 'build:extract',
+    distDir: 'dist-extract',
+    port: 5403,
+    extraQuery: '&fluenticMode=token',
+    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
+  },
+  {
+    name: 'fluentic-style-diagnostic-no-hoist',
+    filter: '@benchmark/app-fluentic-style',
+    buildScript: 'build:extract:no-hoist',
+    distDir: 'dist-extract-no-hoist',
+    port: 5412,
+    extraQuery: '&fluenticMode=scoped',
+    internal: true,
+    lane: 'fluentic-diagnostic-no-hoist',
+    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
+  },
+  {
+    name: 'fluentic-style-diagnostic-inline-hoist',
+    filter: '@benchmark/app-fluentic-style',
+    buildScript: 'build:extract',
+    distDir: 'dist-extract',
+    port: 5413,
+    extraQuery: '&fluenticMode=scoped&inlineStyle=1',
+    internal: true,
+    lane: 'fluentic-diagnostic-inline',
+    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
+  },
+  {
+    name: 'fluentic-style-diagnostic-inline-no-hoist',
+    filter: '@benchmark/app-fluentic-style',
+    buildScript: 'build:extract:no-hoist',
+    distDir: 'dist-extract-no-hoist',
+    port: 5414,
+    extraQuery: '&fluenticMode=scoped&inlineStyle=1',
+    internal: true,
+    lane: 'fluentic-diagnostic-inline',
+    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
+  },
+  {
+    name: 'fluentic-style-diagnostic-inline-stress',
+    filter: '@benchmark/app-fluentic-style',
+    buildScript: 'build:extract',
+    distDir: 'dist-extract',
+    port: 5415,
+    extraQuery: '&fluenticMode=scoped&inlineStyle=1&stressStyle=1',
+    internal: true,
+    lane: 'fluentic-diagnostic-inline-stress',
     styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
   },
   {
     name: 'fluentic-runtime-css-prop',
     filter: '@benchmark/app-fluentic-runtime',
-    port: 5403,
+    port: 5416,
     extraQuery: '',
+    internal: true,
     lane: 'runtime-css-prop',
     styleContract: { minRules: 20 },
   },
   {
-    name: 'fluentic-runtime-css-prop-stress',
+    name: 'fluentic-runtime-css-prop-diagnostic-stress',
     filter: '@benchmark/app-fluentic-runtime',
     port: 5417,
     extraQuery: '&stressStyle=1',
-    lane: 'inline-dynamic-style-stress',
+    internal: true,
+    lane: 'fluentic-diagnostic-inline-stress',
     styleContract: { minRules: 20 },
   },
   { name: 'emotion', filter: '@benchmark/app-emotion', port: 5405, extraQuery: '' },
@@ -89,6 +94,7 @@ export const benchmarkApps = [
     filter: '@benchmark/app-emotion',
     port: 5418,
     extraQuery: '&stressStyle=1',
+    internal: true,
     lane: 'inline-dynamic-style-stress',
   },
   {
@@ -102,6 +108,7 @@ export const benchmarkApps = [
     filter: '@benchmark/app-styled-components',
     port: 5419,
     extraQuery: '&stressStyle=1',
+    internal: true,
     lane: 'inline-dynamic-style-stress',
   },
   { name: 'goober', filter: '@benchmark/app-goober', port: 5407, extraQuery: '' },
@@ -110,6 +117,7 @@ export const benchmarkApps = [
     filter: '@benchmark/app-goober',
     port: 5420,
     extraQuery: '&stressStyle=1',
+    internal: true,
     lane: 'inline-dynamic-style-stress',
   },
   { name: 'stylex', filter: '@benchmark/app-stylex', port: 5408, extraQuery: '', styleContract: { maxStyleTags: 0 } },
@@ -278,6 +286,7 @@ export function selectBenchmarkApps() {
 export function getBenchmarkSelection() {
   const skipFluenticStyle = process.env.SKIP_FLUENTIC_STYLE === '1';
   const includeExperimental = process.env.INCLUDE_EXPERIMENTAL === '1';
+  const includeInternal = process.env.INCLUDE_INTERNAL === '1';
   const selectedApps = (process.env.APP || '')
     .split(',')
     .map((item) => item.trim())
@@ -289,15 +298,15 @@ export function getBenchmarkSelection() {
   for (const app of benchmarkApps) {
     let reason = '';
 
+    const explicitSelection = selectedApps.includes(app.name) || selectedApps.includes(app.filter);
+
     if (skipFluenticStyle && app.name.startsWith('fluentic-')) {
       reason = 'SKIP_FLUENTIC_STYLE=1';
+    } else if (!includeInternal && app.internal && !explicitSelection) {
+      reason = 'internal diagnostic app excluded; set INCLUDE_INTERNAL=1 or select it with APP';
     } else if (!includeExperimental && app.experimental) {
       reason = 'experimental app excluded; set INCLUDE_EXPERIMENTAL=1';
-    } else if (
-      selectedApps.length &&
-      !selectedApps.includes(app.name) &&
-      !selectedApps.includes(app.filter)
-    ) {
+    } else if (selectedApps.length && !explicitSelection) {
       reason = `not selected by APP=${selectedApps.join(',')}`;
     }
 

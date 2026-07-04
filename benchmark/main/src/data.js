@@ -28,6 +28,13 @@ export const rows = Array.from(
   }),
 );
 export const menu = ['Overview', 'Customers', 'Billing', 'Rules', 'Reports', 'Settings'];
+export function getRowVars(row, tick) {
+  return {
+    '--bench-row-hue': String((row.id * 17 + tick * 23) % 360),
+    '--bench-row-opacity': String(0.72 + ((row.id + tick) % 8) / 30),
+    '--bench-row-offset': ((row.id + tick) % 7) - 3 + 'px',
+  };
+}
 export const palette = {
   bg: '#0f172a',
   panel: '#111827',

@@ -1,201 +1,245 @@
-import { base, menu, mountSingleBench, palette, rows } from '@benchmark/main';
-import { style } from '@fluentic/style';
-import { fluenticClassNames as c } from './fluenticStyles';
+import { base, getRowVars, menu, mountSingleBench, palette, rows } from '@benchmark/main';
+import { bindScope, combineStyle, createToken, style } from '@fluentic/style';
 
 const params = new URLSearchParams(window.location.search);
-const useChain = params.get('fluenticMode') !== 'simple';
+const fluenticMode = params.get('fluenticMode') || 'direct';
 const useInlineStyle = params.get('inlineStyle') === '1';
 const useStressStyle = params.get('stressStyle') === '1';
-const panelSlotClass = useChain ? c.panelSlotChain : c.panelSlotSimple;
 
-function getTone(row, tick) {
-  const tones = [palette.accent, '#a78bfa', '#34d399', '#fb7185', '#f59e0b', '#60a5fa'];
+const accentToken = createToken(palette.accent, 'bench-accent');
+const surfaceToken = createToken(palette.panel, 'bench-surface');
+const ringToken = createToken('rgba(34,211,238,0.20)', 'bench-ring');
 
-  return tones[(row.id + tick) % tones.length];
+const appStyles = {
+  page: style.slot(base.page),
+  header: style.slot(base.header),
+  shell: style.slot(base.shell),
+  card: style.slot(base.card),
+  detailsHero: style.slot(base.detailsHero),
+  select: style.slot(base.select),
+  title: style.slot(base.title).media('(max-width: 900px)', { fontSize: 18 }),
+  muted: style.slot(base.muted).hover({ color: '#cbd5e1' }),
+  menuBtn: style.slot(base.menuBtn).hover({ borderColor: palette.accent }),
+  table: style.slot(base.table),
+  thtd: style.slot(base.thtd),
+  row: style.slot({}),
+  rowActive: style.slot({ background: 'rgba(34,211,238,0.08)' }),
+  badge: style.slot(base.badge),
+};
+
+const scopedStyles = {
+  ...appStyles,
+  card: style.slot(base.card).media('(max-width: 900px)', { padding: 10 }),
+  row: style.slot({
+    background: surfaceToken,
+    boxShadow: `inset 3px 0 0 ${ringToken}`,
+  }),
+  badge: style.slot({
+    ...base.badge,
+    color: accentToken,
+  }),
+};
+
+const compactScope = style.scope([
+  scopedStyles.card({ padding: 10 }),
+  scopedStyles.menuBtn({ minHeight: 34 }),
+]);
+const activeScope = style.scope([
+  scopedStyles.row({ background: 'rgba(34,211,238,0.08)' }),
+  scopedStyles.badge({ fontWeight: 700 }),
+]);
+const successScope = style.scope([
+  scopedStyles.badge({ color: '#0f766e' }),
+]);
+const trialScope = style.scope([
+  scopedStyles.badge({ color: '#b45309' }),
+]);
+const blockedScope = style.scope([
+  scopedStyles.badge({ color: '#dc2626' }),
+]);
+
+function getStatusScope(row) {
+  if (row.status === 'blocked') return blockedScope;
+  if (row.status === 'trial') return trialScope;
+  return successScope;
 }
 
-function AppLayout({ view, tick, liteStyle }) {
-  if (useStressStyle) {
-    return <StressAppLayout view={view} tick={tick} liteStyle={liteStyle} />;
-  }
+function getAccent(row) {
+  if (row.status === 'blocked') return '#dc2626';
+  if (row.status === 'trial') return '#b45309';
+  return '#0f766e';
+}
 
-  if (useInlineStyle) {
-    return <InlineAppLayout view={view} tick={tick} liteStyle={liteStyle} />;
-  }
+function getSurface(row) {
+  if (row.status === 'blocked') return 'rgba(254,242,242,0.92)';
+  if (row.status === 'trial') return 'rgba(255,251,235,0.92)';
+  return 'rgba(240,253,250,0.92)';
+}
 
+function getRing(row) {
+  if (row.status === 'blocked') return 'rgba(220,38,38,0.22)';
+  if (row.status === 'trial') return 'rgba(180,83,9,0.22)';
+  return 'rgba(15,118,110,0.24)';
+}
+
+function AppLayout(props) {
+  if (useStressStyle) return <StressAppLayout {...props} />;
+  if (useInlineStyle) return <InlineAppLayout {...props} />;
+  if (fluenticMode === 'token') return <TokenAppLayout {...props} />;
+  if (fluenticMode === 'scoped') return <ScopedAppLayout {...props} />;
+  return <DirectAppLayout {...props} />;
+}
+
+function DirectAppLayout({ view, tick, liteStyle }) {
   const activeRow = tick % rows.length;
+  const css = appStyles;
+
   if (view === 'details') {
     return (
-      <div className={c.page}>
-        <header className={c.header}>
+      <div css={css.page}>
+        <header css={css.header}>
           <strong>Fluentic Style Admin</strong>
-          <select className={c.select}>
+          <select css={css.select}>
             <option>Last 7 days</option>
           </select>
         </header>
-        <section className={c.detailsHero}>
-          <h1 className={c.panelTitle}>Customer Detail</h1>
-          <p className={c.panelDesc}>Real route view mount simulation.</p>
+        <section css={css.detailsHero}>
+          <h1 css={css.title}>Customer Detail</h1>
+          <p css={css.muted}>Real route view mount simulation.</p>
         </section>
       </div>
     );
   }
+
+  return renderDashboard({
+    css,
+    getRowCss: (_row, index) => [css.row, liteStyle && index === activeRow && css.rowActive],
+    getBadgeCss: () => css.badge,
+    tick,
+  });
+}
+
+function ScopedAppLayout({ view, tick, liteStyle }) {
+  const activeRow = tick % rows.length;
+  const css = combineStyle(
+    scopedStyles,
+    bindScope(scopedStyles.card, compactScope),
+  );
+
+  if (view === 'details') {
+    return (
+      <div css={css.page}>
+        <header css={css.header}>
+          <strong>Fluentic Style Admin</strong>
+          <select css={css.select}>
+            <option>Last 7 days</option>
+          </select>
+        </header>
+        <section css={css.detailsHero}>
+          <h1 css={css.title}>Customer Detail</h1>
+          <p css={css.muted}>Real route view mount simulation.</p>
+        </section>
+      </div>
+    );
+  }
+
+  return renderDashboard({
+    css,
+    getRowCss: (row, index) => {
+      const rowCss = combineStyle(
+        scopedStyles,
+        bindScope(scopedStyles.row, getStatusScope(row), liteStyle && index === activeRow && activeScope),
+      );
+      return rowCss.row;
+    },
+    getBadgeCss: (row, index) => {
+      const badgeCss = combineStyle(
+        scopedStyles,
+        bindScope(scopedStyles.badge, getStatusScope(row), liteStyle && index === activeRow && activeScope),
+      );
+      return badgeCss.badge;
+    },
+    tick,
+  });
+}
+
+function TokenAppLayout({ view, tick, liteStyle }) {
+  const activeRow = tick % rows.length;
+  const css = scopedStyles;
+
+  if (view === 'details') {
+    return (
+      <div css={css.page}>
+        <header css={css.header}>
+          <strong>Fluentic Style Admin</strong>
+          <select css={css.select}>
+            <option>Last 7 days</option>
+          </select>
+        </header>
+        <section css={css.detailsHero}>
+          <h1 css={css.title}>Customer Detail</h1>
+          <p css={css.muted}>Real route view mount simulation.</p>
+        </section>
+      </div>
+    );
+  }
+
+  return renderDashboard({
+    css,
+    getRowCss: (row, index) => {
+      const rowCss = combineStyle(
+        scopedStyles,
+        bindScope(scopedStyles.row, liteStyle && index === activeRow && activeScope),
+        accentToken(getAccent(row)),
+        surfaceToken(getSurface(row)),
+        ringToken(getRing(row)),
+      );
+      return rowCss.row;
+    },
+    getBadgeCss: (row) => {
+      const badgeCss = combineStyle(scopedStyles, accentToken(getAccent(row)));
+      return badgeCss.badge;
+    },
+    tick,
+  });
+}
+
+function renderDashboard({ css, getRowCss, getBadgeCss, tick }) {
   return (
-    <div className={c.page}>
-      <header className={c.header}>
+    <div css={css.page}>
+      <header css={css.header}>
         <strong>Fluentic Style Admin</strong>
-        <select className={c.select}>
+        <select css={css.select}>
           <option>Last 7 days</option>
         </select>
       </header>
-      <div className={c.shell}>
-        <section className={c.card}>
-          {menu.map((m) => <button key={m} className={c.menuBtn}>{m}</button>)}
+      <div css={css.shell}>
+        <section css={css.card}>
+          {menu.map((item) => <button key={item} css={css.menuBtn}>{item}</button>)}
         </section>
-        <section className={panelSlotClass}>
-          <h1 className={c.panelTitle}>Admin Dashboard</h1>
-          <p className={c.panelDesc}>Real world mount + update benchmark.</p>
-          <table className={c.table}>
+        <section css={css.card}>
+          <h1 css={css.title}>Admin Dashboard</h1>
+          <p css={css.muted}>Real world mount + update benchmark.</p>
+          <table css={css.table}>
             <thead>
               <tr>
-                <th className={c.thtd}>Name</th>
-                <th className={c.thtd}>Plan</th>
-                <th className={c.thtd}>Usage</th>
-                <th className={c.thtd}>Status</th>
+                <th css={css.thtd}>Name</th>
+                <th css={css.thtd}>Plan</th>
+                <th css={css.thtd}>Usage</th>
+                <th css={css.thtd}>Status</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => (
-                <tr key={r.id} className={liteStyle && i === activeRow ? c.rowActive : ''}>
-                  <td className={c.thtd}>{r.name}</td>
-                  <td className={c.thtd}>{r.plan}</td>
-                  <td className={c.thtd}>{r.usage}%</td>
-                  <td className={c.thtd}>
-                    <span className={c.badge}>{r.status}</span>
+              {rows.map((row, index) => (
+                <tr key={row.id} css={getRowCss(row, index)} style={getRowVars(row, tick)}>
+                  <td css={css.thtd}>{row.name}</td>
+                  <td css={css.thtd}>{row.plan}</td>
+                  <td css={css.thtd}>{row.usage}%</td>
+                  <td css={css.thtd}>
+                    <span css={getBadgeCss(row, index)}>{row.status}</span>
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
-        </section>
-      </div>
-    </div>
-  );
-}
-
-function StressAppLayout({ view, tick, liteStyle }) {
-  const accent = tick % 2 === 0 ? palette.accent : '#a78bfa';
-  const activeRow = tick % rows.length;
-
-  if (view === 'details') {
-    return (
-      <div css={style(base.page)}>
-        <header
-          css={style({
-            ...base.header,
-            borderColor: accent,
-            boxShadow: `0 0 0 1px ${accent}`,
-          })}
-        >
-          <strong>Fluentic Style Admin</strong>
-          <select css={style(base.select)}>
-            <option>Last 7 days</option>
-          </select>
-        </header>
-        <section
-          css={style({
-            ...base.detailsHero,
-            borderColor: accent,
-          })}
-        >
-          <h1 css={style({ ...base.title, color: accent }).media('(max-width: 900px)', { fontSize: 18 })}>
-            Customer Detail
-          </h1>
-          <p css={style(base.muted).hover({ color: accent })}>Real route view mount simulation.</p>
-        </section>
-      </div>
-    );
-  }
-
-  return (
-    <div css={style(base.page)}>
-      <header
-        css={style({
-          ...base.header,
-          borderColor: accent,
-          boxShadow: `0 0 0 1px ${accent}`,
-        })}
-      >
-        <strong>Fluentic Style Admin</strong>
-        <select css={style(base.select)}>
-          <option>Last 7 days</option>
-        </select>
-      </header>
-      <div css={style(base.shell)}>
-        <section css={style(base.card)}>
-          {menu.map((m, index) => (
-            <button
-              key={m}
-              css={style({
-                ...base.menuBtn,
-                borderColor: index === tick % menu.length ? accent : palette.border,
-                transform: index === tick % menu.length ? 'translateX(2px)' : 'none',
-              }).hover({ borderColor: accent })}
-            >
-              {m}
-            </button>
-          ))}
-        </section>
-        <section
-          css={style(base.card)
-            .media('(max-width: 900px)', { padding: 10 + (tick % 4) })
-            .media('(min-width: 700px)', { background: tick % 2 === 0 ? palette.panel : '#0b1220' })}
-        >
-          <h1 css={style({ ...base.title, color: accent }).media('(max-width: 900px)', { fontSize: 18 })}>
-            Admin Dashboard
-          </h1>
-          <p css={style(base.muted).hover({ color: accent })}>Real world mount + update benchmark.</p>
-          <table css={style(base.table)}>
-            <thead>
-              <tr>
-                <th css={style(base.thtd)}>Name</th>
-                <th css={style(base.thtd)}>Plan</th>
-                <th css={style(base.thtd)}>Usage</th>
-                <th css={style(base.thtd)}>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, index) => {
-                const tone = getTone(row, tick);
-                const active = liteStyle && index === activeRow;
-                const usage = (row.usage + tick + index) % 100;
-
-                return (
-                  <tr
-                    key={row.id}
-                    css={style({
-                      background: active ? `color-mix(in srgb, ${tone} 16%, transparent)` : 'transparent',
-                      color: index % 3 === tick % 3 ? '#f8fafc' : palette.text,
-                    })}
-                  >
-                    <td css={style({ ...base.thtd, borderColor: tone })}>{row.name}</td>
-                    <td css={style(base.thtd)}>{row.plan}</td>
-                    <td css={style({ ...base.thtd, color: tone })}>{usage}%</td>
-                    <td css={style(base.thtd)}>
-                      <span
-                        css={style({
-                          ...base.badge,
-                          borderColor: tone,
-                          color: tone,
-                          background: active ? `color-mix(in srgb, ${tone} 18%, transparent)` : 'transparent',
-                        })}
-                      >
-                        {row.status}
-                      </span>
-                    </td>
-                  </tr>
-                );
-              })}
             </tbody>
           </table>
         </section>
@@ -238,11 +282,9 @@ function InlineAppLayout({ view, tick, liteStyle }) {
     );
   }
 
-  const panelCss = useChain
-    ? style(base.card)
-      .media('(max-width: 900px)', { padding: compactPadding })
-      .media('(min-width: 700px)', { background: surface })
-    : style(base.card).media('(max-width: 900px)', { padding: compactPadding });
+  const panelCss = style(base.card)
+    .media('(max-width: 900px)', { padding: compactPadding })
+    .media('(min-width: 700px)', { background: surface });
 
   return (
     <div css={pageCss}>
@@ -254,15 +296,15 @@ function InlineAppLayout({ view, tick, liteStyle }) {
       </header>
       <div css={style(base.shell)}>
         <section css={style(base.card)}>
-          {menu.map((m, index) => (
+          {menu.map((item, index) => (
             <button
-              key={m}
+              key={item}
               css={style({
                 ...base.menuBtn,
                 borderColor: index === tick % menu.length ? accent : '#1e293b',
               }).hover({ borderColor: accent })}
             >
-              {m}
+              {item}
             </button>
           ))}
         </section>
@@ -279,24 +321,24 @@ function InlineAppLayout({ view, tick, liteStyle }) {
               </tr>
             </thead>
             <tbody>
-              {rows.map((r, i) => (
+              {rows.map((row, index) => (
                 <tr
-                  key={r.id}
-                  css={liteStyle && i === activeRow
+                  key={row.id}
+                  css={liteStyle && index === activeRow
                     ? style({ background: `color-mix(in srgb, ${accent} 14%, transparent)` })
                     : null}
                 >
-                  <td css={style(base.thtd)}>{r.name}</td>
-                  <td css={style(base.thtd)}>{r.plan}</td>
-                  <td css={style(base.thtd)}>{r.usage}%</td>
+                  <td css={style(base.thtd)}>{row.name}</td>
+                  <td css={style(base.thtd)}>{row.plan}</td>
+                  <td css={style(base.thtd)}>{row.usage}%</td>
                   <td css={style(base.thtd)}>
                     <span
                       css={style({
                         ...base.badge,
-                        borderColor: r.usage > 70 ? accent : '#334155',
+                        borderColor: row.usage > 70 ? accent : '#334155',
                       })}
                     >
-                      {r.status}
+                      {row.status}
                     </span>
                   </td>
                 </tr>
@@ -309,12 +351,8 @@ function InlineAppLayout({ view, tick, liteStyle }) {
   );
 }
 
-const lib = useInlineStyle
-  ? useChain
-    ? 'fluentic-style-inline-chain'
-    : 'fluentic-style-inline-simple'
-  : useChain
-  ? 'fluentic-style-chain'
-  : 'fluentic-style-simple';
+function StressAppLayout({ view, tick, liteStyle }) {
+  return <InlineAppLayout view={view} tick={tick} liteStyle={liteStyle} />;
+}
 
-mountSingleBench({ AppLayout, lib });
+mountSingleBench({ AppLayout, lib: `fluentic-style-${fluenticMode}` });
