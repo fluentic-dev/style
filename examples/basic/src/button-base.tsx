@@ -6,6 +6,7 @@ import { buttonBaseState, buttonBaseStyles } from './styles';
 type ButtonBaseProps = {
   children: ReactNode;
   css?: StyleProp;
+  debugTarget?: string;
   theme?: StyleTheme;
 };
 
@@ -18,7 +19,7 @@ export function ButtonBase(props: ButtonBaseProps) {
   );
 
   return (
-    <button css={[css.container, props.css]}>
+    <button css={[css.container, props.css]} data-debug-target={props.debugTarget}>
       <span css={css.label}>{props.children}</span>
     </button>
   );

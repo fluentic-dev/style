@@ -6,6 +6,7 @@ import { buttonTheme, primaryButtonTheme } from './styles';
 type ButtonProps = {
   children: ReactNode;
   css?: StyleProp;
+  debugTarget?: string;
   theme?: StyleTheme;
 };
 
@@ -17,7 +18,7 @@ export function Button(props: ButtonProps) {
   ];
 
   return (
-    <ButtonBase css={props.css} theme={theme}>
+    <ButtonBase css={props.css} debugTarget={props.debugTarget} theme={theme}>
       {props.children}
     </ButtonBase>
   );

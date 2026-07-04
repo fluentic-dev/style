@@ -76,7 +76,7 @@ export const pageStyles = {
   }),
   actions: style.slot({
     ...actionRowBase,
-    gap: spacing.buttonGap,
+    gap: spacing.buttonGap * 1.5,
   }),
 };
 
