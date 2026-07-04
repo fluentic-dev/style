@@ -1,10 +1,10 @@
 ---
 title: bindScope
-description: Bind incoming scopes to a component-owned target slot.
+description: Bind incoming scopes to a component-owned target slot, or pre-compose them with combineScope.
 ---
 
 ```ts
-import { bindScope } from '@fluentic/style';
+import { bindScope, combineStyle } from '@fluentic/style';
 
 const css = combineStyle(
   styles,
@@ -14,3 +14,77 @@ const css = combineStyle(
 
 `bindScope(target, ...themes)` accepts scopes, arrays of scopes, falsy values,
 and nested `StyleTheme` inputs.
+
+Use it when a component owns the slot and receives outside styling scopes:
+
+```tsx
+import {
+  bindScope,
+  combineStyle,
+  style,
+  type StyleTheme,
+} from '@fluentic/style';
+
+const card = style({
+  root: {
+    padding: 16,
+    borderRadius: 12,
+  },
+  title: {
+    fontWeight: 700,
+  },
+});
+
+export function Card(props: {
+  title: string;
+  theme?: StyleTheme;
+}) {
+  const css = combineStyle(
+    card,
+    bindScope(card.root, props.theme),
+  );
+
+  return (
+    <article css={css.root}>
+      <h2 css={css.title}>{props.title}</h2>
+    </article>
+  );
+}
+```
+
+Falsy entries are ignored, so conditional scopes can stay inline:
+
+```ts
+const css = combineStyle(
+  button,
+  bindScope(
+    button.root,
+    props.theme,
+    props.danger && dangerScope,
+    props.disabled && disabledScope,
+  ),
+);
+```
+
+## combineScope
+
+`combineScope(...themes)` pre-composes the same scope inputs and returns a
+function that can be applied to a target later:
+
+```ts
+import { combineScope } from '@fluentic/style';
+
+const interactiveTheme = combineScope(
+  props.theme,
+  props.danger && dangerScope,
+);
+
+const css = combineStyle(
+  button,
+  interactiveTheme(button.root),
+);
+```
+
+Use `combineScope(...)` when scope composition needs to be reused before the
+target slot is known. If the target slot is already available, prefer
+`bindScope(target, ...themes)`.

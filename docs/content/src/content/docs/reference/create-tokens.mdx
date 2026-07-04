@@ -1,0 +1,110 @@
+---
+title: createTokens
+description: createToken, createTokens, and getToken create themeable value identities.
+---
+
+Use `createToken(...)` for one themeable value:
+
+```ts
+import { createToken } from '@fluentic/style';
+
+const accent = createToken('#2563eb');
+```
+
+Use `createTokens(...)` for a named token tree:
+
+```ts
+import { createTokens } from '@fluentic/style';
+
+const color = createTokens({
+  accent: '#2563eb',
+  danger: '#dc2626',
+});
+```
+
+The returned leaves are callable tokens. Use the token itself in styles, and
+call it to create a theme override:
+
+```ts
+import { createTheme, createToken, createTokens, style } from '@fluentic/style';
+
+const accent = createToken('#2563eb');
+const color = createTokens({
+  accent: '#2563eb',
+  danger: '#dc2626',
+});
+
+const button = style({
+  backgroundColor: color.accent,
+  color: 'white',
+});
+
+const dangerTheme = createTheme(
+  color.accent(color.danger),
+);
+
+accent('#60a5fa');
+color.danger('#ef4444');
+```
+
+Nested objects become nested token groups:
+
+```ts
+import { createTokens, style } from '@fluentic/style';
+
+const tokens = createTokens({
+  color: {
+    surface: '#ffffff',
+    text: '#111827',
+    accent: '#2563eb',
+  },
+  radius: {
+    panel: 12,
+    pill: 999,
+  },
+  shadow: {
+    panel: '0 16px 40px rgba(15, 23, 42, 0.16)',
+  },
+});
+
+const card = style({
+  backgroundColor: tokens.color.surface,
+  borderRadius: tokens.radius.panel,
+  boxShadow: tokens.shadow.panel,
+  color: tokens.color.text,
+});
+```
+
+Arrays passed to `createTokens(...)` create a token lookup keyed by the literal
+values:
+
+```ts
+import { createTokens, style } from '@fluentic/style';
+
+const space = createTokens([4, 8, 12, 16]);
+
+const row = style({
+  gap: space[12],
+  padding: space[16],
+});
+```
+
+## getToken
+
+`getToken(value)` resolves token inputs to the CSS variable fallback string used
+at runtime. Non-token values pass through unchanged.
+
+```ts
+import { createToken, getToken } from '@fluentic/style';
+
+const accent = createToken('#2563eb', 'accent');
+
+getToken(accent);
+// var(--token-accent-..., #2563eb)
+
+getToken('red');
+// red
+```
+
+Use `getToken(...)` when a non-Fluentic API needs the resolved CSS value, for
+example an inline style object or a third-party component prop.

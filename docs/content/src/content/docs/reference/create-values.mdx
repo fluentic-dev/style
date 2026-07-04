@@ -1,0 +1,91 @@
+---
+title: createValues
+description: createValues creates app-facing scales with token identity.
+---
+
+Use `createValues(...)` when app code should keep reading literal values while
+Fluentic still tracks themeable identity underneath.
+
+```ts
+import { createValues } from '@fluentic/style';
+
+const space = createValues([8, 12, 16]);
+```
+
+```ts
+space(12);
+space(12, 16);
+```
+
+The first call returns the token for `12`. The second call returns an override:
+when code asks for `12`, provide `16` instead.
+
+## String Values
+
+String values are useful for constrained text-like CSS values such as font
+families, shadows, transitions, and labeled scales:
+
+```ts
+import { createValues, style } from '@fluentic/style';
+
+const font = createValues([
+  'Inter, system-ui, sans-serif',
+  'Georgia, serif',
+]);
+
+const shadow = createValues([
+  'none',
+  '0 16px 40px rgba(15, 23, 42, 0.16)',
+]);
+
+const panel = style({
+  fontFamily: font('Inter, system-ui, sans-serif'),
+  boxShadow: shadow('0 16px 40px rgba(15, 23, 42, 0.16)'),
+});
+```
+
+## Color Values
+
+Color values are the common app-facing case. The literal stays visible in the
+style, so editor color previews and normal search still work:
+
+```ts
+import { createTheme, createValues, style } from '@fluentic/style';
+
+const color = createValues([
+  '#ffffff | Surface',
+  '#111827 | Text',
+  '#2563eb | Accent',
+  '#d8e3df | Border',
+]);
+
+const card = style({
+  backgroundColor: color('#ffffff | Surface'),
+  borderColor: color('#d8e3df | Border'),
+  color: color('#111827 | Text'),
+});
+
+const darkTheme = createTheme(
+  color('#ffffff | Surface', '#111827'),
+  color('#111827 | Text', '#f9fafb'),
+  color('#d8e3df | Border', '#374151'),
+);
+```
+
+Labels after `|` are optional. Fluentic parses the CSS value before the label,
+but tracks the full string as the value identity.
+
+## Numeric Labels
+
+Pass `Number` only when the tracked values are string labels but the CSS value
+should be numeric:
+
+```ts
+const labeledSpace = createValues(Number, ['8 | sm', '12 | md', '16 | lg']);
+
+labeledSpace('12 | md');
+labeledSpace('12 | md', 16);
+```
+
+This keeps a readable label in source while the actual style value is the
+number before `|`.
