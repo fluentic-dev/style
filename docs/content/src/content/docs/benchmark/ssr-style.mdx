@@ -79,9 +79,9 @@ benchmark does not turn ever-changing values into token overrides.
 
 ## Latest Local Report
 
-Report file: `benchmark/main/results/ssr-style-1783146478018.json`
+Report file: `benchmark/main/results/ssr-style-1783163343300.json`
 
-Created: `2026-07-04T06:27:58.016Z`
+Created: `2026-07-04T11:09:03.298Z`
 
 Settings: 100 and 500 row scenarios, compiled Fluentic production fixture,
 compiled StyleX fixture, `renderToString()` dashboard/composition shapes, 0.75
@@ -91,49 +91,49 @@ second minimum per case, 8 second maximum per case.
 
 | Scenario | Mean | vs baseline |
 | --- | ---: | ---: |
-| Plain React className plus style variables | 6.571 ms | 1.00x |
-| Plain React className dashboard | 6.302 ms | 0.96x |
-| Fluentic table direct css prop | 6.601 ms | 1.00x |
-| StyleX compiled dashboard | 6.826 ms | 1.04x |
-| Fluentic table scoped composition | 6.857 ms | 1.04x |
-| Fluentic dashboard token overrides | 7.667 ms | 1.17x |
-| Goober styled render only | 13.057 ms | 1.99x |
-| styled-components render only | 18.636 ms | 2.84x |
-| Emotion styled render only | 29.273 ms | 4.46x |
+| Plain React className plus style variables | 7.113 ms | 1.00x |
+| Plain React className dashboard | 6.889 ms | 0.97x |
+| Fluentic table direct css prop | 6.896 ms | 0.97x |
+| Fluentic table scoped composition | 7.246 ms | 1.02x |
+| StyleX compiled dashboard | 7.362 ms | 1.04x |
+| Fluentic dashboard token overrides | 7.797 ms | 1.10x |
+| Goober styled render only | 13.994 ms | 1.97x |
+| styled-components render only | 20.452 ms | 2.88x |
+| Emotion styled render only | 33.418 ms | 4.70x |
 
 ### Composition, 500 Rows
 
 | Scenario | Mean | vs baseline |
 | --- | ---: | ---: |
-| Plain React manual composition | 8.348 ms | 1.00x |
-| Fluentic card direct css prop | 7.286 ms | 0.87x |
-| Fluentic card scoped composition | 7.489 ms | 0.90x |
-| StyleX compiled composition | 8.059 ms | 0.97x |
-| Fluentic card scoped composition plus token overrides | 8.253 ms | 0.99x |
-| Goober styled scoped composition | 17.184 ms | 2.06x |
-| styled-components scoped composition | 22.643 ms | 2.71x |
-| Emotion styled scoped composition | 35.878 ms | 4.30x |
+| Plain React manual composition | 8.807 ms | 1.00x |
+| Fluentic card direct css prop | 7.652 ms | 0.87x |
+| Fluentic card scoped composition | 7.838 ms | 0.89x |
+| Fluentic card scoped composition plus token overrides | 8.393 ms | 0.95x |
+| StyleX compiled composition | 8.525 ms | 0.97x |
+| Goober styled scoped composition | 17.865 ms | 2.03x |
+| styled-components scoped composition | 25.212 ms | 2.86x |
+| Emotion styled scoped composition | 38.877 ms | 4.41x |
 
 ### Dashboard, 100 Rows
 
 | Scenario | Mean | vs baseline |
 | --- | ---: | ---: |
-| Plain React className plus style variables | 1.277 ms | 1.00x |
-| Plain React className dashboard | 1.185 ms | 0.93x |
-| StyleX compiled dashboard | 1.276 ms | 1.00x |
-| Fluentic table direct css prop | 1.333 ms | 1.04x |
-| Fluentic table scoped composition | 1.368 ms | 1.07x |
-| Fluentic dashboard token overrides | 1.500 ms | 1.17x |
+| Plain React className plus style variables | 1.369 ms | 1.00x |
+| Plain React className dashboard | 1.290 ms | 0.94x |
+| StyleX compiled dashboard | 1.370 ms | 1.00x |
+| Fluentic table direct css prop | 1.384 ms | 1.01x |
+| Fluentic table scoped composition | 1.421 ms | 1.04x |
+| Fluentic dashboard token overrides | 1.547 ms | 1.13x |
 
 ### Composition, 100 Rows
 
 | Scenario | Mean | vs baseline |
 | --- | ---: | ---: |
-| Plain React manual composition | 1.572 ms | 1.00x |
-| Fluentic card direct css prop | 1.410 ms | 0.90x |
-| Fluentic card scoped composition | 1.454 ms | 0.93x |
-| StyleX compiled composition | 1.565 ms | 1.00x |
-| Fluentic card scoped composition plus token overrides | 1.572 ms | 1.00x |
+| Plain React manual composition | 1.671 ms | 1.00x |
+| Fluentic card direct css prop | 1.455 ms | 0.87x |
+| Fluentic card scoped composition | 1.501 ms | 0.90x |
+| StyleX compiled composition | 1.605 ms | 0.96x |
+| Fluentic card scoped composition plus token overrides | 1.621 ms | 0.97x |
 
 ## Reading The Numbers
 

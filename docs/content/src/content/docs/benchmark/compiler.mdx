@@ -27,32 +27,105 @@ Use it for questions like:
 | Did a source pattern become expensive? | New chain methods, spreads, merges, or tokens. |
 | Does sourcemap/debug work change transform time? | Debug transform or source-location changes. |
 
+## Why Some Files Cost More
+
+Fluentic's compiler does more than replace one narrow static API call. It tries
+to let styles code stay close to ordinary TypeScript while still extracting the
+parts that are knowable at build time.
+
+That means files with more styles or richer style patterns can take longer to
+transform than files with fewer, simpler styles. The compiler may need to parse
+and evaluate local bindings, follow imported style values, preserve source
+metadata, collect CSS, and preserve runtime handling for values and choices
+that are only known during render.
+
+The supported surface is intentionally broad. Fluentic can extract or preserve
+patterns such as:
+
+- `style(...)` and `style.slot(...)` chains with selectors, media queries,
+  pseudo states, and priority-aware ordering;
+- `.merge(...)` chains, including merged style chains from supported custom
+  style functions configured with `importSources`;
+- `style.scope(...)`, slot overrides, `bindScope(...)`, and component-owned
+  styling hooks;
+- tokens and themes from `createToken(...)`, `createTokens(...)`, and
+  `createTheme(...)`, including extracted token CSS variables and render-time
+  token overrides;
+- inline `style(...)` / `style.slot(...)` usage that can be hoisted out of
+  render when supported;
+- dynamic values inside inline styles, where extractable static pieces are
+  hoisted and values that depend on props continue to work at runtime;
+- mixed static and dynamic style objects, where compile-time declarations can
+  still be extracted even when some values are only known at render time;
+- object spreads through supported `style.raw(...)` and `style.plain(...)`
+  values, including imported reusable fragments;
+- keyframes, font faces, and additional at-rule value references;
+- explicit `getClassName(...)` / `css` prop usage that still needs production
+  runtime imports for dynamic composition.
+
+That breadth is the tradeoff: cold transform throughput is not the only design
+goal. The compiler pays some build-time analysis cost so authors can keep
+styles, themes, scopes, dynamic values, and composition in normal TS/TSX instead
+of moving every extractable case into a restricted side language.
+
 ## Latest Local Report
 
-Report file: `benchmark/main/results/compiler-1783146690445.json`
+Report file: `benchmark/main/results/compiler-1783164671050.json`
 
-Created: `2026-07-04T06:31:30.444Z`
+Created: `2026-07-04T11:31:11.047Z`
 
 Settings: 100 files per corpus, 8 components per file, 1 warmup, 5 measured
 runs, sourcemaps enabled.
 
 | Name | Corpus | LOC | Median ms | ms/file | Overhead vs Babel noop |
 | --- | --- | ---: | ---: | ---: | ---: |
-| babelNoopPlugin | unrelated-tsx | 9200 | 124.07 | 1.24 | 0.00 ms |
-| fluenticExtractWarm | unrelated-tsx | 9200 | 224.35 | 2.24 | 100.28 ms |
-| stylexBabelPlugin | unrelated-tsx | 9200 | 179.68 | 1.80 | 55.61 ms |
-| babelNoopPlugin | direct-styles | 23000 | 177.73 | 1.78 | 0.00 ms |
-| fluenticExtractWarm | direct-styles | 23000 | 376.43 | 3.76 | 198.70 ms |
-| stylexBabelPlugin | direct-styles | 23000 | 249.03 | 2.49 | 71.30 ms |
-| babelNoopPlugin | theme-slots | 33200 | 264.40 | 2.64 | 0.00 ms |
-| fluenticExtractWarm | theme-slots | 33200 | 642.25 | 6.42 | 377.85 ms |
-| stylexBabelPlugin | theme-slots | 33200 | 372.86 | 3.73 | 108.46 ms |
-| babelNoopPlugin | stylex-styles | 31000 | 223.99 | 2.24 | 0.00 ms |
-| fluenticExtractWarm | stylex-styles | 31000 | 392.01 | 3.92 | 168.03 ms |
-| stylexBabelPlugin | stylex-styles | 31000 | 416.69 | 4.17 | 192.71 ms |
-| babelNoopPlugin | mixed-app | 21674 | 196.18 | 1.96 | 0.00 ms |
-| fluenticExtractWarm | mixed-app | 21674 | 421.67 | 4.22 | 225.49 ms |
-| stylexBabelPlugin | mixed-app | 21674 | 270.71 | 2.71 | 74.53 ms |
+| babelNoopPlugin | unrelated-tsx | 9200 | 134.26 | 1.34 | 0.00 ms |
+| fluenticExtractWarm | unrelated-tsx | 9200 | 227.59 | 2.28 | 93.33 ms |
+| stylexBabelPlugin | unrelated-tsx | 9200 | 179.56 | 1.80 | 45.30 ms |
+| babelNoopPlugin | direct-styles | 23000 | 179.93 | 1.80 | 0.00 ms |
+| fluenticExtractWarm | direct-styles | 23000 | 423.02 | 4.23 | 243.09 ms |
+| stylexBabelPlugin | direct-styles | 23000 | 263.95 | 2.64 | 84.02 ms |
+| babelNoopPlugin | theme-slots | 33200 | 319.98 | 3.20 | 0.00 ms |
+| fluenticExtractWarm | theme-slots | 33200 | 707.27 | 7.07 | 387.29 ms |
+| stylexBabelPlugin | theme-slots | 33200 | 428.68 | 4.29 | 108.70 ms |
+| babelNoopPlugin | stylex-styles | 31000 | 227.30 | 2.27 | 0.00 ms |
+| fluenticExtractWarm | stylex-styles | 31000 | 448.19 | 4.48 | 220.89 ms |
+| stylexBabelPlugin | stylex-styles | 31000 | 468.51 | 4.69 | 241.21 ms |
+| babelNoopPlugin | mixed-app | 21674 | 199.19 | 1.99 | 0.00 ms |
+| fluenticExtractWarm | mixed-app | 21674 | 456.70 | 4.57 | 257.51 ms |
+| stylexBabelPlugin | mixed-app | 21674 | 267.54 | 2.68 | 68.35 ms |
+
+## Cold, Warm, And Incremental Cache
+
+The compiler benchmark is a transform-throughput benchmark. It asks: if this
+set of files must be transformed, how long does the transform take?
+
+`fluenticExtractCold` clears the benchmark cache directory before each measured
+sample, creates a compiler, transforms every generated file, then extracts CSS.
+This is closest to a fresh build with no useful Fluentic compiler cache.
+
+`fluenticExtractWarm` uses a stable benchmark cache directory and runs one
+untimed priming transform before each measured transform. It measures a warm
+compiler process with warmed evaluator/import-resolution caches, but it still
+calls `compileExtract()` for every file in the corpus. It is not the same thing
+as an incremental rebuild where the bundler skips unchanged modules.
+
+Real app rebuilds have an extra advantage that this microbenchmark does not
+model: bundlers can reuse prior transformed modules for files that did not
+change. Fluentic also keeps compiler cache data for dependency tracing and, in
+bundler integrations that need it, per-file extracted CSS records keyed by file
+content and config. In that incremental path, unchanged files and dependency
+graphs can reuse previous transformed code and extracted CSS work, while changed
+files and their invalidated graph edges are recomputed.
+
+Keep that cache during normal development and CI cache restores when possible.
+Clearing the cache is useful for cold benchmarks or diagnosing stale output, but
+it removes the reuse that makes repeated builds and small edits faster.
+
+Read the table above as the cost of transforming files that actually need work.
+Read incremental rebuild behavior separately: it should be much faster when a
+small edit leaves most files unchanged, because most of the graph can keep its
+previous transformed code and extracted CSS data.
 
 ## Settings
 

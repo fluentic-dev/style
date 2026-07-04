@@ -1,0 +1,69 @@
+---
+title: Bundle Size
+description: Bundle size report for Fluentic runtime entry points.
+---
+
+Fluentic includes a bundle report script for the package entry points that
+matter to app builds.
+
+Run it from the workspace root:
+
+```sh
+pnpm --filter @fluentic/style build
+pnpm --filter @fluentic/style report:bundle
+```
+
+The report builds the package, follows the compiled dependency graph for each
+entry, then creates a small minified bundle for the imported public surface.
+
+## Current Report
+
+This is the latest local report for `@fluentic/style`, generated on
+2026-07-04.
+
+The extracted production runtime is the important static-extraction budget:
+`5.00 KB` min+gzip. The extracted JSX runtime is `3.22 KB` min+gzip, and the
+generated extracted helpers are `826 B` min+gzip.
+
+| Entry | Graph raw | Graph gzip | Min raw | Min gzip |
+| --- | ---: | ---: | ---: | ---: |
+| dev runtime | 166.62 KB | 35.79 KB | 68.15 KB | 22.88 KB |
+| extracted production runtime | 51.52 KB | 11.74 KB | 13.90 KB | 5.00 KB |
+| extracted jsx runtime | 28.17 KB | 6.83 KB | 8.33 KB | 3.22 KB |
+| extracted generated helpers | 9.17 KB | 2.29 KB | 1.66 KB | 826 B |
+| production runtime | 166.04 KB | 35.61 KB | 68.08 KB | 22.83 KB |
+| server dev rsc runtime | 160.55 KB | 34.89 KB | 68.86 KB | 23.08 KB |
+| server production runtime | 122.18 KB | 26.10 KB | 44.37 KB | 14.88 KB |
+| server extracted production runtime | 51.66 KB | 11.80 KB | 14.28 KB | 5.12 KB |
+
+The exact numbers can change as dependencies, build output, and minifier
+versions change. Treat this page as a recent snapshot and rerun the command when
+you need exact numbers for a release.
+
+## Reading The Columns
+
+| Column | Meaning |
+| --- | --- |
+| `graph raw` | Total size of compiled files reachable from the entry before bundling. |
+| `graph gzip` | Gzip size of those reachable files. |
+| `min raw` | Size of the generated minified bundle for the selected public imports. |
+| `min gzip` | Gzip size of that generated minified bundle. |
+
+## What To Compare
+
+For an app using static extraction, the most relevant client-side entries are:
+
+| Entry | Why it matters |
+| --- | --- |
+| extracted production runtime | Runtime helpers used by extracted styles. |
+| extracted jsx runtime | JSX runtime used with extracted production output. |
+| extracted generated helpers | Helpers used by generated extracted modules. |
+
+For runtime-only app styling, compare `production runtime`.
+
+For React Server Components, compare `server production runtime` or `server
+extracted production runtime`, depending on whether your build extracts styles.
+
+Development entries include debug metadata, sourcemaps, element markers, and
+runtime inspection helpers. They are useful for development ergonomics, but they
+are not the production budget to optimize first.

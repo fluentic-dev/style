@@ -57,17 +57,15 @@ The report includes:
 | `updateStyle` | Known visual variant updates against the existing tree. |
 | `remount` | Recreating the dashboard tree. |
 | `route` | Switching between dashboard views. |
-| `styleTagCount` | Number of runtime style tags after the run. |
-| `ruleCount` | Number of stylesheet rules after the run. |
 
 Median is the headline timing. Mean, p95, cold first-run mount, and raw samples
 stay in the JSON report so regressions can be inspected later.
 
 ## Latest Local Report
 
-Report file: `benchmark/main/results/bench-1783146037937.json`
+Report file: `benchmark/main/results/bench-1783164575520.json`
 
-Created: `2026-07-04T06:20:37.936Z`
+Created: `2026-07-04T11:29:35.518Z`
 
 Settings: quick preset, 100/500/1500 rows, 2 repeats, production builds, Vite
 preview, and compiled Fluentic/StyleX output.
@@ -78,43 +76,43 @@ The 1500-row scenario is the clearest scaling signal in this quick report.
 
 ### 500 Rows
 
-| Library | Shape | Mount median | Style update median | Remount median | Style tags | Rules |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Fluentic direct | DOM | 17.46 ms | 16.65 ms | 18.80 ms | 0 | 2 |
-| Fluentic scoped | DOM | 17.28 ms | 16.61 ms | 19.05 ms | 0 | 2 |
-| Fluentic direct | components | 16.72 ms | 16.63 ms | 18.79 ms | 0 | 2 |
-| Fluentic scoped | components | 17.24 ms | 16.64 ms | 19.24 ms | 0 | 2 |
-| StyleX | DOM | 17.81 ms | 16.65 ms | 19.25 ms | 0 | 7 |
-| StyleX | components | 18.40 ms | 16.64 ms | 19.34 ms | 0 | 7 |
-| Goober | DOM | 17.04 ms | 16.60 ms | 18.70 ms | 1 | 21 |
-| Goober | components | 16.94 ms | 16.60 ms | 18.80 ms | 1 | 21 |
-| Emotion | DOM | 18.03 ms | 16.62 ms | 19.72 ms | 1 | 21 |
-| Emotion | components | 19.29 ms | 16.61 ms | 19.90 ms | 1 | 21 |
-| styled-components | DOM | 17.15 ms | 16.60 ms | 19.00 ms | 1 | 17 |
-| vanilla-extract | DOM | 16.92 ms | 16.63 ms | 19.04 ms | 0 | 21 |
-| vanilla-extract | components | 17.24 ms | 16.62 ms | 19.16 ms | 0 | 21 |
-| CSS Modules | DOM | 17.51 ms | 16.60 ms | 19.10 ms | 0 | 21 |
-| CSS Modules | components | 17.27 ms | 16.65 ms | 19.15 ms | 0 | 21 |
+| Library | Shape | Mount median | Style update median | Remount median |
+| --- | --- | ---: | ---: | ---: |
+| Fluentic direct | DOM | 16.88 ms | 16.63 ms | 18.63 ms |
+| Fluentic scoped | DOM | 17.37 ms | 16.62 ms | 18.98 ms |
+| Fluentic direct | components | 17.40 ms | 16.62 ms | 18.77 ms |
+| Fluentic scoped | components | 18.07 ms | 16.60 ms | 18.86 ms |
+| StyleX | DOM | 17.68 ms | 16.66 ms | 19.13 ms |
+| StyleX | components | 16.58 ms | 16.64 ms | 19.23 ms |
+| Goober | DOM | 16.59 ms | 16.62 ms | 18.54 ms |
+| Goober | components | 16.48 ms | 16.64 ms | 18.64 ms |
+| Emotion | DOM | 18.10 ms | 16.62 ms | 19.55 ms |
+| Emotion | components | 19.77 ms | 16.66 ms | 19.78 ms |
+| styled-components | DOM | 18.69 ms | 16.65 ms | 19.75 ms |
+| vanilla-extract | DOM | 17.11 ms | 16.66 ms | 18.79 ms |
+| vanilla-extract | components | 16.42 ms | 16.65 ms | 18.98 ms |
+| CSS Modules | DOM | 16.52 ms | 16.68 ms | 18.73 ms |
+| CSS Modules | components | 16.68 ms | 16.64 ms | 18.79 ms |
 
 ### 1500 Rows
 
-| Library | Shape | Mount median | Style update median | Remount median | Style tags | Rules |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| Fluentic direct | DOM | 40.05 ms | 17.79 ms | 42.45 ms | 0 | 2 |
-| Fluentic scoped | DOM | 41.43 ms | 19.57 ms | 42.30 ms | 0 | 2 |
-| Fluentic direct | components | 41.63 ms | 17.91 ms | 42.71 ms | 0 | 2 |
-| Fluentic scoped | components | 41.95 ms | 19.54 ms | 43.31 ms | 0 | 2 |
-| StyleX | DOM | 41.28 ms | 17.73 ms | 42.49 ms | 0 | 7 |
-| StyleX | components | 43.17 ms | 17.93 ms | 43.37 ms | 0 | 7 |
-| Goober | DOM | 40.13 ms | 17.75 ms | 42.07 ms | 1 | 21 |
-| Goober | components | 40.62 ms | 17.82 ms | 41.93 ms | 1 | 21 |
-| Emotion | DOM | 52.63 ms | 20.54 ms | 53.34 ms | 1 | 21 |
-| Emotion | components | 55.24 ms | 23.22 ms | 56.30 ms | 1 | 21 |
-| styled-components | DOM | 45.76 ms | 18.15 ms | 48.68 ms | 1 | 17 |
-| vanilla-extract | DOM | 39.85 ms | 17.65 ms | 41.88 ms | 0 | 21 |
-| vanilla-extract | components | 41.67 ms | 17.84 ms | 42.18 ms | 0 | 21 |
-| CSS Modules | DOM | 40.35 ms | 17.75 ms | 41.94 ms | 0 | 21 |
-| CSS Modules | components | 41.45 ms | 17.83 ms | 42.17 ms | 0 | 21 |
+| Library | Shape | Mount median | Style update median | Remount median |
+| --- | --- | ---: | ---: | ---: |
+| Fluentic direct | DOM | 39.64 ms | 17.74 ms | 41.86 ms |
+| Fluentic scoped | DOM | 41.27 ms | 19.43 ms | 41.90 ms |
+| Fluentic direct | components | 40.81 ms | 17.82 ms | 42.09 ms |
+| Fluentic scoped | components | 41.42 ms | 19.51 ms | 42.75 ms |
+| StyleX | DOM | 40.70 ms | 17.86 ms | 43.03 ms |
+| StyleX | components | 42.71 ms | 17.86 ms | 43.04 ms |
+| Goober | DOM | 39.74 ms | 17.75 ms | 42.00 ms |
+| Goober | components | 40.58 ms | 17.70 ms | 42.12 ms |
+| Emotion | DOM | 52.23 ms | 20.75 ms | 54.10 ms |
+| Emotion | components | 55.20 ms | 23.77 ms | 56.53 ms |
+| styled-components | DOM | 45.37 ms | 18.14 ms | 49.23 ms |
+| vanilla-extract | DOM | 40.06 ms | 17.80 ms | 41.99 ms |
+| vanilla-extract | components | 41.54 ms | 17.78 ms | 42.20 ms |
+| CSS Modules | DOM | 39.62 ms | 17.67 ms | 41.97 ms |
+| CSS Modules | components | 41.04 ms | 17.80 ms | 41.98 ms |
 
 ## Filtering
 

@@ -21,25 +21,25 @@ variable is set.
 
 ## Current React App Snapshot
 
-Latest report: `benchmark/main/results/bench-1783146037937.json`
+Latest report: `benchmark/main/results/bench-1783164575520.json`
 
-Created: `2026-07-04T06:20:37.936Z`
+Created: `2026-07-04T11:29:35.518Z`
 
 At 1500 rows:
 
 | Case              | Shape      | Mount median | Style update median | Remount median |
 | ----------------- | ---------- | -----------: | ------------------: | -------------: |
-| Fluentic direct   | DOM        |     40.05 ms |            17.79 ms |       42.45 ms |
-| Fluentic scoped   | DOM        |     41.43 ms |            19.57 ms |       42.30 ms |
-| Fluentic direct   | components |     41.63 ms |            17.91 ms |       42.71 ms |
-| Fluentic scoped   | components |     41.95 ms |            19.54 ms |       43.31 ms |
-| StyleX            | DOM        |     41.28 ms |            17.73 ms |       42.49 ms |
-| StyleX            | components |     43.17 ms |            17.93 ms |       43.37 ms |
-| Goober            | DOM        |     40.13 ms |            17.75 ms |       42.07 ms |
-| Emotion           | DOM        |     52.63 ms |            20.54 ms |       53.34 ms |
-| styled-components | DOM        |     45.76 ms |            18.15 ms |       48.68 ms |
-| vanilla-extract   | DOM        |     39.85 ms |            17.65 ms |       41.88 ms |
-| CSS Modules       | DOM        |     40.35 ms |            17.75 ms |       41.94 ms |
+| Fluentic direct   | DOM        |     39.64 ms |            17.74 ms |       41.86 ms |
+| Fluentic scoped   | DOM        |     41.27 ms |            19.43 ms |       41.90 ms |
+| Fluentic direct   | components |     40.81 ms |            17.82 ms |       42.09 ms |
+| Fluentic scoped   | components |     41.42 ms |            19.51 ms |       42.75 ms |
+| StyleX            | DOM        |     40.70 ms |            17.86 ms |       43.03 ms |
+| StyleX            | components |     42.71 ms |            17.86 ms |       43.04 ms |
+| Goober            | DOM        |     39.74 ms |            17.75 ms |       42.00 ms |
+| Emotion           | DOM        |     52.23 ms |            20.75 ms |       54.10 ms |
+| styled-components | DOM        |     45.37 ms |            18.14 ms |       49.23 ms |
+| vanilla-extract   | DOM        |     40.06 ms |            17.80 ms |       41.99 ms |
+| CSS Modules       | DOM        |     39.62 ms |            17.67 ms |       41.97 ms |
 
 Fluentic uses extracted production output and public authoring patterns. Stable
 styles, scopes, slots, and theme tokens are declared outside render. The app
@@ -51,22 +51,22 @@ for the resolver model.
 
 ## Current SSR Style Snapshot
 
-Latest report: `benchmark/main/results/ssr-style-1783146478018.json`
+Latest report: `benchmark/main/results/ssr-style-1783163343300.json`
 
-Created: `2026-07-04T06:27:58.016Z`
+Created: `2026-07-04T11:09:03.298Z`
 
 At 500 rows:
 
 | Case                    | Dashboard mean | Composition mean |
 | ----------------------- | -------------: | ---------------: |
-| Plain React baseline    |       6.571 ms |         8.348 ms |
-| Fluentic direct         |       6.601 ms |         7.286 ms |
-| Fluentic scoped         |       6.857 ms |         7.489 ms |
-| Fluentic token override |       7.667 ms |         8.253 ms |
-| StyleX compiled         |       6.826 ms |         8.059 ms |
-| Goober                  |      13.057 ms |        17.184 ms |
-| styled-components       |      18.636 ms |        22.643 ms |
-| Emotion                 |      29.273 ms |        35.878 ms |
+| Plain React baseline    |       7.113 ms |         8.807 ms |
+| Fluentic direct         |       6.896 ms |         7.652 ms |
+| Fluentic scoped         |       7.246 ms |         7.838 ms |
+| Fluentic token override |       7.797 ms |         8.393 ms |
+| StyleX compiled         |       7.362 ms |         8.525 ms |
+| Goober                  |      13.994 ms |        17.865 ms |
+| styled-components       |      20.452 ms |        25.212 ms |
+| Emotion                 |      33.418 ms |        38.877 ms |
 
 SSR is warm steady-state `renderToString()` work. It also reflects the
 render-time JavaScript overhead Fluentic pays in the browser after extraction:
@@ -75,24 +75,34 @@ props.
 
 ## Current Compiler Snapshot
 
-Latest report: `benchmark/main/results/compiler-1783146690445.json`
+Latest report: `benchmark/main/results/compiler-1783164671050.json`
 
-Created: `2026-07-04T06:31:30.444Z`
+Created: `2026-07-04T11:31:11.047Z`
 
 Settings: 100 files per corpus, 8 components per file, 1 warmup, 5 measured
 runs, sourcemaps enabled.
 
 | Corpus        | Babel noop | Fluentic extract warm | StyleX Babel plugin |
 | ------------- | ---------: | --------------------: | ------------------: |
-| unrelated-tsx |  124.07 ms |             224.35 ms |           179.68 ms |
-| direct-styles |  177.73 ms |             376.43 ms |           249.03 ms |
-| theme-slots   |  264.40 ms |             642.25 ms |           372.86 ms |
-| stylex-styles |  223.99 ms |             392.01 ms |           416.69 ms |
-| mixed-app     |  196.18 ms |             421.67 ms |           270.71 ms |
+| unrelated-tsx |  134.26 ms |             227.59 ms |           179.56 ms |
+| direct-styles |  179.93 ms |             423.02 ms |           263.95 ms |
+| theme-slots   |  319.98 ms |             707.27 ms |           428.68 ms |
+| stylex-styles |  227.30 ms |             448.19 ms |           468.51 ms |
+| mixed-app     |  199.19 ms |             456.70 ms |           267.54 ms |
 
 The compiler suite measures transform cost, not app runtime. Use before/after
 runs on the same machine when changing extraction, evaluator, import resolution,
-or sourcemap behavior.
+or sourcemap behavior. The `warm` Fluentic case means the benchmark primes and
+reuses the compiler/cache directory, but it still transforms every generated
+file. It is not a full incremental rebuild benchmark. In real bundler rebuilds,
+unchanged modules and dependency graphs can reuse previous transformed output
+and extracted CSS/cache records, so small edits should be much faster than this
+full-corpus transform table suggests. Keep the compiler/build cache when
+possible; clearing it is for cold measurements or stale-output debugging and
+removes that reuse. Some cold per-file cases are also heavier because Fluentic
+supports a broad TS/TSX authoring surface: merged chains, scopes, slot
+overrides, tokens, themes, dynamic token bindings, spreads, keyframes, font
+faces, at-rules, custom style functions, and css prop/runtime composition.
 
 ## Settings
 

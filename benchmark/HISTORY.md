@@ -39,7 +39,7 @@ pnpm --filter @benchmark/main bench:fluentic-cache
 
 Environment:
 
-- Report: `benchmark/main/results/fluentic-cache-1781362148688.json`
+- Report: raw JSON pruned during result cleanup; summary kept here.
 - Created: `2026-06-13T14:49:08.688Z`
 - Browser: Chrome `149.0.7827.114`
 - Node: `v22.22.3`

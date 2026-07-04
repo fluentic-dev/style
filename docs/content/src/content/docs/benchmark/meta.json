@@ -4,6 +4,7 @@
     "overview",
     "react-app",
     "ssr-style",
-    "compiler"
+    "compiler",
+    "bundle-size"
   ]
 }
