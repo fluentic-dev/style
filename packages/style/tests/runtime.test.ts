@@ -288,6 +288,51 @@ test('runtime merge debug sourcemap composes latest style site with previous val
   );
 });
 
+test('runtime scope merge debug sourcemap maps merged scope data through merge debug fields', () => {
+  const slotDebug: DebugData = {
+    $$debug: true,
+    loc: [1, 1],
+    label: ['slot', 'style.slot', 'page.tsx'],
+    sourceUrl: '/src/page.tsx',
+    fields: {
+      color: [2, 3],
+    },
+  };
+  const overrideDebug: DebugData = {
+    $$debug: true,
+    loc: [10, 3],
+    label: ['container', 'style.container', 'page.tsx'],
+    sourceUrl: '/src/page.tsx',
+    fields: {
+      boxShadow: [11, 5],
+    },
+  };
+  const mergeDebug: DebugData = {
+    $$debug: true,
+    loc: [20, 4],
+    label: ['merge', 'style.merge', 'page.tsx'],
+    sourceUrl: '/src/page.tsx',
+    fields: {},
+  };
+
+  configureTestRuntime({ dev: true, sourcemapMode: 'style' });
+
+  const button = (publicStyle as any).slot({ color: 'black' }, slotDebug);
+  const base = (publicStyle as any).scope([
+    button({ boxShadow: '0 0 0 1px red' }, overrideDebug),
+  ]);
+  const merged = (publicStyle as any).scope().merge(base, mergeDebug);
+  const css = combineStyle({ button }, bindScope(button, merged));
+  const boxShadowRule = getSheetRules(css.button).find((rule) => rule.css.includes('box-shadow:'));
+
+  if (!boxShadowRule) throw new Error('expected box-shadow rule');
+  equal(boxShadowRule.debugField, 'boxShadow');
+  equal(getRuleCallsite(boxShadowRule.callsite, boxShadowRule.debug, boxShadowRule.debugField)?.line, 20);
+
+  configureTestRuntime({ dev: true, sourcemapMode: 'value' });
+  equal(getRuleCallsite(boxShadowRule.callsite, boxShadowRule.debug, boxShadowRule.debugField)?.line, 11);
+});
+
 test('style prop resolver strips debug element marker before walking css items', () => {
   const direct = style({
     color: 'orchid',

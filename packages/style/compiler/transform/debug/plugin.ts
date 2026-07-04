@@ -1,4 +1,8 @@
 import { SELECTOR_MERGE } from '../../../builder/data/selector';
+import { BUILDER_STATE } from '../../../builder/data/const';
+import { TRACE_STYLE, TRACE_VALUE, type DebugLoc } from '../../../builder/data/debug';
+import { isScopeData, isStyleData } from '../../../builder/data/is';
+import type { RuntimeItem } from '../../../builder/data/state';
 import type { CheckSelectorMode, SourcemapLocationMode } from '../../../config/types';
 import type { StyleFnMeta } from '../../../style/style';
 import { isStyleTokenData } from '../../../style/token';
@@ -16,7 +20,13 @@ import {
   IMPORT_PATHS,
 } from '../../utils/constants';
 import { createImportSourceMatcher, type ImportSourceMatcher } from '../../utils/import_source';
-import { type EvalScope, evaluateNode } from '../evaluator/evaluator';
+import {
+  COMPILED_STYLE_OBJECT_LOCATIONS,
+  type CompiledStyleObject,
+  type CompiledStyleObjectLocations,
+  type EvalScope,
+  evaluateNode,
+} from '../evaluator/evaluator';
 import type { EvalModuleBindings, ImportMap, ResolveImportFn } from '../evaluator/types';
 import type { ExtractTracer } from '../extract/plugin';
 import {
@@ -31,8 +41,11 @@ import { babelPlugin } from '../utils/babel';
 import { getProjectFileId } from '../utils/path';
 import { getSelectorArgIndex, validateResolvedSelectorValue, validateSelectorDefinition } from '../utils/selector';
 import { buildDebugDataObject, type DebugTraceProperty, hasDebugArgument } from './utils/debug_data';
+import { getDebugSourceUrl } from './utils/source_url';
 
 type PluginState = BabelCore.PluginPass & {
+  options: CompilerOptions;
+  projectDir: string;
   styleNames: Set<string>;
   styleMetas: Map<string, StyleFnMeta>;
   bindings: EvalModuleBindings;
@@ -71,6 +84,8 @@ export function createDebugPlugin(args: PluginArgs) {
 
     return {
       pre(this: PluginState) {
+        this.options = options;
+        this.projectDir = projectDir;
         this.styleNames = new Set();
         this.styleMetas = new Map();
         this.bindings = new Map();
@@ -149,11 +164,13 @@ export function createDebugPlugin(args: PluginArgs) {
           if (!state.styleNames.size) return;
           validateStaticSelectorArg(path, state);
           if (isStyleUtilityCall(path.node.callee, state.styleNames)) return;
+          const isScopeMerge = isScopeMergeCall(path.node.callee, state);
           if (
-            isScopeChainCall(path.node.callee, state.styleNames) ||
+            (isScopeChainCall(path.node.callee, state.styleNames) && !isScopeMerge) ||
             (
               !isStyleChainCall(path.node.callee, state.styleNames) &&
-              !isScopeItemCall(path, state)
+              !isScopeItemCall(path, state) &&
+              !isScopeMerge
             )
           ) return;
           const evaluated = evaluateNode(path.node, getDebugEvalScope(state));
@@ -528,7 +545,7 @@ function getDebugStyleArg(
   state: PluginState,
   sourcemapTrace: SourcemapTrace,
 ) {
-  const arg = path.node.arguments[0];
+  const arg = getStyleObjectArg(path, state);
   if (!arg) return arg;
 
   if (arg.type !== 'ObjectExpression') {
@@ -549,9 +566,40 @@ function getDebugCallLoc(
   path: NodePath<BabelTypes.CallExpression>,
   state: PluginState,
 ) {
-  return isMergeSelectorCall(path.node.callee, state)
+  return (isSelectorStyleCall(path, state) || isScopeItemSelectorCall(path, state))
     ? getMergeStyleLoc(path.node.callee)
     : null;
+}
+
+function getStyleObjectArg(
+  path: NodePath<BabelTypes.CallExpression>,
+  state: PluginState,
+) {
+  const methodName = getSelectorMethodName(path.node.callee);
+  const rootName = getStyleChainRootName(path.node.callee, state.styleNames);
+  const selector = methodName && rootName
+    ? state.styleMetas.get(rootName)?.selectors[methodName]
+    : null;
+
+  if (!selector) return path.node.arguments[0];
+
+  const selectorArgIndex = getSelectorArgIndex(selector, path.node.arguments as BabelTypes.Node[]);
+  const styleArgIndex = selectorArgIndex === null ? 0 : selectorArgIndex + 1;
+
+  return path.node.arguments[styleArgIndex];
+}
+
+function isSelectorStyleCall(
+  path: NodePath<BabelTypes.CallExpression>,
+  state: PluginState,
+) {
+  const methodName = getSelectorMethodName(path.node.callee);
+  if (!methodName) return false;
+
+  const rootName = getStyleChainRootName(path.node.callee, state.styleNames);
+  if (!rootName) return false;
+
+  return !!state.styleMetas.get(rootName)?.selectors[methodName];
 }
 
 function resolveDebugMergeObject(
@@ -561,15 +609,74 @@ function resolveDebugMergeObject(
   state: PluginState,
   sourcemapTrace: SourcemapTrace,
 ) {
-  if (!isMergeSelectorCall(path.node.callee, state)) return null;
+  if (!isMergeSelectorCall(path.node.callee, state) && !isScopeItemMergeCall(path, state)) return null;
 
   const loc = getMergeStyleLoc(path.node.callee);
   if (sourcemapTrace === 'style' && !loc) return null;
 
-  const source = resolveStyleDebugObject(t, arg, path, state, sourcemapTrace, new Set());
+  const localSource = resolveStyleDebugObject(t, arg, path, state, sourcemapTrace, new Set());
+  const source = (localSource?.properties.length ? localSource : null) ??
+    resolveImportedMergeDebugObject(t, arg, loc, state, sourcemapTrace);
   if (!source) return null;
 
   return createTraceDebugObject(t, source, loc ?? arg.loc?.start ?? null, sourcemapTrace);
+}
+
+function isScopeItemMergeCall(
+  path: NodePath<BabelTypes.CallExpression>,
+  state: PluginState,
+) {
+  return getSelectorMethodName(path.node.callee) === FN_STYLE_MERGE && isScopeItemCall(path, state);
+}
+
+function isScopeItemSelectorCall(
+  path: NodePath<BabelTypes.CallExpression>,
+  state: PluginState,
+) {
+  const callee = path.node.callee;
+  return callee.type === 'MemberExpression' &&
+    callee.object.type === 'CallExpression' &&
+    isScopeItemCall(path, state);
+}
+
+function resolveImportedMergeDebugObject(
+  t: typeof BabelTypes,
+  arg: BabelTypes.Node,
+  loc: BabelTypes.SourceLocation['start'] | null,
+  state: PluginState,
+  sourcemapTrace: SourcemapTrace,
+) {
+  if (arg.type !== 'Identifier') return null;
+
+  const evaluated = evaluateNode(arg, getDebugEvalScope(state));
+  if (!evaluated.ok || (!isStyleData(evaluated.value) && !isScopeData(evaluated.value))) return null;
+
+  const locations = (evaluated.value as CompiledStyleObject)[COMPILED_STYLE_OBJECT_LOCATIONS];
+  if (locations) {
+    return createLocationDebugObject(t, locations, loc, state, sourcemapTrace);
+  }
+
+  return createStyleDataDebugObject(
+    t,
+    evaluated.value[BUILDER_STATE].items,
+    loc,
+    state,
+    sourcemapTrace,
+  );
+}
+
+function isScopeMergeCall(
+  callee: BabelTypes.CallExpression['callee'],
+  state: PluginState,
+) {
+  const methodName = getSelectorMethodName(callee);
+  if (!methodName) return false;
+
+  const rootName = getStyleChainRootName(callee, state.styleNames);
+  if (!rootName) return false;
+
+  const selector = state.styleMetas.get(rootName)?.selectors[methodName];
+  return selector?.selector.trim() === SELECTOR_MERGE && isScopeChainCall(callee, state.styleNames);
 }
 
 function isMergeSelectorCall(
@@ -741,7 +848,9 @@ function resolveDebugSpreadObject(
     ? binding.path.node.init
     : null;
 
-  if (!init) return null;
+  if (!init) {
+    return resolveImportedDebugSpreadObject(t, node, spread, state, sourcemapTrace);
+  }
 
   seen.add(node.name);
 
@@ -762,6 +871,139 @@ function resolveDebugSpreadObject(
   } finally {
     seen.delete(node.name);
   }
+}
+
+function resolveImportedDebugSpreadObject(
+  t: typeof BabelTypes,
+  node: BabelTypes.Identifier,
+  spread: BabelTypes.SpreadElement,
+  state: PluginState,
+  sourcemapTrace: SourcemapTrace,
+) {
+  const evaluated = evaluateNode(node, getDebugEvalScope(state));
+  if (!evaluated.ok || !evaluated.value || typeof evaluated.value !== 'object') return null;
+
+  const locations = (evaluated.value as CompiledStyleObject)[COMPILED_STYLE_OBJECT_LOCATIONS];
+  if (!locations) return null;
+
+  return createLocationDebugObject(t, locations, spread.loc?.start ?? null, state, sourcemapTrace);
+}
+
+function createLocationDebugObject(
+  t: typeof BabelTypes,
+  locations: CompiledStyleObjectLocations,
+  styleLoc: BabelTypes.SourceLocation['start'] | null,
+  state: PluginState,
+  sourcemapTrace: SourcemapTrace,
+) {
+  if (sourcemapTrace === 'style' && !styleLoc) return null;
+
+  const properties: BabelTypes.ObjectExpression['properties'] = [];
+
+  for (const [key, loc] of Object.entries(locations)) {
+    const valueLoc = {
+      line: loc.line,
+      column: Math.max(loc.column - 1, 0),
+    } as BabelTypes.SourceLocation['start'];
+    const propertyLoc = sourcemapTrace === 'style' && styleLoc ? styleLoc : valueLoc;
+    const property = t.objectProperty(t.stringLiteral(key), t.nullLiteral()) as DebugTraceProperty;
+
+    property.loc = {
+      start: propertyLoc,
+      end: propertyLoc,
+    } as BabelTypes.SourceLocation;
+
+    if (styleLoc) {
+      property.__styleSourcemapStyleLoc = styleLoc;
+    }
+
+    property.__styleSourcemapValueLoc = valueLoc;
+
+    if (loc.filePath && loc.filePath !== state.filePath) {
+      property.__styleSourcemapValueSourceUrl = getDebugSourceUrl(
+        loc.filePath,
+        loc.filePath,
+        state.projectDir,
+        state.options,
+      );
+    }
+
+    properties.push(property);
+  }
+
+  return t.objectExpression(properties);
+}
+
+function createStyleDataDebugObject(
+  t: typeof BabelTypes,
+  items: readonly unknown[],
+  styleLoc: BabelTypes.SourceLocation['start'] | null,
+  state: PluginState,
+  sourcemapTrace: SourcemapTrace,
+) {
+  if (sourcemapTrace === 'style' && !styleLoc) return null;
+
+  const properties: BabelTypes.ObjectExpression['properties'] = [];
+
+  for (const item of items) {
+    if (Array.isArray(item) || !item || typeof item !== 'object') continue;
+
+    const runtimeItem = item as RuntimeItem;
+    const key = runtimeItem.property;
+    const valueLoc = getRuntimeItemValueLoc(runtimeItem);
+    if (!key || !valueLoc) continue;
+
+    const propertyLoc = sourcemapTrace === 'style' && styleLoc
+      ? styleLoc
+      : debugLocToSourceLoc(valueLoc);
+    const property = t.objectProperty(t.stringLiteral(key), t.nullLiteral()) as DebugTraceProperty;
+
+    property.loc = {
+      start: propertyLoc,
+      end: propertyLoc,
+    } as BabelTypes.SourceLocation;
+
+    if (styleLoc) {
+      property.__styleSourcemapStyleLoc = styleLoc;
+    }
+
+    property.__styleSourcemapValueLoc = debugLocToSourceLoc(valueLoc);
+    property.__styleSourcemapValueSourceUrl = valueLoc[3] || runtimeItem.debug?.sourceUrl;
+
+    properties.push(property);
+  }
+
+  return properties.length ? t.objectExpression(properties) : null;
+}
+
+function getRuntimeItemValueLoc(item: RuntimeItem): DebugLoc | null {
+  if (item.debug && item.debugField) {
+    const loc = item.debug.fields?.[item.debugField];
+    if (Array.isArray(loc)) return withDebugSource(loc, item.debug.sourceUrl, item.debug.code);
+    if (loc) {
+      const valueLoc = loc[TRACE_VALUE] ?? loc[TRACE_STYLE] ?? null;
+      return valueLoc ? withDebugSource(valueLoc, item.debug.sourceUrl, item.debug.code) : null;
+    }
+  }
+
+  return item.callsite
+    ? [item.callsite.line, item.callsite.column, undefined, item.callsite.sourceUrl, item.callsite.sourceContent]
+    : null;
+}
+
+function withDebugSource(
+  loc: DebugLoc,
+  sourceUrl: string,
+  sourceContent: string | undefined,
+): DebugLoc {
+  return loc[3] ? loc : [loc[0], loc[1], loc[2], sourceUrl, sourceContent];
+}
+
+function debugLocToSourceLoc(loc: DebugLoc) {
+  return {
+    line: loc[0],
+    column: Math.max(loc[1] - 1, 0),
+  } as BabelTypes.SourceLocation['start'];
 }
 
 function createSpreadDebugObject(
@@ -790,10 +1032,19 @@ function createTraceDebugObject(
     if (property.computed) continue;
 
     const clone = t.cloneNode(property);
-    if (loc) {
-      (clone as DebugTraceProperty).__styleSourcemapStyleLoc = loc;
+    const sourceProperty = property as DebugTraceProperty;
+    const clonedProperty = clone as DebugTraceProperty;
+    clonedProperty.__styleSourcemapStyleLoc = sourceProperty.__styleSourcemapStyleLoc;
+    clonedProperty.__styleSourcemapStyleSourceUrl = sourceProperty.__styleSourcemapStyleSourceUrl;
+    clonedProperty.__styleSourcemapValueLoc = sourceProperty.__styleSourcemapValueLoc;
+    clonedProperty.__styleSourcemapValueSourceUrl = sourceProperty.__styleSourcemapValueSourceUrl;
+
+    if (loc && !clonedProperty.__styleSourcemapStyleLoc) {
+      clonedProperty.__styleSourcemapStyleLoc = loc;
     }
-    (clone as DebugTraceProperty).__styleSourcemapValueLoc = property.loc?.start;
+    if (!clonedProperty.__styleSourcemapValueLoc) {
+      clonedProperty.__styleSourcemapValueLoc = property.loc?.start;
+    }
 
     if (sourcemapTrace === 'style' && loc) {
       clone.loc = {

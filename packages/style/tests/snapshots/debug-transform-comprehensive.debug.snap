@@ -1,0 +1,68 @@
+import { combineStyle, createTheme, createTokens, style } from '@fluentic/style';
+import { sharedInteractive } from './fixtures/merge_common';
+import { cardBase, textBase } from './fixtures/shared';const _styleDebugSourceUrl = "source:///snapshot-comprehensive.tsx";
+
+const tokens = createTokens({
+  color: {
+    bg: '#ffffff',
+    fg: '#111827',
+    accent: '#2563eb'
+  }
+}, "tokens-3qz6j00", { $$debug: true, loc: [5, 16], label: ["createTokens", "createTokens", "snapshot-comprehensive.tsx"], fields: { "color": [6, 3] }, vars: { "color": "--var-j2frv40" }, sourceUrl: _styleDebugSourceUrl });
+
+const appTheme = createTheme([
+tokens.color.bg('#f8fafc'),
+tokens.color.fg('#0f172a')], "lvb6tl0", { stack: "Error\\n    at " + _styleDebugSourceUrl + ":13:18" + "", filePath: _styleDebugSourceUrl, sourceUrl: _styleDebugSourceUrl, line: 13, column: 18 }
+);
+
+const styles = {
+  panel: style.slot({
+    ...cardBase,
+    ...textBase,
+    borderColor: tokens.color.accent
+  }, { $$debug: true, loc: [19, 10], label: ["slot", "style.slot", "snapshot-comprehensive.tsx"], fields: { "padding": { 0: [20, 5], 1: [24, 3, undefined, "source:///fixtures/shared.ts"] }, "backgroundColor": { 0: [20, 5], 1: [25, 3, undefined, "source:///fixtures/shared.ts"] }, "color": { 0: [21, 5], 1: [15, 3, undefined, "source:///fixtures/shared.ts"] }, "fontSize": { 0: [21, 5], 1: [16, 3, undefined, "source:///fixtures/shared.ts"] }, "borderColor": [22, 5] }, vars: { "borderColor": "--var-b0cszos" }, sourceUrl: _styleDebugSourceUrl }).media('(max-width: 700px)', {
+    padding: 8
+  }, { $$debug: true, loc: [23, 6], label: ["media", "style.media", "snapshot-comprehensive.tsx"], fields: { "padding": [24, 5] }, vars: {}, sourceUrl: _styleDebugSourceUrl }),
+  action: style({
+    ...textBase,
+    backgroundColor: tokens.color.bg
+  }, { $$debug: true, loc: [26, 11], label: ["style", "style", "snapshot-comprehensive.tsx"], fields: { "color": { 0: [27, 5], 1: [15, 3, undefined, "source:///fixtures/shared.ts"] }, "fontSize": { 0: [27, 5], 1: [16, 3, undefined, "source:///fixtures/shared.ts"] }, "backgroundColor": [28, 5] }, vars: { "backgroundColor": "--var-b1096m7" }, sourceUrl: _styleDebugSourceUrl }).merge(sharedInteractive, { $$debug: true, loc: [29, 6], label: ["merge", "style.merge", "snapshot-comprehensive.tsx"], fields: { "backgroundColor": { 0: [29, 6], 1: [10, 3, undefined, "source:///fixtures/merge_common.ts"] }, "borderColor": { 0: [29, 6], 1: [4, 3, undefined, "source:///fixtures/merge_common.ts"] }, "color": { 0: [29, 6], 1: [12, 3, undefined, "source:///fixtures/merge_common.ts"] } }, vars: {}, sourceUrl: _styleDebugSourceUrl }).hover({
+    color: tokens.color.accent
+  }, { $$debug: true, loc: [29, 31], label: ["hover", "style.hover", "snapshot-comprehensive.tsx"], fields: { "color": [30, 5] }, vars: { "color": "--var-bl7g8vz" }, sourceUrl: _styleDebugSourceUrl })
+};
+
+const baseScope = style.scope([
+styles.panel({
+  boxShadow: '0 10px 24px rgba(15, 23, 42, 0.08)'
+}, { $$debug: true, loc: [35, 3], label: ["panel", "style.panel", "snapshot-comprehensive.tsx"], fields: { "boxShadow": [36, 5] }, vars: {}, sourceUrl: _styleDebugSourceUrl })]
+);
+
+const mergedScope = style.scope().
+merge(baseScope, { $$debug: true, loc: [41, 4], label: ["merge", "style.merge", "snapshot-comprehensive.tsx"], fields: {}, vars: {}, sourceUrl: _styleDebugSourceUrl }).
+hover([
+styles.panel({
+  borderColor: '#94a3b8'
+}, { $$debug: true, loc: [43, 5], label: ["panel", "style.panel", "snapshot-comprehensive.tsx"], fields: { "borderColor": [44, 7] }, vars: {}, sourceUrl: _styleDebugSourceUrl })]
+);
+
+const directOverride = styles.panel({
+  outlineColor: '#475569'
+}, { $$debug: true, loc: [48, 24], label: ["panel", "style.panel", "snapshot-comprehensive.tsx"], fields: { "outlineColor": [49, 3] }, vars: {}, sourceUrl: _styleDebugSourceUrl });
+
+const directOverrideScope = style.scope().
+merge(directOverride, { $$debug: true, loc: [53, 4], label: ["merge", "style.merge", "snapshot-comprehensive.tsx"], fields: {}, vars: {}, sourceUrl: _styleDebugSourceUrl });
+
+const sharedElevation = style({
+  boxShadow: '0 16px 36px rgba(15, 23, 42, 0.12)'
+}, { $$debug: true, loc: [55, 25], label: ["style", "style", "snapshot-comprehensive.tsx"], fields: { "boxShadow": [56, 3] }, vars: {}, sourceUrl: _styleDebugSourceUrl });
+
+const chainedOverrideScope = style.scope([
+styles.panel({
+  color: '#334155'
+}, { $$debug: true, loc: [60, 3], label: ["panel", "style.panel", "snapshot-comprehensive.tsx"], fields: { "color": [61, 5] }, vars: {}, sourceUrl: _styleDebugSourceUrl }).merge(sharedElevation, { $$debug: true, loc: [62, 6], label: ["merge", "style.merge", "snapshot-comprehensive.tsx"], fields: { "boxShadow": { 0: [62, 6], 1: [56, 3] } }, vars: {}, sourceUrl: _styleDebugSourceUrl })]
+);
+
+export default function App() {
+  const css = combineStyle(styles, mergedScope, directOverrideScope, chainedOverrideScope);
+  return <main css={[{ $$elementDebug: true, loc: [67, 10], label: "appTheme", sourceUrl: _styleDebugSourceUrl }, appTheme, css.panel, styles.action]}>snapshot</main>;
+}

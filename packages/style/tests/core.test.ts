@@ -335,6 +335,54 @@ const pageStyles = {
   includes(result.code, `"color": [19, 5]`);
 });
 
+test('dev debug transform traces imported object spreads to style and value sources', () => {
+  const result = injectStyleDebugData(
+    [
+      `import { style } from '@fluentic/style';`,
+      `import { textBase } from './fixtures/shared';`,
+      ``,
+      `const pageStyles = {`,
+      `  container: style.slot({`,
+      `    ...textBase,`,
+      `    margin: 0,`,
+      `  }),`,
+      `};`,
+    ].join('\n'),
+    testDir + 'debug-imported-spread.ts',
+    { rootDir: testDir },
+  );
+
+  includes(result.code, `"color": { 0: [6, 5], 1: [15, 3, undefined, "source:///fixtures/shared.ts"] }`);
+  includes(result.code, `"fontSize": { 0: [6, 5], 1: [16, 3, undefined, "source:///fixtures/shared.ts"] }`);
+  includes(result.code, `"margin": [7, 5]`);
+});
+
+test('dev debug transform traces selector style arguments to their own fields', () => {
+  const result = injectStyleDebugData(
+    [
+      `import { style } from '@fluentic/style';`,
+      ``,
+      `const pageStyles = {`,
+      `  container: style.slot({`,
+      `    color: 'red',`,
+      `  }).media('(max-width: 700px)', {`,
+      `    padding: 12,`,
+      `  }).hover({`,
+      `    backgroundColor: 'blue',`,
+      `  }),`,
+      `};`,
+    ].join('\n'),
+    '/src/styles.ts',
+    {},
+    'http://127.0.0.1:4321/src/styles.ts',
+  );
+
+  includes(result.code, `.media('(max-width: 700px)', {\n    padding: 12\n  }, { $$debug: true, loc: [6, 6]`);
+  includes(result.code, `label: ["media", "style.media", "styles.ts"], fields: { "padding": [7, 5] }`);
+  includes(result.code, `.hover({\n    backgroundColor: 'blue'\n  }, { $$debug: true, loc: [8, 6]`);
+  includes(result.code, `label: ["hover", "style.hover", "styles.ts"], fields: { "backgroundColor": [9, 5] }`);
+});
+
 test('dev debug transform traces chain merge to style or value sites', () => {
   const result = injectStyleDebugData(
     `import { style } from '@fluentic/style';
@@ -359,6 +407,26 @@ const button = style({
   includes(result.code, `.merge(shared, { $$debug: true, loc: [10, 4]`);
   includes(result.code, `"display": { 0: [10, 4], 1: [4, 3] }`);
   includes(result.code, `"color": { 0: [10, 4], 1: [5, 3] }`);
+});
+
+test('dev debug transform traces imported chain merge to leaf sources', () => {
+  const result = injectStyleDebugData(
+    [
+      `import { style } from '@fluentic/style';`,
+      `import { sharedInteractive } from './fixtures/merge_common';`,
+      ``,
+      `const button = style({`,
+      `  boxShadow: 'none',`,
+      `}).merge(sharedInteractive);`,
+    ].join('\n'),
+    testDir + 'debug-imported-merge.ts',
+    { rootDir: testDir },
+  );
+
+  includes(result.code, `.merge(sharedInteractive, { $$debug: true, loc: [6, 4]`);
+  includes(result.code, `"backgroundColor": { 0: [6, 4], 1: [10, 3, undefined, "source:///fixtures/merge_common.ts"] }`);
+  includes(result.code, `"borderColor": { 0: [6, 4], 1: [4, 3, undefined, "source:///fixtures/merge_common.ts"] }`);
+  includes(result.code, `"color": { 0: [6, 4], 1: [12, 3, undefined, "source:///fixtures/merge_common.ts"] }`);
 });
 
 test('dev debug transform injects scope item override callsites', () => {

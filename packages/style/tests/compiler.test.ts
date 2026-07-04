@@ -244,6 +244,35 @@ export const theme = createTheme([color('red')]);
   notIncludes(result.code, 'color(\'red\', {');
 });
 
+test('debug transform maps slot override chain merge fields to the merge call', () => {
+  const result = injectStyleDebugData(
+    `
+import { style } from '@fluentic/style';
+
+const localSlotMergeInteraction = style({
+  outline: '3px solid #facc15',
+});
+
+const buttonBaseStyles = {
+  container: style.slot({ color: 'black' }),
+};
+
+export const slotOverrideChainTheme = style.scope([
+  buttonBaseStyles.container({
+    color: '#ffffff',
+  }).merge(localSlotMergeInteraction),
+]);
+`,
+    '/project/src/page.tsx',
+    { rootDir: '/project', sourcemapTrace: 'style' },
+  );
+
+  includes(result.code, '}).merge(localSlotMergeInteraction, { $$debug: true, loc: [15, 6]');
+  includes(result.code, '"outline": { 0: [15, 6], 1: [5, 3] }');
+  notIncludes(result.code, '}).merge(localSlotMergeInteraction, { $$debug: true, loc: [12, 3]');
+  notIncludes(result.code, '}).merge(localSlotMergeInteraction, { $$debug: true, loc: [13, 3]');
+});
+
 test('debug transform skips host element marker metadata when explicitly disabled', () => {
   const result = injectStyleDebugData(
     `
@@ -462,6 +491,191 @@ test('compiler sourcemap toStyle traces merged rules to the merge call', () => {
   equal(
     result.rules.some((rule) =>
       rule.css.includes('border-color: gray') &&
+      rule.trace?.line === mergeLine &&
+      rule.trace?.column === mergeColumn
+    ),
+    true,
+  );
+});
+
+test('compiler sourcemap toStyle traces scope merge rules to the merge call', () => {
+  const code = [
+    `import { style } from '@fluentic/style';`,
+    ``,
+    `const styles = {`,
+    `  button: style.slot({`,
+    `    color: 'black',`,
+    `  }),`,
+    `};`,
+    ``,
+    `const cancelTheme = style.scope([`,
+    `  styles.button({`,
+    `    boxShadow: '0 10px 24px rgba(15, 23, 42, 0.08)',`,
+    `  }),`,
+    `]);`,
+    ``,
+    `export const mergedTheme = style.scope()`,
+    `  .merge(cancelTheme);`,
+  ].join('\n');
+  const mergeLine = code.split('\n').findIndex((line) => line.includes('.merge')) + 1;
+  const mergeColumn = code.split('\n')[mergeLine - 1].indexOf('merge') + 1;
+  const compiler = createPluginCompiler({
+    dev: false,
+    projectDir: testDir,
+    cacheDir: testDir + '.test-cache',
+    runtimeMode: null,
+    options: {
+      css: { layer: false, debugClassName: true, localClassName: true },
+      dev: { sourcemapMode: 'style' },
+    },
+  });
+  const result = compiler.compiler.compileExtract({
+    code,
+    filePath: '/tmp/compiler-scope-merge-trace-style.ts',
+    sourcemap: null,
+  });
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  equal(
+    result.rules.some((rule) =>
+      rule.css.includes('box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08)') &&
+      rule.trace?.line === mergeLine &&
+      rule.trace?.column === mergeColumn
+    ),
+    true,
+  );
+});
+
+test('compiler sourcemap toStyle traces scope slot override merge to the merge call', () => {
+  const code = [
+    `import { style } from '@fluentic/style';`,
+    ``,
+    `const styles = {`,
+    `  button: style.slot({ color: 'black' }),`,
+    `};`,
+    ``,
+    `const override = styles.button({`,
+    `  boxShadow: '0 10px 24px rgba(15, 23, 42, 0.08)',`,
+    `});`,
+    ``,
+    `export const mergedTheme = style.scope()`,
+    `  .merge(override);`,
+  ].join('\n');
+  const mergeLine = code.split('\n').findIndex((line) => line.includes('.merge')) + 1;
+  const mergeColumn = code.split('\n')[mergeLine - 1].indexOf('merge') + 1;
+  const compiler = createPluginCompiler({
+    dev: false,
+    projectDir: testDir,
+    cacheDir: testDir + '.test-cache',
+    runtimeMode: null,
+    options: {
+      css: { layer: false, debugClassName: true, localClassName: true },
+      dev: { sourcemapMode: 'style' },
+    },
+  });
+  const result = compiler.compiler.compileExtract({
+    code,
+    filePath: '/tmp/compiler-scope-slot-override-merge-trace-style.ts',
+    sourcemap: null,
+  });
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  equal(
+    result.rules.some((rule) =>
+      rule.css.includes('box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08)') &&
+      rule.trace?.line === mergeLine &&
+      rule.trace?.column === mergeColumn
+    ),
+    true,
+  );
+});
+
+test('compiler sourcemap toStyle traces slot override chain merge to the merge call', () => {
+  const code = [
+    `import { style } from '@fluentic/style';`,
+    ``,
+    `const shared = style({`,
+    `  boxShadow: '0 10px 24px rgba(15, 23, 42, 0.08)',`,
+    `});`,
+    `const styles = {`,
+    `  button: style.slot({ color: 'black' }),`,
+    `};`,
+    ``,
+    `export const theme = style.scope([`,
+    `  styles.button({ color: 'red' }).merge(shared),`,
+    `]);`,
+  ].join('\n');
+  const mergeLine = code.split('\n').findIndex((line) => line.includes('.merge')) + 1;
+  const mergeColumn = code.split('\n')[mergeLine - 1].indexOf('merge') + 1;
+  const compiler = createPluginCompiler({
+    dev: false,
+    projectDir: testDir,
+    cacheDir: testDir + '.test-cache',
+    runtimeMode: null,
+    options: {
+      css: { layer: false, debugClassName: true, localClassName: true },
+      dev: { sourcemapMode: 'style' },
+    },
+  });
+  const result = compiler.compiler.compileExtract({
+    code,
+    filePath: '/tmp/compiler-slot-override-chain-merge-trace-style.ts',
+    sourcemap: null,
+  });
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  equal(
+    result.rules.some((rule) =>
+      rule.css.includes('box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08)') &&
+      rule.trace?.line === mergeLine &&
+      rule.trace?.column === mergeColumn
+    ),
+    true,
+  );
+});
+
+test('compiler sourcemap toStyle traces slot base merge to the merge call', () => {
+  const code = [
+    `import { style } from '@fluentic/style';`,
+    ``,
+    `const shared = style({`,
+    `  boxShadow: '0 10px 24px rgba(15, 23, 42, 0.08)',`,
+    `});`,
+    `const styles = {`,
+    `  button: style.slot({ color: 'black' })`,
+    `    .merge(shared),`,
+    `};`,
+    ``,
+    `export const theme = style.scope([`,
+    `  styles.button({ color: 'red' }),`,
+    `]);`,
+  ].join('\n');
+  const mergeLine = code.split('\n').findIndex((line) => line.includes('.merge')) + 1;
+  const mergeColumn = code.split('\n')[mergeLine - 1].indexOf('merge') + 1;
+  const compiler = createPluginCompiler({
+    dev: false,
+    projectDir: testDir,
+    cacheDir: testDir + '.test-cache',
+    runtimeMode: null,
+    options: {
+      css: { layer: false, debugClassName: true, localClassName: true },
+      dev: { sourcemapMode: 'style' },
+    },
+  });
+  const result = compiler.compiler.compileExtract({
+    code,
+    filePath: '/tmp/compiler-slot-base-merge-trace-style.ts',
+    sourcemap: null,
+  });
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  equal(
+    result.rules.some((rule) =>
+      rule.css.includes('box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08)') &&
       rule.trace?.line === mergeLine &&
       rule.trace?.column === mergeColumn
     ),

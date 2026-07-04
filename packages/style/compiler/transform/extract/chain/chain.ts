@@ -16,6 +16,7 @@ import {
 } from '../../../../builder/data';
 import {
   BUILDER_STATE,
+  BUILDER_SLOT_ID,
   BUILDER_TYPE_SCOPE,
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
@@ -24,11 +25,13 @@ import {
   ITEM_VALUE_TYPE_AT_RULE_REF,
   ITEM_VALUE_TYPE_VARIABLE,
 } from '../../../../builder/data/const';
-import { isScopeData, isStyleData } from '../../../../builder/data/is';
+import type { DebugLoc } from '../../../../builder/data/debug';
+import { isScopeData, isSlotOverrideData, isStyleData } from '../../../../builder/data/is';
 import type {
   ExtractedItemValue,
   ItemSelector,
   RuntimeScopeItem,
+  RuntimeSlotOverrideItem,
   RuntimeStyleItem,
 } from '../../../../builder/data/state';
 import type { ClassNameFormat, TokenNameFormat } from '../../../../config/types';
@@ -201,7 +204,7 @@ function compileStyleChainInto(
   scope: EvalScope,
   cssConfig: CssConfig,
   transform: StyleTransform | null,
-  type: StyleChainBuilderType,
+  type: ExtractedCssBuilderType,
   slotId: string | null,
   atRules: ItemSelector[] | null,
   items: CompiledItem[],
@@ -328,6 +331,7 @@ function compileScopeChain(
   cssConfig: CssConfig,
   transform: StyleTransform | null,
   options: CompilerOptions,
+  callsiteOverride: TraceCallsiteOverride = null,
 ): CompiledChainData | null {
   const items: CompiledItem[] = [];
   const rules: CssExtractRule[] = [];
@@ -346,6 +350,7 @@ function compileScopeChain(
         rules,
         transform,
         options,
+        callsiteOverride,
       )
     ) {
       return null;
@@ -356,7 +361,18 @@ function compileScopeChain(
   let i = 0;
   while (i < chain.methods.length) {
     const method = chain.methods[i];
-    const result = compileScopeMethod(method, selectors, fileId, scope, cssConfig, items, rules, transform, options);
+    const result = compileScopeMethod(
+      method,
+      selectors,
+      fileId,
+      scope,
+      cssConfig,
+      items,
+      rules,
+      transform,
+      options,
+      callsiteOverride,
+    );
     if (!result) return null;
     i++;
   }
@@ -374,6 +390,7 @@ function compileScopeMethod(
   cssRules: CssExtractRule[],
   transform: StyleTransform | null,
   options: CompilerOptions,
+  callsiteOverride: TraceCallsiteOverride = null,
 ): boolean {
   const selector = selectors[method.name];
   if (!selector) return false;
@@ -382,6 +399,49 @@ function compileScopeMethod(
   const selectorStr = selector.selector.trim();
 
   if (selectorStr === SELECTOR_MERGE) {
+    const mergeCallsite = callsiteOverride ?? getMergeStyleCallsite(method.nameNode, scope, options);
+    const localChain = getLocalStyleChainArg(method.args[0], scope, scope.styleNames ?? new Set());
+    const localMeta = localChain ? scope.styleMetas?.get(localChain.rootName) : null;
+
+    if (mergeCallsite && localChain?.kind === 'scope' && localMeta) {
+      const result = compileScopeChain(
+        localChain,
+        localMeta.selectors,
+        fileId,
+        scope,
+        cssConfig,
+        localMeta.transform,
+        options,
+        mergeCallsite,
+      );
+      if (!result) return false;
+      items.push(...result.items);
+      cssRules.push(...result.rules);
+      return true;
+    }
+
+    const localSlotOverride = getLocalBindingNode(method.args[0], scope);
+    if (
+      mergeCallsite &&
+      localSlotOverride &&
+      compileScopeItemsArg(
+        localSlotOverride,
+        null,
+        null,
+        selectors,
+        fileId,
+        scope,
+        cssConfig,
+        items,
+        cssRules,
+        transform,
+        options,
+        mergeCallsite,
+      )
+    ) {
+      return true;
+    }
+
     const scopeArg = evaluateNode(method.args[0], scope);
     if (!scopeArg.ok) return false;
 
@@ -393,6 +453,7 @@ function compileScopeMethod(
       items,
       cssRules,
       cssConfig,
+      mergeCallsite,
     );
   }
 
@@ -443,6 +504,7 @@ function compileScopeMethod(
       cssRules,
       transform,
       options,
+      callsiteOverride,
     );
   }
 
@@ -487,9 +549,10 @@ function compileScopeMethod(
           cssConfig,
           items,
           cssRules,
-          transform,
-          options,
-        )
+            transform,
+            options,
+            callsiteOverride,
+          )
       ) {
         return false;
       }
@@ -516,6 +579,7 @@ function compileScopeMethod(
     cssRules,
     transform,
     options,
+    callsiteOverride,
   );
 }
 
@@ -531,6 +595,7 @@ function compileScopeItemsArg(
   cssRules: CssExtractRule[],
   transform: StyleTransform | null,
   options: CompilerOptions,
+  callsiteOverride: TraceCallsiteOverride = null,
 ): boolean {
   if (itemsArg.type === 'ArrayExpression') {
     let i = 0;
@@ -553,6 +618,7 @@ function compileScopeItemsArg(
         cssRules,
         transform,
         options,
+        callsiteOverride,
       );
       if (!overrideResult) return false;
       i++;
@@ -570,6 +636,7 @@ function compileScopeItemsArg(
       cssRules,
       transform,
       options,
+      callsiteOverride,
     );
     if (!overrideResult) return false;
   }
@@ -589,6 +656,7 @@ function resolveSlotOverrideNode(
   cssRules: CssExtractRule[],
   transform: StyleTransform | null,
   options: CompilerOptions,
+  callsiteOverride: TraceCallsiteOverride = null,
 ): boolean {
   const tokenOverride = evaluateNode(node, scope);
 
@@ -617,7 +685,46 @@ function resolveSlotOverrideNode(
     const overrideItem = overrideItems[i];
     const mergedAtRules = mergeAtRules(atRules, overrideItem.atRules);
 
-    if (
+    if (overrideItem.chain && overrideItem.meta) {
+      if (
+        !compileStyleChainInto(
+          overrideItem.chain,
+          overrideItem.meta.selectors,
+          fileId,
+          scope,
+          cssConfig,
+          overrideItem.meta.transform,
+          BUILDER_TYPE_SCOPE,
+          slotId,
+          mergedAtRules,
+          items,
+          cssRules,
+          scope.styleNames ?? new Set(),
+          options,
+          overrideItem.callsiteOverride,
+        )
+      ) {
+        return false;
+      }
+    } else if (overrideItem.styleData !== undefined) {
+      if (
+        !addStyleDataItems(
+          overrideItem.styleData,
+          overrideItem.selector,
+          parentSelector,
+          mergedAtRules,
+          fileId,
+          BUILDER_TYPE_SCOPE,
+          slotId,
+          items,
+          cssRules,
+          cssConfig,
+          overrideItem.callsiteOverride,
+        )
+      ) {
+        return false;
+      }
+    } else if (
       !addStyleItems(
         overrideItem.styleObj,
         overrideItem.selector,
@@ -629,6 +736,7 @@ function resolveSlotOverrideNode(
         items,
         cssRules,
         cssConfig,
+        overrideItem.callsiteOverride ?? callsiteOverride,
       )
     ) {
       return false;
@@ -641,9 +749,13 @@ function resolveSlotOverrideNode(
 }
 
 type OverrideItem = {
-  styleObj: Record<string, unknown>;
+  styleObj: CompiledStyleObject;
+  styleData?: unknown;
+  chain?: NonNullable<StyleChainParseResult>;
+  meta?: StyleFnMeta;
   selector: ItemSelector | null;
   atRules: ItemSelector[] | null;
+  callsiteOverride?: TraceCallsiteOverride;
 };
 
 type OverrideChain = {
@@ -677,6 +789,7 @@ function extractOverrideChain(
       const overrideItem = resolveOverrideMethod(
         methodName,
         node.arguments as BabelTypes.Node[],
+        callee.property as BabelTypes.Node,
         selectors,
         scope,
         transform,
@@ -712,6 +825,7 @@ function extractOverrideChain(
 function resolveOverrideMethod(
   methodName: string,
   args: BabelTypes.Node[],
+  nameNode: BabelTypes.Node | undefined,
   selectors: SelectorsMap,
   scope: EvalScope,
   transform: StyleTransform | null,
@@ -722,6 +836,43 @@ function resolveOverrideMethod(
   validateSelectorDefinition(options.dev?.checkSelector, `style.${methodName}`, sel);
 
   const selectorStr = sel.selector.trim();
+
+  if (selectorStr === SELECTOR_MERGE) {
+    const styleArg = evaluateNode(args[0], scope);
+    if (!styleArg.ok) return null;
+
+    const callsiteOverride = getMergeStyleCallsite(nameNode, scope, options);
+    const localChain = getLocalStyleChainArg(args[0], scope, scope.styleNames ?? new Set());
+    const localMeta = localChain ? scope.styleMetas?.get(localChain.rootName) : null;
+
+    if (localChain?.kind === 'style' && localMeta) {
+      return {
+        styleObj: {},
+        chain: localChain,
+        meta: localMeta,
+        selector: null,
+        atRules: null,
+        callsiteOverride,
+      };
+    }
+
+    if (isStyleData(styleArg.value)) {
+      return {
+        styleObj: {},
+        styleData: styleArg.value,
+        selector: null,
+        atRules: null,
+        callsiteOverride,
+      };
+    }
+
+    return {
+      styleObj: applyTransform((styleArg.value as Record<string, unknown>) ?? {}, transform),
+      selector: null,
+      atRules: null,
+      callsiteOverride,
+    };
+  }
 
   if (selectorStr.startsWith(SELECTOR_AT_RULE)) {
     const isMedia = selectorStr.startsWith(SELECTOR_MEDIA) || selectorStr.startsWith(SELECTOR_CONTAINER);
@@ -882,7 +1033,7 @@ function compileChainMethod(
   slotId: string | null,
   fileId: string,
   scope: EvalScope,
-  type: StyleChainBuilderType,
+  type: ExtractedCssBuilderType,
   cssConfig: CssConfig,
   items: CompiledItem[],
   cssRules: CssExtractRule[],
@@ -1005,7 +1156,7 @@ function compileMergeArg(
   mergeNode: BabelTypes.Node | undefined,
   fileId: string,
   scope: EvalScope,
-  type: StyleChainBuilderType,
+  type: ExtractedCssBuilderType,
   slotId: string | null,
   atRules: ItemSelector[] | null,
   cssConfig: CssConfig,
@@ -1017,29 +1168,26 @@ function compileMergeArg(
 ): boolean {
   if (!styleArgNode) return false;
   const styleCallsite = callsiteOverride ?? getMergeStyleCallsite(mergeNode, scope, options);
+  const localChain = getLocalStyleChainArg(styleArgNode, scope, styleNames);
+  const localMeta = localChain ? scope.styleMetas?.get(localChain.rootName) : null;
 
-  if (styleCallsite) {
-    const localChain = getLocalStyleChainArg(styleArgNode, scope, styleNames);
-    const localMeta = localChain ? scope.styleMetas?.get(localChain.rootName) : null;
-
-    if (localChain?.kind === 'style' && localMeta) {
-      return compileStyleChainInto(
-        localChain,
-        localMeta.selectors,
-        fileId,
-        scope,
-        cssConfig,
-        localMeta.transform,
-        type,
-        slotId,
-        atRules,
-        items,
-        cssRules,
-        styleNames,
-        options,
-        styleCallsite,
-      );
-    }
+  if ((styleCallsite || options.dev?.sourcemapMode === 'value') && localChain?.kind === 'style' && localMeta) {
+    return compileStyleChainInto(
+      localChain,
+      localMeta.selectors,
+      fileId,
+      scope,
+      cssConfig,
+      localMeta.transform,
+      type,
+      slotId,
+      atRules,
+      items,
+      cssRules,
+      styleNames,
+      options,
+      styleCallsite,
+    );
   }
 
   if (styleArgNode.type === 'CallExpression') {
@@ -1117,6 +1265,15 @@ function getLocalStyleChainArg(
   return extractStyleChain(init, styleNames);
 }
 
+function getLocalBindingNode(
+  node: BabelTypes.Node | undefined,
+  scope: EvalScope,
+) {
+  return node?.type === 'Identifier'
+    ? scope.bindingNodes?.get(node.name) ?? null
+    : null;
+}
+
 function getMergeStyleCallsite(
   node: BabelTypes.Node | undefined,
   scope: EvalScope,
@@ -1159,7 +1316,7 @@ function compileAtRuleMethod(
   selectorStr: string,
   fileId: string,
   scope: EvalScope,
-  type: StyleChainBuilderType,
+  type: ExtractedCssBuilderType,
   cssConfig: CssConfig,
   items: CompiledItem[],
   cssRules: CssExtractRule[],
@@ -1270,7 +1427,7 @@ function compileArgMethod(
   slotId: string | null,
   fileId: string,
   scope: EvalScope,
-  type: StyleChainBuilderType,
+  type: ExtractedCssBuilderType,
   cssConfig: CssConfig,
   items: CompiledItem[],
   cssRules: CssExtractRule[],
@@ -1334,12 +1491,33 @@ function addScopeDataItems(
   items: CompiledItem[],
   cssRules: CssExtractRule[],
   cssConfig: CssConfig,
+  callsiteOverride: TraceCallsiteOverride = null,
 ): boolean {
   const values = Array.isArray(value) ? value : [value];
 
   let i = 0;
   while (i < values.length) {
     const scopeData = values[i];
+    if (isSlotOverrideData(scopeData)) {
+      if (
+        !addSlotOverrideDataItems(
+          scopeData,
+          parentSelector,
+          atRules,
+          fileId,
+          items,
+          cssRules,
+          cssConfig,
+          callsiteOverride,
+        )
+      ) {
+        return false;
+      }
+
+      i++;
+      continue;
+    }
+
     if (!isScopeData(scopeData)) return false;
 
     const sourceItems = scopeData[BUILDER_STATE].items;
@@ -1377,6 +1555,80 @@ function addScopeDataItems(
         items,
         cssRules,
         cssConfig,
+        callsiteOverride,
+      );
+
+      j++;
+    }
+
+    i++;
+  }
+
+  return true;
+}
+
+function addSlotOverrideDataItems(
+  value: unknown,
+  parentSelector: ItemSelector | null,
+  atRules: ItemSelector[] | null,
+  fileId: string,
+  items: CompiledItem[],
+  cssRules: CssExtractRule[],
+  cssConfig: CssConfig,
+  callsiteOverride: TraceCallsiteOverride = null,
+): boolean {
+  const values = Array.isArray(value) ? value : [value];
+
+  let i = 0;
+  while (i < values.length) {
+    const slotOverrideData = values[i];
+    if (!isSlotOverrideData(slotOverrideData)) return false;
+
+    const slotId = slotOverrideData[BUILDER_SLOT_ID];
+    const sourceItems = slotOverrideData[BUILDER_STATE].items;
+
+    let j = 0;
+    while (j < sourceItems.length) {
+      const sourceItem = sourceItems[j];
+
+      if (Array.isArray(sourceItem)) {
+        addExtractedScopeItem(sourceItem, items);
+        j++;
+        continue;
+      }
+
+      if (isStyleTokenOverrideData(sourceItem) || sourceItem.type !== BUILDER_TYPE_SLOT_OVERRIDE) {
+        return false;
+      }
+
+      const overrideItem = sourceItem as RuntimeSlotOverrideItem;
+      const scopeItem: RuntimeScopeItem = {
+        type: BUILDER_TYPE_SCOPE,
+        slotId,
+        runtime: overrideItem.runtime,
+        callsite: overrideItem.callsite,
+        debug: overrideItem.debug,
+        debugField: overrideItem.debugField,
+        dedupe: overrideItem.dedupe,
+        className: overrideItem.className,
+        property: overrideItem.property,
+        value: overrideItem.value,
+        variable: overrideItem.variable,
+        token: overrideItem.token,
+        selector: overrideItem.selector,
+        atRule: overrideItem.atRule,
+        parentSelector,
+      };
+
+      addRuntimeScopeItem(
+        scopeItem,
+        parentSelector,
+        atRules,
+        fileId,
+        items,
+        cssRules,
+        cssConfig,
+        callsiteOverride,
       );
 
       j++;
@@ -1444,6 +1696,7 @@ function addRuntimeScopeItem(
   items: CompiledItem[],
   cssRules: CssExtractRule[],
   cssConfig: CssConfig,
+  callsiteOverride: TraceCallsiteOverride = null,
 ) {
   let priority: number | null = null;
   let value = sourceItem.value;
@@ -1455,6 +1708,7 @@ function addRuntimeScopeItem(
 
   const itemParentSelector = parentSelector ?? sourceItem.parentSelector;
   const itemAtRules = mergeAtRules(atRules, sourceItem.atRule);
+  const traceCallsite = callsiteOverride ?? sourceItem.callsite;
   const valueStr = String(value ?? '');
 
   const dedupe = getClassNameDedupe(
@@ -1472,7 +1726,7 @@ function addRuntimeScopeItem(
     sourceItem.selector,
     itemParentSelector,
     itemAtRules,
-    sourceItem.callsite,
+    traceCallsite,
     cssConfig.localClassName,
     cssConfig.debugClassName,
     cssConfig.classNameFormat,
@@ -1512,11 +1766,11 @@ function addRuntimeScopeItem(
     className,
     css,
     priority: layerPriority,
-    trace: sourceItem.callsite
+    trace: traceCallsite
       ? {
-        filePath: sourceItem.callsite.filePath ?? fileId,
-        line: sourceItem.callsite.line,
-        column: sourceItem.callsite.column,
+        filePath: traceCallsite.filePath ?? fileId,
+        line: traceCallsite.line,
+        column: traceCallsite.column,
       }
       : undefined,
   });
@@ -1721,6 +1975,7 @@ function addRuntimeStyleItem(
     className,
     !!parentSelector,
   );
+  item.sourceTrace = getRuntimeStyleItemSourceTrace(sourceItem, fileId);
 
   if (type !== BUILDER_TYPE_SCOPE && variable && shouldUseVariable) {
     setCompiledItemValue(item, variable);
@@ -1761,6 +2016,54 @@ function addRuntimeStyleItem(
       }
       : undefined,
   });
+}
+
+function getRuntimeStyleItemSourceTrace(
+  item: RuntimeStyleItem,
+  fileId: string,
+): CompiledCssItem['sourceTrace'] {
+  const trace = getRuntimeStyleItemValueTrace(item);
+  if (!trace) return undefined;
+
+  return {
+    property: item.property,
+    filePath: trace.filePath || fileId,
+    line: trace.line,
+    column: trace.column,
+    trace: trace.trace,
+  };
+}
+
+function getRuntimeStyleItemValueTrace(
+  item: RuntimeStyleItem,
+): CssExtractRule['trace'] {
+  if (item.debug && item.debugField) {
+    const loc = item.debug.fields?.[item.debugField];
+    if (Array.isArray(loc)) return createRuntimeStyleItemTrace(loc, item.debug.sourceUrl);
+    if (loc) {
+      const valueLoc = loc[1] ?? loc[0] ?? null;
+      return valueLoc ? createRuntimeStyleItemTrace(valueLoc, item.debug.sourceUrl) : undefined;
+    }
+  }
+
+  return item.callsite
+    ? {
+      filePath: item.callsite.filePath ?? '',
+      line: item.callsite.line,
+      column: item.callsite.column,
+    }
+    : undefined;
+}
+
+function createRuntimeStyleItemTrace(
+  loc: DebugLoc,
+  fallbackFilePath: string,
+): CssExtractRule['trace'] {
+  return {
+    filePath: loc[3] ?? fallbackFilePath,
+    line: loc[0],
+    column: loc[1],
+  };
 }
 
 function getAtRulePriority(
@@ -1874,6 +2177,15 @@ function addStyleItems(
       className,
       !!parentSelector,
     );
+    item.sourceTrace = propertyCallsite
+      ? {
+        property,
+        filePath: propertyCallsite.filePath ?? fileId,
+        line: propertyCallsite.line,
+        column: propertyCallsite.column,
+        trace: callsiteOverride ? undefined : propertyLoc?.trace,
+      }
+      : undefined;
 
     if (ref && type !== BUILDER_TYPE_SCOPE) {
       setCompiledItemValue(item, [

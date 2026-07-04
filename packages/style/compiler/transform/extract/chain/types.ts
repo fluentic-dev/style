@@ -9,6 +9,9 @@ export type CompiledChainType = 'style' | 'slot' | 'scope';
 export type CompiledCssItem = CssExtractItem & {
   valueNode?: BabelTypes.Expression;
   hasParentSelector?: true;
+  sourceTrace?: NonNullable<CssExtractRule['trace']> & {
+    property: string;
+  };
 };
 
 export type CompiledTokenItem = {

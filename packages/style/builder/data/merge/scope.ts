@@ -5,7 +5,13 @@ import { DEV_CONFIG } from '../../../config/config/dev';
 import { getStyleTokenId, isStyleTokenOverrideData, type StyleTokenOverride } from '../../../style/token';
 import { BUILDER_SLOT_ID, BUILDER_STATE, BUILDER_TYPE_SCOPE, BUILDER_TYPE_SLOT_OVERRIDE } from '../const';
 import type { BuilderCallsite, ScopeData, SlotOverrideData } from '../data';
-import type { DebugData } from '../debug';
+import {
+  getDebugFieldCallsite,
+  TRACE_STYLE,
+  TRACE_VALUE,
+  type DebugData,
+  type DebugLoc,
+} from '../debug';
 import { isScopeData, isSlotOverrideData } from '../is';
 import type { ItemSelector, ItemValue, RuntimeScopeItem, RuntimeSlotOverrideItem, StateItem } from '../state';
 import { cloneData, logInvalidData } from './utils';
@@ -47,6 +53,8 @@ export function mergeScopeData<Style>(
   let atRule: ItemSelector[] | null;
   let dedupe: string;
   let className: string;
+  let itemDebug: DebugData | null | undefined;
+  let itemCallsite: BuilderCallsite | null;
 
   for (let i = 0, len = sourceItems.length; i < len; i++) {
     source = sourceItems[i];
@@ -85,6 +93,10 @@ export function mergeScopeData<Style>(
           atRule,
           parentSelector: parentSelector ?? sourceScopeItem.parentSelector,
         };
+        itemDebug = getMergedScopeDebug(debug, scopeItem);
+        itemCallsite = getDebugFieldCallsite(itemDebug ?? null, scopeItem.property) ??
+          callsite ??
+          scopeItem.callsite;
 
         value = scopeItem.value;
         priority = null;
@@ -109,7 +121,7 @@ export function mergeScopeData<Style>(
           scopeItem.selector,
           scopeItem.parentSelector,
           scopeItem.atRule,
-          scopeItem.callsite ?? callsite,
+          itemCallsite,
           DEV_CONFIG.isLocalClassNameEnabled,
           DEBUG_CONFIG.isDebugClassNameEnabled,
           CSS_CONFIG.classNameFormat ?? null,
@@ -117,6 +129,9 @@ export function mergeScopeData<Style>(
 
         scopeItem.dedupe = dedupe;
         scopeItem.className = className;
+        scopeItem.callsite = itemCallsite;
+        scopeItem.debug = itemDebug ?? null;
+        scopeItem.debugField = itemDebug ? scopeItem.property : null;
 
         const lookupKey = getScopeLookupKey(scopeItem.slotId, dedupe);
         lookupIndex = lookup[lookupKey];
@@ -229,6 +244,51 @@ function addTokenOverride(
   } else {
     lookup[lookupKey] = styles.push(item) - 1;
   }
+}
+
+function getMergedScopeDebug(
+  debug: DebugData | null,
+  item: RuntimeScopeItem,
+): DebugData | null | undefined {
+  if (!debug) return item.debug;
+  if (debug.fields?.[item.property]) return debug;
+
+  const valueLoc = getRuntimeScopeItemValueLoc(item);
+  if (!valueLoc) return debug;
+
+  return {
+    ...debug,
+    fields: {
+      ...debug.fields,
+      [item.property]: {
+        [TRACE_STYLE]: debug.loc,
+        [TRACE_VALUE]: valueLoc,
+      },
+    },
+  };
+}
+
+function getRuntimeScopeItemValueLoc(item: RuntimeScopeItem): DebugLoc | null {
+  if (item.debug && item.debugField) {
+    const loc = item.debug.fields?.[item.debugField];
+    if (Array.isArray(loc)) return withDebugSource(loc, item.debug.sourceUrl, item.debug.code);
+    if (loc) {
+      const valueLoc = loc[TRACE_VALUE] ?? loc[TRACE_STYLE] ?? null;
+      return valueLoc ? withDebugSource(valueLoc, item.debug.sourceUrl, item.debug.code) : null;
+    }
+  }
+
+  return item.callsite
+    ? [item.callsite.line, item.callsite.column, undefined, item.callsite.sourceUrl, item.callsite.sourceContent]
+    : null;
+}
+
+function withDebugSource(
+  loc: DebugLoc,
+  sourceUrl: string,
+  sourceContent: string | undefined,
+): DebugLoc {
+  return loc[3] ? loc : [loc[0], loc[1], loc[2], sourceUrl, sourceContent];
 }
 
 function getScopeLookupKey(slotId: string, dedupe: string) {

@@ -1,5 +1,6 @@
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
+import { TRACE_STYLE, TRACE_VALUE } from '../../../builder/data/debug';
 import { BUILDER_TYPE_SCOPE } from '../../../builder/data';
 import { createExtractedScope, createExtractedStyle } from '../../../builder/extract';
 import type { ExtractedStyleTuple } from '../../../builder/extract';
@@ -18,8 +19,14 @@ import {
 import type { BabelCore, BabelTypes } from '../utils/babel';
 import { babelTransformOptions } from '../utils/babel';
 import { getProjectFileId } from '../utils/path';
-import type { EvalScope } from './evaluator';
-import { evalFail, evalOk, evaluateEnumDeclaration, evaluateNode } from './evaluator';
+import type { CompiledStyleObject, CompiledStyleObjectLocations, EvalScope } from './evaluator';
+import {
+  COMPILED_STYLE_OBJECT_LOCATIONS,
+  evalFail,
+  evalOk,
+  evaluateEnumDeclaration,
+  evaluateNode,
+} from './evaluator';
 import type { EvalModuleBindings, EvalResult, EvalSlotRef, ImportMap, ResolveImportFn } from './types';
 
 export type Tracer = ReturnType<typeof createTracer>;
@@ -271,6 +278,7 @@ function parseAndExtractModule(
     filePath,
     sourcemapTrace: options.dev?.sourcemapMode ?? 'style',
     resolveImport,
+    bindingNodes: rawBindings,
   };
 
   rawBindings.forEach((node, name) => {
@@ -313,7 +321,25 @@ function evaluateResolvedNode(
         const result = compileChain(chain, fileId, node.loc?.start, scope, options, meta, styleNames);
         if (!result) return evalFail('Cannot compile imported style chain');
 
-        const extracted = createExtractedChainValue(result);
+        const traceResult = options.dev?.sourcemapMode === 'value'
+          ? result
+          : compileChain(
+            chain,
+            fileId,
+            node.loc?.start,
+            scope,
+            {
+              ...options,
+              dev: {
+                ...options.dev,
+                sourcemapMode: 'value',
+              },
+            },
+            meta,
+            styleNames,
+          ) ?? result;
+
+        const extracted = createExtractedChainValue(result, traceResult);
         if (!extracted) return evalFail('Cannot extract imported style chain');
 
         return evalOk(extracted);
@@ -337,7 +363,8 @@ function evaluateResolvedObject(
   fileId: string,
   options: CompilerOptions,
 ): EvalResult {
-  const result: Record<string, unknown> = {};
+  const result: CompiledStyleObject = {};
+  const locations: CompiledStyleObjectLocations = {};
 
   for (const prop of node.properties) {
     if (prop.type === 'SpreadElement') {
@@ -345,6 +372,28 @@ function evaluateResolvedObject(
       if (!value.ok) return value;
       if (value.value && typeof value.value === 'object') {
         Object.assign(result, value.value);
+
+        const sourceLocations = (value.value as CompiledStyleObject)[COMPILED_STYLE_OBJECT_LOCATIONS];
+        if (sourceLocations) {
+          const trace = scope.sourcemapTrace === 'value'
+            ? TRACE_VALUE
+            : TRACE_STYLE;
+          const spreadLoc = prop.loc?.start;
+
+          for (const [key, loc] of Object.entries(sourceLocations)) {
+            locations[key] = trace === TRACE_STYLE && spreadLoc
+              ? {
+                line: spreadLoc.line,
+                column: spreadLoc.column + 1,
+                filePath: scope.styleFilePath ?? scope.filePath,
+                trace,
+              }
+              : {
+                ...loc,
+                trace,
+              };
+          }
+        }
       }
       continue;
     }
@@ -360,18 +409,41 @@ function evaluateResolvedObject(
     if (!value.ok && value.reason !== 'slot-ref') return value;
 
     result[String(key.value)] = value.ok ? value.value : value;
+
+    if (prop.loc?.start) {
+      locations[String(key.value)] = {
+        line: prop.loc.start.line,
+        column: prop.loc.start.column + 1,
+        filePath: scope.styleFilePath ?? scope.filePath,
+      };
+    }
+  }
+
+  if (Object.keys(locations).length) {
+    Object.defineProperty(result, COMPILED_STYLE_OBJECT_LOCATIONS, {
+      configurable: true,
+      enumerable: false,
+      value: locations,
+    });
   }
 
   return evalOk(result);
 }
 
-function createExtractedChainValue(result: CompiledChainData): unknown {
+function createExtractedChainValue(
+  result: CompiledChainData,
+  traceResult: CompiledChainData = result,
+): unknown {
   if (result.type === 'style') {
-    return createExtractedStyle(
+    const style = createExtractedStyle(
       result.items
         .filter(Array.isArray)
         .map((item) => toExtractedStyleTuple(item as CompiledCssItem)),
     );
+
+    defineCompiledStyleLocations(style, traceResult);
+
+    return style;
   }
 
   if (result.type === 'scope') {
@@ -383,6 +455,32 @@ function createExtractedChainValue(result: CompiledChainData): unknown {
   }
 
   return null;
+}
+
+function defineCompiledStyleLocations(
+  value: CompiledStyleObject,
+  result: CompiledChainData,
+) {
+  const locations: CompiledStyleObjectLocations = {};
+
+  for (const item of result.items) {
+    if (!Array.isArray(item) || !item.sourceTrace) continue;
+
+    locations[item.sourceTrace.property] = {
+      filePath: item.sourceTrace.filePath,
+      line: item.sourceTrace.line,
+      column: item.sourceTrace.column,
+      trace: TRACE_VALUE,
+    };
+  }
+
+  if (!Object.keys(locations).length) return;
+
+  Object.defineProperty(value, COMPILED_STYLE_OBJECT_LOCATIONS, {
+    configurable: true,
+    enumerable: false,
+    value: locations,
+  });
 }
 
 function toExtractedStyleTuple(item: CompiledCssItem): ExtractedStyleTuple {

@@ -1,0 +1,28 @@
+import { createExtractedTheme, createExtractedSlot, createExtractedToken, createExtractedStyleMerge, createExtractedScope, createExtractedStyle } from "@fluentic/style/entry/prod/extract";
+import { combineStyle, createTokens, style } from '@fluentic/style';
+import { sharedInteractive } from './fixtures/merge_common';
+import { cardBase, textBase } from './fixtures/shared';
+const tokens = createTokens({
+  color: {
+    bg: '#ffffff',
+    fg: '#111827',
+    accent: '#2563eb'
+  }
+}, "tokens-3qz6j00");
+const appTheme = createExtractedTheme("lvb6tl0", "theme-lvb6tl0-bcmdhyx");
+const styles = {
+  panel: createExtractedSlot("1ryb5oa", [["1ffb9qm", "padding-gs244e0"], ["mwx9540", "background-color-b4mcwga"], ["18q1j80", "color-iayy6t0"], ["1ut2mip", "font-size-bhgqjrg"], ["109h4xq", "border-color-b2rga6s", [1, "--var-vfnc6k0", createExtractedToken("tokens-3qz6j00--color--accent", "#2563eb", null), 1]], ["1kkptnv", "max-700px-padding-mtnjvq0"]]),
+  action: createExtractedStyleMerge([["18q1j80", "color-br62w1f"], ["1ut2mip", "font-size-ia0h460"], ["mwx9540", "background-color-bivhs4p", [1, "--var-ixn6uy0", createExtractedToken("tokens-3qz6j00--color--bg", "#ffffff", null), 1]]], sharedInteractive, [["1qmb2bt", "color-hover-rrfbjz0", [1, "--var-d2bnon0", createExtractedToken("tokens-3qz6j00--color--accent", "#2563eb", null), 1]]])
+};
+const baseScope = createExtractedScope([[4, "1ryb5oa", "1qi6vb6", "box-shadow-n55rl70"]]);
+const mergedScope = createExtractedScope([[4, "1ryb5oa", "1qi6vb6", "box-shadow-n55rl70"], [4, "1ryb5oa", "eoxpgd0", "hover-border-color-hr74se0", 1]]);
+const directOverride = styles.panel({
+  outlineColor: '#475569'
+});
+const directOverrideScope = style.scope().merge(directOverride);
+const sharedElevation = createExtractedStyle([["1qi6vb6", "box-shadow-byxkme1"]]);
+const chainedOverrideScope = createExtractedScope([[4, "1ryb5oa", "18q1j80", "color-trkda60"], [4, "1ryb5oa", "1qi6vb6", "box-shadow-byxkme1"]]);
+export default function App() {
+  const css = combineStyle(styles, mergedScope, directOverrideScope, chainedOverrideScope);
+  return <main css={[appTheme, css.panel, styles.action]}>snapshot</main>;
+}

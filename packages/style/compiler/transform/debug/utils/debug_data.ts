@@ -9,7 +9,9 @@ import type { BabelTypes } from '../../utils/babel';
 
 export type DebugTraceProperty = BabelTypes.ObjectProperty & {
   __styleSourcemapStyleLoc?: BabelTypes.SourceLocation['start'];
+  __styleSourcemapStyleSourceUrl?: string | null;
   __styleSourcemapValueLoc?: BabelTypes.SourceLocation['start'];
+  __styleSourcemapValueSourceUrl?: string | null;
 };
 
 export function buildDebugDataObject(
@@ -90,11 +92,19 @@ function buildLoc(
   t: typeof BabelTypes,
   line: number,
   column: number,
+  sourceUrl?: string | null,
 ) {
-  return t.arrayExpression([
+  const items: BabelTypes.Expression[] = [
     t.numericLiteral(line),
     t.numericLiteral(column),
-  ]);
+  ];
+
+  if (sourceUrl) {
+    items.push(t.identifier('undefined'));
+    items.push(t.stringLiteral(sourceUrl));
+  }
+
+  return t.arrayExpression(items);
 }
 
 function buildFields(
@@ -132,11 +142,11 @@ function buildFieldLoc(
     return t.objectExpression([
       t.objectProperty(
         t.numericLiteral(TRACE_STYLE),
-        buildLoc(t, styleLoc.line, styleLoc.column + 1),
+        buildLoc(t, styleLoc.line, styleLoc.column + 1, property.__styleSourcemapStyleSourceUrl),
       ),
       t.objectProperty(
         t.numericLiteral(TRACE_VALUE),
-        buildLoc(t, valueLoc.line, valueLoc.column + 1),
+        buildLoc(t, valueLoc.line, valueLoc.column + 1, property.__styleSourcemapValueSourceUrl),
       ),
     ]);
   }
