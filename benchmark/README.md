@@ -9,7 +9,7 @@ reports are local artifacts and are ignored by git.
 
 ## Suites
 
-- `pnpm bench:contract` builds every benchmark app, verifies computed styles and DOM structure, records bundle/CSS output size, then runs app timings only for apps that pass correctness.
+- `pnpm bench:correctness` builds every benchmark app, verifies computed styles and DOM structure, records bundle/CSS output size, then runs app timings only for apps that pass correctness.
 - `pnpm bench` runs the React app timing matrix across row-count scenarios with app order rotated between repeats. Median is the primary timing metric; mean, p95, raw samples, cold first-run mount, style-tag counts, and CSS rule counts are kept for diagnosis.
 - `pnpm bench:stable` uses more repeats and measured runs for reportable local numbers.
 - `pnpm bench:stress` adds larger row-count scenarios so scaling issues do not hide behind a small dashboard.
@@ -38,7 +38,7 @@ and the experimental Panda CSS app. Panda is excluded unless
 - `dynamic-value-browser`: arbitrary dynamic value lane. Recommended variants keep style rules static and move per-item values through CSS custom properties; inline dynamic style creation is retained as a warning/control variant.
 - `ssr-style-render-only`: `renderToString` dashboard/table and repeated composition benchmark for server-side className, css-prop, scope, merge, and style-prop resolution. Fluentic uses extracted CSS, so this lane measures the render work that remains after extraction rather than server stylesheet collection.
 - `stress-dashboard`: the same dashboard shape at larger row counts via `pnpm bench:stress`.
-- `build-output`: contract reports include build time, JS bytes, CSS bytes, file count, style tag count, and stylesheet rule count.
+- `build-output`: correctness reports include build time, JS bytes, CSS bytes, file count, style tag count, and stylesheet rule count.
 
 ## Current React App Snapshot
 
@@ -82,7 +82,7 @@ per-row token overrides measured 7.925 ms mean, or 0.90x baseline.
 
 ## Selection and Settings
 
-- `APP=name[,name]` limits `bench` or `bench:contract` to app names such as `fluentic-style-extract-direct`, `emotion`, or package filters such as `@benchmark/app-emotion`.
+- `APP=name[,name]` limits `bench` or `bench:correctness` to app names such as `fluentic-style-extract-direct`, `emotion`, or package filters such as `@benchmark/app-emotion`.
 - `SKIP_FLUENTIC_STYLE=1` skips Fluentic apps when comparing third-party baselines.
 - `INCLUDE_INTERNAL=1` includes diagnostic apps such as Fluentic no-hoist, inline dynamic style creation, and runtime-only css-prop.
 - `INCLUDE_EXPERIMENTAL=1` includes the Panda CSS benchmark app.

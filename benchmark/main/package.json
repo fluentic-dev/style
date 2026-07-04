@@ -6,7 +6,7 @@
   "main": "src/index.js",
   "scripts": {
     "bench": "node bench.mjs",
-    "bench:contract": "node contract-bench.mjs",
+    "bench:correctness": "node correctness-bench.mjs",
     "bench:compiler": "node compiler-bench.mjs",
     "bench:dynamic-values": "BENCH_KIND=dynamic-value-browser-benchmark BENCH_LABEL='Dynamic value benchmark' OUTPUT_PREFIX=dynamic-values VARIANTS=fluenticDynamicVars,fluenticInlineDynamicValues,gooberDynamicVars,emotionDynamicVars,styledComponentsDynamicVars node fluentic-cache-bench.mjs",
     "bench:fluentic-cache": "node fluentic-cache-bench.mjs",

@@ -16,7 +16,7 @@ written somewhere else.
 | Page | Command | What it answers |
 | --- | --- | --- |
 | [React App](./react-app) | `pnpm bench` | How app render/update/remount timings compare across styling approaches. |
-| [Contract](./contract) | `pnpm bench:contract` | Whether benchmark apps build, render the same DOM, and produce expected styles. |
+| [Correctness](./correctness) | `pnpm bench:correctness` | Whether benchmark apps build, render the same DOM, and produce expected styles. |
 | [Style Cache](./style-cache) | `pnpm bench:fluentic-cache` | How warmed runtime cache paths behave in the browser. |
 | [Dynamic Values](./dynamic-values) | `pnpm bench:dynamic-values` | How open-ended values behave when using stable value bindings versus runtime rule generation. |
 | [SSR Style](./ssr-style) | `pnpm bench:ssr-style` | How extracted class, css-prop, scope, merge, and style-prop resolution behaves during server rendering. |
@@ -49,9 +49,9 @@ Common environment variables:
 | Variable | Used by | Purpose |
 | --- | --- | --- |
 | `BENCH_OUT_DIR` | all benchmark reports | Writes JSON reports to a custom directory. |
-| `APP` | app and contract benchmarks | Limits a run to one or more benchmark apps. |
-| `INCLUDE_INTERNAL` | app and contract benchmarks | Includes diagnostic lanes such as Fluentic no-hoist, inline dynamic style creation, and runtime-only css-prop. |
-| `INCLUDE_EXPERIMENTAL` | app and contract benchmarks | Includes experimental competitor apps. |
+| `APP` | app and correctness benchmarks | Limits a run to one or more benchmark apps. |
+| `INCLUDE_INTERNAL` | app and correctness benchmarks | Includes diagnostic lanes such as Fluentic no-hoist, inline dynamic style creation, and runtime-only css-prop. |
+| `INCLUDE_EXPERIMENTAL` | app and correctness benchmarks | Includes experimental competitor apps. |
 | `ROWS` | React app benchmark | Changes the row-count scenarios. |
 | `REPEATS`, `WARMUPS`, `MEASURED` | React app benchmark | Changes sample counts. |
 | `ITEMS` | browser microbenchmarks | Changes the number of styled items. |

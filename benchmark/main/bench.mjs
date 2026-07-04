@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium } from 'playwright-core';
-import { getBenchmarkSelection, getBuildKey, getUniqueBuildApps } from './contract.mjs';
+import { getBenchmarkSelection, getBuildKey, getUniqueBuildApps } from './correctness.mjs';
 
 const presets = {
   quick: {

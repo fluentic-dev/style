@@ -3,7 +3,7 @@
   "pages": [
     "overview",
     "react-app",
-    "contract",
+    "correctness",
     "style-cache",
     "dynamic-values",
     "ssr-style",

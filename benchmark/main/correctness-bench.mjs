@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { chromium } from 'playwright-core';
-import { correctnessContract, getBenchmarkSelection, getBuildKey, getUniqueBuildApps } from './contract.mjs';
+import { correctnessSpec, getBenchmarkSelection, getBuildKey, getUniqueBuildApps } from './correctness.mjs';
 
 const REPEATS = Number(process.env.REPEATS || 3);
 const ROWS = Number(process.env.ROWS || 500);
@@ -219,7 +219,7 @@ async function runCorrectness(browser, app, localUrl) {
   const failures = [];
   const snapshots = [];
 
-  for (const viewport of correctnessContract.viewports) {
+  for (const viewport of correctnessSpec.viewports) {
     const page = await browser.newPage({ viewport: { width: viewport.width, height: viewport.height } });
 
     try {
@@ -229,7 +229,7 @@ async function runCorrectness(browser, app, localUrl) {
         if (message.type() === 'error') pageErrors.push(message.text());
       });
 
-      await page.goto(`${localUrl}?${correctnessContract.query}${app.extraQuery}`, {
+      await page.goto(`${localUrl}?${correctnessSpec.query}${app.extraQuery}`, {
         waitUntil: 'load',
       });
 
@@ -246,7 +246,7 @@ async function runCorrectness(browser, app, localUrl) {
         continue;
       }
 
-      const assertions = correctnessContract.assertions.filter((assertion) => {
+      const assertions = correctnessSpec.assertions.filter((assertion) => {
         return !assertion.viewport || assertion.viewport === viewport.name;
       });
 
@@ -276,7 +276,7 @@ async function runCorrectness(browser, app, localUrl) {
         }
       }
 
-      failures.push(...await runDomAssertions(page, correctnessContract.structureAssertions, viewport.name));
+      failures.push(...await runDomAssertions(page, correctnessSpec.structureAssertions, viewport.name));
 
       const snapshot = {
         viewport: viewport.name,
@@ -298,13 +298,13 @@ async function runCorrectness(browser, app, localUrl) {
       };
 
       snapshots.push(snapshot);
-      failures.push(...compareStyleContract(snapshot, app.styleContract, viewport.name));
+      failures.push(...compareStyleCorrectness(snapshot, app.styleCorrectness, viewport.name));
 
-      await page.goto(`${localUrl}?${correctnessContract.detailsQuery}${app.extraQuery}`, {
+      await page.goto(`${localUrl}?${correctnessSpec.detailsQuery}${app.extraQuery}`, {
         waitUntil: 'load',
       });
       await page.waitForSelector('h1', { timeout: RENDER_TIMEOUT_MS });
-      failures.push(...await runDomAssertions(page, correctnessContract.detailsAssertions, viewport.name));
+      failures.push(...await runDomAssertions(page, correctnessSpec.detailsAssertions, viewport.name));
     } finally {
       await page.close();
     }
@@ -317,64 +317,64 @@ async function runCorrectness(browser, app, localUrl) {
   };
 }
 
-function compareStyleContract(snapshot, styleContract, viewportName) {
-  if (!styleContract) return [];
+function compareStyleCorrectness(snapshot, styleCorrectness, viewportName) {
+  if (!styleCorrectness) return [];
 
   const failures = [];
 
-  if (styleContract.maxStyleTags !== undefined && snapshot.styleTagCount > styleContract.maxStyleTags) {
+  if (styleCorrectness.maxStyleTags !== undefined && snapshot.styleTagCount > styleCorrectness.maxStyleTags) {
     failures.push({
       viewport: viewportName,
       assertion: 'style tag count',
-      reason: `Expected at most ${styleContract.maxStyleTags} style tags, got ${snapshot.styleTagCount}`,
+      reason: `Expected at most ${styleCorrectness.maxStyleTags} style tags, got ${snapshot.styleTagCount}`,
     });
   }
 
-  if (styleContract.minStyleTags !== undefined && snapshot.styleTagCount < styleContract.minStyleTags) {
+  if (styleCorrectness.minStyleTags !== undefined && snapshot.styleTagCount < styleCorrectness.minStyleTags) {
     failures.push({
       viewport: viewportName,
       assertion: 'style tag count',
-      reason: `Expected at least ${styleContract.minStyleTags} style tags, got ${snapshot.styleTagCount}`,
+      reason: `Expected at least ${styleCorrectness.minStyleTags} style tags, got ${snapshot.styleTagCount}`,
     });
   }
 
   if (
-    styleContract.fluenticRuntimeTags !== undefined &&
-    snapshot.fluenticRuntimeStyleTagCount !== styleContract.fluenticRuntimeTags
+    styleCorrectness.fluenticRuntimeTags !== undefined &&
+    snapshot.fluenticRuntimeStyleTagCount !== styleCorrectness.fluenticRuntimeTags
   ) {
     failures.push({
       viewport: viewportName,
       assertion: 'fluentic runtime style tags',
       reason:
-        `Expected ${styleContract.fluenticRuntimeTags} Fluentic runtime style tags, got ${snapshot.fluenticRuntimeStyleTagCount}`,
+        `Expected ${styleCorrectness.fluenticRuntimeTags} Fluentic runtime style tags, got ${snapshot.fluenticRuntimeStyleTagCount}`,
     });
   }
 
   if (
-    styleContract.minFluenticRuntimeTags !== undefined &&
-    snapshot.fluenticRuntimeStyleTagCount < styleContract.minFluenticRuntimeTags
+    styleCorrectness.minFluenticRuntimeTags !== undefined &&
+    snapshot.fluenticRuntimeStyleTagCount < styleCorrectness.minFluenticRuntimeTags
   ) {
     failures.push({
       viewport: viewportName,
       assertion: 'fluentic runtime style tags',
       reason:
-        `Expected at least ${styleContract.minFluenticRuntimeTags} Fluentic runtime style tags, got ${snapshot.fluenticRuntimeStyleTagCount}`,
+        `Expected at least ${styleCorrectness.minFluenticRuntimeTags} Fluentic runtime style tags, got ${snapshot.fluenticRuntimeStyleTagCount}`,
     });
   }
 
-  if (styleContract.minRules !== undefined && snapshot.ruleCount < styleContract.minRules) {
+  if (styleCorrectness.minRules !== undefined && snapshot.ruleCount < styleCorrectness.minRules) {
     failures.push({
       viewport: viewportName,
       assertion: 'stylesheet rule count',
-      reason: `Expected at least ${styleContract.minRules} stylesheet rules, got ${snapshot.ruleCount}`,
+      reason: `Expected at least ${styleCorrectness.minRules} stylesheet rules, got ${snapshot.ruleCount}`,
     });
   }
 
-  if (styleContract.maxRules !== undefined && snapshot.ruleCount > styleContract.maxRules) {
+  if (styleCorrectness.maxRules !== undefined && snapshot.ruleCount > styleCorrectness.maxRules) {
     failures.push({
       viewport: viewportName,
       assertion: 'stylesheet rule count',
-      reason: `Expected at most ${styleContract.maxRules} stylesheet rules, got ${snapshot.ruleCount}`,
+      reason: `Expected at most ${styleCorrectness.maxRules} stylesheet rules, got ${snapshot.ruleCount}`,
     });
   }
 
@@ -549,7 +549,7 @@ try {
 mkdirSync(OUT_DIR, { recursive: true });
 
 const report = {
-  contract: correctnessContract.name,
+  correctness: correctnessSpec.name,
   rows: ROWS,
   repeats: REPEATS,
   createdAt: new Date().toISOString(),
@@ -571,10 +571,10 @@ const report = {
   results,
 };
 
-const outputPath = join(OUT_DIR, `contract-${Date.now()}.json`);
+const outputPath = join(OUT_DIR, `correctness-${Date.now()}.json`);
 writeFileSync(outputPath, JSON.stringify(report, null, 2));
 
-console.log(`\nContract benchmark report: ${outputPath}\n`);
+console.log(`\nCorrectness benchmark report: ${outputPath}\n`);
 console.table(
   results.map((result) => ({
     library: result.app,

@@ -6,7 +6,7 @@ export const benchmarkApps = [
     distDir: 'dist-extract',
     port: 5401,
     extraQuery: '&fluenticMode=direct',
-    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
+    styleCorrectness: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
   },
   {
     name: 'fluentic-style-extract-scoped',
@@ -15,7 +15,7 @@ export const benchmarkApps = [
     distDir: 'dist-extract',
     port: 5402,
     extraQuery: '&fluenticMode=scoped',
-    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
+    styleCorrectness: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
   },
   {
     name: 'fluentic-style-extract-token',
@@ -24,7 +24,7 @@ export const benchmarkApps = [
     distDir: 'dist-extract',
     port: 5403,
     extraQuery: '&fluenticMode=token',
-    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
+    styleCorrectness: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
   },
   {
     name: 'fluentic-style-diagnostic-no-hoist',
@@ -35,7 +35,7 @@ export const benchmarkApps = [
     extraQuery: '&fluenticMode=scoped',
     internal: true,
     lane: 'fluentic-diagnostic-no-hoist',
-    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
+    styleCorrectness: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
   },
   {
     name: 'fluentic-style-diagnostic-inline-hoist',
@@ -46,7 +46,7 @@ export const benchmarkApps = [
     extraQuery: '&fluenticMode=scoped&inlineStyle=1',
     internal: true,
     lane: 'fluentic-diagnostic-inline',
-    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
+    styleCorrectness: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
   },
   {
     name: 'fluentic-style-diagnostic-inline-no-hoist',
@@ -57,7 +57,7 @@ export const benchmarkApps = [
     extraQuery: '&fluenticMode=scoped&inlineStyle=1',
     internal: true,
     lane: 'fluentic-diagnostic-inline',
-    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
+    styleCorrectness: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
   },
   {
     name: 'fluentic-style-diagnostic-inline-stress',
@@ -68,7 +68,7 @@ export const benchmarkApps = [
     extraQuery: '&fluenticMode=scoped&inlineStyle=1&stressStyle=1',
     internal: true,
     lane: 'fluentic-diagnostic-inline-stress',
-    styleContract: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
+    styleCorrectness: { maxStyleTags: 0, fluenticRuntimeTags: 0 },
   },
   {
     name: 'fluentic-runtime-css-prop',
@@ -77,7 +77,7 @@ export const benchmarkApps = [
     extraQuery: '',
     internal: true,
     lane: 'runtime-css-prop',
-    styleContract: { minRules: 20 },
+    styleCorrectness: { minRules: 20 },
   },
   {
     name: 'fluentic-runtime-css-prop-diagnostic-stress',
@@ -86,7 +86,7 @@ export const benchmarkApps = [
     extraQuery: '&stressStyle=1',
     internal: true,
     lane: 'fluentic-diagnostic-inline-stress',
-    styleContract: { minRules: 20 },
+    styleCorrectness: { minRules: 20 },
   },
   { name: 'emotion', filter: '@benchmark/app-emotion', port: 5405, extraQuery: '' },
   {
@@ -120,36 +120,42 @@ export const benchmarkApps = [
     internal: true,
     lane: 'inline-dynamic-style-stress',
   },
-  { name: 'stylex', filter: '@benchmark/app-stylex', port: 5408, extraQuery: '', styleContract: { maxStyleTags: 0 } },
+  {
+    name: 'stylex',
+    filter: '@benchmark/app-stylex',
+    port: 5408,
+    extraQuery: '',
+    styleCorrectness: { maxStyleTags: 0 },
+  },
   {
     name: 'panda-static-css',
     filter: '@benchmark/app-panda',
     port: 5409,
     extraQuery: '',
     experimental: true,
-    styleContract: { maxStyleTags: 0 },
+    styleCorrectness: { maxStyleTags: 0 },
   },
   {
     name: 'vanilla-extract',
     filter: '@benchmark/app-vanilla-extract',
     port: 5410,
     extraQuery: '',
-    styleContract: { maxStyleTags: 0 },
+    styleCorrectness: { maxStyleTags: 0 },
   },
   {
     name: 'css-modules',
     filter: '@benchmark/app-css-modules',
     port: 5411,
     extraQuery: '',
-    styleContract: { maxStyleTags: 0 },
+    styleCorrectness: { maxStyleTags: 0 },
   },
 ];
 
-export const correctnessContract = {
-  name: 'simple-dashboard-contract',
+export const correctnessSpec = {
+  name: 'simple-dashboard-correctness',
   description: [
     'All libraries must render the same dashboard semantics with idiomatic static styles.',
-    'Dynamic arbitrary style creation is not part of this contract and belongs in a separate stress benchmark.',
+    'Dynamic arbitrary style creation is not part of this correctness check and belongs in a separate stress benchmark.',
     'Performance numbers are only valid when the computed-style assertions pass.',
     'Median should be treated as the primary timing metric; mean and p95 are retained for outlier visibility.',
   ],

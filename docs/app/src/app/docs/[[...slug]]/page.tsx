@@ -99,7 +99,7 @@ const docsOrder = [
   ['reference', 'plugin-options'],
   ['benchmark', 'overview'],
   ['benchmark', 'react-app'],
-  ['benchmark', 'contract'],
+  ['benchmark', 'correctness'],
   ['benchmark', 'style-cache'],
   ['benchmark', 'dynamic-values'],
   ['benchmark', 'ssr-style'],
