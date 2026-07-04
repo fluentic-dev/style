@@ -1,0 +1,33 @@
+{
+  "mode": "pre",
+  "tag": "beta",
+  "initialVersions": {
+    "@benchmark/app-css-modules": "0.0.0",
+    "@benchmark/app-emotion": "0.0.0",
+    "@benchmark/app-fluentic-cache": "0.0.0",
+    "@benchmark/app-fluentic-runtime": "0.0.0",
+    "@benchmark/app-fluentic-style": "0.0.0",
+    "@benchmark/app-goober": "0.0.0",
+    "@benchmark/app-panda": "0.0.0",
+    "@benchmark/app-styled-components": "0.0.0",
+    "@benchmark/app-stylex": "0.0.0",
+    "@benchmark/app-vanilla-extract": "0.0.0",
+    "@benchmark/main": "0.0.0",
+    "@example/at-rule": "0.0.0",
+    "@example/basic": "0.0.0",
+    "@example/bundler-farm": "0.0.0",
+    "@example/bundler-parcel": "0.0.0",
+    "@example/bundler-rspack": "0.0.0",
+    "@example/bundler-shared": "0.0.0",
+    "@example/bundler-vite": "0.0.0",
+    "@example/bundler-webpack": "0.0.0",
+    "@example/custom": "0.0.0",
+    "@example/hoist": "0.0.0",
+    "@example/selector-check": "0.0.0",
+    "@example/snapshots": "0.0.0",
+    "@example/static-values": "0.0.0",
+    "@example/theme": "0.0.0",
+    "@fluentic/style": "0.1.0-beta.0"
+  },
+  "changesets": []
+}
