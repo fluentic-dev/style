@@ -27,11 +27,7 @@ import { walkRecursiveItems } from '../core/cache/utils/walk';
 import {
   type ClassNameProps,
   type ClassNameResult,
-  createClassNameResult,
-  finishClassNameResult,
   mergeClassName,
-  mergeResolvedClassName,
-  mergeResolvedStyle,
   mergeStyle,
 } from '../core/className';
 import type { StyleProp } from '../types';
@@ -59,73 +55,60 @@ const stylePropObjectCache = new WeakMap<object, { c: number; r: ExtractedStyleP
 export function getClassName(
   styleProp: StyleProp,
   props?: ClassNameProps,
-): ClassNameResult {
+) {
   const resolved = resolveExtractedStyleProp(styleProp);
 
   if (!props?.className && !props?.style) {
     return resolved ?? {};
   }
 
-  const result = createClassNameResult(props);
+  let className = props.className ? mergeClassName(props.className) : undefined;
+  let style = props.style ? mergeStyle(props.style) : undefined;
 
   if (resolved) {
-    mergeResolvedClassName(result, resolved.className);
-    mergeResolvedStyle(result, resolved.style);
+    if (resolved.className) {
+      className = className
+        ? className + ' ' + resolved.className
+        : resolved.className;
+    }
+
+    if (resolved.style) {
+      style = style
+        ? Object.assign({}, resolved.style, style)
+        : resolved.style;
+    }
   }
 
-  return finishClassNameResult(result);
+  return className || style ? { className, style } : {};
 }
 
 export { type ClassNameProps, type ClassNameResult, mergeClassName, mergeStyle };
 
 function resolveExtractedStyleProp(styleProp: StyleProp | undefined) {
   if (!styleProp) return null;
+  if (RUNTIME_CONFIG.runtimeCacheTTL === 0) return resolveExtractedStylePropUncached(styleProp);
 
-  if (RUNTIME_CONFIG.runtimeCacheTTL !== 0) {
-    const objectCached = resolveObjectCachedExtractedStyleProp(styleProp);
-    if (objectCached !== undefined) return objectCached;
+  const objectCacheable = typeof styleProp === 'object' || typeof styleProp === 'function';
 
-    const directCached = resolveDirectCachedExtractedStyleProp(styleProp);
-    if (directCached !== undefined) {
-      cacheObjectExtractedStyleProp(styleProp, directCached);
-      return directCached;
-    }
-
-    const cached = resolveCachedExtractedStyleProp(styleProp);
-    if (cached !== undefined) {
-      cacheObjectExtractedStyleProp(styleProp, cached);
-      return cached;
-    }
+  if (objectCacheable) {
+    const objectCached = stylePropObjectCache.get(styleProp);
+    if (objectCached && objectCached.c === RUNTIME_CONFIG.changes) return objectCached.r;
   }
 
-  const result = resolveExtractedStylePropUncached(styleProp);
-  cacheObjectExtractedStyleProp(styleProp, result);
+  const directCached = resolveDirectCachedExtractedStyleProp(styleProp);
+  const cached = directCached !== undefined
+    ? directCached
+    : resolveCachedExtractedStyleProp(styleProp);
+  const result = cached !== undefined ? cached : resolveExtractedStylePropUncached(styleProp);
+
+  if (objectCacheable) {
+    stylePropObjectCache.set(styleProp, {
+      c: RUNTIME_CONFIG.changes,
+      r: result,
+    });
+  }
+
   return result;
-}
-
-function resolveObjectCachedExtractedStyleProp(styleProp: StyleProp): ExtractedStylePropResult | null | undefined {
-  if (!isObjectCacheableStyleProp(styleProp)) return undefined;
-
-  const cached = stylePropObjectCache.get(styleProp);
-  if (!cached || cached.c !== RUNTIME_CONFIG.changes) return undefined;
-
-  return cached.r;
-}
-
-function cacheObjectExtractedStyleProp(
-  styleProp: StyleProp,
-  result: ExtractedStylePropResult | null,
-) {
-  if (RUNTIME_CONFIG.runtimeCacheTTL === 0 || !isObjectCacheableStyleProp(styleProp)) return;
-
-  stylePropObjectCache.set(styleProp, {
-    c: RUNTIME_CONFIG.changes,
-    r: result,
-  });
-}
-
-function isObjectCacheableStyleProp(styleProp: StyleProp): styleProp is StyleProp & object {
-  return (typeof styleProp === 'object' && styleProp !== null) || typeof styleProp === 'function';
 }
 
 function resolveDirectCachedExtractedStyleProp(styleProp: StyleProp): ExtractedStylePropResult | null | undefined {
