@@ -1,0 +1,764 @@
+---
+title: Why Fluentic
+---
+
+> Fluentic is my attempt to make React styling feel explicit, composable, and predictable again.
+
+<img
+  className="docs-essay-cover"
+  src="/style/why-fluentic-banner.png"
+  alt="Illustration of style cards composing into a React component"
+/>
+
+Years ago, I worked on web apps with Emotion, and I loved it.
+
+It was flexible, productive, and convenient. But over time, some of the codebases I worked on became harder and harder to change. I do not blame Emotion for that. The problem was how I used the convenience it gave me.
+
+I wrote class names that depended on DOM structure. I used nested selectors because they were quick. I reached into child elements from parent styles. It worked, until months later I had to change something and no longer felt confident about what else would break.
+
+That feeling is what I remember most.
+
+Not that the styling was impossible. Not that the tool was bad. Just that I slowly lost confidence when changing UI.
+
+## The Problem Was Confidence
+
+A lot of frontend styling problems are not about whether something is technically possible.
+
+CSS is powerful. CSS-in-JS is powerful. Utility classes are powerful. CSS Modules are useful. Static extraction is useful.
+
+The hard part is usually confidence.
+
+Can I change this component without accidentally changing another component?
+
+Can I understand where this style comes from?
+
+Can I tell which style wins?
+
+Can I move this element without breaking some selector far away?
+
+Can I delete this class name?
+
+Can I add a variant without making the component more fragile?
+
+When styles depend on class names, DOM structure, nested selectors, and implicit relationships between elements, every change becomes a little less obvious.
+
+You can still build good systems this way. Many teams do.
+
+But that way of styling makes it very easy to create hidden coupling.
+
+And hidden coupling is where confidence starts to fade.
+
+## Then I Spent Years in React Native
+
+After that, I spent years mostly working on React Native projects.
+
+React Native styling changed how I think about UI.
+
+The styling model is much smaller:
+
+```tsx
+<View style={[styles.root, disabled && styles.disabled, style]} />
+```
+
+Styles are objects.
+
+Styles are passed as values.
+
+Arrays compose styles.
+
+The later style wins.
+
+Variants are usually explicit.
+
+The style belongs close to the element that uses it.
+
+There is no class name pretending to be both identity and styling hook. There is no global selector reaching through some DOM structure. There is much less “where did this come from?”
+
+Of course React Native styling is not perfect. It has its own limitations. But the mental model is very simple.
+
+And after using that model for years, I came back to React web.
+
+That was when web styling felt more complicated to me than it used to.
+
+Not because CSS got worse.
+
+Actually, CSS got much better.
+
+We have better layout. Better selectors. Better browser support. Better build tools. Better frameworks.
+
+But for component-heavy React work, I started to miss the React Native mental model a lot.
+
+I rarely see React web components styled like this:
+
+```tsx
+<Component style={[base, primary && primaryStyle, props.style]} />
+```
+
+But in React Native, this is completely normal.
+
+And that normality matters.
+
+It makes styling feel like data. Like values. Like composition.
+
+Not like a string contract with the DOM.
+
+## React Web Has Something React Native Misses
+
+But I do not want to pretend React Native has the perfect model.
+
+It does not.
+
+The web has something extremely useful: selectors.
+
+Sometimes selectors are exactly what you want.
+
+You want hover states:
+
+```css
+.button:hover {
+  background: var(--hover);
+}
+```
+
+You want focus states.
+
+You want child coordination.
+
+You want media queries.
+
+You want pseudo elements.
+
+You want to style based on parent state.
+
+You want to express relationships without manually passing a style prop into every single element.
+
+That is real power.
+
+React Native often makes this more manual. You wire state. You pass style props. You conditionally apply styles element by element.
+
+That explicitness is nice until it becomes repetitive.
+
+So the question I kept thinking about was:
+
+Can React styling keep the simple React Native mental model, but still keep the useful parts of CSS?
+
+Can styles be values, while selectors still exist?
+
+Can composition be explicit, while output is still real CSS?
+
+Can override order be obvious, while runtime work stays small?
+
+That question became the beginning of Fluentic.
+
+## Extraction Is Not the New Idea
+
+Modern React styling has changed a lot.
+
+Runtime CSS-in-JS used to feel like a reasonable default for many React apps. Today, the tradeoffs are more visible.
+
+Performance matters.
+
+Server rendering matters.
+
+Streaming matters.
+
+React Server Components changed what can happen on the server and what should happen on the client.
+
+Build-time extraction is no longer a niche idea. In many modern stacks, it feels close to mandatory.
+
+But extraction itself is not the interesting part anymore.
+
+There are already many libraries that extract CSS.
+
+That is not the main reason I started working on Fluentic.
+
+The thing I felt missing was not “another extracted CSS-in-JS library”.
+
+The thing I wanted was a different way to write and compose styles.
+
+A model closer to what I had in my head after years of React Native:
+
+- styles as values
+- explicit composition
+- predictable override order
+- local ownership
+- variants without magic class names
+- selectors when useful, but not as the default way to connect everything
+- build-time output that fits modern React apps
+
+That is the shape of Fluentic.
+
+## What I Want From a Styling System
+
+When I started thinking about Fluentic, I wrote down the requirements more like a frontend developer who has been hurt by his own past decisions than like someone trying to invent a styling library.
+
+The requirements were not only technical.
+
+They were emotional too.
+
+I wanted to feel confident changing UI again.
+
+### 1. Styles Should Be Values
+
+In React Native, a style is something you can pass around.
+
+```tsx
+<View style={styles.card} />
+```
+
+Or compose:
+
+```tsx
+<View style={[styles.card, elevated && styles.elevated]} />
+```
+
+That feels very different from:
+
+```tsx
+<div className={`${styles.card} ${elevated ? styles.elevated : ""}`} />
+```
+
+The class name version works, of course. But the mental model is different.
+
+One feels like composing values.
+
+The other feels like constructing a string that points to styling somewhere else.
+
+In Fluentic, the equivalent idea uses `style(...)` and the JSX `css` prop:
+
+```tsx
+import { style } from '@fluentic/style';
+
+const styles = {
+  card: style({
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: 'white',
+  }),
+
+  elevated: style({
+    boxShadow: '0 12px 30px rgb(15 23 42 / 0.16)',
+  }),
+};
+
+function Card({ elevated }: { elevated?: boolean }) {
+  return (
+    <section css={[styles.card, elevated && styles.elevated]}>
+      Ready to style.
+    </section>
+  );
+}
+```
+
+The syntax is different from React Native, because the target is still the browser.
+
+But the feeling is familiar:
+
+Base style first.
+
+Conditional style after.
+
+The style value is passed directly to the element.
+
+### 2. Override Order Should Be Obvious
+
+One of the nicest things about React Native style arrays is that the later item wins.
+
+```tsx
+<View style={[styles.base, styles.large, props.style]} />
+```
+
+You can read that line and understand the override order.
+
+Base first.  
+Then large.  
+Then external style.
+
+There is very little mystery.
+
+On the web, override order can come from many places:
+
+- stylesheet order
+- selector specificity
+- class order
+- nested selectors
+- cascade layers
+- inline styles
+- generated CSS order
+
+Some of these are powerful. Some are necessary. But when building components, I often want the boring rule:
+
+> later style wins
+
+Fluentic is designed around that kind of predictability.
+
+```tsx
+<button css={[styles.button, primary && styles.primary, props.css]}>
+  Save
+</button>
+```
+
+That is the kind of composition I want to keep visible in React code.
+
+### 3. Variants Should Be Explicit
+
+I have written many components where styles were controlled by a mix of class names and nested selectors.
+
+Something like:
+
+```css
+.card.compact .title {
+  font-size: 14px;
+}
+
+.card.highlighted .title {
+  color: blue;
+}
+```
+
+This is convenient.
+
+It also couples the parent state, child structure, and class names together.
+
+Later, when the component changes, the style assumptions are still sitting there.
+
+For a local component, explicit composition can be enough:
+
+```tsx
+const styles = {
+  card: style({
+    padding: 16,
+    borderRadius: 8,
+    backgroundColor: 'white',
+  }),
+
+  compactCard: style({
+    padding: 12,
+  }),
+
+  title: style({
+    fontSize: 20,
+    fontWeight: 700,
+  }),
+
+  compactTitle: style({
+    fontSize: 16,
+  }),
+};
+
+function Card({ compact }: { compact?: boolean }) {
+  return (
+    <div css={[styles.card, compact && styles.compactCard]}>
+      <h2 css={[styles.title, compact && styles.compactTitle]}>
+        Title
+      </h2>
+    </div>
+  );
+}
+```
+
+This may look less magical.
+
+That is the point.
+
+A little less magic often means a lot more confidence later.
+
+### 4. Reusable Components Need More Than Root Styling
+
+Root-level styling is only the small case.
+
+Reusable React components often have internal parts.
+
+A button may have a root, an icon, and a label.
+
+A card may have a root, header, title, content, and footer.
+
+A caller might need to customize those parts without depending on DOM structure.
+
+With normal class names, the public styling API often becomes accidental:
+
+```tsx
+<button className="button">
+  <span className="button__icon" />
+  <span className="button__label">Save</span>
+</button>
+```
+
+That works.
+
+But now the caller knows your class names.
+
+And if they use selectors, they may also start to know your markup.
+
+Fluentic uses slots for this.
+
+A slot is a named styling target that a component chooses to expose:
+
+```tsx
+import { style } from '@fluentic/style';
+
+const buttonStyles = {
+  root: style.slot({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    border: 0,
+    borderRadius: 8,
+    padding: '8px 12px',
+  }),
+
+  icon: style.slot({
+    display: 'inline-flex',
+    width: 16,
+    height: 16,
+  }),
+
+  label: style.slot({
+    fontWeight: 650,
+  }),
+};
+```
+
+This says something important:
+
+`root`, `icon`, and `label` are allowed styling targets.
+
+The DOM can stay private.
+
+The component decides what it exposes.
+
+### 5. Selectors Should Exist, But They Should Not Become the Whole Model
+
+I still want hover and focus styles to feel natural.
+
+In Fluentic, a simple element style can use fluent selector/state chains:
+
+```tsx
+const button = style({
+  backgroundColor: 'white',
+  border: '1px solid var(--color-border)',
+}).hover({
+  backgroundColor: 'var(--color-surface-hover)',
+}).focusVisible({
+  outline: '2px solid var(--color-focus)',
+  outlineOffset: 2,
+});
+```
+
+Hover and focus states belong naturally in CSS.
+
+I do not want to manually wire every interaction state in JavaScript just to avoid selectors.
+
+But I also do not want selectors to become the main way components talk to each other.
+
+Selectors are useful.
+
+Selectors are also where hidden relationships often begin.
+
+So Fluentic should support selectors, but still encourage local, explicit style ownership.
+
+### 6. Runtime Work Should Be Small
+
+Modern React apps already have enough work to do at runtime.
+
+Styling should not require unnecessary client-side computation when the result can be known at build time.
+
+This matters even more with SSR and React Server Components.
+
+So Fluentic needs extraction.
+
+But again, extraction is the implementation requirement, not the whole product idea.
+
+The product idea is the way styles are written and composed.
+
+### 7. Debugging Should Lead Back to the Code
+
+This does not happen every day, but when it happens, it is painful.
+
+I have had simple style issues take much longer than they should because tracing the final rule back to the code was not clear enough. Sometimes the source map was not precise. Sometimes the class name pointed me to generated output, but not to the exact style code that produced it.
+
+That kind of debugging makes me lose confidence quickly.
+
+Atomic CSS has a real benefit: it can keep the final CSS output small. But it also means the browser often shows many generated class names in the HTML. That tradeoff is acceptable only if those class names can still be traced back to the style code that created them.
+
+If the browser shows an atomic class name, I still need a way to answer:
+
+- which code created this rule?
+- which component owns it?
+- did this come from the base style, a variant, a scope, or an incoming override?
+- why did this style win?
+
+Because styling bugs are often not about one declaration. They are about the path that declaration took into the UI.
+
+So Fluentic is not only about producing CSS. It is also about making generated styles easier to trace back to the React code that created them.
+
+## What Fluentic Is Trying To Be
+
+Fluentic is my attempt to bring a React Native-inspired styling mental model to React web apps.
+
+The goal is not to hide CSS.
+
+The web is still the web.
+
+You still need to understand layout, cascade, inheritance, media queries, pseudo states, and browser behavior.
+
+Fluentic is not trying to make CSS disappear.
+
+It is trying to make component styling feel more explicit, composable, and predictable.
+
+The smallest version looks like this:
+
+```tsx
+import { style, type StyleProp } from '@fluentic/style';
+
+const styles = {
+  button: style({
+    height: 36,
+    paddingInline: 12,
+    borderRadius: 6,
+    border: '1px solid var(--color-border)',
+    backgroundColor: 'var(--color-surface)',
+  }).hover({
+    backgroundColor: 'var(--color-surface-hover)',
+  }),
+
+  primary: style({
+    borderColor: 'var(--color-accent)',
+    backgroundColor: 'var(--color-accent)',
+    color: 'white',
+  }),
+
+  disabled: style({
+    opacity: 0.5,
+    pointerEvents: 'none',
+  }),
+};
+
+type ToolbarButtonProps = React.ComponentProps<'button'> & {
+  primary?: boolean;
+  css?: StyleProp;
+};
+
+function ToolbarButton({
+  primary,
+  disabled,
+  css,
+  ...props
+}: ToolbarButtonProps) {
+  return (
+    <button
+      {...props}
+      disabled={disabled}
+      css={[
+        styles.button,
+        primary && styles.primary,
+        disabled && styles.disabled,
+        css,
+      ]}
+    />
+  );
+}
+```
+
+For reusable components, Fluentic can go further with slots, scopes, and `combineStyle(...)`.
+
+```tsx
+import {
+  bindScope,
+  combineStyle,
+  style,
+  type StyleProp,
+  type StyleTheme,
+} from '@fluentic/style';
+
+const buttonStyles = {
+  root: style.slot({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    border: 0,
+    borderRadius: 8,
+    padding: '8px 12px',
+    backgroundColor: '#2563eb',
+    color: 'white',
+  }).hover({
+    opacity: 0.9,
+  }),
+
+  icon: style.slot({
+    display: 'inline-flex',
+    width: 16,
+    height: 16,
+  }),
+
+  label: style.slot({
+    fontWeight: 650,
+    lineHeight: 1,
+  }),
+};
+
+type ButtonProps = {
+  children: React.ReactNode;
+  css?: StyleProp;
+  icon?: React.ReactNode;
+  theme?: StyleTheme;
+};
+
+function BaseButton(props: ButtonProps) {
+  const css = combineStyle(
+    buttonStyles,
+    bindScope(buttonStyles.root, props.theme),
+  );
+
+  return (
+    <button css={[css.root, props.css]}>
+      {props.icon ? <span css={css.icon}>{props.icon}</span> : null}
+      <span css={css.label}>{props.children}</span>
+    </button>
+  );
+}
+```
+
+Then variants can target public slots instead of reaching through DOM structure:
+
+```tsx
+const dangerButton = style.scope([
+  buttonStyles.root({
+    backgroundColor: '#dc2626',
+  }),
+
+  buttonStyles.label({
+    fontWeight: 700,
+  }),
+]);
+
+const compactButton = style.scope([
+  buttonStyles.root({
+    gap: 6,
+    padding: '6px 10px',
+  }),
+
+  buttonStyles.label({
+    fontSize: 13,
+  }),
+]);
+
+function Button({
+  danger,
+  compact,
+  theme,
+  ...props
+}: ButtonProps & {
+  danger?: boolean;
+  compact?: boolean;
+}) {
+  return (
+    <BaseButton
+      {...props}
+      theme={[
+        danger && dangerButton,
+        compact && compactButton,
+        theme,
+      ]}
+    />
+  );
+}
+```
+
+The important part is not only the exact syntax.
+
+The important part is the styling approach:
+
+- styles are defined as values
+- styles are composed explicitly
+- conditional styles are visible
+- component parts can be named with slots
+- variants can target slots without depending on DOM structure
+- selectors are available, but they are not the whole styling model
+- CSS is extracted for production builds
+- debugging should lead back to the React code, not stop at a generated class name
+
+That is the balance I want.
+
+React Native simplicity.
+
+CSS power.
+
+Modern React output.
+
+## Why Not Just Use Existing Tools?
+
+This is a fair question.
+
+There are many good styling tools now.
+
+Some are utility-first.  
+Some are CSS-in-TypeScript.  
+Some are zero-runtime.  
+Some are compiler-first.  
+Some are design-system focused.  
+Some are close to CSS Modules with better ergonomics.
+
+I am not building Fluentic because I think all of them are bad.
+
+I am building it because I want a very specific feel.
+
+The feel of React Native style composition, adapted to React web.
+
+The thing I miss is not only extraction, type safety, or colocated styles.
+
+It is the simple confidence of this line:
+
+```tsx
+style={[base, variant, state, props.style]}
+```
+
+That mental model has been living rent-free in my head for years.
+
+When I came back to React web, I wanted that feeling again.
+
+But I also wanted hover, focus, media queries, selectors, SSR, extraction, component slots, and CSS output.
+
+So Fluentic is my attempt to connect those worlds.
+
+## What I Am Trying To Avoid
+
+Fluentic is also shaped by the things I want to avoid from my own past web code.
+
+I want to avoid class names becoming a private styling API between parent and child components.
+
+I want to avoid parent styles reaching too deeply into child structure.
+
+I want to avoid selectors that make markup hard to change.
+
+I want to avoid styling systems where I cannot easily answer “which style wins?”
+
+I want to avoid too much runtime styling work.
+
+I want to avoid cleverness that feels good today and suspicious six months later.
+
+That last one is important.
+
+A lot of styling decisions feel great when writing them.
+
+The real test is how they feel when changing them later.
+
+## The Direction
+
+The direction is clear:
+
+> React styling should feel more like composing values, and less like maintaining invisible relationships between class names and DOM structure.
+
+That is the idea behind Fluentic.
+
+Not whether CSS can do everything. It can.
+
+Not whether extraction is useful. It is.
+
+The question is:
+
+Can styling for component-heavy React apps feel predictable again?
+
+Can we keep the parts of CSS that make the web powerful, while making everyday component styling feel closer to the React Native model?
+
+That is what I am building with Fluentic.

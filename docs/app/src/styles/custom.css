@@ -715,6 +715,26 @@ button[data-search-full]:hover {
   color: #e2e8f0 !important;
 }
 
+.docs-essay-cover {
+  aspect-ratio: 1672 / 941;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 12px;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.8) inset,
+    0 18px 44px rgba(15, 23, 42, 0.1);
+  display: block;
+  margin: 1.4rem 0 2rem;
+  object-fit: cover;
+  width: 100%;
+}
+
+.dark .docs-essay-cover {
+  border-color: rgba(148, 163, 184, 0.28);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 18px 44px rgba(0, 0, 0, 0.28);
+}
+
 .docs-pager {
   display: grid;
   gap: 0.85rem;

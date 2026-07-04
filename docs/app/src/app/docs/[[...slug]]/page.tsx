@@ -12,6 +12,7 @@ type PageProps = {
 };
 
 const docsOrder = [
+  ['why-fluentic', 'why-fluentic'],
   ['why-fluentic', 'fluentic-approach'],
   ['why-fluentic', 'debug-without-getting-lost'],
   ['why-fluentic', 'extend-without-friction'],

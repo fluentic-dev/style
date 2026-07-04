@@ -1,6 +1,7 @@
 {
   "title": "Why Fluentic",
   "pages": [
+    "why-fluentic",
     "fluentic-approach",
     "debug-without-getting-lost",
     "extend-without-friction",
