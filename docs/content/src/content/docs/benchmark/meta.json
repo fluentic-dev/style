@@ -3,7 +3,6 @@
   "pages": [
     "overview",
     "react-app",
-    "correctness",
     "style-cache",
     "dynamic-values",
     "ssr-style",
