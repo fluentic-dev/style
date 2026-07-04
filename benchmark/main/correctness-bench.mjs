@@ -285,9 +285,18 @@ async function runCorrectness(browser, app, localUrl) {
         ruleCount: await page.evaluate(() => {
           let count = 0;
 
+          function visitRules(rules) {
+            count += rules.length;
+
+            for (let i = 0; i < rules.length; i++) {
+              const nested = rules[i].cssRules;
+              if (nested) visitRules(nested);
+            }
+          }
+
           for (const sheet of document.styleSheets) {
             try {
-              count += sheet.cssRules?.length || 0;
+              visitRules(sheet.cssRules || []);
             } catch {
               // Cross-origin stylesheets are not expected in these local benchmarks.
             }

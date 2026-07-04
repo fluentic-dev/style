@@ -535,14 +535,19 @@ function readStyleTelemetry() {
   let ruleCount = 0;
   let cssTextBytes = 0;
 
+  function visitRules(rules) {
+    ruleCount += rules.length;
+
+    for (let i = 0; i < rules.length; i++) {
+      const rule = rules[i];
+      cssTextBytes += rule.cssText.length;
+      if (rule.cssRules) visitRules(rule.cssRules);
+    }
+  }
+
   for (const sheet of document.styleSheets) {
     try {
-      const rules = sheet.cssRules || [];
-      ruleCount += rules.length;
-
-      for (let i = 0; i < rules.length; i++) {
-        cssTextBytes += rules[i].cssText.length;
-      }
+      visitRules(sheet.cssRules || []);
     } catch {
       // Same-origin benchmark sheets should be readable; skip if a browser blocks one.
     }
