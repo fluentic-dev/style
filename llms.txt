@@ -389,7 +389,7 @@ collected by `createTheme`.
 Use `createValues` for constrained scales.
 
 ```ts
-const space = createValues([0, 4, 8, 12, 16, 24] as const, 'space');
+const space = createValues([0, 4, 8, 12, 16, 24], 'space');
 
 const styles = {
   root: style.slot({
@@ -401,12 +401,12 @@ const styles = {
 const dense = combineStyle(styles, space(16, 12));
 ```
 
-Use the `Number` overload when keys are strings but provided CSS values are
+Use the `Number` overload when labels are strings but provided CSS values are
 numbers:
 
 ```ts
-const z = createValues(Number, ['base', 'overlay', 'modal'] as const, 'z');
-const css = combineStyle(styles, z('modal', 1000));
+const space = createValues(Number, ['8 | sm', '12 | md', '16 | lg'], 'space');
+const css = combineStyle(styles, space('16 | lg', 12));
 ```
 
 Use `createTokens` for semantic trees. Use `createValues` when a known scale

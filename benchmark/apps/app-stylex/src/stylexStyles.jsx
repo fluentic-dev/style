@@ -103,7 +103,16 @@ export const stylexStyles = stylex.create({
     padding: 16,
     marginBottom: 12,
   },
+  rowThemed: {
+    backgroundColor: 'var(--bench-row-surface, var(--bench-token-surface, #111827))',
+    borderLeftWidth: 3,
+    borderLeftStyle: 'solid',
+    borderLeftColor: 'var(--bench-row-ring, var(--bench-token-ring, rgba(34,211,238,0.20)))',
+  },
   rowActive: { backgroundColor: 'rgba(34,211,238,0.08)' },
+  badgeThemed: {
+    color: 'var(--bench-badge-accent, var(--bench-token-accent, #22d3ee))',
+  },
 });
 
 export function sx(...parts) {

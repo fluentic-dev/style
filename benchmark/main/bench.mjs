@@ -44,6 +44,8 @@ const WARMUPS = Number(process.env.WARMUPS || preset.warmups);
 const MEASURED = Number(process.env.MEASURED || preset.measured);
 const UPDATE_STEPS = Number(process.env.UPDATE_STEPS || preset.updateSteps);
 const REMOUNT_STEPS = Number(process.env.REMOUNT_STEPS || preset.remountSteps);
+const EXTRA_QUERY = process.env.EXTRA_QUERY || '';
+const CDP_METRICS = process.env.CDP_METRICS === '1';
 const OUT_DIR = process.env.BENCH_OUT_DIR || join(process.cwd(), 'results');
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 const mean = (n) => n.reduce((a, b) => a + b, 0) / n.length;
@@ -175,16 +177,24 @@ try {
         try {
           const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
           const page = await ctx.newPage();
+          const cdp = CDP_METRICS ? await ctx.newCDPSession(page) : null;
           try {
+            if (cdp) await cdp.send('Performance.enable');
             await page.goto(
-              `${localUrl}?rows=${scenario.rows}${app.extraQuery}&autorun=1&warmups=${WARMUPS}&measured=${MEASURED}&updateSteps=${UPDATE_STEPS}&remountSteps=${REMOUNT_STEPS}`,
+              `${localUrl}?rows=${scenario.rows}${app.extraQuery}${EXTRA_QUERY}&autorun=1&warmups=${WARMUPS}&measured=${MEASURED}&updateSteps=${UPDATE_STEPS}&remountSteps=${REMOUNT_STEPS}`,
               {
                 waitUntil: 'load',
               },
             );
             await page.waitForFunction(() => !!window.__benchResult, null, { timeout: 600000 });
-            runsByApp.get(app.name).push(await page.evaluate(() => window.__benchResult));
+            const result = await page.evaluate(() => window.__benchResult);
+            if (cdp) {
+              const metrics = await cdp.send('Performance.getMetrics');
+              result.cdpMetrics = Object.fromEntries(metrics.metrics.map((metric) => [metric.name, metric.value]));
+            }
+            runsByApp.get(app.name).push(result);
           } finally {
+            await cdp?.detach().catch(() => {});
             await ctx.close().catch(() => {});
           }
         } finally {
@@ -286,6 +296,7 @@ function summarizeRuns(scenario, library, runs) {
     updateStyle: summarizeMetric(runs, 'updateLiteStyleMs'),
     coldInitialMount: summarizeMetric(runs, 'coldInitialMountMs'),
     styleTelemetry: runs.at(-1)?.styleTelemetry || null,
+    cdpMetrics: runs.at(-1)?.cdpMetrics || null,
   };
 }
 

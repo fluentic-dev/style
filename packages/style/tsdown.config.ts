@@ -64,6 +64,7 @@ export default [
   // Build-tool / Node.js entries
   defineConfig({
     entry: {
+      'compiler/index': 'compiler/index.ts',
       'plugin/vite/index': 'plugin/bundler/vite/index.ts',
       'plugin/webpack/index': 'plugin/bundler/webpack/index.ts',
       'plugin/webpack/loader': 'plugin/bundler/webpack/loader.ts',

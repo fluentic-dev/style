@@ -55,7 +55,7 @@ import {
 
 export default plugin;
 
-const TURBOPACK_TRANSFORM_EXTENSIONS = ['*.ts', '*.tsx', '*.js', '*.jsx'] as const;
+const TURBOPACK_TRANSFORM_EXTENSIONS: readonly string[] = ['*.ts', '*.tsx', '*.js', '*.jsx'];
 const clearedPrecollectCacheRoots = new Set<string>();
 
 type NextPhaseState = {

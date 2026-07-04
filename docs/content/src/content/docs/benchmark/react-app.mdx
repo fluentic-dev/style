@@ -3,8 +3,8 @@ title: React App
 description: React dashboard benchmark report for app render, update, and remount timings.
 ---
 
-Use the React app benchmark when you want an app-shaped timing report instead of
-a tiny style-only loop.
+Use the React app benchmark when you want an app-shaped browser timing report
+instead of a tiny style-only loop.
 
 ```sh
 pnpm bench
@@ -31,112 +31,97 @@ aligned so the report is about the styling path as much as possible.
 The default Fluentic rows use extracted production output and public authoring
 patterns:
 
-- direct css prop: stable `style.slot()` values declared outside render and
-  passed directly as `css={styles.item}`;
-- scoped composition: stable slots and scopes declared outside render, composed
-  with `combineStyle()` and `bindScope()`;
-- token composition: the same scoped composition plus a bounded set of token
-  overrides for theme-like values.
+- direct DOM: stable `style.slot()` values declared outside render and passed
+  directly as `css={styles.row}`;
+- scoped DOM: stable slots, scopes, and token-backed themes declared outside
+  render, composed with `combineStyle()` and `bindScope()`;
+- direct components: row/cell work split into React components, each using its
+  own stable local styles;
+- scoped components: componentized rows using stable scopes and theme tokens.
 
-Open-ended per-row values are passed through the normal React `style` prop for
-every app. Fluentic no-hoist, inline dynamic style creation, and runtime-only
-css-prop variants are diagnostic lanes, not part of the default comparison.
+The main suite does not use ever-changing per-row token overrides. Theme/token
+links are still present through stable scopes and status themes. Open-ended
+high-cardinality values belong in separate diagnostics because browsers spend
+extra work invalidating CSS custom properties in the real DOM.
+
+Fluentic benefits from stable module-scope style objects and cache reuse across
+repeated component instances. That is intentional and mirrors long-lived browser
+apps. For the underlying resolver model, see
+[Style Resolution And Cache](../design/style-resolution-and-cache/).
 
 The report includes:
 
 | Metric | Meaning |
 | --- | --- |
-| `initialMountMs` | First render for a scenario. |
-| `updateMs` | Known prop/state updates against the existing tree. |
-| `remountMs` | Recreating the dashboard tree. |
-| `routeSwitchMs` | Switching between dashboard views. |
-| `styleTags` | Number of style tags after the run. |
-| `cssRules` | Number of stylesheet rules after the run. |
+| `initialMount` | First render for a scenario. |
+| `updateStyle` | Known visual variant updates against the existing tree. |
+| `remount` | Recreating the dashboard tree. |
+| `route` | Switching between dashboard views. |
+| `styleTagCount` | Number of runtime style tags after the run. |
+| `ruleCount` | Number of stylesheet rules after the run. |
 
 Median is the headline timing. Mean, p95, cold first-run mount, and raw samples
 stay in the JSON report so regressions can be inspected later.
 
 ## Latest Local Report
 
-Report file: `benchmark/main/results/bench-1783124350528.json`
+Report file: `benchmark/main/results/bench-1783146037937.json`
 
-Created: `2026-07-04T00:19:10.527Z`
+Created: `2026-07-04T06:20:37.936Z`
 
-Settings: quick preset, 2 repeats, 2 warmups, 10 measured browser runs, 20
-update steps, 5 remount steps.
+Settings: quick preset, 100/500/1500 rows, 2 repeats, production builds, Vite
+preview, and compiled Fluentic/StyleX output.
 
-The small scenarios are close to the browser frame floor, so tiny differences at
-100 or 500 rows should be read as noise unless they repeat across local runs.
+The 100-row and 500-row scenarios are close to the browser frame floor, so tiny
+differences there should be read as noise unless they repeat across local runs.
 The 1500-row scenario is the clearest scaling signal in this quick report.
-
-### 100 Rows
-
-| Library | Mount median | Style update median | Remount median | Rules | CSS bytes |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| fluentic-style-extract-direct | 16.2 ms | 16.6 ms | 15.8 ms | 2 | 3462 |
-| fluentic-style-extract-scoped | 15.5 ms | 16.6 ms | 15.9 ms | 2 | 3462 |
-| fluentic-style-extract-token | 15.8 ms | 16.6 ms | 15.6 ms | 2 | 3462 |
-| emotion | 15.4 ms | 16.6 ms | 15.7 ms | 16 | 0 |
-| styled-components | 15.4 ms | 16.6 ms | 15.8 ms | 17 | 0 |
-| goober | 15.5 ms | 16.6 ms | 15.7 ms | 16 | 0 |
-| stylex | 15.9 ms | 16.6 ms | 15.6 ms | 4 | 1913 |
-| vanilla-extract | 15.2 ms | 16.6 ms | 15.8 ms | 16 | 1584 |
-| css-modules | 16.0 ms | 16.6 ms | 16.0 ms | 16 | 1715 |
 
 ### 500 Rows
 
-| Library | Lane | Mount median | Style update median | Remount median | Rules | CSS bytes |
+| Library | Shape | Mount median | Style update median | Remount median | Style tags | Rules |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| fluentic-style-extract-direct | static-dashboard | 18.2 ms | 16.7 ms | 19.5 ms | 2 | 3462 |
-| fluentic-style-extract-scoped | static-dashboard | 18.5 ms | 16.7 ms | 20.6 ms | 2 | 3462 |
-| fluentic-style-extract-token | static-dashboard | 19.6 ms | 16.6 ms | 21.3 ms | 2 | 3462 |
-| emotion | static-dashboard | 18.9 ms | 16.7 ms | 20.4 ms | 16 | 0 |
-| styled-components | static-dashboard | 19.0 ms | 16.6 ms | 20.2 ms | 17 | 0 |
-| goober | static-dashboard | 18.0 ms | 16.6 ms | 19.1 ms | 16 | 0 |
-| stylex | static-dashboard | 18.6 ms | 16.6 ms | 20.0 ms | 4 | 1913 |
-| vanilla-extract | static-dashboard | 18.2 ms | 16.6 ms | 19.6 ms | 16 | 1584 |
-| css-modules | static-dashboard | 17.5 ms | 16.6 ms | 19.3 ms | 16 | 1715 |
+| Fluentic direct | DOM | 17.46 ms | 16.65 ms | 18.80 ms | 0 | 2 |
+| Fluentic scoped | DOM | 17.28 ms | 16.61 ms | 19.05 ms | 0 | 2 |
+| Fluentic direct | components | 16.72 ms | 16.63 ms | 18.79 ms | 0 | 2 |
+| Fluentic scoped | components | 17.24 ms | 16.64 ms | 19.24 ms | 0 | 2 |
+| StyleX | DOM | 17.81 ms | 16.65 ms | 19.25 ms | 0 | 7 |
+| StyleX | components | 18.40 ms | 16.64 ms | 19.34 ms | 0 | 7 |
+| Goober | DOM | 17.04 ms | 16.60 ms | 18.70 ms | 1 | 21 |
+| Goober | components | 16.94 ms | 16.60 ms | 18.80 ms | 1 | 21 |
+| Emotion | DOM | 18.03 ms | 16.62 ms | 19.72 ms | 1 | 21 |
+| Emotion | components | 19.29 ms | 16.61 ms | 19.90 ms | 1 | 21 |
+| styled-components | DOM | 17.15 ms | 16.60 ms | 19.00 ms | 1 | 17 |
+| vanilla-extract | DOM | 16.92 ms | 16.63 ms | 19.04 ms | 0 | 21 |
+| vanilla-extract | components | 17.24 ms | 16.62 ms | 19.16 ms | 0 | 21 |
+| CSS Modules | DOM | 17.51 ms | 16.60 ms | 19.10 ms | 0 | 21 |
+| CSS Modules | components | 17.27 ms | 16.65 ms | 19.15 ms | 0 | 21 |
 
 ### 1500 Rows
 
-| Library | Lane | Mount median | Style update median | Remount median | Rules | CSS bytes |
+| Library | Shape | Mount median | Style update median | Remount median | Style tags | Rules |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| fluentic-style-extract-direct | static-dashboard | 48.0 ms | 18.7 ms | 47.2 ms | 2 | 3462 |
-| fluentic-style-extract-scoped | static-dashboard | 53.0 ms | 31.0 ms | 52.5 ms | 2 | 3462 |
-| fluentic-style-extract-token | static-dashboard | 53.7 ms | 25.8 ms | 56.2 ms | 2 | 3462 |
-| emotion | static-dashboard | 57.5 ms | 28.4 ms | 57.5 ms | 16 | 0 |
-| styled-components | static-dashboard | 52.6 ms | 24.5 ms | 54.4 ms | 17 | 0 |
-| goober | static-dashboard | 45.9 ms | 18.0 ms | 45.6 ms | 16 | 0 |
-| stylex | static-dashboard | 45.4 ms | 18.4 ms | 47.6 ms | 4 | 1913 |
-| vanilla-extract | static-dashboard | 45.1 ms | 18.1 ms | 47.1 ms | 16 | 1584 |
-| css-modules | static-dashboard | 45.0 ms | 18.0 ms | 46.9 ms | 16 | 1715 |
-
-In this run, Fluentic direct css prop is close to StyleX and static CSS at
-1500 rows and ahead of Emotion on mount/remount. Scoped and token composition do
-more per-row work in the benchmark parent loop, so their 1500-row update medians
-are the main follow-up optimization target.
-
-## Lanes
-
-Fluentic is intentionally reported in separate modes:
-
-| Lane | Meaning |
-| --- | --- |
-| `fluentic-style-extract-direct` | Extracted production css-prop path with stable slots passed directly. |
-| `fluentic-style-extract-scoped` | Extracted production path with stable scopes composed through `combineStyle()` and `bindScope()`. |
-| `fluentic-style-extract-token` | Extracted production scoped path plus bounded token override values. |
-| Fluentic diagnostic lanes | No-hoist, inline dynamic style creation, and runtime-only css-prop variants. They are excluded by default; select them explicitly or set `INCLUDE_INTERNAL=1`. |
-
-Other apps include Emotion, styled-components, Goober, StyleX, vanilla-extract,
-CSS Modules, and an experimental Panda CSS app.
+| Fluentic direct | DOM | 40.05 ms | 17.79 ms | 42.45 ms | 0 | 2 |
+| Fluentic scoped | DOM | 41.43 ms | 19.57 ms | 42.30 ms | 0 | 2 |
+| Fluentic direct | components | 41.63 ms | 17.91 ms | 42.71 ms | 0 | 2 |
+| Fluentic scoped | components | 41.95 ms | 19.54 ms | 43.31 ms | 0 | 2 |
+| StyleX | DOM | 41.28 ms | 17.73 ms | 42.49 ms | 0 | 7 |
+| StyleX | components | 43.17 ms | 17.93 ms | 43.37 ms | 0 | 7 |
+| Goober | DOM | 40.13 ms | 17.75 ms | 42.07 ms | 1 | 21 |
+| Goober | components | 40.62 ms | 17.82 ms | 41.93 ms | 1 | 21 |
+| Emotion | DOM | 52.63 ms | 20.54 ms | 53.34 ms | 1 | 21 |
+| Emotion | components | 55.24 ms | 23.22 ms | 56.30 ms | 1 | 21 |
+| styled-components | DOM | 45.76 ms | 18.15 ms | 48.68 ms | 1 | 17 |
+| vanilla-extract | DOM | 39.85 ms | 17.65 ms | 41.88 ms | 0 | 21 |
+| vanilla-extract | components | 41.67 ms | 17.84 ms | 42.18 ms | 0 | 21 |
+| CSS Modules | DOM | 40.35 ms | 17.75 ms | 41.94 ms | 0 | 21 |
+| CSS Modules | components | 41.45 ms | 17.83 ms | 42.17 ms | 0 | 21 |
 
 ## Filtering
 
 ```sh
-APP=fluentic-style-extract-direct,emotion pnpm bench
+APP=fluentic-style-extract-direct-dom,stylex pnpm bench
 ROWS=100,500,1500 pnpm bench
 REPEATS=5 WARMUPS=3 MEASURED=30 pnpm bench
-INCLUDE_INTERNAL=1 pnpm bench
 INCLUDE_EXPERIMENTAL=1 pnpm bench
 ```
 

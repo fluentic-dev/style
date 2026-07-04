@@ -117,6 +117,10 @@
       "types": "./config/index.ts",
       "import": "./dist/config/index.js"
     },
+    "./compiler": {
+      "types": "./compiler/index.ts",
+      "import": "./dist/compiler/index.mjs"
+    },
     "./selector": {
       "types": "./selector/index.ts",
       "import": "./dist/selector/index.js"
@@ -210,6 +214,7 @@
   },
   "files": [
     "README.md",
+    "CHANGELOG.md",
     "dist",
     "atomic",
     "builder",
@@ -231,6 +236,8 @@
   "scripts": {
     "build": "tsdown",
     "dev": "tsdown --watch",
+    "prepack": "node ../../scripts/sync-package-readme.mjs copy",
+    "postpack": "node ../../scripts/sync-package-readme.mjs clean",
     "report:bundle": "node ./scripts/report-bundle.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx ./tests/run-tests.ts"
@@ -249,7 +256,6 @@
     "@types/picomatch": "4.0.3",
     "@types/react": "19.2.14",
     "react": "19.2.0",
-    "react-dom": "19.2.0",
     "tsdown": "0.22.1",
     "tsx": "4.20.6",
     "typescript": "5.8.3",
@@ -262,8 +268,7 @@
     "@parcel/plugin": ">=2",
     "@rspack/core": ">=1",
     "next": ">=15",
-    "react": ">=18",
-    "react-dom": ">=18",
+    "react": ">=16.14",
     "vite": ">=5",
     "webpack": ">=5"
   },

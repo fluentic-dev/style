@@ -85,5 +85,26 @@ export const pandaStyles = {
   menuBtn: css({ ...base.menuBtn, '&:hover': { borderColor: palette.accent } }),
   select: css(base.select),
   detailsHero: css(base.detailsHero),
+  rowThemed: css({
+    background: 'var(--bench-row-surface, var(--bench-token-surface, #111827))',
+    borderLeft: '3px solid transparent',
+    borderLeftColor: 'var(--bench-row-ring, var(--bench-token-ring, rgba(34,211,238,0.20)))',
+  }),
   rowActive: css({ background: 'rgba(34,211,238,0.08)' }),
+  badgeThemed: css({ color: 'var(--bench-badge-accent, var(--bench-token-accent, #22d3ee))' }),
+  themeActive: css({
+    '--bench-token-accent': '#0f766e',
+    '--bench-token-surface': 'rgba(240,253,250,0.92)',
+    '--bench-token-ring': 'rgba(15,118,110,0.24)',
+  }),
+  themeTrial: css({
+    '--bench-token-accent': '#b45309',
+    '--bench-token-surface': 'rgba(255,251,235,0.92)',
+    '--bench-token-ring': 'rgba(180,83,9,0.22)',
+  }),
+  themeBlocked: css({
+    '--bench-token-accent': '#dc2626',
+    '--bench-token-surface': 'rgba(254,242,242,0.92)',
+    '--bench-token-ring': 'rgba(220,38,38,0.22)',
+  }),
 };

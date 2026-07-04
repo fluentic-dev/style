@@ -8,11 +8,16 @@
 .table { width:100%; border-collapse:collapse; font-size:13px; }
 .thtd { border-bottom:1px solid #334155; text-align:left; padding:8px 6px; }
 .badge { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid #334155; font-size:11px; }
+.badgeThemed { color: var(--bench-badge-accent, var(--bench-token-accent, #22d3ee)); }
 .menuBtn { width:100%; margin-bottom:6px; text-align:left; border:1px solid #334155; background:#1f2937; color:#e5e7eb; border-radius:8px; padding:8px 10px; }
 .menuBtn:hover { border-color:#22d3ee; }
 .select { background:#0b1220; color:#e5e7eb; border:1px solid #334155; border-radius:8px; padding:6px 8px; }
 .detailsHero { border:1px solid #334155; background:#0b1220; border-radius:10px; padding:16px; margin-bottom:12px; }
+.rowThemed { background: var(--bench-row-surface, var(--bench-token-surface, #111827)); border-left: 3px solid transparent; border-left-color: var(--bench-row-ring, var(--bench-token-ring, rgba(34,211,238,0.20))); }
 .rowActive { background: rgba(34,211,238,0.08); }
+.themeActive { --bench-token-accent: #0f766e; --bench-token-surface: rgba(240,253,250,0.92); --bench-token-ring: rgba(15,118,110,0.24); }
+.themeTrial { --bench-token-accent: #b45309; --bench-token-surface: rgba(255,251,235,0.92); --bench-token-ring: rgba(180,83,9,0.22); }
+.themeBlocked { --bench-token-accent: #dc2626; --bench-token-surface: rgba(254,242,242,0.92); --bench-token-ring: rgba(220,38,38,0.22); }
 @media (max-width: 900px) {
   .title { font-size:18px; }
 }

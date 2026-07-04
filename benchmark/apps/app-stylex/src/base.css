@@ -1,1 +1,4 @@
 /* StyleX app intentionally provides a CSS asset so the Vite plugin can append extracted rules. */
+.themeActive { --bench-token-accent: #0f766e; --bench-token-surface: rgba(240,253,250,0.92); --bench-token-ring: rgba(15,118,110,0.24); }
+.themeTrial { --bench-token-accent: #b45309; --bench-token-surface: rgba(255,251,235,0.92); --bench-token-ring: rgba(180,83,9,0.22); }
+.themeBlocked { --bench-token-accent: #dc2626; --bench-token-surface: rgba(254,242,242,0.92); --bench-token-ring: rgba(220,38,38,0.22); }

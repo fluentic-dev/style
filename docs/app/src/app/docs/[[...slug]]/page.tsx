@@ -99,11 +99,8 @@ const docsOrder = [
   ['reference', 'plugin-options'],
   ['benchmark', 'overview'],
   ['benchmark', 'react-app'],
-  ['benchmark', 'style-cache'],
-  ['benchmark', 'dynamic-values'],
   ['benchmark', 'ssr-style'],
   ['benchmark', 'compiler'],
-  ['benchmark', 'bundle-size'],
 ];
 
 function renderInlineCode(value: string): ReactNode {

@@ -7,7 +7,7 @@ Use the compiler benchmark when you want to measure Fluentic's transform cost
 across generated source shapes.
 
 ```sh
-pnpm --filter @benchmark/main bench:compiler
+pnpm bench:compiler
 ```
 
 The report writes JSON under `benchmark/main/results` by default, or under
@@ -29,35 +29,38 @@ Use it for questions like:
 
 ## Latest Local Report
 
-Report file: `benchmark/main/results/compiler-1781617667349.json`
+Report file: `benchmark/main/results/compiler-1783146690445.json`
 
-Created: `2026-06-16T13:47:47.348Z`
+Created: `2026-07-04T06:31:30.444Z`
 
 Settings: 100 files per corpus, 8 components per file, 1 warmup, 5 measured
 runs, sourcemaps enabled.
 
-| Name | Corpus | Files | LOC | Median ms | ms/file | files/sec |
-| --- | --- | ---: | ---: | ---: | ---: | ---: |
-| fluenticExtractCold | unrelated-tsx | 100 | 9200 | 157.9 | 1.6 | 633.3 |
-| fluenticExtractWarm | unrelated-tsx | 100 | 9200 | 156.0 | 1.6 | 641.2 |
-| stylexBabelPlugin | unrelated-tsx | 100 | 9200 | 169.0 | 1.7 | 591.6 |
-| fluenticExtractCold | direct-styles | 100 | 23000 | 242.0 | 2.4 | 413.2 |
-| fluenticExtractWarm | direct-styles | 100 | 23000 | 244.1 | 2.4 | 409.7 |
-| stylexBabelPlugin | direct-styles | 100 | 23000 | 234.7 | 2.3 | 426.0 |
-| fluenticExtractCold | theme-slots | 100 | 33200 | 410.4 | 4.1 | 243.6 |
-| fluenticExtractWarm | theme-slots | 100 | 33200 | 412.6 | 4.1 | 242.4 |
-| stylexBabelPlugin | theme-slots | 100 | 33200 | 381.3 | 3.8 | 262.3 |
-| fluenticExtractCold | stylex-styles | 100 | 31000 | 273.9 | 2.7 | 365.1 |
-| fluenticExtractWarm | stylex-styles | 100 | 31000 | 274.8 | 2.7 | 363.9 |
-| stylexBabelPlugin | stylex-styles | 100 | 31000 | 413.6 | 4.1 | 241.8 |
+| Name | Corpus | LOC | Median ms | ms/file | Overhead vs Babel noop |
+| --- | --- | ---: | ---: | ---: | ---: |
+| babelNoopPlugin | unrelated-tsx | 9200 | 124.07 | 1.24 | 0.00 ms |
+| fluenticExtractWarm | unrelated-tsx | 9200 | 224.35 | 2.24 | 100.28 ms |
+| stylexBabelPlugin | unrelated-tsx | 9200 | 179.68 | 1.80 | 55.61 ms |
+| babelNoopPlugin | direct-styles | 23000 | 177.73 | 1.78 | 0.00 ms |
+| fluenticExtractWarm | direct-styles | 23000 | 376.43 | 3.76 | 198.70 ms |
+| stylexBabelPlugin | direct-styles | 23000 | 249.03 | 2.49 | 71.30 ms |
+| babelNoopPlugin | theme-slots | 33200 | 264.40 | 2.64 | 0.00 ms |
+| fluenticExtractWarm | theme-slots | 33200 | 642.25 | 6.42 | 377.85 ms |
+| stylexBabelPlugin | theme-slots | 33200 | 372.86 | 3.73 | 108.46 ms |
+| babelNoopPlugin | stylex-styles | 31000 | 223.99 | 2.24 | 0.00 ms |
+| fluenticExtractWarm | stylex-styles | 31000 | 392.01 | 3.92 | 168.03 ms |
+| stylexBabelPlugin | stylex-styles | 31000 | 416.69 | 4.17 | 192.71 ms |
+| babelNoopPlugin | mixed-app | 21674 | 196.18 | 1.96 | 0.00 ms |
+| fluenticExtractWarm | mixed-app | 21674 | 421.67 | 4.22 | 225.49 ms |
+| stylexBabelPlugin | mixed-app | 21674 | 270.71 | 2.71 | 74.53 ms |
 
 ## Settings
 
 ```sh
-FILES=200 COMPONENTS=20 pnpm --filter @benchmark/main bench:compiler
-WARMUPS=3 MEASURED=20 pnpm --filter @benchmark/main bench:compiler
-CASE=chain pnpm --filter @benchmark/main bench:compiler
-CORPUS=large BENCH_OUT_DIR=./tmp/compiler-report pnpm --filter @benchmark/main bench:compiler
+FILES=200 COMPONENTS=20 pnpm bench:compiler
+WARMUPS=3 MEASURED=20 pnpm bench:compiler
+VARIANTS=theme-slots:fluenticExtractWarm pnpm bench:compiler
+BENCH_OUT_DIR=./tmp/compiler-report pnpm bench:compiler
 ```
 
 Run this benchmark before and after compiler-heavy changes on the same machine.

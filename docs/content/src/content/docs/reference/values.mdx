@@ -4,7 +4,7 @@ description: createValues creates app-facing scales with token identity.
 ---
 
 ```ts
-const space = createValues(Number, [8, 12, 16]);
+const space = createValues([8, 12, 16]);
 ```
 
 Use values when app code should read literal scales while Fluentic still tracks
@@ -13,4 +13,14 @@ themeable identity underneath:
 ```ts
 space(12);
 space(12, 16);
+```
+
+Pass `Number` only when the tracked values are string labels but the CSS value
+should be numeric:
+
+```ts
+const labeledSpace = createValues(Number, ['8 | sm', '12 | md', '16 | lg']);
+
+labeledSpace('12 | md');
+labeledSpace('12 | md', 16);
 ```

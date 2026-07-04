@@ -4,8 +4,8 @@ description: How Fluentic benchmark reports are organized and how to rerun them 
 ---
 
 Fluentic keeps benchmark reports in a separate section because they are not API
-reference. They are repeatable local measurements for checking runtime cost,
-static extraction output, and package size.
+reference. They are repeatable local measurements for checking app render cost,
+SSR style-resolution overhead, and compiler transform cost.
 
 Run benchmark commands from the workspace root. Raw JSON reports are written to
 `benchmark/main/results` by default. Set `BENCH_OUT_DIR` when you want reports
@@ -16,11 +16,8 @@ written somewhere else.
 | Page | Command | What it answers |
 | --- | --- | --- |
 | [React App](./react-app) | `pnpm bench` | How app render/update/remount timings compare across styling approaches. |
-| [Style Cache](./style-cache) | `pnpm bench:fluentic-cache` | How warmed runtime cache paths behave in the browser. |
-| [Dynamic Values](./dynamic-values) | `pnpm bench:dynamic-values` | How open-ended values behave when using stable value bindings versus runtime rule generation. |
 | [SSR Style](./ssr-style) | `pnpm bench:ssr-style` | How extracted class, css-prop, scope, merge, and style-prop resolution behaves during server rendering. |
-| [Compiler](./compiler) | `pnpm --filter @benchmark/main bench:compiler` | How the Fluentic compiler transform scales across generated source shapes. |
-| [Bundle Size](./bundle-size) | `pnpm --filter @fluentic/style report:bundle` | How large the public package entry points are. |
+| [Compiler](./compiler) | `pnpm bench:compiler` | How the Fluentic compiler transform scales across generated source shapes. |
 
 ## Reading Numbers
 
@@ -38,8 +35,8 @@ is usually a before-and-after run from the same machine.
 BENCH_OUT_DIR=./tmp/bench pnpm bench
 APP=fluentic-style-extract-direct,emotion pnpm bench
 ROWS=100,500,1500 REPEATS=5 pnpm bench:stable
-INCLUDE_INTERNAL=1 pnpm bench
-ITEMS=2000 pnpm bench:dynamic-values
+SSR_ROWS=100,500 pnpm bench:ssr-style
+FILES=200 COMPONENTS=20 pnpm bench:compiler
 CHROME_BIN=/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome pnpm bench
 ```
 
@@ -49,9 +46,9 @@ Common environment variables:
 | --- | --- | --- |
 | `BENCH_OUT_DIR` | all benchmark reports | Writes JSON reports to a custom directory. |
 | `APP` | app benchmarks | Limits a run to one or more benchmark apps. |
-| `INCLUDE_INTERNAL` | app benchmarks | Includes diagnostic lanes such as Fluentic no-hoist, inline dynamic style creation, and runtime-only css-prop. |
 | `INCLUDE_EXPERIMENTAL` | app benchmarks | Includes experimental competitor apps. |
 | `ROWS` | React app benchmark | Changes the row-count scenarios. |
 | `REPEATS`, `WARMUPS`, `MEASURED` | React app benchmark | Changes sample counts. |
-| `ITEMS` | browser microbenchmarks | Changes the number of styled items. |
+| `SSR_ROWS` | SSR benchmark | Changes server-render row-count scenarios. |
+| `FILES`, `COMPONENTS` | compiler benchmark | Changes generated compiler corpus size. |
 | `CHROME_BIN` | browser benchmarks | Uses a specific Chrome, Chromium, or Edge executable. |

@@ -57,6 +57,7 @@ export const vBadge = style({
   border: `1px solid ${palette.border}`,
   fontSize: 11,
 });
+export const vBadgeThemed = style({ color: 'var(--bench-badge-accent, var(--bench-token-accent, #22d3ee))' });
 export const vMenuBtn = style({
   width: '100%',
   marginBottom: 6,
@@ -81,5 +82,31 @@ export const vDetailsHero = style({
   padding: 16,
   marginBottom: 12,
 });
+export const vRowThemed = style({
+  background: 'var(--bench-row-surface, var(--bench-token-surface, #111827))',
+  borderLeft: '3px solid transparent',
+  borderLeftColor: 'var(--bench-row-ring, var(--bench-token-ring, rgba(34,211,238,0.20)))',
+});
 export const vRowActive = style({ background: 'rgba(34,211,238,0.08)' });
 export const vMenuBtnHover = style({ selectors: { '&:hover': { borderColor: palette.accent } } });
+export const vThemeActive = style({
+  vars: {
+    '--bench-token-accent': '#0f766e',
+    '--bench-token-surface': 'rgba(240,253,250,0.92)',
+    '--bench-token-ring': 'rgba(15,118,110,0.24)',
+  },
+});
+export const vThemeTrial = style({
+  vars: {
+    '--bench-token-accent': '#b45309',
+    '--bench-token-surface': 'rgba(255,251,235,0.92)',
+    '--bench-token-ring': 'rgba(180,83,9,0.22)',
+  },
+});
+export const vThemeBlocked = style({
+  vars: {
+    '--bench-token-accent': '#dc2626',
+    '--bench-token-surface': 'rgba(254,242,242,0.92)',
+    '--bench-token-ring': 'rgba(220,38,38,0.22)',
+  },
+});

@@ -21,7 +21,7 @@ const linkedColors = createValues(
     'brand | mint',
     'alert | amber',
     'focus | violet',
-  ] as const,
+  ],
   'linked-colors',
 );
 
@@ -59,7 +59,7 @@ const linkedThemeCards = [
       deepLinkedCardVars.color(linkedColors('focus | violet')),
     ]),
   },
-] as const;
+];
 
 export function ThemeApp() {
   const [themeIndex, setThemeIndex] = useState(0);

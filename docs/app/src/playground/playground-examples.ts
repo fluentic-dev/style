@@ -1,3 +1,6 @@
+import type { CompilerCssOptions } from '../../../../packages/style/compiler/compiler/types';
+import type { SourcemapLocationMode, StylePriorityMode } from '../../../../packages/style/config/types';
+
 export type PlaygroundFile = {
   name: string;
   code: string;
@@ -10,10 +13,34 @@ export type PlaygroundExample = {
   files: PlaygroundFile[];
 };
 
-export const compilerConfig = {
+type PlaygroundDefaultCssOptions = Omit<CompilerCssOptions, 'debugClassName' | 'localClassName'> & {
+  layers: string[];
+  layerNamespace: string;
+  classNamePrefix: string;
+  scopeTargetPrefix: string;
+  elementMarkerPrefix: string;
+  themeNamePrefix: string;
+  tokenVarPrefix: string;
+  localClassName: boolean;
+  debugClassName: boolean;
+  debugPropertyLength: number;
+  debugValueLength: number;
+  debugSelectorLength: number;
+  debugParentSelectorLength: number;
+  debugAtRuleLength: number;
+};
+
+type PlaygroundDefaultCompilerConfig = {
+  css: PlaygroundDefaultCssOptions;
+  layer: boolean;
+  priorityMode: StylePriorityMode;
+  sourcemapTrace: SourcemapLocationMode;
+};
+
+export const compilerConfig: PlaygroundDefaultCompilerConfig = {
   layer: true,
-  priorityMode: 'layer' as const,
-  sourcemapTrace: 'style' as const,
+  priorityMode: 'layer',
+  sourcemapTrace: 'style',
   css: {
     layerNamespace: 'fluentic',
     layers: ['reset', 'fluentic', 'override'],

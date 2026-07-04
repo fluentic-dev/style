@@ -68,7 +68,7 @@ export const color = createValues([
   '#d8f3ee | AccentSoft',
 ]);
 
-export const space = createValues(Number, [4, 8, 12, 16, 24]);
+export const space = createValues([4, 8, 12, 16, 24]);
 ```
 
 Use the literal values directly in styles:
@@ -157,13 +157,13 @@ Both entries default to `#ffffff`.
 
 Because the labels are different, the dark theme can change them separately.
 
-For numeric scales, pass `Number`.
+For numeric scales, use numeric values directly.
 
 Numeric values stay typed as numbers, so they fit properties like `gap`,
 `padding`, or `borderRadius`:
 
 ```ts
-export const space = createValues(Number, [4, 8, 12, 16, 24]);
+export const space = createValues([4, 8, 12, 16, 24]);
 
 const panel = style({
   gap: space(12),
@@ -173,6 +173,28 @@ const panel = style({
 export const denseTheme = createTheme([
   space(12, 8),
   space(16, 12),
+]);
+```
+
+Pass `Number` when the tracked values are string labels but the actual CSS value
+should be numeric. The label remains the value you reference in app code, and
+theme overrides must provide numbers:
+
+```ts
+export const space = createValues(Number, [
+  '8 | sm',
+  '12 | md',
+  '16 | lg',
+]);
+
+const panel = style({
+  gap: space('12 | md'),
+  padding: space('16 | lg'),
+});
+
+export const denseTheme = createTheme([
+  space('12 | md', 8),
+  space('16 | lg', 12),
 ]);
 ```
 

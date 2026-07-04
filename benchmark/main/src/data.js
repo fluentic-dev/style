@@ -17,6 +17,8 @@ export const WARMUP_RUNS = readPositiveNumber('warmups', 2);
 export const MEASURED_RUNS = readPositiveNumber('measured', 10);
 export const UPDATE_STEPS = readPositiveNumber('updateSteps', 20);
 export const REMOUNT_STEPS = readPositiveNumber('remountSteps', 5);
+export const USE_ROW_VARS = typeof window !== 'undefined' &&
+  new URLSearchParams(window.location.search).get('rowVars') === '1';
 export const rows = Array.from(
   { length: PAGE_SIZE },
   (_, i) => ({
@@ -29,6 +31,8 @@ export const rows = Array.from(
 );
 export const menu = ['Overview', 'Customers', 'Billing', 'Rules', 'Reports', 'Settings'];
 export function getRowVars(row, tick) {
+  if (!USE_ROW_VARS) return undefined;
+
   return {
     '--bench-row-hue': String((row.id * 17 + tick * 23) % 360),
     '--bench-row-opacity': String(0.72 + ((row.id + tick) % 8) / 30),

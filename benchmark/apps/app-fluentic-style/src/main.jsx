@@ -1,8 +1,9 @@
 import { base, getRowVars, menu, mountSingleBench, palette, rows } from '@benchmark/main';
-import { bindScope, combineStyle, createToken, style } from '@fluentic/style';
+import { bindScope, combineStyle, createTheme, createToken, style } from '@fluentic/style';
 
 const params = new URLSearchParams(window.location.search);
 const fluenticMode = params.get('fluenticMode') || 'direct';
+const tableShape = params.get('tableShape') || 'dom';
 const useInlineStyle = params.get('inlineStyle') === '1';
 const useStressStyle = params.get('stressStyle') === '1';
 
@@ -32,8 +33,30 @@ const scopedStyles = {
   card: style.slot(base.card).media('(max-width: 900px)', { padding: 10 }),
   row: style.slot({
     background: surfaceToken,
-    boxShadow: `inset 3px 0 0 ${ringToken}`,
+    borderLeft: '3px solid transparent',
+    borderLeftColor: ringToken,
   }),
+  badge: style.slot({
+    ...base.badge,
+    color: accentToken,
+  }),
+};
+
+const rowComponentStyles = {
+  row: style.slot({}),
+  rowActive: style.slot({ background: 'rgba(34,211,238,0.08)' }),
+  cell: style.slot(base.thtd),
+  badge: style.slot(base.badge),
+};
+
+const scopedComponentStyles = {
+  row: style.slot({
+    background: surfaceToken,
+    borderLeft: '3px solid transparent',
+    borderLeftColor: ringToken,
+  }),
+  rowActive: style.slot({ background: 'rgba(34,211,238,0.08)' }),
+  cell: style.slot(base.thtd),
   badge: style.slot({
     ...base.badge,
     color: accentToken,
@@ -48,44 +71,157 @@ const activeScope = style.scope([
   scopedStyles.row({ background: 'rgba(34,211,238,0.08)' }),
   scopedStyles.badge({ fontWeight: 700 }),
 ]);
-const successScope = style.scope([
-  scopedStyles.badge({ color: '#0f766e' }),
-]);
-const trialScope = style.scope([
-  scopedStyles.badge({ color: '#b45309' }),
-]);
-const blockedScope = style.scope([
-  scopedStyles.badge({ color: '#dc2626' }),
+const componentActiveScope = style.scope([
+  scopedComponentStyles.row({ background: 'rgba(34,211,238,0.08)' }),
+  scopedComponentStyles.badge({ fontWeight: 700 }),
 ]);
 
-function getStatusScope(row) {
-  if (row.status === 'blocked') return blockedScope;
-  if (row.status === 'trial') return trialScope;
-  return successScope;
+const directRowCss = {
+  base: { row: appStyles.row, badge: appStyles.badge },
+  active: { row: [appStyles.row, appStyles.rowActive], badge: appStyles.badge },
+};
+const directComponentRowCss = {
+  base: { row: rowComponentStyles.row, cell: rowComponentStyles.cell, badge: rowComponentStyles.badge },
+  active: {
+    row: [rowComponentStyles.row, rowComponentStyles.rowActive],
+    cell: rowComponentStyles.cell,
+    badge: rowComponentStyles.badge,
+  },
+};
+
+function getStatusKey(row) {
+  if (row.status === 'blocked') return 'blocked';
+  if (row.status === 'trial') return 'trial';
+  return 'active';
 }
 
-function getAccent(row) {
-  if (row.status === 'blocked') return '#dc2626';
-  if (row.status === 'trial') return '#b45309';
+function getAccent(status) {
+  if (status === 'blocked') return '#dc2626';
+  if (status === 'trial') return '#b45309';
   return '#0f766e';
 }
 
-function getSurface(row) {
-  if (row.status === 'blocked') return 'rgba(254,242,242,0.92)';
-  if (row.status === 'trial') return 'rgba(255,251,235,0.92)';
+function getSurface(status) {
+  if (status === 'blocked') return 'rgba(254,242,242,0.92)';
+  if (status === 'trial') return 'rgba(255,251,235,0.92)';
   return 'rgba(240,253,250,0.92)';
 }
 
-function getRing(row) {
-  if (row.status === 'blocked') return 'rgba(220,38,38,0.22)';
-  if (row.status === 'trial') return 'rgba(180,83,9,0.22)';
+function getRing(status) {
+  if (status === 'blocked') return 'rgba(220,38,38,0.22)';
+  if (status === 'trial') return 'rgba(180,83,9,0.22)';
   return 'rgba(15,118,110,0.24)';
+}
+
+function getVariantKey(row, selected) {
+  const status = getStatusKey(row);
+  return selected ? `${status}Selected` : status;
+}
+
+function createScopedBindings(status, selected) {
+  return [
+    bindScope(
+      scopedStyles.row,
+      selected && activeScope,
+    ),
+    bindScope(
+      scopedStyles.badge,
+      selected && activeScope,
+    ),
+  ];
+}
+
+function createComponentScopedBindings(status, selected) {
+  return [
+    bindScope(
+      scopedComponentStyles.row,
+      selected && componentActiveScope,
+    ),
+    bindScope(
+      scopedComponentStyles.badge,
+      selected && componentActiveScope,
+    ),
+  ];
+}
+
+const scopedBindings = {
+  active: createScopedBindings('active', false),
+  activeSelected: createScopedBindings('active', true),
+  trial: createScopedBindings('trial', false),
+  trialSelected: createScopedBindings('trial', true),
+  blocked: createScopedBindings('blocked', false),
+  blockedSelected: createScopedBindings('blocked', true),
+};
+
+const componentScopedBindings = {
+  active: createComponentScopedBindings('active', false),
+  activeSelected: createComponentScopedBindings('active', true),
+  trial: createComponentScopedBindings('trial', false),
+  trialSelected: createComponentScopedBindings('trial', true),
+  blocked: createComponentScopedBindings('blocked', false),
+  blockedSelected: createComponentScopedBindings('blocked', true),
+};
+
+const statusThemes = {
+  active: createTheme([
+    accentToken('#0f766e'),
+    surfaceToken('rgba(240,253,250,0.92)'),
+    ringToken('rgba(15,118,110,0.24)'),
+  ], 'bench-active'),
+  trial: createTheme([
+    accentToken('#b45309'),
+    surfaceToken('rgba(255,251,235,0.92)'),
+    ringToken('rgba(180,83,9,0.22)'),
+  ], 'bench-trial'),
+  blocked: createTheme([
+    accentToken('#dc2626'),
+    surfaceToken('rgba(254,242,242,0.92)'),
+    ringToken('rgba(220,38,38,0.22)'),
+  ], 'bench-blocked'),
+};
+
+function createScopedRowCss(styles, bindingMap, variantKey) {
+  const status = variantKey.startsWith('trial') ? 'trial' : variantKey.startsWith('blocked') ? 'blocked' : 'active';
+  const theme = statusThemes[status];
+  const css = combineStyle(styles, ...bindingMap[variantKey]);
+
+  return {
+    row: [theme, css.row],
+    badge: css.badge,
+    cell: css.cell,
+  };
+}
+
+const scopedRowCss = {
+  active: createScopedRowCss(scopedStyles, scopedBindings, 'active'),
+  activeSelected: createScopedRowCss(scopedStyles, scopedBindings, 'activeSelected'),
+  trial: createScopedRowCss(scopedStyles, scopedBindings, 'trial'),
+  trialSelected: createScopedRowCss(scopedStyles, scopedBindings, 'trialSelected'),
+  blocked: createScopedRowCss(scopedStyles, scopedBindings, 'blocked'),
+  blockedSelected: createScopedRowCss(scopedStyles, scopedBindings, 'blockedSelected'),
+};
+
+const componentScopedRowCss = {
+  active: createScopedRowCss(scopedComponentStyles, componentScopedBindings, 'active'),
+  activeSelected: createScopedRowCss(scopedComponentStyles, componentScopedBindings, 'activeSelected'),
+  trial: createScopedRowCss(scopedComponentStyles, componentScopedBindings, 'trial'),
+  trialSelected: createScopedRowCss(scopedComponentStyles, componentScopedBindings, 'trialSelected'),
+  blocked: createScopedRowCss(scopedComponentStyles, componentScopedBindings, 'blocked'),
+  blockedSelected: createScopedRowCss(scopedComponentStyles, componentScopedBindings, 'blockedSelected'),
+};
+
+function getScopedCss(row, selected) {
+  return scopedRowCss[getVariantKey(row, selected)];
+}
+
+function getComponentScopedCss(row, selected) {
+  return componentScopedRowCss[getVariantKey(row, selected)];
 }
 
 function AppLayout(props) {
   if (useStressStyle) return <StressAppLayout {...props} />;
   if (useInlineStyle) return <InlineAppLayout {...props} />;
-  if (fluenticMode === 'token') return <TokenAppLayout {...props} />;
+  if (tableShape === 'components') return <ComponentAppLayout {...props} />;
   if (fluenticMode === 'scoped') return <ScopedAppLayout {...props} />;
   return <DirectAppLayout {...props} />;
 }
@@ -113,8 +249,7 @@ function DirectAppLayout({ view, tick, liteStyle }) {
 
   return renderDashboard({
     css,
-    getRowCss: (_row, index) => [css.row, liteStyle && index === activeRow && css.rowActive],
-    getBadgeCss: () => css.badge,
+    getRowCss: (_row, index) => liteStyle && index === activeRow ? directRowCss.active : directRowCss.base,
     tick,
   });
 }
@@ -145,27 +280,65 @@ function ScopedAppLayout({ view, tick, liteStyle }) {
 
   return renderDashboard({
     css,
-    getRowCss: (row, index) => {
-      const rowCss = combineStyle(
-        scopedStyles,
-        bindScope(scopedStyles.row, getStatusScope(row), liteStyle && index === activeRow && activeScope),
-      );
-      return rowCss.row;
-    },
-    getBadgeCss: (row, index) => {
-      const badgeCss = combineStyle(
-        scopedStyles,
-        bindScope(scopedStyles.badge, getStatusScope(row), liteStyle && index === activeRow && activeScope),
-      );
-      return badgeCss.badge;
-    },
+    getRowCss: (row, index) => getScopedCss(row, liteStyle && index === activeRow),
     tick,
   });
 }
 
-function TokenAppLayout({ view, tick, liteStyle }) {
-  const activeRow = tick % rows.length;
-  const css = scopedStyles;
+function renderDashboard({ css, getRowCss, tick }) {
+  return (
+    <div css={css.page}>
+      <header css={css.header}>
+        <strong>Fluentic Style Admin</strong>
+        <select css={css.select}>
+          <option>Last 7 days</option>
+        </select>
+      </header>
+      <div css={css.shell}>
+        <section css={css.card}>
+          {menu.map((item) => <button key={item} css={css.menuBtn}>{item}</button>)}
+        </section>
+        <section css={css.card}>
+          <h1 css={css.title}>Admin Dashboard</h1>
+          <p css={css.muted}>Real world mount + update benchmark.</p>
+          <table css={css.table}>
+            <thead>
+              <tr>
+                <th css={css.thtd}>Name</th>
+                <th css={css.thtd}>Plan</th>
+                <th css={css.thtd}>Usage</th>
+                <th css={css.thtd}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => {
+                const rowCss = getRowCss(row, index);
+                return (
+                  <tr key={row.id} css={rowCss.row} style={getRowVars(row, tick)}>
+                    <td css={css.thtd}>{row.name}</td>
+                    <td css={css.thtd}>{row.plan}</td>
+                    <td css={css.thtd}>{row.usage}%</td>
+                    <td css={css.thtd}>
+                      <span css={rowCss.badge}>{row.status}</span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+      </div>
+    </div>
+  );
+}
+
+function ComponentAppLayout({ view, tick, liteStyle }) {
+  const css = fluenticMode === 'direct'
+    ? appStyles
+    : combineStyle(
+      scopedStyles,
+      bindScope(scopedStyles.card, compactScope),
+    );
 
   if (view === 'details') {
     return (
@@ -184,27 +357,6 @@ function TokenAppLayout({ view, tick, liteStyle }) {
     );
   }
 
-  return renderDashboard({
-    css,
-    getRowCss: (row, index) => {
-      const rowCss = combineStyle(
-        scopedStyles,
-        bindScope(scopedStyles.row, liteStyle && index === activeRow && activeScope),
-        accentToken(getAccent(row)),
-        surfaceToken(getSurface(row)),
-        ringToken(getRing(row)),
-      );
-      return rowCss.row;
-    },
-    getBadgeCss: (row) => {
-      const badgeCss = combineStyle(scopedStyles, accentToken(getAccent(row)));
-      return badgeCss.badge;
-    },
-    tick,
-  });
-}
-
-function renderDashboard({ css, getRowCss, getBadgeCss, tick }) {
   return (
     <div css={css.page}>
       <header css={css.header}>
@@ -231,14 +383,12 @@ function renderDashboard({ css, getRowCss, getBadgeCss, tick }) {
             </thead>
             <tbody>
               {rows.map((row, index) => (
-                <tr key={row.id} css={getRowCss(row, index)} style={getRowVars(row, tick)}>
-                  <td css={css.thtd}>{row.name}</td>
-                  <td css={css.thtd}>{row.plan}</td>
-                  <td css={css.thtd}>{row.usage}%</td>
-                  <td css={css.thtd}>
-                    <span css={getBadgeCss(row, index)}>{row.status}</span>
-                  </td>
-                </tr>
+                <BenchRow
+                  key={row.id}
+                  active={liteStyle && index === tick % rows.length}
+                  row={row}
+                  tick={tick}
+                />
               ))}
             </tbody>
           </table>
@@ -246,6 +396,34 @@ function renderDashboard({ css, getRowCss, getBadgeCss, tick }) {
       </div>
     </div>
   );
+}
+
+function BenchRow({ row, active, tick }) {
+  const css = getComponentRowCss(row, active);
+
+  return (
+    <tr css={css.row} style={getRowVars(row, tick)}>
+      <BenchCell cssValue={css.cell}>{row.name}</BenchCell>
+      <BenchCell cssValue={css.cell}>{row.plan}</BenchCell>
+      <BenchCell cssValue={css.cell}>{row.usage}%</BenchCell>
+      <BenchCell cssValue={css.cell}>
+        <BenchBadge cssValue={css.badge}>{row.status}</BenchBadge>
+      </BenchCell>
+    </tr>
+  );
+}
+
+function BenchCell({ cssValue, children }) {
+  return <td css={cssValue}>{children}</td>;
+}
+
+function BenchBadge({ cssValue, children }) {
+  return <span css={cssValue}>{children}</span>;
+}
+
+function getComponentRowCss(row, active) {
+  if (fluenticMode === 'direct') return active ? directComponentRowCss.active : directComponentRowCss.base;
+  return getComponentScopedCss(row, active);
 }
 
 function InlineAppLayout({ view, tick, liteStyle }) {

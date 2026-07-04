@@ -54,6 +54,7 @@ const dedupeRun: Record<string, number> = Object.create(null);
 const dedupeIndex: Record<string, number> = Object.create(null);
 
 const resolvedItemCache = new WeakMap<object, ExtractedStylePropResult | null>();
+const stylePropObjectCache = new WeakMap<object, { c: number; r: ExtractedStylePropResult | null; }>();
 
 export function getClassName(
   styleProp: StyleProp,
@@ -81,18 +82,50 @@ function resolveExtractedStyleProp(styleProp: StyleProp | undefined) {
   if (!styleProp) return null;
 
   if (RUNTIME_CONFIG.runtimeCacheTTL !== 0) {
+    const objectCached = resolveObjectCachedExtractedStyleProp(styleProp);
+    if (objectCached !== undefined) return objectCached;
+
     const directCached = resolveDirectCachedExtractedStyleProp(styleProp);
     if (directCached !== undefined) {
+      cacheObjectExtractedStyleProp(styleProp, directCached);
       return directCached;
     }
 
     const cached = resolveCachedExtractedStyleProp(styleProp);
     if (cached !== undefined) {
+      cacheObjectExtractedStyleProp(styleProp, cached);
       return cached;
     }
   }
 
-  return resolveExtractedStylePropUncached(styleProp);
+  const result = resolveExtractedStylePropUncached(styleProp);
+  cacheObjectExtractedStyleProp(styleProp, result);
+  return result;
+}
+
+function resolveObjectCachedExtractedStyleProp(styleProp: StyleProp): ExtractedStylePropResult | null | undefined {
+  if (!isObjectCacheableStyleProp(styleProp)) return undefined;
+
+  const cached = stylePropObjectCache.get(styleProp);
+  if (!cached || cached.c !== RUNTIME_CONFIG.changes) return undefined;
+
+  return cached.r;
+}
+
+function cacheObjectExtractedStyleProp(
+  styleProp: StyleProp,
+  result: ExtractedStylePropResult | null,
+) {
+  if (RUNTIME_CONFIG.runtimeCacheTTL === 0 || !isObjectCacheableStyleProp(styleProp)) return;
+
+  stylePropObjectCache.set(styleProp, {
+    c: RUNTIME_CONFIG.changes,
+    r: result,
+  });
+}
+
+function isObjectCacheableStyleProp(styleProp: StyleProp): styleProp is StyleProp & object {
+  return (typeof styleProp === 'object' && styleProp !== null) || typeof styleProp === 'function';
 }
 
 function resolveDirectCachedExtractedStyleProp(styleProp: StyleProp): ExtractedStylePropResult | null | undefined {
@@ -340,6 +373,7 @@ function addStateItemStyle(
 
   if (Array.isArray(value)) {
     if (value[0] === ITEM_VALUE_TYPE_VARIABLE) {
+      if (!tokens && isStyleTokenData(value[2])) return style;
       return setStyleValue(style, value[1], normalizeValue(resolveValue(value[2], tokens), value[3]));
     }
 

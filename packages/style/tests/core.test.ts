@@ -533,8 +533,8 @@ const rule = style({ color: 'red' }).invalidState({ color: 'blue' });
 });
 
 test('custom selector assert can carry typed enum args', () => {
-  const toneAssert = assertEnum(['brand', 'danger'] as const);
-  const stateAssert = assertEnum(['open', 'closed'] as const);
+  const toneAssert = assertEnum(['brand', 'danger']);
+  const stateAssert = assertEnum(['open', 'closed']);
   const custom = createStyleFn({
     style: null as any,
     selectors: {

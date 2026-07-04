@@ -32,3 +32,4 @@ docs/app/.astro/
 docs/app/.source/
 docs/app/dist/
 docs/app/out/
+packages/style/README.md

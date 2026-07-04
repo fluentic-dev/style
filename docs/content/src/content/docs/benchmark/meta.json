@@ -3,10 +3,7 @@
   "pages": [
     "overview",
     "react-app",
-    "style-cache",
-    "dynamic-values",
     "ssr-style",
-    "compiler",
-    "bundle-size"
+    "compiler"
   ]
 }

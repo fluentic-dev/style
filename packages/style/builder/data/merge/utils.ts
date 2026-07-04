@@ -3,13 +3,14 @@ import { traceError } from '../../../utils/trace';
 import { BUILDER_STATE, ITEM_RUNTIME_DEV, ITEM_RUNTIME_DEV_PLUGIN, ITEM_RUNTIME_PROD } from '../const';
 import type { BuilderData } from '../data';
 import type { DebugData } from '../debug';
+import type { ItemRuntimeType, StateItem, StateLookup } from '../state';
 
 export function cloneData<Data extends BuilderData, Source extends BuilderData>(
   data: Data,
   source: Source,
   debug: DebugData | null,
   merge = true,
-) {
+): [runtimeType: ItemRuntimeType, data: Data, items: StateItem[], lookup: StateLookup] {
   const runtimeType = DEV_CONFIG.isDev
     ? (debug ? ITEM_RUNTIME_DEV_PLUGIN : ITEM_RUNTIME_DEV)
     : ITEM_RUNTIME_PROD;
@@ -26,7 +27,7 @@ export function cloneData<Data extends BuilderData, Source extends BuilderData>(
   const lookup = state.lookup!;
   const items = state.items;
 
-  return [runtimeType, data, items, lookup] as const;
+  return [runtimeType, data, items, lookup];
 }
 
 export function logInvalidData(message: string, data: object) {

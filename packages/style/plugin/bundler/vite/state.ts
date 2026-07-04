@@ -20,6 +20,8 @@ import { getSourcemapSidecar } from '../../utils/sidecar';
 import { resolveDevSourcemapMode } from '../../utils/sourcemap';
 import { RUNTIME_MODULE_ID } from '../../utils/virtual';
 
+const htmlEntryInjectTo: 'head-prepend' = 'head-prepend';
+
 export function createVitePluginState(options: PluginOptions) {
   let config: ResolvedConfig | null = null;
   let state: PluginCompiler | null = null;
@@ -56,7 +58,7 @@ export function createVitePluginState(options: PluginOptions) {
         tag: 'script',
         attrs: { type: 'module' },
         children: `import ${JSON.stringify(RUNTIME_MODULE_ID)};`,
-        injectTo: 'head-prepend' as const,
+        injectTo: htmlEntryInjectTo,
       }];
     },
 
