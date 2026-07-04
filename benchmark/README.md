@@ -19,24 +19,45 @@ reports are local artifacts and are ignored by git.
 
 Fluentic is reported in separate build modes:
 
-- `fluentic-style-extract-*` builds with the Babel/unplugin precompile path and emits `dist-extract` with a real CSS asset.
-- `fluentic-runtime-css-prop` runs without the extraction plugin and exercises `combineStyle`, the custom JSX runtime, runtime rule insertion, and style-tag output.
+- `fluentic-style-extract-direct` builds with the Babel/unplugin precompile path, emits `dist-extract` with a real CSS asset, and passes stable slots directly to the `css` prop.
+- `fluentic-style-extract-scoped` uses the same extracted build with stable slots/scopes composed through `combineStyle()` and `bindScope()`.
+- `fluentic-style-extract-token` uses the extracted scoped path plus a bounded set of token override values.
+- Fluentic no-hoist, inline dynamic style creation, and runtime-only css-prop variants are internal diagnostic apps. They are excluded by default; select them with `APP=...` or set `INCLUDE_INTERNAL=1`.
 - `emotion` uses Emotion's React css-prop path with hoisted object styles.
 
-The main dashboard matrix currently includes Fluentic extracted chain/simple
-modes, Fluentic runtime css-prop, Emotion, styled-components, Goober, StyleX,
-vanilla-extract, CSS Modules, and the experimental Panda CSS app. Panda is
-excluded unless `INCLUDE_EXPERIMENTAL=1` is set.
+The main dashboard matrix currently includes Fluentic extracted direct/scoped/token
+modes, Emotion, styled-components, Goober, StyleX, vanilla-extract, CSS Modules,
+and the experimental Panda CSS app. Panda is excluded unless
+`INCLUDE_EXPERIMENTAL=1` is set.
 
 ## Scenario Lanes
 
 - `static-dashboard`: the current admin dashboard/table. This measures class lookup, render, remount, route switch, and known variant update work.
-- `runtime-css-prop`: Fluentic runtime path using `css` props and `combineStyle`; this is intentionally separated from the extracted/static lane.
+- `runtime-css-prop`: Fluentic runtime path using `css` props and `combineStyle`; this is an internal diagnostic lane and intentionally separated from the extracted/static lane.
 - `style-cache-browser`: warmed browser cache stress lane. Cross-library variants run in fresh browser contexts, initialize only the selected library family, and rotate variant order across repeats. Fluentic-specific variants cover repeated css-prop cache hits, precomputed className output, same-map and new-map `combineStyle` paths, inline dynamic style creation, and the no-css JSX runtime fast path.
 - `dynamic-value-browser`: arbitrary dynamic value lane. Recommended variants keep style rules static and move per-item values through CSS custom properties; inline dynamic style creation is retained as a warning/control variant.
 - `ssr-style-render-only`: `renderToString` dashboard/table and repeated composition benchmark for server-side className, css-prop, scope, merge, and style-prop resolution. Fluentic uses extracted CSS, so this lane measures the render work that remains after extraction rather than server stylesheet collection.
 - `stress-dashboard`: the same dashboard shape at larger row counts via `pnpm bench:stress`.
 - `build-output`: contract reports include build time, JS bytes, CSS bytes, file count, style tag count, and stylesheet rule count.
+
+## Current React App Snapshot
+
+The latest default `pnpm bench` report is
+`benchmark/main/results/bench-1783124350528.json`, created
+`2026-07-04T00:19:10.527Z`.
+
+At 500 rows, the benchmark is close to the browser frame floor: Fluentic direct
+css prop measured 18.18 ms mount median, scoped composition measured 18.45 ms,
+token composition measured 19.63 ms, StyleX measured 18.57 ms, Emotion measured
+18.94 ms, Goober measured 17.97 ms, vanilla-extract measured 18.21 ms, and CSS
+Modules measured 17.46 ms.
+
+At 1500 rows, Fluentic direct css prop measured 48.00 ms mount median and
+18.67 ms style-update median. StyleX measured 45.43 ms mount and 18.39 ms
+style-update. Goober measured 45.85 ms mount and 18.00 ms style-update.
+Fluentic scoped composition measured 53.04 ms mount and 30.97 ms style-update;
+Fluentic token composition measured 53.74 ms mount and 25.75 ms style-update.
+That scoped/token update work is the next optimization target.
 
 ## Current SSR Style Snapshot
 
@@ -61,8 +82,9 @@ per-row token overrides measured 7.925 ms mean, or 0.90x baseline.
 
 ## Selection and Settings
 
-- `APP=name[,name]` limits `bench` or `bench:contract` to app names such as `fluentic-style-extract-chain`, `emotion`, or package filters such as `@benchmark/app-emotion`.
+- `APP=name[,name]` limits `bench` or `bench:contract` to app names such as `fluentic-style-extract-direct`, `emotion`, or package filters such as `@benchmark/app-emotion`.
 - `SKIP_FLUENTIC_STYLE=1` skips Fluentic apps when comparing third-party baselines.
+- `INCLUDE_INTERNAL=1` includes diagnostic apps such as Fluentic no-hoist, inline dynamic style creation, and runtime-only css-prop.
 - `INCLUDE_EXPERIMENTAL=1` includes the Panda CSS benchmark app.
 - `ROWS=100,500,1500`, `REPEATS=3`, `WARMUPS=3`, `MEASURED=20`, `UPDATE_STEPS=20`, and `REMOUNT_STEPS=5` override the default React app benchmark settings.
 - `ITEMS=1000` controls the browser cache and dynamic-value microbenchmarks.

@@ -13,6 +13,11 @@ This report builds each benchmark app, verifies that the rendered DOM and
 computed styles match the expected contract, records bundle/CSS output size, and
 then runs timings only for apps that pass correctness.
 
+The default app set is intentionally limited to production-style comparison
+lanes. Fluentic no-hoist, inline dynamic style creation, and runtime-only
+css-prop variants are internal diagnostic lanes; select them explicitly with
+`APP=...` or include them with `INCLUDE_INTERNAL=1`.
+
 ## What It Checks
 
 | Check | Why it matters |
@@ -25,29 +30,31 @@ then runs timings only for apps that pass correctness.
 
 ## Latest Local Report
 
-Report file: `benchmark/main/results/contract-1781608860990.json`
+Report file: `benchmark/main/results/contract-1783123576668.json`
 
-Created: `2026-06-16T11:21:00.989Z`
+Created: `2026-07-04T00:06:16.667Z`
 
-Settings: 500 rows, 3 repeats. All rows shown below passed correctness.
+Settings: 20 rows, 1 repeat. All rows shown below passed correctness.
 
 | App | Build ms | JS KB | CSS KB |
 | --- | ---: | ---: | ---: |
-| fluentic-style-extract-chain | 807.1 | 221.0 | 2.8 |
-| fluentic-runtime-css-prop | 469.1 | 268.9 | 0.0 |
-| emotion | 411.0 | 214.3 | 0.0 |
-| styled-components | 418.9 | 222.2 | 0.0 |
-| goober | 405.3 | 199.1 | 0.0 |
-| stylex | 609.3 | 196.0 | 2.1 |
-| vanilla-extract | 667.8 | 193.1 | 1.2 |
-| css-modules | 563.0 | 193.4 | 1.3 |
+| fluentic-style-extract-direct | 1459.9 | 251.8 | 2.9 |
+| fluentic-style-extract-scoped | 1459.9 | 251.8 | 2.9 |
+| fluentic-style-extract-token | 1459.9 | 251.8 | 2.9 |
+| emotion | 588.9 | 214.5 | 0.0 |
+| styled-components | 606.4 | 222.4 | 0.0 |
+| goober | 597.3 | 199.3 | 0.0 |
+| stylex | 782.4 | 196.2 | 2.1 |
+| vanilla-extract | 803.8 | 193.3 | 1.2 |
+| css-modules | 570.6 | 193.5 | 1.3 |
 
 ## Filtering
 
 ```sh
-APP=fluentic-style-extract-chain pnpm bench:contract
+APP=fluentic-style-extract-direct pnpm bench:contract
 APP=@benchmark/app-emotion pnpm bench:contract
 SKIP_FLUENTIC_STYLE=1 pnpm bench:contract
+INCLUDE_INTERNAL=1 pnpm bench:contract
 INCLUDE_EXPERIMENTAL=1 pnpm bench:contract
 ```
 

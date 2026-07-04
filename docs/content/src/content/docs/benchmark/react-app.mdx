@@ -28,6 +28,20 @@ The benchmark runs the same dashboard/table shape across styling approaches. It
 keeps the DOM shape, data, viewport, keys, React version, and browser automation
 aligned so the report is about the styling path as much as possible.
 
+The default Fluentic rows use extracted production output and public authoring
+patterns:
+
+- direct css prop: stable `style.slot()` values declared outside render and
+  passed directly as `css={styles.item}`;
+- scoped composition: stable slots and scopes declared outside render, composed
+  with `combineStyle()` and `bindScope()`;
+- token composition: the same scoped composition plus a bounded set of token
+  overrides for theme-like values.
+
+Open-ended per-row values are passed through the normal React `style` prop for
+every app. Fluentic no-hoist, inline dynamic style creation, and runtime-only
+css-prop variants are diagnostic lanes, not part of the default comparison.
+
 The report includes:
 
 | Metric | Meaning |
@@ -44,25 +58,63 @@ stay in the JSON report so regressions can be inspected later.
 
 ## Latest Local Report
 
-Report file: `benchmark/main/results/bench-1781610500415.json`
+Report file: `benchmark/main/results/bench-1783124350528.json`
 
-Created: `2026-06-16T11:48:20.414Z`
+Created: `2026-07-04T00:19:10.527Z`
 
 Settings: quick preset, 2 repeats, 2 warmups, 10 measured browser runs, 20
 update steps, 5 remount steps.
 
-The table below shows the `500-rows` scenario:
+The small scenarios are close to the browser frame floor, so tiny differences at
+100 or 500 rows should be read as noise unless they repeat across local runs.
+The 1500-row scenario is the clearest scaling signal in this quick report.
+
+### 100 Rows
+
+| Library | Mount median | Style update median | Remount median | Rules | CSS bytes |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| fluentic-style-extract-direct | 16.2 ms | 16.6 ms | 15.8 ms | 2 | 3462 |
+| fluentic-style-extract-scoped | 15.5 ms | 16.6 ms | 15.9 ms | 2 | 3462 |
+| fluentic-style-extract-token | 15.8 ms | 16.6 ms | 15.6 ms | 2 | 3462 |
+| emotion | 15.4 ms | 16.6 ms | 15.7 ms | 16 | 0 |
+| styled-components | 15.4 ms | 16.6 ms | 15.8 ms | 17 | 0 |
+| goober | 15.5 ms | 16.6 ms | 15.7 ms | 16 | 0 |
+| stylex | 15.9 ms | 16.6 ms | 15.6 ms | 4 | 1913 |
+| vanilla-extract | 15.2 ms | 16.6 ms | 15.8 ms | 16 | 1584 |
+| css-modules | 16.0 ms | 16.6 ms | 16.0 ms | 16 | 1715 |
+
+### 500 Rows
 
 | Library | Lane | Mount median | Style update median | Remount median | Rules | CSS bytes |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
-| fluentic-style-extract-chain | static-dashboard | 22.3 ms | 17.0 ms | 19.7 ms | 2 | 3463 |
-| fluentic-runtime-css-prop | runtime-css-prop | 20.5 ms | 17.2 ms | 20.5 ms | 44 | 2778 |
-| emotion | static-dashboard | 18.6 ms | 17.2 ms | 19.3 ms | 16 | 1696 |
-| styled-components | static-dashboard | 19.1 ms | 17.1 ms | 19.3 ms | 17 | 1667 |
-| goober | static-dashboard | 20.8 ms | 17.0 ms | 19.5 ms | 16 | 1372 |
-| stylex | static-dashboard | 20.8 ms | 16.9 ms | 19.5 ms | 4 | 1913 |
-| vanilla-extract | static-dashboard | 20.2 ms | 16.9 ms | 19.2 ms | 16 | 1584 |
-| css-modules | static-dashboard | 21.4 ms | 16.9 ms | 19.5 ms | 16 | 1715 |
+| fluentic-style-extract-direct | static-dashboard | 18.2 ms | 16.7 ms | 19.5 ms | 2 | 3462 |
+| fluentic-style-extract-scoped | static-dashboard | 18.5 ms | 16.7 ms | 20.6 ms | 2 | 3462 |
+| fluentic-style-extract-token | static-dashboard | 19.6 ms | 16.6 ms | 21.3 ms | 2 | 3462 |
+| emotion | static-dashboard | 18.9 ms | 16.7 ms | 20.4 ms | 16 | 0 |
+| styled-components | static-dashboard | 19.0 ms | 16.6 ms | 20.2 ms | 17 | 0 |
+| goober | static-dashboard | 18.0 ms | 16.6 ms | 19.1 ms | 16 | 0 |
+| stylex | static-dashboard | 18.6 ms | 16.6 ms | 20.0 ms | 4 | 1913 |
+| vanilla-extract | static-dashboard | 18.2 ms | 16.6 ms | 19.6 ms | 16 | 1584 |
+| css-modules | static-dashboard | 17.5 ms | 16.6 ms | 19.3 ms | 16 | 1715 |
+
+### 1500 Rows
+
+| Library | Lane | Mount median | Style update median | Remount median | Rules | CSS bytes |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| fluentic-style-extract-direct | static-dashboard | 48.0 ms | 18.7 ms | 47.2 ms | 2 | 3462 |
+| fluentic-style-extract-scoped | static-dashboard | 53.0 ms | 31.0 ms | 52.5 ms | 2 | 3462 |
+| fluentic-style-extract-token | static-dashboard | 53.7 ms | 25.8 ms | 56.2 ms | 2 | 3462 |
+| emotion | static-dashboard | 57.5 ms | 28.4 ms | 57.5 ms | 16 | 0 |
+| styled-components | static-dashboard | 52.6 ms | 24.5 ms | 54.4 ms | 17 | 0 |
+| goober | static-dashboard | 45.9 ms | 18.0 ms | 45.6 ms | 16 | 0 |
+| stylex | static-dashboard | 45.4 ms | 18.4 ms | 47.6 ms | 4 | 1913 |
+| vanilla-extract | static-dashboard | 45.1 ms | 18.1 ms | 47.1 ms | 16 | 1584 |
+| css-modules | static-dashboard | 45.0 ms | 18.0 ms | 46.9 ms | 16 | 1715 |
+
+In this run, Fluentic direct css prop is close to StyleX and static CSS at
+1500 rows and ahead of Emotion on mount/remount. Scoped and token composition do
+more per-row work in the benchmark parent loop, so their 1500-row update medians
+are the main follow-up optimization target.
 
 ## Lanes
 
@@ -70,8 +122,10 @@ Fluentic is intentionally reported in separate modes:
 
 | Lane | Meaning |
 | --- | --- |
-| `fluentic-style-extract-*` | Babel/unplugin precompile path with extracted CSS output. |
-| `fluentic-runtime-css-prop` | Runtime-only path using `css` props, `combineStyle()`, runtime rule insertion, and the custom JSX runtime. |
+| `fluentic-style-extract-direct` | Extracted production css-prop path with stable slots passed directly. |
+| `fluentic-style-extract-scoped` | Extracted production path with stable scopes composed through `combineStyle()` and `bindScope()`. |
+| `fluentic-style-extract-token` | Extracted production scoped path plus bounded token override values. |
+| Fluentic diagnostic lanes | No-hoist, inline dynamic style creation, and runtime-only css-prop variants. They are excluded by default; select them explicitly or set `INCLUDE_INTERNAL=1`. |
 
 Other apps include Emotion, styled-components, Goober, StyleX, vanilla-extract,
 CSS Modules, and an experimental Panda CSS app.
@@ -79,9 +133,10 @@ CSS Modules, and an experimental Panda CSS app.
 ## Filtering
 
 ```sh
-APP=fluentic-style-extract-chain,emotion pnpm bench
+APP=fluentic-style-extract-direct,emotion pnpm bench
 ROWS=100,500,1500 pnpm bench
 REPEATS=5 WARMUPS=3 MEASURED=30 pnpm bench
+INCLUDE_INTERNAL=1 pnpm bench
 INCLUDE_EXPERIMENTAL=1 pnpm bench
 ```
 

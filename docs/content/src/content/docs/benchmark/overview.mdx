@@ -37,8 +37,9 @@ is usually a before-and-after run from the same machine.
 
 ```sh
 BENCH_OUT_DIR=./tmp/bench pnpm bench
-APP=fluentic-style-extract-chain,emotion pnpm bench
+APP=fluentic-style-extract-direct,emotion pnpm bench
 ROWS=100,500,1500 REPEATS=5 pnpm bench:stable
+INCLUDE_INTERNAL=1 pnpm bench
 ITEMS=2000 pnpm bench:dynamic-values
 CHROME_BIN=/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome pnpm bench
 ```
@@ -49,6 +50,8 @@ Common environment variables:
 | --- | --- | --- |
 | `BENCH_OUT_DIR` | all benchmark reports | Writes JSON reports to a custom directory. |
 | `APP` | app and contract benchmarks | Limits a run to one or more benchmark apps. |
+| `INCLUDE_INTERNAL` | app and contract benchmarks | Includes diagnostic lanes such as Fluentic no-hoist, inline dynamic style creation, and runtime-only css-prop. |
+| `INCLUDE_EXPERIMENTAL` | app and contract benchmarks | Includes experimental competitor apps. |
 | `ROWS` | React app benchmark | Changes the row-count scenarios. |
 | `REPEATS`, `WARMUPS`, `MEASURED` | React app benchmark | Changes sample counts. |
 | `ITEMS` | browser microbenchmarks | Changes the number of styled items. |
