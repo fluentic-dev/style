@@ -1,0 +1,40 @@
+---
+title: Why Themes Are Data
+description: Keep value themes and component themes composable until render.
+---
+
+A theme can mean two different things.
+
+One theme changes shared values:
+
+```txt
+surface color
+text color
+spacing
+radius
+```
+
+Another theme changes component parts:
+
+```txt
+Card.root
+Card.title
+Button.icon
+```
+
+Fluentic keeps both as data until render:
+
+```txt
+shared value change   -> token/value theme
+component part change -> scope
+component render      -> combineStyle
+```
+
+This avoids a single giant theme object that must know every component and every
+app value at once.
+
+Value themes apply to subtrees through `css`.
+
+Component themes pass through component props and resolve against slots.
+
+They compose in JSX, but they are different kinds of styling data.

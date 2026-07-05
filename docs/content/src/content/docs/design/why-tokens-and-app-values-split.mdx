@@ -1,0 +1,37 @@
+---
+title: Why Tokens And App Values Split
+description: Use named token APIs for reusable components and literal-facing values for app surfaces.
+---
+
+Reusable components often need semantic names:
+
+```txt
+cardTokens.color.surface
+cardTokens.color.border
+cardTokens.radius.panel
+```
+
+Those names are the theme API.
+
+App code often wants the literal value visible:
+
+```txt
+color('#ffffff | Surface')
+color('#111827 | Text')
+space(16)
+```
+
+Those values are easier to preview, search, and review in page code.
+
+Both forms need identity so themes can override them.
+
+That is why Fluentic has both:
+
+```txt
+createToken/createTokens -> named component or design-system hooks
+createValues             -> app-facing literal values with identity
+createTheme              -> overrides either kind for a subtree
+```
+
+The implementation can treat both as token-backed values, while the authoring
+API fits different jobs.

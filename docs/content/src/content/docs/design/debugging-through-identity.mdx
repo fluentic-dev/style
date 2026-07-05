@@ -1,24 +1,31 @@
 ---
 title: Debugging Through Identity
-description: Trace styles by preserving slot, scope, token, and element identity.
+description: Preserve enough identity for generated CSS to lead back to authored decisions.
 ---
 
-Debugging usually starts with a concrete problem.
+Generated CSS is not the authoring model.
 
-An element has the wrong color.
+When something looks wrong, the useful question is:
 
-The browser shows the generated rule, but the real decision may live in a slot,
-a scope, a token theme, or the JSX element that received the style.
+```txt
+which authored decision produced this rule?
+```
 
-Generated output is rarely enough on its own.
+Fluentic keeps identity on the values that matter:
 
-Traceability needs identity to survive:
+- `style()` identifies an element style;
+- `style.slot()` identifies a component part;
+- `style.scope()` identifies a grouped override;
+- tokens and values identify shared value sources;
+- JSX element markers identify where `css` attached.
 
-- slots identify component parts;
-- scopes identify grouped overrides;
-- tokens identify shared values;
-- `combineStyle` identifies where styles are merged;
-- element markers connect DOM back to JSX.
+Sourcemap modes exist because spread and merge sources can be read in two useful
+ways:
 
-The question is whether those identities survive long enough for a developer
-to follow the wrong property back to the TypeScript that produced it.
+```txt
+style mode -> point to the leaf style call that assembled the rule
+value mode -> point to the original reusable value when possible
+```
+
+Debugging works because identity is part of the data model, not an afterthought
+added after CSS strings are generated.

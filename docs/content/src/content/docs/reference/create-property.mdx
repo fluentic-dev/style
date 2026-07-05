@@ -1,0 +1,33 @@
+---
+title: createProperty
+description: Register a custom property with @property and use its generated name.
+---
+
+Import from `@fluentic/style/css`:
+
+```ts
+import { createProperty } from '@fluentic/style/css';
+```
+
+Pass an explicit custom property name:
+
+```ts
+const spinAngle = createProperty('--spin-angle', {
+  syntax: '"<angle>"',
+  inherits: false,
+  initialValue: '0deg',
+});
+```
+
+Or let Fluentic generate the property name:
+
+```ts
+const progress = createProperty({
+  syntax: '"<number>"',
+  inherits: false,
+  initialValue: 0,
+});
+```
+
+Use the returned value where CSS expects the registered property name, such as
+`transitionProperty`.

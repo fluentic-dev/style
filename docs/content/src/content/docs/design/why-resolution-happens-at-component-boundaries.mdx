@@ -1,0 +1,41 @@
+---
+title: Why Resolution Happens At Component Boundaries
+description: Resolve base slots, scopes, variants, themes, and root css where the component owns the render tree.
+---
+
+Only the component has all the context:
+
+- base slot styles;
+- variant scopes;
+- incoming component theme;
+- private DOM;
+- final root `css` override.
+
+That is why resolution happens inside the component:
+
+```tsx
+const css = combineStyle(
+  buttonStyles,
+  bindScope(buttonStyles.root, props.theme),
+);
+
+return (
+  <button css={[css.root, props.css]}>
+    <span css={css.label}>{props.children}</span>
+  </button>
+);
+```
+
+`combineStyle(...)` resolves component-aware inputs.
+
+`bindScope(...)` binds incoming scopes to the component-owned root slot.
+
+The root `css` prop stays separate and last because it is ordinary element
+styling for the rendered root.
+
+This preserves the React ownership rule:
+
+```txt
+outside code describes changes
+component attaches them
+```

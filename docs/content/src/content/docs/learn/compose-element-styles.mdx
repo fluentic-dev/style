@@ -1,0 +1,52 @@
+---
+title: Compose Element Styles
+description: Combine style values with css arrays before introducing component APIs.
+---
+
+Sometimes one element needs more than one style: a base style, a conditional
+style, and maybe a style passed from a parent component.
+
+Use a `css` array to put those styles together:
+
+```tsx
+import { style, type StyleProp } from '@fluentic/style';
+import type { ReactNode } from 'react';
+
+const button = style({
+  border: 0,
+  borderRadius: 8,
+  padding: '8px 12px',
+});
+
+const danger = style({
+  backgroundColor: '#dc2626',
+  color: 'white',
+});
+
+type ButtonProps = {
+  css?: StyleProp;
+  danger?: boolean;
+  children: ReactNode;
+};
+
+export function Button(props: ButtonProps) {
+  return (
+    <button css={[button, props.danger && danger, props.css]}>
+      {props.children}
+    </button>
+  );
+}
+```
+
+Array order matters. When entries set the same property, Fluentic keeps the
+later value in the final resolved style.
+
+That is why a reusable component usually puts the parent-provided root `css`
+prop last:
+
+```tsx
+<button css={[button, props.css]} />
+```
+
+Continue to [Add Local States And Media](/docs/learn/add-local-states-and-media/)
+to keep hover, focus, and media conditions with the style that owns them.

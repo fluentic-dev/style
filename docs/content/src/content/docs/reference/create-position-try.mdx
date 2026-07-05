@@ -1,0 +1,23 @@
+---
+title: createPositionTry
+description: Create a named @position-try reference for CSS anchor positioning fallbacks.
+---
+
+Import from `@fluentic/style/css`:
+
+```ts
+import { createPositionTry } from '@fluentic/style/css';
+```
+
+```ts
+const menuFallback = createPositionTry({
+  positionArea: 'top',
+  margin: '8px',
+});
+
+const menu = style({
+  position: 'absolute',
+  positionArea: 'bottom',
+  positionTryFallbacks: menuFallback,
+});
+```

@@ -214,7 +214,7 @@ const readingCards = [
   [
     'Learn',
     'Build from local styles to reusable components, themes, overrides, and debugging.',
-    '/docs/learn/installation/',
+    '/docs/learn/start-here/',
   ],
   [
     'Beyond the Basics',
@@ -224,7 +224,7 @@ const readingCards = [
   [
     'Design',
     'Read why the model has this shape, from authoring to runtime and extraction.',
-    '/docs/design/style-builder/',
+    '/docs/design/start-from-the-problem/',
   ],
 ];
 
@@ -297,7 +297,7 @@ export default function HomePage() {
             <Link className='home-primary' href='/docs/fluentic-approach/from-elements-to-components/'>
               See the idea
             </Link>
-            <Link className='home-secondary' href='https://fluenticstack.com/style/docs/learn/installation/'>
+            <Link className='home-secondary' href='https://fluenticstack.com/style/docs/learn/start-here/'>
               Build your first component
             </Link>
           </div>

@@ -1,0 +1,102 @@
+---
+title: Runtime Interop
+description: Low-level helpers for className, style, and token interop outside the css prop.
+---
+
+Prefer the `css` prop when you own the element.
+
+Use these helpers at boundaries with non-Fluentic APIs.
+
+## getClassName
+
+```ts
+import { getClassName } from '@fluentic/style';
+```
+
+`getClassName(styleProp, props?)` resolves a `StyleProp` to:
+
+```ts
+type ClassNameResult = {
+  className?: string;
+  style?: React.CSSProperties;
+};
+```
+
+```tsx
+const result = getClassName([button, props.css]);
+
+return (
+  <ThirdPartyButton
+    className={result.className}
+    style={result.style}
+  />
+);
+```
+
+The optional second argument accepts existing `className` and `style` values:
+
+```ts
+getClassName(button, {
+  className: props.className,
+  style: props.style,
+});
+```
+
+## getToken
+
+```ts
+import { getToken } from '@fluentic/style';
+```
+
+`getToken(value)` resolves token inputs to the CSS variable fallback string used
+at runtime. Non-token values pass through unchanged.
+
+```ts
+const accent = createToken('#2563eb', 'accent');
+
+getToken(accent);
+// var(--token-accent-..., #2563eb)
+
+getToken('red');
+// red
+```
+
+Use it when a non-Fluentic API needs a CSS value.
+
+## mergeClassName
+
+```ts
+import { mergeClassName } from '@fluentic/style';
+```
+
+`mergeClassName(value)` is a small `clsx`-style helper. It accepts nested arrays
+and ignores falsy entries.
+
+```ts
+const className = mergeClassName([
+  result.className,
+  props.className,
+  active && 'is-active',
+]);
+```
+
+## mergeStyle
+
+```ts
+import { mergeStyle } from '@fluentic/style';
+```
+
+`mergeStyle(value)` merges nested arrays of inline style objects and ignores
+falsy entries.
+
+```ts
+const style = mergeStyle([
+  result.style,
+  props.style,
+  disabled && { pointerEvents: 'none' },
+]);
+```
+
+Later style objects override earlier objects.
+
+For guide-level examples, see [Interop With Non-Fluentic APIs](../beyond-the-basics/interop-with-non-fluentic-apis).

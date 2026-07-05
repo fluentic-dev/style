@@ -1,0 +1,146 @@
+---
+title: Add Local States And Media
+description: Keep hover, focus, and media changes with the element style they modify.
+---
+
+You are probably familiar with CSS selectors such as `:hover`, `:active`, and
+`:focus-visible`. These are self selectors: they affect the element being
+styled.
+
+With Fluentic, you add those states using builder methods instead of nested
+fields inside the style object.
+
+The first object is the normal style. Each method after it adds the style for a
+selector such as `:hover` or `:focus-visible`:
+
+```ts
+const saveButton = style({
+  border: 0,
+  borderRadius: 8,
+  cursor: 'pointer',
+  padding: '8px 12px',
+}).hover({
+  opacity: 0.86,
+}).focusVisible({
+  outline: '2px solid currentColor',
+  outlineOffset: 2,
+});
+```
+
+Media queries can be added using `.media(...)`:
+
+```ts
+const responsiveButton = style({
+  padding: '8px 12px',
+}).media('(max-width: 700px)', {
+  width: '100%',
+});
+```
+
+Sometimes you may need a selector that is not covered by the named builder
+methods. Use `.select(...)` as an escape hatch.
+
+```ts
+const expandedButton = style({
+  backgroundColor: 'white',
+}).select('&[aria-expanded="true"]', {
+  backgroundColor: '#e0f2fe',
+});
+```
+
+The selector must be a self selector. It can describe the element's own state or
+attributes, but it should not target nested elements or other elements.
+Fluentic validates `.select(...)` selectors and throws when they violate this
+rule.
+For cross-element styling, Fluentic uses a different component-aware approach
+covered in [Style Reusable Component](/docs/learn/style-reusable-component/).
+
+## Compose Conditions
+
+Builder methods can compose further. A chain can include self selectors, local
+selectors, and a media query that receives another `style(...)` value:
+
+```ts
+const adaptiveButton = style({
+  borderRadius: 8,
+  padding: '8px 12px',
+}).hover({
+  opacity: 0.86,
+}).active({
+  transform: 'translateY(1px)',
+}).select('&[aria-expanded="true"]', {
+  backgroundColor: '#e0f2fe',
+}).media(
+  '(max-width: 700px)',
+  style({
+    padding: '10px 12px',
+    width: '100%',
+  }).hover({
+    opacity: 1,
+  }).focusVisible({
+    outlineOffset: 4,
+  }),
+);
+```
+
+The default `style` builder includes common methods for pseudo states, media
+queries, and local selectors.
+
+Use style builder methods to extend one style definition. Use the `css` prop
+array to combine separate style definitions on an element.
+
+The [Understand The Style Builder](/docs/learn/understand-the-style-builder/)
+page covers more supported builder methods and how to customize them.
+
+## Extraction Caveat
+
+For production extraction, each style chain should start from a `style(...)`
+call.
+
+Do not call another builder method on a style definition that was already assigned
+to a variable:
+
+```ts
+const interaction = style({
+  borderColor: 'gray',
+}).hover({
+  color: 'blue',
+});
+
+// ❌ Do not continue the chain from a style definition variable.
+const button = interaction.active({
+  color: 'red',
+});
+```
+
+That can work in runtime-only mode, but the compiler follows extractable chains
+that start from `style(...)`. It will not recognize `interaction.active(...)` as
+a new extractable chain.
+
+When you want to reuse another style chain, start a new `style(...)` call and
+merge the existing style with `.merge(...)`:
+
+```ts
+const interaction = style({
+  borderColor: 'gray',
+}).hover({
+  color: 'blue',
+});
+
+const button = style({
+  color: 'black',
+})
+  .merge(interaction)
+  .active({
+    color: 'red',
+  });
+```
+
+The call order in the chain matters for the same condition. If two `.hover(...)`
+rules set the same property, the later value replaces the previous value.
+
+For different conditions, such as `.hover(...)` and `.active(...)`, method order
+does not decide which condition wins. Selector priority does.
+
+Continue to [Understand The Style Builder](/docs/learn/understand-the-style-builder/)
+to see how selector priority and custom builder methods work.

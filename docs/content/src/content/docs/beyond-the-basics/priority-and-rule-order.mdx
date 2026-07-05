@@ -30,7 +30,7 @@ Priority tuning is mostly for design-system authors.
 It matters when base styles, component themes, state scopes, media rules, and
 token overrides all meet.
 
-For the deeper bucket model, see [Priority Model](../design/priority-model).
+For the deeper bucket model, see [Priority And Rule Order](../design/priority-and-rule-order).
 
 Ordering is one generated-CSS concern. The other is deciding which style work
 can move out of the browser before the app runs.
@@ -51,7 +51,8 @@ return <button css={[css.root, props.css]} />;
 Here the component resolves its base slots, variants, and incoming component
 theme first.
 
-The caller's root `props.css` is last because it is the final root override.
+The parent-provided root `props.css` is last because it is the final root
+override.
 
 Design-system authors can also control state priority in a custom selector
 map:

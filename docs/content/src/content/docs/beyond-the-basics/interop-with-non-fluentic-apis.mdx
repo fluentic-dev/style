@@ -1,0 +1,77 @@
+---
+title: Interop With Non-Fluentic APIs
+description: Use runtime interop helpers when an API accepts className, style, or raw CSS values instead of the css prop.
+---
+
+Prefer the `css` prop when you own the element:
+
+```tsx
+<button css={[button, props.css]} />
+```
+
+Use interop helpers at boundaries where the API is not Fluentic-aware.
+
+## Token Values
+
+Use `getToken(...)` when a utility or third-party component accepts a CSS value
+prop.
+
+```tsx
+import { getToken, type StyleTokenInput } from '@fluentic/style';
+
+export function ColorText(props: {
+  color: StyleTokenInput<string>;
+  children: React.ReactNode;
+}) {
+  return (
+    <span style={{ color: getToken(props.color) }}>
+      {props.children}
+    </span>
+  );
+}
+```
+
+If `props.color` is a token, `getToken(...)` returns the CSS variable fallback
+string. If it is already a plain value, it passes through unchanged.
+
+## Class Name And Style Props
+
+Use `getClassName(...)` when an API accepts `className` and `style` instead of
+`css`.
+
+```tsx
+import {
+  getClassName,
+  mergeClassName,
+  mergeStyle,
+  type StyleProp,
+} from '@fluentic/style';
+
+type ThirdPartyButtonProps = {
+  className?: string;
+  style?: React.CSSProperties;
+};
+
+export function ButtonBridge(props: {
+  css?: StyleProp;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  const result = getClassName(props.css);
+
+  return (
+    <ThirdPartyButton
+      className={mergeClassName([result.className, props.className])}
+      style={mergeStyle([result.style, props.style])}
+    />
+  );
+}
+```
+
+`mergeClassName(...)` is the small `clsx`-style helper for class name values.
+
+`mergeStyle(...)` is the matching helper for inline style objects.
+
+Both accept nested arrays and ignore falsy entries.
+
+For exact signatures, see [Runtime Interop](../reference/runtime-interop).

@@ -5,8 +5,18 @@ description: Use Fluentic without a compiler plugin.
 
 Runtime-only mode is the lowest-friction setup.
 
-Configure the JSX runtime and write Fluentic styles normally. The runtime
-resolves class names and inserts rules as components render.
+Configure the plain JSX runtime and write Fluentic styles normally:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/jsx"
+  }
+}
+```
+
+The runtime resolves class names and inserts rules as components render.
 
 This is useful for:
 

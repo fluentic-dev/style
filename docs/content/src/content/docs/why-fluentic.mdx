@@ -118,7 +118,9 @@ Not just root element composition:
 <Component css={[base, variant, props.css]} />
 ```
 
-But a component style theme where each public part can be composed explicitly, without the caller reaching into DOM structure or relying on class names as hidden hooks, with something as simple as this:
+But a component style theme where each public part can be composed explicitly,
+without consumers reaching into DOM structure or relying on class names as
+hidden hooks, with something as simple as this:
 
 ```tsx
 <Component theme={[baseTheme, variantTheme, props.theme]} />
@@ -397,7 +399,7 @@ A button may have a root, an icon, and a label.
 
 A card may have a root, header, title, content, and footer.
 
-A caller might need to customize those parts without depending on DOM structure.
+A consumer might need to customize those parts without depending on DOM structure.
 
 With normal class names, the public styling API often becomes accidental:
 
@@ -410,7 +412,7 @@ With normal class names, the public styling API often becomes accidental:
 
 That works.
 
-But now the caller knows your class names.
+But now the consumer knows your class names.
 
 And if they use selectors, they may also start to know your markup.
 

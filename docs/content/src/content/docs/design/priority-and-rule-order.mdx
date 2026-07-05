@@ -1,0 +1,41 @@
+---
+title: Priority And Rule Order
+description: Why Fluentic uses ordered buckets instead of relying only on source order.
+---
+
+Source order alone is not enough once these meet:
+
+- base styles;
+- hover/focus/disabled states;
+- component scopes;
+- media or container rules;
+- token/value overrides;
+- root `css` overrides.
+
+Fluentic orders generated rules through buckets:
+
+```txt
+selector context
+scope context
+media/at-rule context
+property bucket
+value weight
+```
+
+That gives default states predictable behavior and lets custom builders define
+their own selector priority:
+
+```ts
+const prioritySelectors = selectorPriority(selectors, [
+  'hover',
+  'focusVisible',
+  'active',
+  'pressed',
+  'disabled',
+]);
+```
+
+The goal is not to make users tune priority often.
+
+The goal is that generated CSS has a stable ordering model when composition gets
+large enough that simple source order stops explaining every result.

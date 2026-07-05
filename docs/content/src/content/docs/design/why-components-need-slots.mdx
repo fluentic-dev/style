@@ -1,0 +1,35 @@
+---
+title: Why Components Need Slots
+description: Give reusable component parts stable styling identity without exposing private DOM.
+---
+
+When a component gets reused, consumers often need more than root styling.
+
+The usual options all have tradeoffs:
+
+```txt
+DOM selector -> knows implementation
+extra prop   -> grows one need at a time
+class name   -> unclear contract unless documented
+```
+
+Fluentic makes the supported parts explicit:
+
+```ts
+export const buttonStyles = {
+  root: style.slot({ display: 'inline-flex' }),
+  icon: style.slot({ flex: '0 0 auto' }),
+  label: style.slot({ fontWeight: 700 }),
+};
+```
+
+A slot is a styling identity for a component part.
+
+It is not a DOM promise. The component may change whether `label` is a `span`,
+a nested component, or wrapped in another element. The public styling target is
+the slot name.
+
+Plain `style()` remains available for private implementation details.
+
+Slots let a component publish styleable parts without publishing every DOM
+detail.

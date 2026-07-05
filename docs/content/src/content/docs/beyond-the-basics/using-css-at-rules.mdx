@@ -1,0 +1,61 @@
+---
+title: Using CSS At-Rules
+description: Use @fluentic/style/css for named CSS features such as keyframes, font faces, registered properties, and counter styles.
+---
+
+Some CSS features create a name first, then use that name in a declaration.
+
+Examples include:
+
+- `@keyframes`;
+- `@font-face`;
+- `@property`;
+- `@counter-style`;
+- `@font-palette-values`;
+- `@position-try`.
+
+Use `@fluentic/style/css` for those named CSS features.
+
+```ts
+import { style } from '@fluentic/style';
+import { createKeyframes } from '@fluentic/style/css';
+
+const enter = createKeyframes({
+  from: { opacity: 0, transform: 'translateY(8px)' },
+  to: { opacity: 1, transform: 'none' },
+});
+
+export const card = style({
+  animationName: enter,
+  animationDuration: '220ms',
+});
+```
+
+The helper returns a value reference. Use that reference where CSS expects the
+generated name.
+
+Registered custom properties work the same way:
+
+```ts
+import { createProperty } from '@fluentic/style/css';
+
+const spinAngle = createProperty('--spin-angle', {
+  syntax: '"<angle>"',
+  inherits: false,
+  initialValue: '0deg',
+});
+
+export const icon = style({
+  '--spin-angle': '0deg',
+  transform: 'rotate(var(--spin-angle))',
+  transitionProperty: spinAngle,
+  transitionDuration: '240ms',
+} as never).hover({
+  '--spin-angle': '18deg',
+} as never);
+```
+
+Use these helpers when the CSS feature needs a generated name that should be
+emitted with the rest of Fluentic's CSS output.
+
+For exact helper signatures, see [CSS Helpers](../reference/css-helpers).

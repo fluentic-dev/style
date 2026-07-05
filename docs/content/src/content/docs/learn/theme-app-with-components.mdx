@@ -1,0 +1,64 @@
+---
+title: Theme App With Components
+description: Use app-wide value themes and component-specific slot themes together.
+---
+
+A real page may need both:
+
+- app-wide colors for the subtree;
+- component-specific styling for one `Card`.
+
+The app theme changes shared values:
+
+```ts
+const darkTheme = createTheme([
+  color('#ffffff | Surface', '#111827'),
+  color('#111827 | Text', '#ffffff'),
+]);
+```
+
+The component theme changes public slots:
+
+```ts
+const marketingCard = style.scope([
+  CardStyle.root({ borderColor: '#60a5fa' }),
+  CardStyle.title({ color: '#60a5fa' }),
+]);
+```
+
+Use both where they belong:
+
+```tsx
+export function Dashboard() {
+  const css = combineStyle(appStyles);
+
+  return (
+    <main css={[darkTheme, css.root]}>
+      <Card theme={marketingCard} title="Campaign">
+        Launch plan
+      </Card>
+    </main>
+  );
+}
+```
+
+Inside `Card`, resolve the component theme against the slots `Card` owns:
+
+```tsx
+const cardCss = combineStyle(
+  styles,
+  bindScope(styles.root, props.theme),
+);
+```
+
+The split is:
+
+```txt
+app theme       -> shared token/value overrides for a subtree
+component theme -> slot overrides for a component
+```
+
+They compose in JSX, but they are not the same kind of theme.
+
+Continue to [Debug Styles](/docs/learn/debug-styles/) to see how generated
+styles lead back to the source that authored them.

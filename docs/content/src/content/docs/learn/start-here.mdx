@@ -1,0 +1,61 @@
+---
+title: Start Here
+description: Learn the core Fluentic model in the order you are likely to need it.
+---
+
+Start here if you are new to Fluentic.
+
+Learn is the practical path through the core model.
+
+Need setup first? Start with [Installation](/docs/installation/).
+
+Need API details? Go to [Reference](/docs/reference/style/).
+
+Need bundler details? Follow [Integrations](/docs/integrations/overview/).
+
+The path is:
+
+```txt
+element styles       -> style() + css prop
+style composition    -> css arrays
+local states/media   -> style chains
+style builder        -> selectors + custom methods
+component parts      -> style.slot()
+outside styles       -> style.scope()
+style resolution     -> StyleTheme + combineStyle()
+component variants   -> scopes
+public style surface -> exposeStyle()
+component tokens     -> createToken() / createTokens()
+app values           -> createValues()
+theme overrides      -> createTheme()
+debugging            -> source-aware styles
+shipping             -> bundler integration + static extraction
+```
+
+You do not need all of this on day one.
+
+Start with `style()` and the `css` prop. Add the next concept only when the
+component or app needs it.
+
+| Step | What you learn |
+| --- | --- |
+| Style one element | Use `style()` with the `css` prop. |
+| Compose element styles | Combine base, conditional, and override styles in order. |
+| Add local states and media | Keep hover, focus, and media changes readable. |
+| Understand the style builder | See why Fluentic uses builder methods for selectors and media. |
+| Organize styles | Move repeated element styles into shared TypeScript files. |
+| Build components | See why reusable components need named styleable parts. |
+| Name component parts | Use slots for the component parts other code can style. |
+| Style component parts from outside | Use scopes to describe outside styles for public parts. |
+| Accept and resolve outside styles | Pass scopes through props and resolve them inside the component. |
+| Add variants and states | Model variants, states, and responsive changes as scopes. |
+| Expose styleable parts | Export only the slots consumers may depend on. |
+| Theme component tokens | Use named tokens for component and design-system APIs. |
+| Theme app values | Use literal-facing values for app colors and spacing. |
+| Apply themes | Use `createTheme()` to override values for a subtree. |
+| Theme app with components | Use app themes and component themes together. |
+| Debug styles | Trace generated CSS back to authored styles. |
+| Ship Fluentic | Choose the production integration for your build system. |
+
+Continue to [Style One Element](/docs/learn/style-one-element/) to write the
+smallest useful Fluentic style.

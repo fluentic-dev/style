@@ -12,7 +12,7 @@ export default {
       url.pathname === `${prefix}/docs/getting-started/quick-start` ||
       url.pathname === `${prefix}/docs/getting-started/quick-start/`
     ) {
-      return Response.redirect(`${url.origin}${prefix}/docs/learn/installation/`, 308);
+      return Response.redirect(`${url.origin}${prefix}/docs/learn/start-here/`, 308);
     }
 
     if (!url.pathname.startsWith(`${prefix}/`)) {

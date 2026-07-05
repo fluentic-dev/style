@@ -47,7 +47,7 @@ Each part may need its own CSS, and component state may affect several of them.
 .button[data-danger] .button__label { ... }
 ```
 
-When the component needs to let callers customize those parts, the usual React
+When the component needs to let consumers customize those parts, the usual React
 API is to pass class names in. The root gets `className`, and named internal
 parts often get a `classNames` object:
 
@@ -71,7 +71,7 @@ you can reach." It is saying "these are the parts I support: root, icon, label."
 
 CSS-in-JS keeps that same component-part API, but changes what travels through
 it. Instead of passing class name strings that point to CSS somewhere else,
-callers can pass style values that target the same known parts. A base style, a
+consumers can pass style values that target the same known parts. A base style, a
 variant, a theme, or a wrapper override can all use the same part names without
 reaching through the DOM with selectors.
 
@@ -169,7 +169,7 @@ Each piece answers one question.
 | Idea | Front-end question |
 | --- | --- |
 | Style | What does this element look like? |
-| Slot | Which component parts can callers style on purpose? |
+| Slot | Which component parts can consumers style on purpose? |
 | Scope | Which variant, theme, or state changes those public parts together? |
 | Resolve | How do props, defaults, and overrides become final `css` props? |
 
@@ -324,5 +324,5 @@ The next section turns that shape into practice. It starts with one styled
 element, then builds toward reusable components, app themes, debugging, and
 component libraries.
 
-Start with [Installation](../learn/installation), then write the smallest
+Start with [Style One Element](../learn/style-one-element), then write the smallest
 possible style before introducing any component concepts.

@@ -1,0 +1,84 @@
+---
+title: Understand The Style Builder
+description: Learn why Fluentic uses chained builder methods for selectors, media queries, and custom style vocabulary.
+---
+
+The chained builder style may feel unfamiliar at first.
+
+Many CSS-in-JS APIs put selectors and media queries inside one large nested
+object. Fluentic keeps the first object as normal CSS declarations, then uses
+builder methods for conditions around those declarations.
+
+Read it as:
+
+```txt
+object -> what the element looks like
+method -> which state, selector, or media query changes that style
+```
+
+That gives Fluentic useful structure:
+
+- the base style object stays lean;
+- each condition has its own typed method;
+- state and media rules stay close to the style they modify;
+- the compiler can understand selectors as structured style data;
+- design systems can add their own selector vocabulary later.
+
+Builder methods can compose when the styling condition itself has more detail.
+For example, the previous page showed a media query receiving another
+`style(...)` value with its own state selectors.
+
+That keeps each condition readable:
+
+```txt
+default button style
+hover style
+media query
+  media-specific default style
+  media-specific hover style
+  media-specific focus-visible style
+```
+
+That chain covers several abilities without changing the style model:
+
+- base declarations stay in the first `style(...)` object;
+- self selectors such as `hover(...)` and `active(...)` add state rules;
+- `select(...)` handles a local selector for the same styled element;
+- `media(...)` wraps a separate style value for that media query;
+- the media style can still use its own builder methods.
+
+The default `style` function already includes common useful selector methods
+such as `hover(...)`, `active(...)`, `focusVisible(...)`, `disabled(...)`,
+`media(...)`, and `select(...)`. See the
+[full built-in method list](/docs/reference/selectors/#built-in-methods) in the
+Selectors reference.
+
+Different selector methods do not rely on call order to decide which state wins.
+For example, when `.hover(...)` and `.active(...)` both apply, selector priority
+decides which condition wins over the other, not by the order they appear in
+the chain. See
+[Priority](/docs/reference/priority/) for the full priority model.
+
+Advanced style builders can add project-specific methods:
+
+```ts
+const button = ui({
+  borderRadius: 8,
+}).pressed({
+  transform: 'translateY(1px)',
+}).tone('danger', {
+  color: 'white',
+});
+```
+
+The default `style` function is just Fluentic's predefined common selector
+vocabulary. Custom style functions use the same model with your own method
+names.
+
+For the full selector API, see [Selectors](/docs/reference/selectors/). To build
+your own methods, see [Custom Chain Methods](/docs/beyond-the-basics/custom-chain-methods/)
+and [createStyleFn](/docs/reference/create-style-fn/).
+
+Continue to [Organize Styles In Files](/docs/learn/organize-styles-in-files/)
+to move repeated element styles into shared TypeScript files without changing
+the model.

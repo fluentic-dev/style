@@ -87,13 +87,15 @@ export default function RootLayout(props: { children: ReactNode }) {
 }
 ```
 
-`StyleDev` does two development-only jobs:
+`StyleDev` is a development-only bridge for App Router styles.
 
-- starts the RSC development style observer on the client;
-- inserts changed server-rendered Fluentic CSS during render with
-  `useServerInsertedHTML`.
+On the server, it uses `useServerInsertedHTML` to send newly changed Fluentic
+CSS during development renders. On the client, it starts the RSC development
+observer, which reads Fluentic style payloads from streamed server-rendered
+elements and inserts any missing rules into the development stylesheet.
 
-It returns `null`, so it does not render visible UI.
+When `enableStyleDevUtils` is enabled, it also installs the browser console
+helper. `StyleDev` returns `null`, so it does not render visible UI.
 
 ## StyleDev Props
 

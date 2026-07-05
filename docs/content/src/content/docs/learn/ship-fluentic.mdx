@@ -1,0 +1,41 @@
+---
+title: Ship Fluentic
+description: Choose the production integration for your build system without changing the source model.
+---
+
+The source model stays the same when you ship:
+
+```txt
+style -> chain -> slot -> scope -> combineStyle
+token values -> createTheme -> css prop
+```
+
+Choose the integration for your build system:
+
+| Environment | Start here |
+| --- | --- |
+| Next.js App Router | [Next.js](../integrations/nextjs) |
+| Vite + React | [Vite](../integrations/vite) |
+| Webpack | [Webpack](../integrations/webpack) |
+| Rspack | [Rspack](../integrations/rspack) |
+| Farm | [Farm](../integrations/farm) |
+| Parcel 2 | [Parcel](../integrations/parcel) |
+| No compiler plugin yet | [Runtime-Only Mode](../integrations/runtime-only-mode) |
+| Custom build system | [Custom Compiler](../integrations/custom-compiler) |
+
+Static extraction is a build optimization.
+
+The compiler can move supported static styles into CSS assets. Runtime
+composition still resolves props, conditions, incoming themes, token values, and
+root `css` overrides.
+
+Use this rule:
+
+```txt
+learning or early prototype -> JSX runtime + runtime-only setup is fine
+production app              -> use the bundler adapter when one exists
+library or custom build     -> document the integration contract clearly
+```
+
+Continue to [Recap](/docs/learn/recap/) for a short decision map of the whole
+Learn path.

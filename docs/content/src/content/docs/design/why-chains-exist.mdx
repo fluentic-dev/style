@@ -1,0 +1,43 @@
+---
+title: Why Chains Exist
+description: Separate base declarations from local states, selectors, and at-rules.
+---
+
+One object can hold everything:
+
+```ts
+style({
+  padding: 12,
+  ':hover': { opacity: 0.86 },
+  '@media (max-width: 700px)': { width: '100%' },
+});
+```
+
+That works, but it mixes declarations, states, selectors, and at-rules in one
+object language.
+
+Fluentic uses chains for local conditions:
+
+```ts
+style({
+  padding: 12,
+}).hover({
+  opacity: 0.86,
+}).media('(max-width: 700px)', {
+  width: '100%',
+});
+```
+
+The split is:
+
+```txt
+object -> what the element looks like
+chain  -> when that element changes
+```
+
+Chains also give the system structured selector data. That lets TypeScript type
+custom methods, the compiler validate selector arguments, and the priority model
+order states consistently.
+
+Custom builders can add project-specific chain methods without changing the
+rest of the model.

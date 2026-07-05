@@ -1,0 +1,66 @@
+---
+title: Style A Reusable Component
+description: Learn why reusable components need named parts to style.
+---
+
+So far, you have worked with `style(...)`, the `css` prop, arrays, builder
+methods, and style files.
+
+When it comes to reusable components, there are other things to address. A
+component may render several elements, but consumers should not need to know its
+private markup.
+
+Consider a button with an icon and label:
+
+```tsx
+<Button icon={<SaveIcon />}>Save</Button>
+```
+
+A parent component may need to adjust the styles for the root, icon, or label.
+
+The component can still accept a `css` prop and pass it to its root or outermost
+element. That is useful when a parent component needs to adjust layout around
+the component, such as margin, width, or positioning:
+
+```tsx
+<Button css={wideButton}>Save</Button>
+```
+
+But that only styles the component's root element.
+
+In plain CSS, a common next step is to write selectors for the internal pieces:
+
+```css
+.button > .icon { ... }
+.button > .label { ... }
+```
+
+That works, but consumers now depend on your DOM shape and class names. If the
+component changes its markup later, those selectors can break.
+
+Another common pattern is to add more props:
+
+```tsx
+<Button iconCss={iconStyle} labelCss={labelStyle}>Save</Button>
+```
+
+That also works, but every new styling need becomes another prop.
+
+**Fluentic uses a different approach:** give the styleable component parts explicit
+names.
+
+In Fluentic, those named parts are called slots. A slot is still just a name for
+a part of the component, but it is explicit and type-safe. It tells consumers
+which parts are supported for styling:
+
+```txt
+root
+icon
+label
+```
+
+Those slot names form the supported styling surface without promising what DOM
+elements the component uses internally.
+
+Continue to [Name Component Parts](/docs/learn/name-component-parts/) to see
+how to define those parts with slots.

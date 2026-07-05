@@ -70,9 +70,10 @@ Vite is the smallest full setup path: write styles in TypeScript, extract
 static CSS when possible, and keep runtime support for prop-driven or
 theme-driven styles.
 
-The plugin should run before `@vitejs/plugin-react` so Fluentic sees the source
-before the React JSX transform. If you intentionally run without the plugin,
-configure the style runtime yourself before rendering the app.
+It is recommended to place the plugin before `@vitejs/plugin-react` so Fluentic
+sees the source before the React JSX transform. If you intentionally run
+without the plugin, configure the style runtime yourself before rendering the
+app.
 
 See [Plugin Options](options) for `include`, `exclude`, `devSourcemap`,
 `getSourcemapFilePath`, and the development sourcemap modes.

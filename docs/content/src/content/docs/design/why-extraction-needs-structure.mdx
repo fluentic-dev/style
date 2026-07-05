@@ -1,0 +1,43 @@
+---
+title: Why Extraction Needs Structure
+description: Static extraction depends on style data the compiler can understand.
+---
+
+A compiler cannot safely extract arbitrary JavaScript behavior.
+
+It can extract style data when the source preserves enough structure:
+
+```ts
+const button = style({
+  borderRadius: 8,
+  padding: '8px 12px',
+}).hover({
+  opacity: 0.86,
+});
+```
+
+The compiler can see:
+
+```txt
+base declarations
+selector chain
+static values
+source locations
+```
+
+React-known choices still happen at runtime:
+
+```tsx
+<button css={[button, props.danger && dangerButton, props.css]} />
+```
+
+The build cannot know `props.danger` for every render.
+
+So Fluentic keeps a split:
+
+```txt
+build-known style data -> extracted CSS
+React-known choices    -> runtime resolution
+```
+
+The authoring model stays the same across runtime-only and extracted builds.

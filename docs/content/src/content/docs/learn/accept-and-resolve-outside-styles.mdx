@@ -1,0 +1,169 @@
+---
+title: Accept And Resolve Outside Styles
+description: Pass scopes through props and apply their provided styles inside the component.
+---
+
+You have seen how to create scopes. A scope describes provided styles for slots,
+but it does not apply those styles by itself.
+
+A scope is callable. To apply it, call the scope with a target slot.
+
+The target slot is usually the component's container slot: the element that
+contains the parts styled by the scope. For a button, that is usually the button
+root. For a card, that is usually the card container.
+
+```ts
+const css = combineStyle(
+  buttonStyles,
+  primaryButtonTheme(buttonStyles.root),
+);
+```
+
+Here, `primaryButtonTheme(...)` is called with `buttonStyles.root`. That tells
+Fluentic to resolve the provided slot styles from the scope through the
+component's root slot.
+
+`combineStyle(...)` receives the component's base style object first. The next
+arguments are the provided styles to combine with it. For convenience, those
+arguments can include falsy values and arrays, so conditional inputs can stay
+inline.
+
+The resolved result mirrors the component style object. `style(...)` and
+`style.slot(...)` entries are replaced by resolved style items, while other
+values are preserved as they are:
+
+```tsx
+return (
+  <button css={css.root}>
+    {props.icon ? <span css={css.icon}>{props.icon}</span> : null}
+    <span css={css.label}>{props.children}</span>
+  </button>
+);
+```
+
+The target slot and the rendered element stay connected: `buttonStyles.root` is
+the target slot used to resolve the scope, and `css.root` is the resolved style
+attached to the button element.
+
+A component may need to resolve several scopes together: from variants, state,
+and responsive style sets.
+
+The direct form is to call each scope with the same target slot:
+
+```ts
+const css = combineStyle(
+  buttonStyles,
+  props.primary && primaryButtonTheme(buttonStyles.root),
+  props.compact && compactButtonTheme(buttonStyles.root),
+);
+```
+
+That works, but repeating `buttonStyles.root` for every scope gets noisy.
+
+In this case, using `bindScope(...)` is more convenient: pass the target slot once,
+then pass the scopes.
+
+```ts
+const css = combineStyle(
+  buttonStyles,
+  bindScope(
+    buttonStyles.root,
+    props.primary && primaryButtonTheme,
+    props.compact && compactButtonTheme,
+  ),
+);
+```
+
+## Accept Scopes Through Props
+
+Most reusable components receive outside styles through props:
+
+```tsx
+<Button theme={primaryButtonTheme}>Launch</Button>
+```
+
+We can use `theme` with `StyleTheme` to define a prop that accepts scopes:
+
+```ts
+type ButtonProps = {
+  css?: StyleProp;
+  theme?: StyleTheme;
+  children: React.ReactNode;
+  // ...
+};
+```
+
+Under the hood, `StyleTheme` is a recursive array of scopes and falsy values.
+That means a parent can pass one scope, multiple scopes, conditional scopes, or
+nested arrays of scopes.
+
+It is similar to the `css` prop shape, but it accepts scopes instead of styles
+or slots.
+
+The `css` and `theme` prop names are conventions here. You can name these props
+whatever fits your component API.
+
+Because `StyleTheme` can contain multiple scopes or nested scope arrays, using
+`bindScope(...)` is the right way to resolve it with a target slot.
+
+It also keeps repeated target calls tidy. Pass the target slot once, then pass
+every scope that should resolve through that same target:
+
+```tsx
+import {
+  combineStyle,
+  bindScope,
+  type StyleProp,
+  type StyleTheme,
+} from '@fluentic/style';
+
+type ButtonProps = {
+  css?: StyleProp;
+  theme?: StyleTheme;
+  primary?: boolean;
+  compact?: boolean;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+};
+
+export function Button(props: ButtonProps) {
+  const css = combineStyle(
+    buttonStyles,
+    bindScope(
+      buttonStyles.root,
+      props.primary && primaryButtonTheme,
+      props.compact && compactButtonTheme,
+      props.theme,
+    ),
+  );
+
+  return (
+    <button css={[css.root, props.css]}>
+      {props.icon ? <span css={css.icon}>{props.icon}</span> : null}
+      <span css={css.label}>{props.children}</span>
+    </button>
+  );
+}
+```
+
+`bindScope(buttonStyles.root, ...)` applies each provided scope through the same
+root slot. Falsy values are ignored, so conditional scopes can stay inline.
+
+This keeps style merging convenient and centered in one place. The JSX stays
+focused on attaching resolved styles to elements, and each `css` prop can stay
+small and easier to read.
+
+`theme` carries scope-based component styles. `css` is still for styles that
+attach to the component root element.
+
+```txt
+theme -> styles provided to component slots
+css   -> styles attached to the root element
+```
+
+The consumer provides scopes. The component resolves them and decides what
+target elements to apply the provided styles to.
+
+Continue to [Add Variants And States](/docs/learn/add-variants-and-states/) to
+see how to use the same scope-and-resolve path for variants, states, and
+responsive changes.

@@ -1,0 +1,47 @@
+---
+title: Expose Styleable Parts
+description: Export only the component slots consumers may depend on.
+---
+
+A component can have more internal styles than public styling targets.
+
+```ts
+const styles = {
+  root: style.slot({ borderRadius: 16 }),
+  title: style.slot({ fontWeight: 700 }),
+  body: style.slot({ lineHeight: 1.6 }),
+  measurementLayer: style({ position: 'absolute' }),
+};
+```
+
+Only expose the parts consumers may rely on:
+
+```ts
+import { exposeStyle } from '@fluentic/style/utils';
+
+export const CardStyle = exposeStyle({
+  root: styles.root,
+  title: styles.title,
+  body: styles.body,
+});
+```
+
+Consumers target the exported surface:
+
+```ts
+export const marketingCard = style.scope([
+  CardStyle.root({ backgroundColor: '#111827', color: 'white' }),
+  CardStyle.title({ letterSpacing: 0.2 }),
+]);
+```
+
+This keeps the contract clear:
+
+- exposed slots are supported customization points;
+- private styles can change with the implementation;
+- consumers do not target DOM selectors;
+- component docs can describe `CardStyle.root`, `CardStyle.title`, and
+  `CardStyle.body`.
+
+Continue to [Theme Component Tokens](/docs/learn/theme-component-tokens/) to
+move from styleable component parts to themeable component values.

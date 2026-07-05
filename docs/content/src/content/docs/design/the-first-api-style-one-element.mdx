@@ -1,0 +1,38 @@
+---
+title: "The First API: Style One Element"
+description: Derive the smallest Fluentic API from one rendered element.
+---
+
+Start with one requirement:
+
+```tsx
+<button>Save</button>
+```
+
+The element needs CSS.
+
+The smallest API is a TypeScript value attached to JSX:
+
+```tsx
+const button = style({
+  borderRadius: 8,
+  padding: '8px 12px',
+});
+
+<button css={button}>Save</button>
+```
+
+This solves the base case without introducing component concepts.
+
+The API also preserves structure:
+
+```txt
+style object -> style data -> class name / CSS rule
+```
+
+That structure matters later. The runtime can resolve it, the compiler can
+extract it when static, and debug output can point back to the authored value.
+
+The first API should not know about slots, scopes, or themes.
+
+Those appear only when the problem grows beyond one rendered element.

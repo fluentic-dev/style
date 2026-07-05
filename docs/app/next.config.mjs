@@ -12,6 +12,7 @@ function normalizeBase(base) {
 
 /** @type {import('next').NextConfig} */
 const config = {
+  allowedDevOrigins: ['10.*.*.*', '172.*.*.*', '192.168.*.*'],
   basePath: docsBase,
   env: {
     NEXT_PUBLIC_DOCS_BASE: docsBase,

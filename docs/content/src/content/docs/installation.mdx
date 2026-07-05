@@ -1,0 +1,214 @@
+---
+title: Installation
+description: Install Fluentic and choose the right build setup.
+---
+
+Install the package:
+
+Fluentic is currently published as a beta package, so install from the `beta`
+dist tag for now.
+
+<Tabs items={['pnpm', 'npm', 'Yarn', 'Bun']}>
+  <Tab>
+
+```sh
+pnpm add @fluentic/style@beta
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+npm install @fluentic/style@beta
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+yarn add @fluentic/style@beta
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+bun add @fluentic/style@beta
+```
+
+  </Tab>
+</Tabs>
+
+Then enable the `css` prop through React's `jsxImportSource` setting.
+
+Use this when you are not using a Fluentic bundler plugin:
+
+```jsonc title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    // without bundler plugin, use this JSX entry
+    "jsxImportSource": "@fluentic/style/jsx"
+  }
+}
+```
+
+Use this when your app is configured with a Fluentic bundler plugin. See the
+[integration options below](#choose-your-integration).
+
+```jsonc title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    // with bundler plugin, use this JSX entry
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+Fluentic is runtime-first. The core API is designed to work by itself, without
+a compiler plugin, and the `css` prop is enabled through React's
+`jsxImportSource` setting. That means you can install Fluentic and start using
+it immediately.
+
+Runtime-only setup is the easiest path to try Fluentic, but it leaves more work
+for the browser and has less development source-map capacity.
+
+For production, it is recommended to use the Fluentic plugin for your bundler
+when one is available. The plugin does not change how you write Fluentic styles;
+it adds extraction, better development CSS, sourcemaps, and production
+optimization.
+
+## Choose Your Integration
+
+## Next.js
+
+Use the Next.js plugin for App Router projects and configure React to use
+`@fluentic/style/plugin/jsx` as `jsxImportSource`:
+
+```js title="next.config.mjs"
+import stylePlugin from '@fluentic/style/plugin/nextjs';
+
+export default stylePlugin({
+  // your Next config
+});
+```
+
+For development in React Server Components, add `StyleDev` in the root layout.
+
+See the full [Next.js guide](/docs/integrations/nextjs/).
+
+## Vite
+
+Use the Vite plugin and configure React to use `@fluentic/style/plugin/jsx` as
+`jsxImportSource`. It is recommended to place the Fluentic plugin before the
+React plugin:
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+
+export default defineConfig({
+  plugins: [
+    stylePlugin(),
+    react({
+      jsxImportSource: '@fluentic/style/plugin/jsx',
+    }),
+  ],
+});
+```
+
+See the full [Vite guide](/docs/integrations/vite/).
+
+## Webpack
+
+In `webpack.config.mjs`, add the Fluentic Webpack plugin and configure React to
+use `@fluentic/style/plugin/jsx` as `jsxImportSource`:
+
+```js title="webpack.config.mjs"
+import { plugin as stylePlugin } from '@fluentic/style/plugin/webpack';
+
+export default {
+  // other config...
+  plugins: [
+    // your existing plugins
+    stylePlugin(),
+  ],
+};
+```
+
+See the full [Webpack guide](/docs/integrations/webpack/).
+
+## Rspack
+
+In `rspack.config.mjs`, add the Fluentic Rspack plugin and configure React to
+use `@fluentic/style/plugin/jsx` as `jsxImportSource`:
+
+```js title="rspack.config.mjs"
+import { plugin as stylePlugin } from '@fluentic/style/plugin/rspack';
+
+export default {
+  // other config...
+  plugins: [
+    // your existing plugins
+    stylePlugin(),
+  ],
+};
+```
+
+See the full [Rspack guide](/docs/integrations/rspack/).
+
+## Parcel
+
+Use Fluentic's Parcel config and configure React to use
+`@fluentic/style/plugin/jsx` as `jsxImportSource`:
+
+```json title="package.json"
+{
+  "scripts": {
+    "dev": "parcel index.html --config @fluentic/style/plugin/parcel/config",
+    "build": "parcel build index.html --config @fluentic/style/plugin/parcel/config"
+  }
+}
+```
+
+See the full [Parcel guide](/docs/integrations/parcel/).
+
+## Farm
+
+In `farm.config.mjs`, add the Fluentic Farm plugin and configure React to use
+`@fluentic/style/plugin/jsx` as `jsxImportSource`:
+
+```js title="farm.config.mjs"
+import { defineConfig } from '@farmfe/core';
+import { plugin as stylePlugin } from '@fluentic/style/plugin/farm';
+
+export default defineConfig({
+  plugins: [
+    ['@farmfe/plugin-react', {
+      runtime: 'automatic',
+      importSource: '@fluentic/style/plugin/jsx',
+    }],
+    stylePlugin(),
+  ],
+});
+```
+
+See the full [Farm guide](/docs/integrations/farm/).
+
+## Custom Build Systems
+
+If you are building your own integration, start from the compiler and extraction
+contracts instead of copying a provided plugin.
+
+See [Custom Compiler](/docs/integrations/custom-compiler/) and
+[Plugin Options](/docs/integrations/options/).
+
+## Runtime Only
+
+If you cannot add a bundler plugin yet, keep the JSX runtime configured and run
+Fluentic in runtime-only mode. This is useful for quick adoption, but production
+apps should use a bundler plugin when possible.
+
+See [Runtime-Only Mode](/docs/integrations/runtime-only-mode/).

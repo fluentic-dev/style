@@ -1,14 +1,15 @@
 {
   "title": "Beyond the Basics",
   "pages": [
-    "tracing-styles-in-real-apps",
-    "custom-style-builders",
-    "multiple-style-functions",
-    "custom-chain-methods",
-    "custom-style-fields",
-    "priority-and-rule-order",
-    "static-extraction",
     "runtime-and-dynamic-styles",
-    "devtools-and-sourcemaps"
+    "interop-with-non-fluentic-apis",
+    "using-css-at-rules",
+    "priority-and-rule-order",
+    "tracing-styles-in-real-apps",
+    "devtools-and-sourcemaps",
+    "custom-style-builders",
+    "custom-style-fields",
+    "custom-chain-methods",
+    "multiple-style-functions"
   ]
 }

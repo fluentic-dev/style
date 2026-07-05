@@ -13,7 +13,7 @@ active state
 component scope
 theme override
 media rule
-caller css prop
+parent-provided css prop
 ```
 
 All of those inputs can be valid. In plain CSS, the browser answers conflicts
@@ -250,7 +250,7 @@ box, then the longhand refines one side. The longhand should not be accidentally
 erased just because the shorthand appeared later in the style object.
 
 This bucket is only for CSS declaration shape. If you need to decide that one
-component state, theme, breakpoint, or caller override should win, express that
+component state, theme, breakpoint, or parent-provided override should win, express that
 with the matching styling path instead of relying on where two properties happen
 to appear in the object.
 
@@ -311,7 +311,7 @@ When two styles land in the same priority path, the later argument passed to
 the array win.
 
 A typical component uses that order for base styles first, then variants, then
-theme scopes, then the caller's root `css` prop if the component allows one:
+theme scopes, then the parent-provided root `css` prop if the component allows one:
 
 ```tsx
 const css = combineStyle(
@@ -340,5 +340,5 @@ That makes boundary priority reviewable in the component code that owns the
 markup.
 
 For the full bucket model and development priority modes, see
-[Priority Model](../../design/priority-model) and
+[Priority And Rule Order](../../design/priority-and-rule-order) and
 [Priority And Rule Order](../../beyond-the-basics/priority-and-rule-order).

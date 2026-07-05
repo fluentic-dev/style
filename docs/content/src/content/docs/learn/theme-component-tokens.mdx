@@ -1,0 +1,60 @@
+---
+title: Theme Component Tokens
+description: Use named tokens when a component or design system publishes theme hooks.
+---
+
+Reusable components often need named theme hooks.
+
+Use `createToken()` for one value:
+
+```ts
+const accent = createToken('#2563eb');
+
+const link = style({
+  color: accent,
+});
+```
+
+Use `createTokens()` when the names are part of the component theme API:
+
+```ts
+export const cardTokens = createTokens({
+  color: {
+    surface: '#ffffff',
+    text: '#111827',
+    border: '#d8e3df',
+    accent: '#2563eb',
+  },
+  radius: {
+    panel: 8,
+  },
+});
+```
+
+Use those names inside component styles:
+
+```ts
+export const cardStyles = {
+  root: style.slot({
+    backgroundColor: cardTokens.color.surface,
+    borderColor: cardTokens.color.border,
+    borderRadius: cardTokens.radius.panel,
+    color: cardTokens.color.text,
+  }),
+};
+```
+
+Choose component tokens when consumers should theme names like:
+
+```txt
+cardTokens.color.surface
+cardTokens.color.border
+cardTokens.radius.panel
+```
+
+That is useful for reusable components, component libraries, and design systems.
+
+For app pages, literal colors and spacing are often easier to read in place.
+
+Continue to [Theme App Values](/docs/learn/theme-app-values/) to learn the
+app-facing value path.

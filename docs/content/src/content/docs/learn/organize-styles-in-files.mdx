@@ -1,0 +1,46 @@
+---
+title: Organize Styles In Files
+description: Move repeated local styles into normal TypeScript files before creating component APIs.
+---
+
+When a page or component grows, repeated styles need a better place to stay
+organized.
+
+You can split those styles into a regular TypeScript file:
+
+```ts title="settings.styles.ts"
+import { style } from '@fluentic/style';
+
+export const styles = {
+  section: style({
+    display: 'grid',
+    gap: 12,
+    padding: 16,
+  }),
+  title: style({
+    fontSize: 18,
+    fontWeight: 700,
+    margin: 0,
+  }),
+};
+```
+
+Then import the styles from the file and use them as usual:
+
+```tsx
+import { styles } from './settings.styles';
+
+export function SettingsSection() {
+  return (
+    <section css={styles.section}>
+      <h2 css={styles.title}>Profile</h2>
+    </section>
+  );
+}
+```
+
+Fluentic does not require a specific file name or folder structure. Name the
+files as you like and place them wherever they fit your project.
+
+Continue to [Style Reusable Component](/docs/learn/style-reusable-component/)
+to see what changes when a style belongs to a component instead of one element.

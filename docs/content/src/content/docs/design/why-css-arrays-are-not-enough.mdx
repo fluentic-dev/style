@@ -1,0 +1,27 @@
+---
+title: Why css Arrays Are Not Enough
+description: css arrays solve element composition, but reusable components need component-aware composition.
+---
+
+`css` arrays solve many local cases:
+
+```tsx
+<button css={[base, props.danger && danger, props.css]} />
+```
+
+This is enough when every style attaches to the same rendered element.
+
+A reusable component has more parts:
+
+```tsx
+<Button icon={<SaveIcon />}>Save</Button>
+```
+
+The root, icon, label, spinner, and wrapper are not the same element.
+
+An array can compose styles for one attachment point. It cannot tell consumers
+which internal component parts are supported styling targets.
+
+That is the boundary where Fluentic needs a component-aware concept.
+
+The next design step is naming the component parts consumers may style.

@@ -1,0 +1,45 @@
+---
+title: Runtime Resolution And Cache
+description: How css props and combineStyle reuse resolved style graphs across rendered instances.
+---
+
+Two places resolve styles at runtime:
+
+| Resolver | Job |
+| --- | --- |
+| `combineStyle(...)` | Resolve component slots, scopes, and token overrides. |
+| `css` prop / `getClassName(...)` | Resolve final element className and inline style output. |
+
+`combineStyle(...)` walks a component style graph:
+
+```tsx
+const css = combineStyle(
+  buttonStyles,
+  dangerButton(buttonStyles.root),
+  bindScope(buttonStyles.root, props.theme),
+);
+```
+
+The cache is based on object identity and graph path.
+
+Stable module-scope values are the fast path:
+
+```ts
+const dangerButton = style.scope([
+  buttonStyles.root({ backgroundColor: '#dc2626' }),
+]);
+```
+
+Repeated component instances can reuse the same resolved path.
+
+Inline values created during render are less cache-friendly unless extraction
+and hoisting can turn them into stable generated values.
+
+The runtime is optimized for the React pattern Fluentic encourages:
+
+```txt
+stable style values
+stable scopes
+component-boundary resolution
+root css composition
+```

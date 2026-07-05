@@ -1,0 +1,51 @@
+---
+title: Theme App Values
+description: Use literal-facing values when app code should keep colors and spacing visible.
+---
+
+App teams often want to see the actual value where it is used.
+
+Use `createValues()` for app-level colors, borders, shadows, spacing, or other
+values that should stay visible in code:
+
+```ts
+import { createValues, style } from '@fluentic/style';
+
+export const color = createValues([
+  '#f5f7f6 | Canvas',
+  '#ffffff | Surface',
+  '#15211d | Text',
+  '#60716a | Muted',
+  '#d8e3df | Border',
+  '#0f766e | Accent',
+]);
+
+export const space = createValues([4, 8, 12, 16, 24]);
+```
+
+Use those values directly:
+
+```ts
+const page = style({
+  backgroundColor: color('#f5f7f6 | Canvas'),
+  color: color('#15211d | Text'),
+});
+
+const panel = style({
+  backgroundColor: color('#ffffff | Surface'),
+  borderColor: color('#d8e3df | Border'),
+  padding: space(16),
+});
+```
+
+The literal stays visible.
+
+Your editor can still show color previews, and search can find the original
+value.
+
+Use component tokens when names are the public API.
+
+Use app values when literal app values are clearer to edit and review.
+
+Continue to [Apply Themes](/docs/learn/apply-themes/) to use `createTheme()`
+for different values in a subtree.

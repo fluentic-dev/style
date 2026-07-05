@@ -25,7 +25,7 @@ Fluentic has a runtime path for the parts React still decides at render time.
 
 That matters because real components do not become fully static just because a
 project wants extracted CSS. Props still choose variants. Themes still arrive
-from app composition. Component libraries still receive overrides from callers.
+from app composition. Component libraries still receive overrides from consumers.
 Some values only exist when React renders the tree.
 
 ```txt
@@ -257,7 +257,7 @@ values that are only known while React renders, including conditions, incoming
 themes, props, and app state.
 
 See [Extraction Without Lock-In](../extraction-without-lock-in),
-[Static Extraction](../../beyond-the-basics/static-extraction), and
+[Static Extraction](../../integrations/static-extraction), and
 [Compiler](../../benchmark/compiler).
 
 ## Hoisting Inline Styles
@@ -309,7 +309,7 @@ themeable, or reused across component parts, it usually deserves a name outside
 render. Named styles are easier to organize, review, trace in DevTools, and
 reuse from variants or themes.
 
-See [Hoisting Inline Style Chains](../../design/hoisting-inline-style-chains).
+See [Compiler Hoisting](../../design/compiler-hoisting).
 
 ## Integrations
 

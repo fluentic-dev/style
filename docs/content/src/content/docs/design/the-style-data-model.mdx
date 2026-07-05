@@ -1,0 +1,33 @@
+---
+title: The Style Data Model
+description: The public APIs produce structured data that runtime, compiler, and debugging can all understand.
+---
+
+Fluentic APIs do not immediately become strings.
+
+They produce structured data:
+
+| API | Data it creates |
+| --- | --- |
+| `style()` | element style data |
+| chain methods | selector, at-rule, or merge steps |
+| `style.slot()` | style data with component-part identity |
+| `style.scope()` | grouped slot overrides |
+| `createToken()` / `createValues()` | themeable value identity |
+| `createTheme()` | token/value override data |
+| CSS helpers | named at-rule references |
+
+That structure is the shared contract between systems:
+
+```txt
+author API -> style data -> runtime resolver
+                       -> compiler extraction
+                       -> debug metadata
+```
+
+If style information became opaque strings too early, the runtime could not
+compose it safely, the compiler could not extract it reliably, and DevTools
+could not point back to the authored source.
+
+The data model is what lets Fluentic keep one authoring API across runtime,
+extraction, and debugging.

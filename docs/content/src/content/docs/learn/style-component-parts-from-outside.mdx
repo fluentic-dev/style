@@ -1,0 +1,174 @@
+---
+title: Style Component Parts From Outside
+description: Let outside code style component parts with scopes.
+---
+
+Slots give a component named parts to style, such as `root`, `icon`, and
+`label`.
+
+The next step is to let outside code provide styles for those parts, so it does
+not need to depend on the component's internal markup or DOM structure. Fluentic
+provides scopes for this. A scope is a set of provided slot styles bundled
+together.
+
+Create a scope with `style.scope([...])`:
+
+```ts
+export const primaryButtonTheme = style.scope([
+  buttonStyles.root({
+    backgroundColor: '#111827',
+    color: 'white',
+  }),
+  buttonStyles.label({
+    letterSpacing: 0.2,
+  }),
+]);
+```
+
+Each item in the scope is created by calling a slot. The syntax is:
+
+```ts
+buttonStyles.root({
+  /* styles provided to the root slot */
+});
+```
+
+That slot call returns slot override styles for `root`.
+
+## Slot Calls
+
+A slot is callable inside a scope. Calling `buttonStyles.root(...)` creates one
+scope item that says: provide these styles to the `root` slot.
+
+This syntax may look unfamiliar at first, but it keeps the styling path direct:
+choose a known part, write the styles, and let TypeScript check the call.
+
+```ts
+const primaryButtonTheme = style.scope([
+  buttonStyles.root({
+    backgroundColor: '#111827',
+  }),
+]);
+```
+
+A slot call is also a style builder. It has the same builder methods as
+`style(...)` and `style.slot(...)`, so you can provide more than base styles:
+states, media queries, and local selectors can live on the slot override too.
+
+```ts
+const primaryButtonTheme = style.scope([
+  buttonStyles.root({
+    backgroundColor: '#111827',
+  }).hover({
+    backgroundColor: '#030712',
+  }),
+]);
+```
+
+## Scope Chains
+
+`style.scope(...)` is also a style builder. It has the same builder methods
+as `style(...)` and `style.slot(...)`, but the condition applies to a group of
+slot style items instead of one style object.
+
+The slot style items passed to `style.scope(...)` provide extra styles for the
+slots they target:
+
+```ts
+const primaryButtonTheme = style.scope([
+  buttonStyles.root({
+    backgroundColor: '#111827',
+  }),
+  buttonStyles.label({
+    letterSpacing: 0.2,
+  }),
+]);
+```
+
+Sometimes the same responsive condition should provide styles to several
+component parts together. We can do that with a scope too:
+
+```ts
+const compactButtonTheme = style.scope().media('(max-width: 700px)', [
+  buttonStyles.root({
+    width: '100%',
+  }),
+  buttonStyles.label({
+    fontSize: 14,
+  }),
+]);
+```
+
+Another common component styling need is changing child parts when the parent
+component is hovered, active, or focused. For a button, the root, icon, and
+label may all need to change together. A scope-level `hover(...)` or
+`active(...)` can provide styles to several slots at the same time:
+
+```ts
+const interactiveButtonTheme = style.scope()
+  .hover([
+    buttonStyles.root({
+      backgroundColor: '#1f2937',
+    }),
+    buttonStyles.icon({
+      transform: 'translateX(1px)',
+    }),
+  ])
+  .active([
+    buttonStyles.root({
+      transform: 'translateY(1px)',
+    }),
+    buttonStyles.label({
+      opacity: 0.86,
+    }),
+  ]);
+```
+
+Here, the scope condition belongs to the component root interaction, while each
+slot call describes which component part changes during that interaction.
+
+## Extraction Caveat
+
+To keep production extraction working as expected, write slot calls inside
+`style.scope(...)`. The compiler reads the scope and extracts the slot calls it
+finds there.
+
+That includes slot calls inside `style.scope([...])` and inside arrays passed to
+scope builder methods such as `.hover(...)`, `.active(...)`, `.focusVisible(...)`,
+and `.media(...)`.
+
+Do not assign a slot call to a separate variable and then pass it into a scope:
+
+```ts
+// ❌ Do not split a slot call away from its scope.
+const rootOverride = buttonStyles.root({
+  backgroundColor: '#111827',
+});
+
+const primaryButtonTheme = style.scope([rootOverride]);
+```
+
+That can work in runtime-only mode, but the compiler recognizes the
+`style.scope(...)` chain as the extraction point. It expects slot calls to
+appear inside that chain.
+
+The rule of thumb: keep slot calls inline inside the scope:
+
+```ts
+const primaryButtonTheme = style.scope([
+  buttonStyles.root({
+    backgroundColor: '#111827',
+  }),
+]);
+```
+
+A scope only describes the provided styles. It does not decide where those
+styles attach.
+
+That separation is intentional. The scope stays decoupled from the component's
+internal structure, and the component can receive scopes through props. Then it
+can decide what target elements to apply the styles from provided scopes.
+
+Continue to [Accept And Resolve Outside Styles](/docs/learn/accept-and-resolve-outside-styles/)
+to see how to provide scopes to a component, and how the component resolves and
+applies the provided styles.

@@ -1,0 +1,33 @@
+---
+title: Why Outside Styling Needs Scopes
+description: Group outside slot overrides without letting them attach directly to DOM.
+---
+
+Outside code often wants one idea to change several component parts.
+
+```txt
+danger     -> root + icon + label
+marketing  -> root + title
+compact    -> root + body + actions
+```
+
+Those changes need to travel together.
+
+Fluentic represents them as a scope:
+
+```ts
+const dangerButton = style.scope([
+  ButtonStyle.root({ backgroundColor: '#dc2626' }),
+  ButtonStyle.icon({ color: 'white' }),
+  ButtonStyle.label({ color: 'white' }),
+]);
+```
+
+A scope describes slot overrides.
+
+It does not attach them to DOM.
+
+That separation is important: outside code can describe supported changes, while
+the component still owns its implementation.
+
+The component decides where those scoped slot overrides attach.

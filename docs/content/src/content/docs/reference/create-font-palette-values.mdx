@@ -1,0 +1,21 @@
+---
+title: createFontPaletteValues
+description: Create a named @font-palette-values reference.
+---
+
+Import from `@fluentic/style/css`:
+
+```ts
+import { createFontPaletteValues } from '@fluentic/style/css';
+```
+
+```ts
+const palette = createFontPaletteValues({
+  fontFamily: 'system-ui',
+  basePalette: 1,
+});
+
+const label = style({
+  fontPalette: palette,
+});
+```

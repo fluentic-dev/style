@@ -1,0 +1,40 @@
+---
+title: Custom Vocabulary Without Forking The Model
+description: Let design systems add fields and chain methods while keeping the same runtime, compiler, and debug model.
+---
+
+Design systems often want their own styling vocabulary:
+
+```txt
+row
+gapX
+elevation
+pressed
+selected
+below()
+```
+
+One option is to build a separate styling layer.
+
+Fluentic instead lets a project create a custom style function:
+
+```ts
+export const { style: ui } = createStyleFn({
+  style: type<UiStyle>,
+  selectors: prioritySelectors,
+  transform,
+});
+```
+
+Custom fields transform into CSS properties.
+
+Custom chain methods transform into selectors or at-rules.
+
+Slots and scopes created from the custom builder still produce the same kind of
+style data.
+
+That is the important constraint: custom vocabulary should extend the model,
+not fork it.
+
+The runtime can resolve it, the compiler can extract supported static uses, and
+debugging can still trace back to authored values.

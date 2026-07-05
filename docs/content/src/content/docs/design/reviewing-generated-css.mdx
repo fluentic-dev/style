@@ -1,0 +1,25 @@
+---
+title: Reviewing Generated CSS
+description: Generated CSS should be inspectable without becoming the public authoring surface.
+---
+
+Generated CSS is implementation output.
+
+It still needs to be reviewable.
+
+A reviewer should be able to answer:
+
+- which component surface is public;
+- which generated rule came from a slot, scope, token, or local style;
+- which priority bucket explains the winning rule;
+- which source file authored the value.
+
+Generated class names and CSS variables are allowed to be compact in production.
+
+In development, readable names, sourcemaps, and element markers help connect the
+output back to the authoring model.
+
+Do not treat generated CSS selectors as the public component API.
+
+The public API is the TypeScript surface: props, slots, scopes, tokens, and
+documented style contracts.

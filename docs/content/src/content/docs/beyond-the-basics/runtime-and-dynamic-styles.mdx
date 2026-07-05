@@ -9,10 +9,10 @@ It means: move the CSS rules that are already known at build time into a CSS
 file.
 
 React still renders components. Props still change. Themes still change.
-Callers can still pass `css`. Those parts need a small runtime resolver.
+Parent components can still pass `css`. Those parts need a small runtime resolver.
 
 For the detailed resolver and cache path, see
-[Style Resolution And Cache](../design/style-resolution-and-cache).
+[Runtime Resolution And Cache](../design/runtime-resolution-and-cache).
 
 ## The Short Version
 
@@ -171,7 +171,7 @@ The app decides how to customize those slots:
 
 ```tsx
 <Card
-  css={style.scope([
+  theme={style.scope([
     cardStyles.title({ color: '#2563eb' }),
   ])}
 />
@@ -179,7 +179,7 @@ The app decides how to customize those slots:
 
 The component library did not know that app override when it was built. The
 runtime combines the component's extracted classes with the app's scopes and
-caller styles.
+parent-provided styles.
 
 ## What To Remember
 
@@ -200,3 +200,6 @@ render-time choices -> class/token/scope resolution
 Use extraction for production apps when you can. Use tokens/value bindings for
 open-ended dynamic values. Let runtime resolution handle the parts that only
 React can know at render time.
+
+When an API cannot accept Fluentic's `css` prop, use the runtime interop helpers
+described in [Interop With Non-Fluentic APIs](interop-with-non-fluentic-apis).

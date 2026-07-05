@@ -8,12 +8,23 @@ description: Public subpath exports and when to use them.
 | `@fluentic/style` | Runtime API, style builder, tokens, themes, and types. |
 | `@fluentic/style/utils` | Utilities such as `exposeStyle`. |
 | `@fluentic/style/selector` | Selector constructors, validators, presets, and priority helpers. |
-| `@fluentic/style/css` | CSS helper APIs. |
+| `@fluentic/style/css` | CSS helper APIs such as `createKeyframes`, `createFontFace`, and `createProperty`. |
+| `@fluentic/style/config` | Manual runtime configuration such as `configureStyleRuntime`. |
+| `@fluentic/style/dev` | Development helpers such as `configureStyleDev` and `enableStyleDevUtils`. |
 | `@fluentic/style/dev/rsc` | Next.js App Router and RSC development bridge. |
-| `@fluentic/style/plugin/jsx` | JSX runtime import source. |
+| `@fluentic/style/jsx` | Plain JSX runtime import source for runtime-only setup. |
+| `@fluentic/style/plugin/jsx` | Plugin JSX runtime import source for compiler/bundler setup. |
 | `@fluentic/style/plugin/vite` | Vite adapter. |
 | `@fluentic/style/plugin/webpack` | Webpack adapter. |
+| `@fluentic/style/plugin/webpack/loader` | Webpack loader entry used by the adapter. |
 | `@fluentic/style/plugin/rspack` | Rspack adapter. |
 | `@fluentic/style/plugin/farm` | Farm adapter. |
 | `@fluentic/style/plugin/parcel/config` | Parcel config. |
+| `@fluentic/style/plugin/parcel/transformer` | Parcel transformer entry used by Parcel config. |
+| `@fluentic/style/plugin/parcel/resolver` | Parcel resolver entry used by Parcel config. |
+| `@fluentic/style/plugin/parcel/runtime` | Parcel runtime entry used by Parcel config. |
+| `@fluentic/style/plugin/parcel/optimizer` | Parcel optimizer entry used by Parcel config. |
 | `@fluentic/style/plugin/nextjs` | Next.js adapter. |
+| `@fluentic/style/plugin/nextjs/loader` | Next.js loader entry used by the adapter. |
+| `@fluentic/style/compiler` | Lower-level compiler APIs for custom integrations. |
+| `@fluentic/style/builder/extract` | Extraction entry used by custom compiler/runtime integrations. |

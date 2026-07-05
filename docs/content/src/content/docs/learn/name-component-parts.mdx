@@ -1,0 +1,56 @@
+---
+title: Name Component Parts
+description: Use slots to name the component parts consumers may style.
+---
+
+For a reusable component, names like `root`, `icon`, and `label` become the
+parts other code can style.
+
+Define those targets with `style.slot()`.
+
+```ts title="button.styles.ts"
+import { style } from '@fluentic/style';
+
+export const buttonStyles = {
+  root: style.slot({
+    alignItems: 'center',
+    border: 0,
+    borderRadius: 8,
+    display: 'inline-flex',
+    gap: 8,
+    padding: '8px 12px',
+  }),
+  icon: style.slot({
+    flex: '0 0 auto',
+  }),
+  label: style.slot({
+    fontWeight: 700,
+  }),
+};
+```
+
+A slot names a component styling target.
+
+The component can change its internal markup later, but consumers can still refer
+to `root`, `icon`, and `label` if those slots remain public.
+
+`style.slot()` has the full styling capacity of a regular style chain. You can
+still use builder methods such as `hover(...)`, `focusVisible(...)`, and
+`media(...)`:
+
+```ts
+const interactiveRoot = style.slot({
+  cursor: 'pointer',
+}).hover({
+  opacity: 0.86,
+}).media('(max-width: 700px)', {
+  width: '100%',
+});
+```
+
+The difference is that a slot can also be targeted to provide styles from
+outside the component, while `style()` remains for local styles and cannot be
+targeted.
+
+Continue to [Style Component Parts From Outside](/docs/learn/style-component-parts-from-outside/)
+to let outside code target public slots with scopes.

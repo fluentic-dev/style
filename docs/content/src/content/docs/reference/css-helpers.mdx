@@ -11,8 +11,8 @@ when the CSS feature creates a name first, then uses that name in a declaration:
 `@keyframes`, `@font-face`, `@property`, `@counter-style`,
 `@font-palette-values`, and `@position-try`.
 
-For related production behavior, see
-[Static Extraction](../beyond-the-basics/static-extraction).
+For guide-level examples, see
+[Using CSS At-Rules](../beyond-the-basics/using-css-at-rules).
 
 ```ts
 import { style } from '@fluentic/style';
@@ -43,6 +43,16 @@ const card = style({
 
 Each create helper returns an at-rule value reference. Use the reference directly
 where CSS expects the generated name.
+
+Each helper also has its own reference page:
+
+- [createKeyframes](create-keyframes)
+- [createFontFace](create-font-face)
+- [fontSrc](font-src)
+- [createFontPaletteValues](create-font-palette-values)
+- [createCounterStyle](create-counter-style)
+- [createProperty](create-property)
+- [createPositionTry](create-position-try)
 
 ## createKeyframes
 

@@ -1,0 +1,22 @@
+---
+title: createCounterStyle
+description: Create a named @counter-style reference for listStyleType.
+---
+
+Import from `@fluentic/style/css`:
+
+```ts
+import { createCounterStyle } from '@fluentic/style/css';
+```
+
+```ts
+const marker = createCounterStyle({
+  system: 'cyclic',
+  symbols: '"◆" "◇"',
+  suffix: '" "',
+});
+
+const list = style({
+  listStyleType: marker,
+});
+```

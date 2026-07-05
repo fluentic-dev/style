@@ -1,31 +1,35 @@
 ---
 title: Tradeoffs
-description: Understand the tradeoffs Fluentic makes for React styling.
+description: The costs Fluentic accepts to keep React styling component-aware, extractable, and traceable.
 ---
 
-Every styling library is a set of choices.
+Fluentic chooses more structure than plain class names.
 
-Those choices feel helpful in some projects and limiting in others.
+That structure buys component-aware styling, typed composition, static
+extraction, and debugging identity.
 
-There is not one correct way to style React applications.
+It also has costs:
 
-If you want CSS syntax as the main thing developers write, Fluentic may feel
-indirect.
+| Tradeoff | Cost |
+| --- | --- |
+| Slots are contracts | Component authors must avoid exposing implementation details. |
+| Scopes are a separate concept | Consumers learn the difference between root styles and component themes. |
+| Runtime remains | React-known choices cannot all move to build time. |
+| Compiler integration matters | Production extraction requires bundler setup. |
+| Custom vocabulary is powerful | Bad custom fields can hide ordinary CSS behind local jargon. |
+| Debug metadata has modes | Teams choose whether spread/merge traces point to style sites or value sites. |
 
-If you want external code to reach every DOM node, slots may feel strict.
+The design goal is not to remove every decision.
 
-If you want themes to own implementation, isolated scopes may feel constrained.
+It is to make the important decisions visible:
 
-Those tradeoffs come with the API.
+```txt
+what is local
+what is public
+what can be themed
+what resolves at runtime
+what can be extracted
+what can be traced
+```
 
-This direction leans toward:
-
-- public styling contracts;
-- component ownership;
-- traceability;
-- predictable composition;
-- AI-generated code that humans can still understand.
-
-Those preferences are useful in some projects and unnecessary in others. The
-question is whether they match the kind of styling work your team expects to
-revisit.
+That is the architecture Fluentic is built around.

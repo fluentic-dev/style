@@ -1,0 +1,47 @@
+---
+title: Start From The Problem
+description: Start with the engineering constraints that shape Fluentic's API and implementation.
+---
+
+The first style is not the hard part.
+
+The hard part appears after a component has shipped and gathered context:
+
+- local styles;
+- parent-provided root overrides;
+- variants and states;
+- component-specific themes;
+- app-wide value themes;
+- generated CSS;
+- production extraction;
+- debugging needs.
+
+A styling system for React has to keep simple element styling simple, while
+also preserving component ownership once styles cross a component boundary.
+
+The constraints are:
+
+```txt
+local styles should stay cheap
+component implementation should stay private
+public styling surfaces should be explicit
+runtime composition should handle React-known choices
+static extraction should handle build-known rules
+debug output should lead back to authored source
+```
+
+Fluentic's API is the result of those constraints:
+
+```txt
+style()       -> one element
+css prop      -> attach to a rendered element
+chains        -> local states and conditions
+style.slot()  -> public component part identity
+style.scope() -> outside overrides for slots
+combineStyle  -> component-boundary resolution
+tokens/values -> themeable value identity
+createTheme   -> subtree value overrides
+```
+
+The rest of Design walks through how those pieces emerge and how the runtime,
+compiler, and debugger make the model work.

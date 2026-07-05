@@ -1,0 +1,86 @@
+---
+title: Runtime And Dev
+description: Runtime configuration and development utility APIs.
+---
+
+## configureStyleRuntime
+
+Import from `@fluentic/style/config`:
+
+```ts
+import { configureStyleRuntime } from '@fluentic/style/config';
+```
+
+Use it when runtime-only setup needs to configure CSS output before rendering.
+Most bundler integrations configure this for you.
+
+```ts
+configureStyleRuntime({
+  css: {
+    classNameFormat: '(property)-$hash',
+  },
+});
+```
+
+## configureStyleDev
+
+Import from `@fluentic/style/dev`:
+
+```ts
+import { configureStyleDev } from '@fluentic/style/dev';
+```
+
+Use it in development when you need to enable dev behavior manually.
+
+```ts
+configureStyleDev({
+  sourcemapMode: 'style',
+  elementClassName: true,
+  utils: { name: 'StyleDevUtils' },
+});
+```
+
+## enableStyleDevUtils
+
+Import from `@fluentic/style/dev`:
+
+```ts
+import { enableStyleDevUtils } from '@fluentic/style/dev';
+```
+
+It installs the browser console helper, usually as `StyleDevUtils`:
+
+```ts
+enableStyleDevUtils();
+
+StyleDevUtils.info();
+StyleDevUtils.setSourcemapMode.toStyle();
+StyleDevUtils.setElementMarker.toOn();
+```
+
+## StyleDev
+
+Import from `@fluentic/style/dev/rsc`:
+
+```tsx
+import { StyleDev } from '@fluentic/style/dev/rsc';
+```
+
+Use it near the root of a Next.js App Router or RSC app during development:
+
+```tsx
+export default function RootLayout(props: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {props.children}
+        {process.env.NODE_ENV === 'development'
+          ? <StyleDev enableStyleDevUtils />
+          : null}
+      </body>
+    </html>
+  );
+}
+```
+
+For the workflow guide, see [DevTools And Sourcemaps](../beyond-the-basics/devtools-and-sourcemaps).

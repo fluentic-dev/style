@@ -3,12 +3,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --hostname 127.0.0.1 --port 6789",
+    "dev": "next dev --hostname 0.0.0.0 --port 6789",
     "build": "next build --webpack",
     "cf:build": "DOCS_SITE=https://fluenticstack.com DOCS_BASE=/style next build --webpack",
     "cf:deploy": "npx wrangler@latest deploy",
     "cf": "pnpm run cf:build && pnpm run cf:deploy",
-    "preview": "next dev --hostname 127.0.0.1 --port 6789",
+    "preview": "next dev --hostname 0.0.0.0 --port 6789",
     "source:gen": "fumadocs-mdx",
     "typecheck": "pnpm run source:gen && tsc -p tsconfig.json --noEmit"
   },

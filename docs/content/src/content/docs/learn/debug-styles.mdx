@@ -1,0 +1,34 @@
+---
+title: Debug Styles
+description: Trace generated CSS back to the style, slot, scope, token, or JSX source.
+---
+
+Generated CSS is what the browser needs.
+
+Developers usually need the authored decision.
+
+When you inspect a rule, the useful path is:
+
+```txt
+DOM element
+JSX element
+CSS property
+style property
+slot, scope, or token source
+original TypeScript value
+```
+
+Fluentic keeps source information on the values you author:
+
+- `style()` identifies one element style;
+- `style.slot()` identifies a component part;
+- `style.scope()` identifies a grouped override;
+- tokens and values identify shared value sources.
+
+That gives generated CSS a path back to the source file and styling concept
+that produced it.
+
+The deeper tooling details live in [Tracing Styles In Real Apps](../beyond-the-basics/tracing-styles-in-real-apps).
+
+Continue to [Ship Fluentic](/docs/learn/ship-fluentic/) to connect the same
+source model to production output.

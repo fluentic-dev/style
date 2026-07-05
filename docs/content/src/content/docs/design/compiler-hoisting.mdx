@@ -1,0 +1,30 @@
+---
+title: Compiler Hoisting
+description: Why supported inline style chains can still become stable extracted output.
+---
+
+Inline styles are ergonomic:
+
+```tsx
+<button css={style({ padding: 8 }).hover({ opacity: 0.86 })} />
+```
+
+Without help, that creates new style values during render.
+
+With extraction, the compiler can hoist supported static inline chains into
+stable generated values.
+
+That keeps the authoring style convenient while preserving:
+
+- extracted CSS output;
+- stable runtime cache paths;
+- source metadata for debugging.
+
+Hoisting is not a license for arbitrary dynamic style construction.
+
+Values that depend on props, state, data, or unsupported control flow stay on
+the runtime path.
+
+Use module-scope styles for reusable component contracts and public APIs. Inline
+styles are best for local one-off element styling that the compiler can prove is
+static.
