@@ -12,12 +12,14 @@ type PageProps = {
 };
 
 const docsOrder = [
-  ['why-fluentic', 'why-fluentic'],
-  ['why-fluentic', 'fluentic-approach'],
-  ['why-fluentic', 'debug-without-getting-lost'],
-  ['why-fluentic', 'extend-without-friction'],
-  ['why-fluentic', 'override-without-guessing'],
-  ['why-fluentic', 'extraction-without-lock-in'],
+  ['why-fluentic'],
+  ['fluentic-approach', 'from-elements-to-components'],
+  ['fluentic-approach', 'debug-without-getting-lost'],
+  ['fluentic-approach', 'extend-without-friction'],
+  ['fluentic-approach', 'override-without-guessing'],
+  ['fluentic-approach', 'theme-without-retrofitting'],
+  ['fluentic-approach', 'extraction-without-lock-in'],
+  ['fluentic-approach', 'beyond-the-sketch'],
   ['learn', 'installation'],
   ['learn', 'styling-one-element'],
   ['learn', 'hover-focus-and-media'],
@@ -135,7 +137,7 @@ function getPager(slug: string[]) {
 
 export default async function Page(props: PageProps) {
   const params = await props.params;
-  const slug = params.slug?.length ? params.slug : ['why-fluentic', 'fluentic-approach'];
+  const slug = params.slug?.length ? params.slug : ['why-fluentic'];
   const page = source.getPage(slug);
 
   if (!page) {
@@ -144,11 +146,12 @@ export default async function Page(props: PageProps) {
 
   const MDX = page.data.body;
   const pager = getPager(slug);
+  const visibleDescription = page.data.hideDescription ? undefined : page.data.description;
 
   return (
     <DocsPage breadcrumb={{ enabled: false }} toc={page.data.toc} full={page.slugs[0] === 'playground'}>
       <DocsTitle>{page.data.title}</DocsTitle>
-      {page.data.description ? <DocsDescription>{renderInlineCode(page.data.description)}</DocsDescription> : null}
+      {visibleDescription ? <DocsDescription>{renderInlineCode(visibleDescription)}</DocsDescription> : null}
       <DocsBody>
         <MDX components={getMDXComponents()} />
       </DocsBody>
@@ -189,7 +192,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata(props: PageProps) {
   const params = await props.params;
-  const slug = params.slug?.length ? params.slug : ['why-fluentic', 'fluentic-approach'];
+  const slug = params.slug?.length ? params.slug : ['why-fluentic'];
   const page = source.getPage(slug);
 
   if (!page) {

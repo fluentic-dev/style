@@ -1,0 +1,338 @@
+---
+title: Beyond the Sketch
+description: See what Fluentic already implements across runtime styling, extraction, debugging, hoisting, integrations, and custom design systems.
+---
+
+The approach pages describe a styling model.
+
+This page is about where that model has already landed in Fluentic: the parts
+that are implemented today and why they matter when an app stops being a small
+example.
+
+The useful thing is not only that these features exist. It is that they do not
+ask you to switch mental models as the problem changes.
+
+```txt
+style value -> chain -> slot -> scope -> token -> combineStyle -> css prop
+```
+
+That same shape shows up in runtime styling, debugging, custom design systems,
+extracted CSS, inline hoisting, integrations, and component themes.
+
+## Runtime
+
+Fluentic has a runtime path for the parts React still decides at render time.
+
+That matters because real components do not become fully static just because a
+project wants extracted CSS. Props still choose variants. Themes still arrive
+from app composition. Component libraries still receive overrides from callers.
+Some values only exist when React renders the tree.
+
+```txt
+static style value   -> compiler can emit CSS
+dynamic style input  -> runtime can resolve it
+component theme      -> runtime can attach it through slots
+```
+
+The runtime path lets those pieces keep working without turning dynamic styles
+into a second styling system. A component can use the same `style(...)`,
+`style.slot(...)`, `style.scope(...)`, and `combineStyle(...)` model whether a
+part is extracted or resolved later.
+
+Fluentic's runtime is fast. In our benchmark, it can catch up with some
+of the fastest options out there.
+
+In the React app benchmark, we render a dashboard/table-shaped UI with repeated
+rows, style updates, and remounts. At 1 row, most of the measurement is fixed
+setup cost rather than repeated style consumption, and Fluentic reusable
+components with scoped style composition are about `1.01x` the matching StyleX
+component lane. At 10 rows, the same Fluentic component pattern is about
+`1.00x` StyleX. By 1500 rows, direct `css` prop styling is about `0.97x` the
+matching StyleX DOM lane, and the reusable component pattern is about `0.97x`
+the matching StyleX component lane.
+
+Those results match the runtime design. The runtime cache works best in the
+shape real apps commonly have: many repeated instances on the same screen
+consuming the same style path. Once a style, scope, or component theme
+combination is resolved, repeated instances can reuse that result instead of
+repeating the full resolution work.
+
+The SSR render benchmark shows the same direction for repeated component
+shapes: Fluentic direct style usage with the `css` prop is `0.97x` versus the
+plain React baseline, while StyleX is `1.04x`. In the component composition
+benchmark, Fluentic scoped composition is `0.89x`, and StyleX is `0.97x`.
+
+For current app-shaped and server-rendered measurements, see
+[React App](../../benchmark/react-app) and [SSR Style](../../benchmark/ssr-style).
+
+_Benchmarks usually reflect the shape of the code they measure. Before using
+them as a broad claim, read the benchmark source and decide whether that shape
+matches the app or comparison you care about._
+
+## Bundle Size
+
+Keeping a runtime path is only useful if it does not make the extracted path
+feel heavy.
+
+Despite the feature set and runtime composition model, the production runtime
+that runs with extracted CSS stays small: about 5 KB min+gzip.
+
+That is the balance Fluentic is aiming for:
+
+```txt
+static rules -> delivered as CSS
+dynamic composition -> kept available through a small runtime
+```
+
+The number is not hidden in this page because bundle reports should be
+regenerated and read with context. See [Bundle Size](../../benchmark/bundle-size)
+for the current report and command.
+
+## Debugging
+
+Fluentic is designed from the ground up so debugging and sourcemaps can stay
+precise.
+
+In development, a generated CSS rule can point back to the exact style property
+where it was placed in a style chain call. For example, a generated hover color
+rule can point back to the `color` property inside `.hover({ color: '#2563eb' })`.
+
+A special case is reusable style fragments.
+
+Fluentic supports TypeScript-like composition where a reusable value from
+`style.raw(...)` or `style.plain(...)` can be spread into a later style call:
+`style({ ...reused })`.
+
+It also supports `.merge(...)` when a style chain needs to merge another whole
+style chain.
+
+When a codebase uses these patterns, sourcemap debugging can switch between
+two trace modes:
+
+- `toStyle()` points to the leaf style chain where the spread operator `...`
+  or `.merge(...)` was used.
+- `toValue()` points to the original raw/plain value or merged style where the
+  property was defined.
+
+That works for the style-chain forms Fluentic supports: `style(...)`,
+`style.slot(...)`, slot overrides, and scope chains.
+
+During development, you can toggle the mode from the DevTools console:
+
+```ts
+StyleDevUtils.setSourcemapMode.toStyle();
+StyleDevUtils.setSourcemapMode.toValue();
+```
+
+Another common debugging need starts from the rendered element itself.
+
+You inspect a DOM node in DevTools and want to know which JSX element in the
+code rendered that HTML element.
+
+In development, Fluentic can add a unique marker class to elements that receive
+a `css` prop:
+
+```tsx
+return <article css={cardStyles.root}>...</article>;
+```
+
+Inspect the `<article>` in DevTools. You should see the normal Fluentic classes
+plus a development marker class. That marker class gets a tiny development-only
+CSS rule:
+
+```css
+.<marker-class>{--fluentic-element-marker:0}
+```
+
+The sourcemap for that marker rule maps back to the JSX element that received
+`css={cardStyles.root}`. The exact marker class format can depend on the dev
+configuration, but the job is the same: DevTools can lead from the DOM element
+on the page back to the JSX line where its `css` prop was attached.
+
+See [Debug Without Getting Lost](../debug-without-getting-lost) for the larger
+debugging story, and [Devtools and Sourcemaps](../../beyond-the-basics/devtools-and-sourcemaps)
+for the lower-level setup.
+
+## Custom Design Systems
+
+Fluentic is not limited to its default CSS object shape, because real projects
+often grow their own styling language.
+
+A design system may want words like `row`, `gapX`, `tone`, `selected(...)`, or
+`below(...)`. Those words can be useful, but they should not be forced on every
+team and they should not become a separate styling system.
+
+Fluentic lets projects choose that design-system language themselves.
+
+Custom fields are handled by transforms: project-specific style object fields
+are turned into regular CSS properties.
+
+Custom chain methods are handled by selectors, with argument parsing and
+validation where a method needs it.
+
+```tsx
+type LayoutStyle = CSSProperties & {
+  row?: boolean;
+  gapX?: CSSProperties['columnGap'];
+};
+
+const layoutTransform = styleTransform<LayoutStyle>({
+  transform(style) {
+    const { row, gapX, ...css } = style;
+
+    if (row) {
+      css.display = 'flex';
+      css.flexDirection = 'row';
+    }
+
+    if (gapX !== undefined) css.columnGap = gapX;
+
+    return css;
+  },
+});
+
+const ui = createStyleFn({
+  style: type<LayoutStyle>,
+  transform: layoutTransform,
+  selectors: {
+    selected: selector('[aria-selected="true"]'),
+    below: selector('@media (max-width: $$)', 'media'),
+  },
+});
+```
+
+Then that custom design-system language works inside the same style chain:
+
+```tsx
+const tab = ui({
+  row: true,
+  gapX: 8,
+}).selected({
+  backgroundColor: '#eef2ff',
+}).below('700px', {
+  gapX: 4,
+});
+```
+
+The important part is that custom design-system code still uses Fluentic's
+model. A custom style function works with slots, scopes, runtime resolution,
+and static extraction the same way the default `style` API does.
+
+Projects can also create and use multiple style functions when they need different
+vocabularies for different layers of an app. That can be as small as adding
+layout utilities, or as large as a design system with its own fields, selectors,
+and validation rules.
+
+See [Extend Without Friction](../extend-without-friction),
+[Custom Style Builders](../../beyond-the-basics/custom-style-builders),
+[Custom Chain Methods](../../beyond-the-basics/custom-chain-methods),
+[Custom Style Fields](../../beyond-the-basics/custom-style-fields),
+[Selectors](../../reference/selectors), and [Transforms](../../reference/transforms).
+
+## CSS Extraction
+
+Static extraction works without making authors write a different styling
+language for production.
+
+The compiler understands normal-looking TypeScript style composition. A style
+can import reusable values from another file, spread them with `...base`, merge
+another style chain with `.merge(reusableStyle)`, and use conditional or
+dynamic expressions as values. The compiler extracts the static CSS and prepares
+dynamic values that are not known at build time so the runtime can resolve them
+later.
+
+```tsx
+const button = style({
+  ...buttonBase,
+  borderRadius: 8,
+}).merge(reusableStyle).hover({
+  backgroundColor: '#eef2ff',
+});
+```
+
+That means a team can add extraction as a delivery step instead of rewriting
+component styles for production. The style code stays TypeScript-like.
+The compiler moves the static pieces to CSS. The runtime resolves dynamic
+values that are only known while React renders, including conditions, incoming
+themes, props, and app state.
+
+See [Extraction Without Lock-In](../extraction-without-lock-in),
+[Static Extraction](../../beyond-the-basics/static-extraction), and
+[Compiler](../../benchmark/compiler).
+
+## Hoisting Inline Styles
+
+Fluentic supports inline style chains too. At build time, the compiler can
+hoist inline styles and extract their CSS. If part of an inline style chain
+depends on a dynamic value, such as a component prop, the style can still be
+hoisted and extracted as usual while the runtime resolves the dynamic value.
+
+```tsx
+function SaveButton() {
+  return (
+    <button
+      css={style({
+        borderRadius: 8,
+        padding: '8px 12px',
+      }).hover({
+        backgroundColor: '#f3f4f6',
+      })}
+    >
+      Save
+    </button>
+  );
+}
+```
+
+```tsx
+function SaveButton(props: { active?: boolean }) {
+  return (
+    <button
+      css={style({
+        borderRadius: 8,
+        paddingBlock: props.active ? 10 : 5,
+        paddingInline: 12,
+      })}
+    >
+      Save
+    </button>
+  );
+}
+```
+
+That gives people who like colocated styling a real path. Inline styles can be
+convenient when the style belongs to one small element and reading it next to
+the JSX makes the component clearer.
+
+Inline styles are useful for small local cases. Once a style is shared,
+themeable, or reused across component parts, it usually deserves a name outside
+render. Named styles are easier to organize, review, trace in DevTools, and
+reuse from variants or themes.
+
+See [Hoisting Inline Style Chains](../../design/hoisting-inline-style-chains).
+
+## Integrations
+
+Fluentic provides plugins for
+[Next.js App Router](../../integrations/nextjs), [Vite](../../integrations/vite),
+[Webpack](../../integrations/webpack), [Rspack](../../integrations/rspack),
+[Farm](../../integrations/farm), and [Parcel](../../integrations/parcel).
+
+That matters because the styling model should not require every app to have
+the same build system. Each integration is mostly a thin adapter around
+Fluentic's own compiler. The compiler understands Fluentic style calls,
+collects extracted CSS, preserves runtime paths for dynamic values, and emits
+development-only debug metadata for sourcemaps and element markers.
+
+Keeping that work inside Fluentic's compiler lets Fluentic control the style
+pipeline instead of relying too much on special hooks in each bundler.
+
+See [Integrations](../../integrations/overview) for the overview, then choose
+the setup page that matches your framework or bundler.
+
+> That is the part beyond the sketch: these are not separate features bolted
+> onto the same package. Runtime styling, extraction, debugging, theming,
+> component scopes, hoisting, integrations, and custom design systems all
+> connect back to the same style model. The API stays natural to write in React
+> code, and the implementation is built to keep that model reliable as the UI
+> gets larger and harder to change.

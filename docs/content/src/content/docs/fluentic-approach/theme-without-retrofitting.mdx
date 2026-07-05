@@ -1,0 +1,298 @@
+---
+title: Theme Without Retrofitting
+description: Prepare app and component styling for dark mode, brands, density, and product themes without turning every value into a token.
+---
+
+Theming usually sounds like something an app can add later.
+
+At the beginning, there is one brand. One visual mode. One density. One set of
+screens. The app needs components, not a full theme architecture.
+
+Then the product grows.
+
+```txt
+dark mode
+brand-specific surfaces
+denser admin screens
+marketing pages with a different tone
+product areas that need local variation
+```
+
+That is when a simple styling model can start to feel expensive. Not because
+dark mode is difficult by itself, but because the codebase was not prepared for
+styles to change at the app level.
+
+Fluentic tries to keep that preparation small.
+
+The goal is not to make every team design a token system before they ship a
+button. The goal is to let ordinary styles remain ordinary, while still giving
+the app a place to change shared values later.
+
+```txt
+app values       -> colors, spacing, fonts, and other shared decisions
+component tokens -> named values a component intentionally exposes
+scopes           -> the bridge between app values and component parts
+```
+
+Those are separate ideas. Keeping them separate is what makes the model easier
+to grow.
+
+## App Values Can Stay Readable
+
+At the app level, the literal value is often useful.
+
+When a screen says `#ffffff`, `16`, or `0 1px 2px rgba(...)`, the person
+editing that screen can see the thing being used. Naming every value too early
+can turn simple styling into a lookup exercise.
+
+Fluentic uses `createValues(...)` for this case. The value stays readable in
+the style, but Fluentic can still give it identity for theming.
+
+```tsx
+import { createTheme, createValues, style } from '@fluentic/style';
+
+const color = createValues([
+  '#ffffff',
+  '#111827',
+  '#d8e3df',
+]);
+
+const page = style({
+  backgroundColor: color('#ffffff'),
+  color: color('#111827'),
+});
+```
+
+There is no extra name there. The app code still reads like app code. It does
+not need to invent a semantic name for every shade before there is a reason.
+
+Later, a dark theme can change those app values:
+
+```tsx
+const darkTheme = createTheme([
+  // color(originalValue, themedValue)
+  color('#ffffff', '#111827'),
+  color('#111827', '#ffffff'),
+  color('#d8e3df', '#374151'),
+]);
+
+function App() {
+  return (
+    <main css={[page, darkTheme]}>
+      <Dashboard />
+    </main>
+  );
+}
+```
+
+The app theme changes shared values. The page style still says what it means.
+
+When the literal value alone is not specific enough, `createValues(...)` can
+also accept optional labels.
+
+That comes up more often than it first seems. A light theme may use `#ffffff`
+for a page surface and also for text on a saturated accent button. In dark
+mode, those should not necessarily become the same value.
+
+```tsx
+const color = createValues([
+  '#ffffff | Surface',
+  '#ffffff | AccentText',
+  '#2563eb | Accent',
+]);
+
+const page = style({
+  backgroundColor: color('#ffffff | Surface'),
+});
+
+const primaryButton = style({
+  backgroundColor: color('#2563eb | Accent'),
+  color: color('#ffffff | AccentText'),
+});
+```
+
+Now the dark theme can change each `#ffffff` according to the job it is doing:
+
+```tsx
+const darkTheme = createTheme([
+  color('#ffffff | Surface', '#111827'),
+  color('#ffffff | AccentText', '#0f172a'),
+  color('#2563eb | Accent', '#60a5fa'),
+]);
+```
+
+The label is not a design-token requirement. It is a way to split identity when
+the literal value alone is too broad.
+
+## Component Tokens Name What Can Change
+
+Reusable components have a different problem.
+
+A component should not ask the outside world to know its DOM structure. If a
+card has a root, title, icon, footer, and action area, the component owns that
+markup. A theme should not have to reach through selectors to find it.
+
+When a value is meant to be overridden from outside the component, the name
+becomes part of the public styling surface.
+
+```tsx
+import { createTokens, style } from '@fluentic/style';
+
+const card = createTokens({
+  surface: '#ffffff',
+  text: '#111827',
+  border: '#d8e3df',
+});
+
+const cardStyles = {
+  root: style.slot({
+    backgroundColor: card.surface,
+    border: '1px solid',
+    borderColor: card.border,
+    color: card.text,
+  }),
+  title: style.slot({
+    color: card.text,
+  }),
+};
+```
+
+Now the component exposes a small theme surface:
+
+```txt
+card.surface
+card.text
+card.border
+```
+
+That surface is not the whole app theme. It is the part this component chooses
+to make stable.
+
+<blockquote>
+  <p>
+    App-level values do not have to use `createValues(...)`. Teams that prefer
+    the traditional token shape can use `createTokens(...)` for app colors,
+    spacing, and other shared values too. `createValues(...)` is there for
+    teams that want literal values to stay visible in everyday styles.
+  </p>
+  <p>
+    Both APIs create themeable tokens under the hood, so they work with
+    `createTheme(...)` in the same way; they are just different ways to define
+    values for different advantages.
+  </p>
+</blockquote>
+
+## Scopes Connect The Two
+
+The useful question is what happens when app-level values need to theme a
+component.
+
+The app may already have values for surface, text, and border. The component
+has tokens for the values it exposes. Fluentic lets a scope connect them:
+
+```tsx
+const dashboardCardTheme = style.scope([
+  card.surface(color('#ffffff')),
+  card.text(color('#111827')),
+  card.border(color('#d8e3df')),
+]);
+
+function Dashboard() {
+  return <Card theme={dashboardCardTheme} />;
+}
+```
+
+Inside `Card`, the component attaches that incoming theme to the slot it owns
+before rendering the final styles:
+
+```tsx
+import {
+  bindScope,
+  combineStyle,
+  type StyleTheme,
+} from '@fluentic/style';
+
+type CardProps = {
+  theme?: StyleTheme;
+};
+
+function Card(props: CardProps) {
+  const css = combineStyle(
+    cardStyles,
+    bindScope(cardStyles.root, props.theme),
+  );
+
+  return (
+    <article css={css.root}>
+      <h2 css={css.title}>Revenue</h2>
+    </article>
+  );
+}
+```
+
+That scope is a component theme. It does not say what dark mode is. It does not
+own the app palette. It only says how this card connects to the app values.
+
+```txt
+app theme decides what Surface, Text, and Border become
+component theme maps those app values into Card's public tokens
+Card decides where its tokens and slots attach to markup
+```
+
+Each layer keeps its own job.
+
+## Local Change Still Stays Local
+
+This matters because theming is rarely only global.
+
+A whole app may switch to dark mode. A dashboard area may need denser spacing.
+A product page may use a different accent. A single card may need a warning
+surface.
+
+Those changes should not all become one giant theme object.
+
+```tsx
+const warningCardTheme = style.scope([
+  card.surface('#fef3c7'),
+  card.text('#78350f'),
+  card.border('#f59e0b'),
+]);
+
+function BillingPanel() {
+  return (
+    <section css={darkTheme}>
+      <Card theme={dashboardCardTheme}>Plan usage</Card>
+      <Card theme={warningCardTheme}>Payment attention needed</Card>
+    </section>
+  );
+}
+```
+
+The dark theme can still provide app-wide values. The warning card can still
+override the component's public tokens. The component still owns its slots.
+
+No layer has to pretend to be the other one.
+
+## Prepared, Not Overbuilt
+
+The important part is the direction of dependency.
+
+Components expose tokens and slots on purpose. App code chooses values and
+themes at the level where the decision belongs. Scopes connect those decisions
+without making callers depend on private DOM structure.
+
+That gives the app room to grow:
+
+```txt
+one mode today      -> themeable values are already identifiable
+dark mode later     -> createTheme(...) can change app values
+brand themes later  -> a subtree can apply its own createTheme(...)
+component variants  -> scopes can target public slots and tokens
+DOM refactors later -> component themes keep targeting the same public names
+```
+
+The theme model is there before the app needs all of it.
+
+But the everyday path can stay small: write the style, use readable values,
+name the values that are meant to change, and connect app values to component
+tokens only where that boundary matters.

@@ -117,7 +117,7 @@
     0 10px 24px rgba(15, 23, 42, 0.04);
   color: var(--docs-heading);
   font-size: 1rem;
-  font-style: italic;
+  font-style: normal;
   font-weight: 560;
   line-height: 1.62;
   margin: 1.1rem 0;
@@ -127,6 +127,11 @@
 .prose blockquote p {
   margin: 0;
   max-width: none;
+}
+
+.prose blockquote p::before,
+.prose blockquote p::after {
+  content: none;
 }
 
 .dark .prose blockquote {

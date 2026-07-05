@@ -209,7 +209,7 @@ const readingCards = [
   [
     'Why Fluentic',
     'Start with the idea: React solved UI composition. What would style composition look like?',
-    '/docs/why-fluentic/fluentic-approach/',
+    '/docs/why-fluentic/',
   ],
   [
     'Learn',
@@ -294,10 +294,10 @@ export default function HomePage() {
             later.
           </p>
           <div className='home-actions'>
-            <Link className='home-primary' href='/docs/why-fluentic/fluentic-approach/'>
+            <Link className='home-primary' href='/docs/fluentic-approach/from-elements-to-components/'>
               See the idea
             </Link>
-            <Link className='home-secondary' href='/docs/learn/styling-reusable-components/'>
+            <Link className='home-secondary' href='https://fluenticstack.com/style/docs/learn/installation/'>
               Build your first component
             </Link>
           </div>

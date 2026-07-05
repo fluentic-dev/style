@@ -1,9 +1,15 @@
 import { defineConfig, defineDocs } from 'fumadocs-mdx/config';
+import { pageSchema } from 'fumadocs-core/source/schema';
 import githubDarkDefault from 'shiki/themes/github-dark-default.mjs';
 import githubLightDefault from 'shiki/themes/github-light-default.mjs';
 
 export const docs = defineDocs({
   dir: '../content/src/content/docs',
+  docs: {
+    schema: pageSchema.extend({
+      hideDescription: pageSchema.shape.full,
+    }),
+  },
 });
 
 const lightCodeTheme = {

@@ -1,0 +1,12 @@
+{
+  "title": "The Fluentic Approach",
+  "pages": [
+    "from-elements-to-components",
+    "debug-without-getting-lost",
+    "extend-without-friction",
+    "override-without-guessing",
+    "theme-without-retrofitting",
+    "extraction-without-lock-in",
+    "beyond-the-sketch"
+  ]
+}

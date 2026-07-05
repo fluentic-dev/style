@@ -1,5 +1,7 @@
 ---
 title: Why Fluentic
+description: A React styling model built around explicit composition, component boundaries, and confidence when styles change.
+hideDescription: true
 ---
 
 > Fluentic is my attempt to make React styling feel explicit, composable, and predictable again.
@@ -88,19 +90,41 @@ We have better layout. Better selectors. Better browser support. Better build to
 
 But for component-heavy React work, I started to miss the React Native mental model a lot.
 
-I rarely see React web components styled like this:
+In React Native, this kind of style composition is completely normal:
 
 ```tsx
-<Component style={[base, primary && primaryStyle, props.style]} />
+<View style={[base, variant, state, props.style]} />
 ```
 
-But in React Native, this is completely normal.
-
 And that normality matters.
+
+Base first. Then the variant. Then the current state. Then the style passed from outside.
 
 It makes styling feel like data. Like values. Like composition.
 
 Not like a string contract with the DOM.
+
+React web already has pieces of this too. Emotion’s `css` prop can feel especially close, and other tools have their own ways to compose styles.
+
+However, the thing I wanted was not just style composition for one element.
+
+React Native does not solve every part of this either. When a component has multiple internal elements, you still need to decide which parts can be styled and how those styles are passed through.
+
+I wanted the same explicit composition to work not only for one root element, but across a whole styleable component: root, icon, label, header, content, footer, or whatever parts the component chooses to expose.
+
+Not just root element composition:
+
+```tsx
+<Component css={[base, variant, props.css]} />
+```
+
+But a component style theme where each public part can be composed explicitly, without the caller reaching into DOM structure or relying on class names as hidden hooks, with something as simple as this:
+
+```tsx
+<Component theme={[baseTheme, variantTheme, props.theme]} />
+```
+
+That is where Fluentic started to feel different.
 
 ## React Web Has Something React Native Misses
 
@@ -492,6 +516,102 @@ Because styling bugs are often not about one declaration. They are about the pat
 
 So Fluentic is not only about producing CSS. It is also about making generated styles easier to trace back to the React code that created them.
 
+### 8. App Themes Should Not Be an Afterthought
+
+There are two things many apps do not need on day one, but often wish they had prepared for from the beginning: i18n and theming.
+
+At first, it is easy to assume the app only needs one language, one brand, one density, and one visual mode.
+
+Then later the app needs dark mode. Or a different brand theme. Or a denser admin layout. Or product-specific styling.
+
+That is when theming becomes painful.
+
+Not because dark mode is hard by itself, but because the codebase was not prepared for styles to change at the app level.
+
+So Fluentic has to support theming without forcing every value to become a carefully named token from day one.
+
+Named tokens are useful when the name matters, which is usually when a component exposes values that other code is expected to override intentionally:
+
+```tsx
+const card = createTokens({
+  surface: '#ffffff',
+  text: '#111827',
+  border: '#d8e3df',
+});
+
+const cardStyles = {
+  root: style.slot({
+    backgroundColor: card.surface,
+    color: card.text,
+    border: '1px solid',
+    borderColor: card.border,
+  }),
+};
+```
+
+Now the component has a small theme surface.
+
+Other code does not need to know its DOM structure. It only needs to know the values the component chose to expose.
+
+But at the app level, naming every color or spacing value can become more effort than help.
+
+Sometimes the value itself is the clearest thing to read, search, and maintain.
+
+That is why Fluentic also has `createValues(...)`:
+
+```tsx
+const color = createValues([
+  '#ffffff | Surface',
+  '#111827 | Text',
+  '#d8e3df | Border',
+]);
+```
+
+The app can use those values directly:
+
+```tsx
+const page = style({
+  backgroundColor: color('#ffffff | Surface'),
+  color: color('#111827 | Text'),
+});
+```
+
+And `createTheme(...)` can provide different values at the app or subtree level:
+
+```tsx
+const darkTheme = createTheme([
+  color('#ffffff | Surface', '#111827'),
+  color('#111827 | Text', '#ffffff'),
+  color('#d8e3df | Border', '#374151'),
+]);
+
+function App() {
+  return (
+    <main css={[page, darkTheme]}>
+      <Dashboard />
+    </main>
+  );
+}
+```
+
+At the component level, those app values can be mapped into the component’s exposed tokens through `style.scope(...)` and passed to the component:
+
+```tsx
+const dashboardCardTheme = style.scope([
+  card.surface(color('#ffffff | Surface')),
+  card.text(color('#111827 | Text')),
+  card.border(color('#d8e3df | Border')),
+]);
+
+<Card theme={dashboardCardTheme} />
+```
+
+The app theme still controls what those app values become. The component theme only says how this component should connect to those values.
+
+The goal is not to force every app to define many themes from day one.
+
+The goal is to make themeability available from the beginning, so dark mode and app-level styling do not become a retrofit later.
+
 ## What Fluentic Is Trying To Be
 
 Fluentic is my attempt to bring a React Native-inspired styling mental model to React web apps.
@@ -516,16 +636,16 @@ const styles = {
     height: 36,
     paddingInline: 12,
     borderRadius: 6,
-    border: '1px solid var(--color-border)',
-    backgroundColor: 'var(--color-surface)',
+    border: '1px solid #d1d5db',
+    backgroundColor: '#ffffff',
   }).hover({
-    backgroundColor: 'var(--color-surface-hover)',
+    backgroundColor: '#f3f4f6',
   }),
 
   primary: style({
-    borderColor: 'var(--color-accent)',
-    backgroundColor: 'var(--color-accent)',
-    color: 'white',
+    borderColor: '#2563eb',
+    backgroundColor: '#2563eb',
+    color: '#ffffff',
   }),
 
   disabled: style({
@@ -560,29 +680,44 @@ function ToolbarButton({
 }
 ```
 
-For reusable components, Fluentic can go further with slots, scopes, and `combineStyle(...)`.
+For reusable components, Fluentic can go further with tokens, slots, scopes, and `combineStyle(...)`.
 
 ```tsx
 import {
-  bindScope,
-  combineStyle,
   style,
+  createTokens,
+  combineStyle,
+  bindScope,
   type StyleProp,
   type StyleTheme,
 } from '@fluentic/style';
+
+const button = createTokens({
+  color: {
+    surface: '#2563eb',
+    surfaceHover: '#1d4ed8',
+    text: '#ffffff',
+    dangerSurface: '#dc2626',
+  },
+  space: {
+    gap: 8,
+    paddingInline: 12,
+  },
+});
 
 const buttonStyles = {
   root: style.slot({
     display: 'inline-flex',
     alignItems: 'center',
-    gap: 8,
+    gap: button.space.gap,
     border: 0,
     borderRadius: 8,
-    padding: '8px 12px',
-    backgroundColor: '#2563eb',
-    color: 'white',
+    paddingBlock: 8,
+    paddingInline: button.space.paddingInline,
+    backgroundColor: button.color.surface,
+    color: button.color.text,
   }).hover({
-    opacity: 0.9,
+    backgroundColor: button.color.surfaceHover,
   }),
 
   icon: style.slot({
@@ -619,13 +754,11 @@ function BaseButton(props: ButtonProps) {
 }
 ```
 
-Then variants can target public slots instead of reaching through DOM structure:
+Then variants can target public slots and component tokens instead of reaching through DOM structure:
 
 ```tsx
 const dangerButton = style.scope([
-  buttonStyles.root({
-    backgroundColor: '#dc2626',
-  }),
+  button.color.surface(button.color.dangerSurface),
 
   buttonStyles.label({
     fontWeight: 700,
@@ -635,7 +768,8 @@ const dangerButton = style.scope([
 const compactButton = style.scope([
   buttonStyles.root({
     gap: 6,
-    padding: '6px 10px',
+    paddingBlock: 6,
+    paddingInline: 10,
   }),
 
   buttonStyles.label({
@@ -665,6 +799,50 @@ function Button({
 }
 ```
 
+At the app level, values can stay readable while still being themeable.
+
+```tsx
+import { createTheme, createValues, style } from '@fluentic/style';
+
+const color = createValues([
+  '#2563eb | Accent',
+  '#1d4ed8 | AccentHover',
+  '#ffffff | AccentText',
+]);
+
+const darkTheme = createTheme([
+  color('#2563eb | Accent', '#60a5fa'),
+  color('#1d4ed8 | AccentHover', '#93c5fd'),
+  color('#ffffff | AccentText', '#0f172a'),
+]);
+```
+
+Then the app can map those values into the component’s exposed tokens through a component theme:
+
+```tsx
+const appButtonTheme = style.scope([
+  button.color.surface(color('#2563eb | Accent')),
+  button.color.surfaceHover(color('#1d4ed8 | AccentHover')),
+  button.color.text(color('#ffffff | AccentText')),
+]);
+
+function App() {
+  return (
+    <main css={darkTheme}>
+      <Button theme={appButtonTheme}>
+        Save
+      </Button>
+    </main>
+  );
+}
+```
+
+The app theme decides what the app values become.
+
+The component theme decides how this button connects to those values.
+
+The component itself stays explicit about the parts and tokens it exposes.
+
 The important part is not only the exact syntax.
 
 The important part is the styling approach:
@@ -674,6 +852,7 @@ The important part is the styling approach:
 - conditional styles are visible
 - component parts can be named with slots
 - variants can target slots without depending on DOM structure
+- app and component themes can be prepared early without becoming a separate styling system
 - selectors are available, but they are not the whole styling model
 - CSS is extracted for production builds
 - debugging should lead back to the React code, not stop at a generated class name
@@ -685,6 +864,8 @@ React Native simplicity.
 CSS power.
 
 Modern React output.
+
+A styling system where the everyday path stays simple, explicit when the component grows and prepared for the app-level concerns that usually arrive later.
 
 ## Why Not Just Use Existing Tools?
 
