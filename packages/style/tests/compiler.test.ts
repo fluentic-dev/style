@@ -1597,6 +1597,47 @@ const styles = {
   includes(css, ', blue)');
 });
 
+test('compiler parses createValues pipe and semicolon labels', () => {
+  const compiler = createCompiler({
+    layer: false,
+  });
+  const result = compiler.transform(
+    `
+import { createValues, style } from '@fluentic/style';
+
+const color = createValues([
+  '#ffffff | Surface',
+  '#111827; Text',
+]);
+const space = createValues(Number, [
+  '8 | sm',
+  '12; md',
+]);
+
+export const box = style({
+  backgroundColor: color('#ffffff | Surface'),
+  color: color('#111827; Text'),
+  padding: space('8 | sm'),
+  margin: space('12; md'),
+});
+`,
+    '/tmp/compiler-create-values-labels.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(css, ', #ffffff)');
+  includes(css, ', #111827)');
+  includes(css, ', 8)');
+  includes(css, ', 12)');
+  notIncludes(css, '| Surface');
+  notIncludes(css, '; Text');
+  notIncludes(css, '| sm');
+  notIncludes(css, '; md');
+});
+
 test('compiler extracts traceable plain constants as literal css values', () => {
   const compiler = createCompiler({
     layer: false,

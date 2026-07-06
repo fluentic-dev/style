@@ -72,8 +72,8 @@ const darkTheme = createTheme(
 );
 ```
 
-Labels after `|` are optional. Fluentic parses the CSS value before the label,
-but tracks the full string as the value identity.
+Labels after `|` or `;` are optional. Fluentic parses the CSS value before the
+label separator, but tracks the full string as the value identity.
 
 ## Numeric Labels
 
@@ -88,4 +88,4 @@ labeledSpace('12 | md', 16);
 ```
 
 This keeps a readable label in source while the actual style value is the
-number before `|`.
+number before the label separator.

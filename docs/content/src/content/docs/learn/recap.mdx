@@ -1,37 +1,478 @@
 ---
 title: Recap
-description: A short decision map for the Learn path.
+description: A practical review of the Fluentic styling approach.
 ---
 
-Use the smallest Fluentic concept that matches the problem.
+This recap walks back through the Fluentic styling approach from the smallest
+building block to production extraction. Each step shows the API to reach for,
+the problem it solves, and a small reminder of the shape to write.
+
+## 1. Style One Element
+
+Use `style(...)` when one element needs CSS.
+
+```ts
+const card = style({
+  padding: 16,
+  backgroundColor: '#ffffff',
+  borderRadius: 8,
+});
+```
+
+```tsx
+<article css={card}>...</article>
+```
+
+## 2. Compose Element Styles
+
+Use `css` arrays when one element needs more than one style, whether they are
+local, conditional, or passed in.
+
+```tsx
+<button css={[button, selected && selectedButton, disabled && disabledButton]}>
+  Save
+</button>
+```
+
+Falsy items are ignored, and nested arrays are also supported, so conditions can
+stay close to the element.
+
+## 3. Add Local States And Media
+
+Use builder chains for selectors, interaction states, or responsive rules.
+
+```ts
+const button = style({
+  padding: '8px 12px',
+  backgroundColor: '#111827',
+  color: '#ffffff',
+})
+  .hover({ backgroundColor: '#1f2937' })
+  .focusVisible({ outline: '2px solid #60a5fa' })
+  .media('(max-width: 700px)', { width: '100%' });
+```
+
+## 4. Understand The Builder Shape
+
+Keep static chains visible to the compiler.
+
+```ts
+// ✅ Keep the chain together.
+const panel = style({ padding: 16 })
+  .hover({ boxShadow: '0 8px 24px rgba(0,0,0,0.12)' });
+
+const interaction = style({
+  borderColor: '#d1d5db',
+}).hover({
+  borderColor: '#60a5fa',
+});
+
+// ❌ Do not continue the chain from a style definition variable.
+const brokenActivePanel = interaction.active({
+  transform: 'translateY(1px)',
+});
+
+// ✅ Start a new chain and merge the reusable style.
+const activePanel = style({
+  padding: 16,
+})
+  .merge(interaction)
+  .active({
+    transform: 'translateY(1px)',
+  });
+
+// ✅ For plain style object reuse, use style.plain(...) and object spread.
+const surface = style.plain({
+  backgroundColor: '#ffffff',
+  borderRadius: 8,
+});
+
+const card = style({
+  ...surface,
+  padding: 16,
+});
+
+// ✅ For Fluentic values in reusable objects, use style.raw(...).
+const tone = createToken('#2563eb');
+const accentText = style.raw({
+  color: tone,
+});
+
+const title = style({
+  ...accentText,
+  fontWeight: 700,
+});
+```
+
+The build can extract supported shapes because each chain starts from
+`style(...)` and stays structured.
+
+## 5. Organize Styles In Files
+
+Move reusable local styles into regular JS or TS files when needed.
+
+```ts
+// Card.styles.ts
+export const cardStyles = {
+  root: style({ padding: 16 }),
+  title: style({ fontWeight: 700 }),
+};
+```
+
+```tsx
+// Card.tsx
+<article css={cardStyles.root}>
+  <h2 css={cardStyles.title}>Dashboard</h2>
+</article>
+```
+
+## 6. Style A Reusable Component
+
+Start by deciding what outside code can style. A root `css` prop is useful for
+layout around the component, but it only reaches the outer element.
+
+```tsx
+type ButtonProps = {
+  css?: StyleProp;
+  icon?: React.ReactNode;
+  children: React.ReactNode;
+};
+
+export function Button(props: ButtonProps) {
+  return (
+    <button css={[buttonRoot, props.css]}>
+      {props.icon}
+      <span>{props.children}</span>
+    </button>
+  );
+}
+```
+
+That is enough for root-level adjustments like width or margin. It does not give
+outside code a supported way to style parts such as the icon or label.
+
+## 7. Name Component Parts
+
+Use `style.slot(...)` to name the component parts that outside code is allowed
+to style.
+
+```ts
+export const buttonStyles = {
+  root: style.slot({
+    display: 'inline-flex',
+    alignItems: 'center',
+  }),
+  icon: style.slot({
+    width: 16,
+    height: 16,
+  }),
+  label: style.slot({
+    fontWeight: 600,
+  }),
+};
+```
+
+Slots are the public styling surface of the component.
+
+## 8. Style Component Parts From Outside
+
+Use `style.scope(...)` to provide styles for another component's slots.
+
+```ts
+export const primaryButtonTheme = style.scope([
+  buttonStyles.root({
+    backgroundColor: '#2563eb',
+    color: '#ffffff',
+  }),
+  buttonStyles.icon({
+    color: '#dbeafe',
+  }),
+]);
+```
+
+Keep slot calls inline inside the scope so extraction can see the full shape.
+
+## 9. Accept And Resolve Outside Styles
+
+Use `combineStyle(...)` at the component boundary.
+
+```tsx
+type ButtonProps = {
+  theme?: StyleTheme;
+  children: React.ReactNode;
+};
+
+export function Button(props: ButtonProps) {
+  const css = combineStyle(
+    buttonStyles,
+    bindScope(buttonStyles.root, props.theme),
+  );
+
+  return <button css={css.root}>{props.children}</button>;
+}
+```
+
+The component decides where outside styles attach.
+
+## 10. Use Scopes For Variants And States
+
+Component-level styling cases can be scopes: variants, component state,
+responsive rules, and parent interaction.
+
+```ts
+const dangerButton = style.scope([
+  buttonStyles.root({
+    backgroundColor: '#dc2626',
+    color: '#ffffff',
+  }),
+]);
+
+const selectedButton = style.scope([
+  buttonStyles.root({
+    boxShadow: '0 0 0 2px #60a5fa',
+  }),
+  buttonStyles.label({
+    fontWeight: 700,
+  }),
+]);
+
+const mobileButton = style.scope().media('(max-width: 700px)', [
+  buttonStyles.root({
+    width: '100%',
+  }),
+]);
+
+const interactiveButton = style.scope().hover([
+  buttonStyles.icon({
+    transform: 'translateX(2px)',
+  }),
+]);
+
+const css = combineStyle(
+  buttonStyles,
+  bindScope(
+    buttonStyles.root,
+    props.danger && dangerButton,
+    props.selected && selectedButton,
+    mobileButton,
+    interactiveButton,
+  ),
+);
+```
+
+This keeps styling cases composable without changing the component markup. The
+component resolves the scopes once and still attaches styles to its named slots.
+
+## 11. Expose Supported Parts
+
+Use `exposeStyle(...)` when a component should publish a typed styling API.
+
+```ts
+export const ButtonStyle = exposeStyle(buttonStyles);
+```
+
+```ts
+const quietButton = style.scope([
+  ButtonStyle.root({ backgroundColor: 'transparent' }),
+  ButtonStyle.label({ color: '#374151' }),
+]);
+```
+
+Outside code gets named, supported parts instead of guessing selectors.
+
+## 12. Add Component Tokens
+
+Use `createToken(...)` or `createTokens(...)` when component values need a
+themeable default.
+
+```ts
+const buttonTokens = createTokens({
+  color: {
+    background: '#111827',
+    foreground: '#ffffff',
+  },
+});
+
+const root = style.slot({
+  backgroundColor: buttonTokens.color.background,
+  color: buttonTokens.color.foreground,
+});
+```
+
+Tokens let the component keep defaults while allowing overrides.
+
+## 13. Use App Values For App Meaning
+
+Use `createValues(...)` when app code wants values to stay visible where they
+are used, while still making them themeable.
+
+```ts
+const color = createValues([
+  '#2563eb | Accent',
+  '#ffffff | AccentText',
+]);
+
+const primaryButton = style({
+  backgroundColor: color('#2563eb | Accent'),
+  color: color('#ffffff | AccentText'),
+});
+```
+
+The literal stays easy to review and search for. The label gives the value a
+clear app-level meaning.
+
+## 14. Create Themes For Subtrees
+
+Use `createTheme(...)` when a page or subtree needs different token values.
+
+```ts
+const darkTheme = createTheme({
+  [appValues.color.accent]: '#60a5fa',
+  [appValues.color.accentText]: '#0f172a',
+});
+```
+
+```tsx
+<section css={darkTheme}>
+  <Dashboard />
+</section>
+```
+
+Themes provide values through normal CSS inheritance.
+
+## 15. Connect App Values To Component Tokens
+
+Use scopes to map app values into component tokens and slots.
+
+```ts
+const dashboardButtonTheme = style.scope([
+  buttonTokens.color.background(appValues.color.accent),
+  buttonTokens.color.foreground(appValues.color.accentText),
+  ButtonStyle.root({ borderRadius: 6 }),
+]);
+```
+
+This keeps app vocabulary and component vocabulary separate, while still letting
+them meet at the boundary.
+
+## 16. Debug Styles
+
+Enable `StyleDevUtils` in development, then use it from the browser console to
+trace generated CSS back to source.
+
+```ts
+import { enableStyleDevUtils } from '@fluentic/style/dev';
+
+if (import.meta.env.DEV) {
+  enableStyleDevUtils();
+}
+```
+
+```ts
+StyleDevUtils.info();
+StyleDevUtils.setElementMarker.toOn();
+StyleDevUtils.setSourcemapMode.toStyle();
+```
+
+Use element markers to find the JSX element that received a style. Use
+sourcemap modes to follow a generated rule back to the style, slot, scope,
+spread, merge, token, or value that produced it.
+
+## 17. Build For Production
+
+Install the Fluentic plugin for your build system so extraction runs during the
+app build.
+
+```ts
+// vite.config.ts
+export default defineConfig({
+  plugins: [fluenticStyle()],
+});
+```
+
+Production does not change how you write app styles or component code. It
+changes how Fluentic prepares CSS for the browser.
+
+## 18. Keep The Extractable Shape
+
+To keep extraction working properly, keep this rule of thumb: start from
+`style(...)`, `style.slot(...)`, or `style.scope(...)`, and keep the builder
+chain together from that starting call.
+
+```ts
+// ✅ Start style chains from style(...).
+const interaction = style({
+  borderColor: '#d1d5db',
+}).hover({
+  borderColor: '#60a5fa',
+});
+
+// ✅ Reuse a complete style chain with .merge(...).
+const button = style({
+  padding: '8px 12px',
+})
+  .merge(interaction)
+  .active({
+    transform: 'translateY(1px)',
+  });
+
+// ✅ Reuse object fragments with spread.
+const surface = style.plain({
+  backgroundColor: '#ffffff',
+  borderRadius: 8,
+});
+
+const card = style({
+  ...surface,
+  padding: 16,
+});
+
+// ✅ Keep dynamic values inside the recognized chain.
+function createPrimaryButtonTheme(color: string) {
+  return style.scope([
+    ButtonStyle.root({
+      backgroundColor: color,
+    }),
+  ]);
+}
+
+// ❌ Do not split the slot override away from the scope.
+function createBrokenPrimaryButtonTheme(color: string) {
+  const root = ButtonStyle.root({ backgroundColor: color });
+  return style.scope([root]);
+}
+
+// ❌ Do not continue a chain from an assigned style definition.
+const brokenButton = interaction.active({
+  transform: 'translateY(1px)',
+});
+```
+
+Following that rule does not mean style property values must be static. Dynamic
+property values stay fully supported: the compiler extracts the CSS with a CSS
+variable, and the runtime handles the changing value for that variable.
+
+## Decision Map
 
 | Problem | Use |
 | --- | --- |
-| One element needs CSS | `style()` |
-| A React element needs styles | `css` prop |
+| One element needs CSS | `style(...)` |
 | One element needs optional styles | `css={[base, condition && next]}` |
-| One element needs hover, focus, or media | `style().hover().focusVisible().media()` |
-| Repeated local styles need a home | normal `*.styles.ts` exports |
-| A reusable component has styleable parts | `style.slot()` |
-| Outside code customizes component parts | `style.scope([...])` |
-| A component resolves slots, variants, and themes | `combineStyle()` |
-| Many scopes attach from the same root | `bindScope()` |
-| A component publishes named theme hooks | `createToken()` / `createTokens()` |
-| App code needs visible themeable literals | `createValues()` |
-| A subtree needs different values | `createTheme()` |
-| A component exports supported style targets | `exposeStyle()` |
-| A rule needs to be traced back to source | source-aware styles, slots, scopes, and tokens |
-| A production app needs CSS output | bundler integration and static extraction |
+| One element needs states or media | builder chains |
+| A reusable component has styleable parts | `style.slot(...)` |
+| Outside code customizes component parts | `style.scope(...)` |
+| A component resolves themes and variants | `combineStyle(...)` |
+| Many scopes attach from one root slot | `bindScope(...)` |
+| Component defaults need overrides | `createToken(...)` / `createTokens(...)` |
+| App values need readable names | `createValues(...)` |
+| A subtree needs different values | `createTheme(...)` |
+| A component exposes supported parts | `exposeStyle(...)` |
+| A production app needs CSS assets | bundler integration and extraction |
 
-The main path is:
+The shortest version:
 
 ```txt
-style -> css arrays -> chains
+style -> chains -> css prop
 slots -> scopes -> combineStyle
-component tokens -> app values -> createTheme
-debug -> ship
+tokens -> values -> themes
 ```
-
-Start simple.
-
-Move to component APIs and themes only when the styling problem needs them.

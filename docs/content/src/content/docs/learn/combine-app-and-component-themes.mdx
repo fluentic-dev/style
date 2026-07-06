@@ -1,0 +1,252 @@
+---
+title: Combine App And Component Themes
+description: Connect app values to component tokens, then theme the app subtree.
+---
+
+You have worked with app values, component tokens, scopes, and themes as
+separate pieces.
+
+This page puts them together.
+
+The common path is:
+
+```txt
+app values -> component token overrides in a scope -> createTheme() on the app subtree
+```
+
+The app keeps control of its palette. The component keeps control of its public
+tokens and slots. The scope is the small bridge between the two.
+
+## App Values Stay In App Code
+
+App code often starts with colors and spacing values the team wants to keep
+visible, so the team can review and change app styles without chasing every
+value through a token name:
+
+```ts
+import { createTheme, createValues, style } from '@fluentic/style';
+
+export const color = createValues([
+  '#f5f7f6 | Canvas',
+  '#ffffff | Surface',
+  '#15211d | Text',
+  '#60716a | Muted',
+  '#d8e3df | Border',
+  '#2563eb | Accent',
+]);
+
+export const appStyles = {
+  root: style({
+    backgroundColor: color('#f5f7f6 | Canvas'),
+    color: color('#15211d | Text'),
+  }),
+};
+```
+
+Those values can theme ordinary app styles directly. They can also be passed
+into component tokens when a reusable component needs to follow the same app
+palette.
+
+## Components Keep Their Own Tokens
+
+A component should not need to know the whole app palette. It names only the
+values that matter to its own styling surface:
+
+```ts
+import { createTokens, style } from '@fluentic/style';
+
+export const CardTokens = createTokens({
+  color: {
+    surface: '#ffffff',
+    text: '#111827',
+    border: '#d8e3df',
+    accent: '#2563eb',
+  },
+});
+
+export const CardStyles = {
+  root: style.slot({
+    backgroundColor: CardTokens.color.surface,
+    border: '1px solid',
+    borderColor: CardTokens.color.border,
+    color: CardTokens.color.text,
+  }),
+  title: style.slot({
+    color: CardTokens.color.text,
+  }),
+  action: style.slot({
+    color: CardTokens.color.accent,
+  }),
+};
+```
+
+`CardTokens.color.surface` is the component's name for its surface color. The
+app may decide that value should come from `color('#ffffff | Surface')`, but the
+component does not have to hard-code that app value.
+
+## Scopes Connect App Values To Component Tokens
+
+A scope can provide token values, slot styles, or both. That makes it a good
+place to connect app values to a component's public token surface:
+
+```ts
+export const dashboardCardTheme = style.scope([
+  CardTokens.color.surface(color('#ffffff | Surface')),
+  CardTokens.color.text(color('#15211d | Text')),
+  CardTokens.color.border(color('#d8e3df | Border')),
+  CardTokens.color.accent(color('#2563eb | Accent')),
+]);
+```
+
+This scope does not define dark mode. It only says how the card should read the
+app's values.
+
+Notice the syntax: `CardTokens.color.surface(...)` is called with another
+themeable value, `color('#ffffff | Surface')`, instead of a literal value. That
+is all it takes to connect the component token to the app value.
+
+You can still add component-specific slot styles in the same scope:
+
+```ts
+export const featuredCardTheme = style.scope([
+  CardTokens.color.surface(color('#ffffff | Surface')),
+  CardTokens.color.text(color('#15211d | Text')),
+  CardTokens.color.border(color('#2563eb | Accent')),
+  CardTokens.color.accent(color('#2563eb | Accent')),
+  CardStyles.root({
+    borderWidth: 2,
+  }),
+  CardStyles.title({
+    color: color('#2563eb | Accent'),
+  }),
+]);
+```
+
+The token overrides connect the component's values to the app values. The slot
+styles add the extra treatment for this component theme, such as a stronger
+border or a highlighted title.
+
+## The Component Resolves The Scope
+
+After defining a scope such as `dashboardCardTheme` or `featuredCardTheme`, the
+next step is to pass it into `Card`. The scope carries the provided token values
+and slot styles. `Card` decides how those provided styles attach to the slots it
+owns.
+
+First, make the component accept a prop for those scopes. In this guide the
+prop is named `theme`, and its type is `StyleTheme`:
+
+```tsx
+import type { StyleTheme } from '@fluentic/style';
+
+type CardProps = {
+  theme?: StyleTheme;
+  title: React.ReactNode;
+  children: React.ReactNode;
+};
+
+export function Dashboard() {
+  return (
+    <Card theme={dashboardCardTheme} title="Revenue">
+      Monthly recurring revenue
+    </Card>
+  );
+}
+```
+
+The prop does not have to be named `theme`; that is just the name used in this
+example. The important type is `StyleTheme`, which accepts a scope, conditional
+scopes, or nested arrays of scopes.
+
+Inside `Card`, resolve that prop in one place:
+
+```tsx
+import {
+  bindScope,
+  combineStyle,
+} from '@fluentic/style';
+
+export function Card(props: CardProps) {
+  const css = combineStyle(
+    CardStyles,
+    bindScope(CardStyles.root, props.theme),
+  );
+
+  return (
+    <article css={css.root}>
+      <h2 css={css.title}>{props.title}</h2>
+      <div>{props.children}</div>
+      <a css={css.action}>Open</a>
+    </article>
+  );
+}
+```
+
+`bindScope(CardStyles.root, props.theme)` applies the provided scopes through
+the card root target. `combineStyle(...)` then merges the base component styles,
+the token overrides, and any slot styles from the scope.
+
+The parent chooses which scope to pass. The component chooses the target slot
+and keeps control over where the resolved styles attach in JSX.
+
+## Provide App Theme Overrides
+
+At this point, the app root style uses `color(...)` directly, and the card
+themes pass those same `color(...)` values into `CardTokens`. Now create a
+theme with `createTheme(...)` and provide override values for the app values:
+
+```ts
+export const darkTheme = createTheme([
+  color('#f5f7f6 | Canvas', '#101514'),
+  color('#ffffff | Surface', '#18211f'),
+  color('#15211d | Text', '#eef8f4'),
+  color('#60716a | Muted', '#a6bbb3'),
+  color('#d8e3df | Border', '#31443e'),
+  color('#2563eb | Accent', '#60a5fa'),
+]);
+```
+
+Attach that theme to the app root or any subtree. Keep the base app style first,
+then put the theme after it:
+
+```tsx
+export function Dashboard() {
+  return (
+    <main css={[appStyles.root, darkTheme]}>
+      <Card theme={dashboardCardTheme} title="Revenue">
+        Monthly recurring revenue
+      </Card>
+
+      <Card theme={featuredCardTheme} title="Campaign">
+        Launch plan
+      </Card>
+    </main>
+  );
+}
+```
+
+Inside this `main`, every `color(...)` value reads from `darkTheme`. That
+includes the app root style and the `color(...)` values passed into
+`CardTokens` by `dashboardCardTheme` and `featuredCardTheme`.
+
+The cards still keep their own token names and slot structure. The app theme
+does not need to know where `Card` renders its title or action. It only provides
+the app values, and the scopes connect those values to the component tokens.
+
+That is the useful separation:
+
+```txt
+createValues()    -> app values such as surface, text, border, and accent
+createTheme()     -> override values for an app root or subtree
+CardTokens        -> component values Card chooses to expose
+style.scope()     -> connects app values to CardTokens and Card slots
+combineStyle()    -> resolves the final Card styles before render
+```
+
+App code stays readable because app values remain visible. Components stay
+portable because they expose their own tokens and slots instead of depending on
+one app palette. Scopes link the two only where that component boundary needs a
+theme connection.
+
+Continue to [Debug Styles](/docs/learn/debug-styles/) to see how generated
+styles can lead back to the source that authored them.

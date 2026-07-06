@@ -23,11 +23,11 @@ style builder        -> selectors + custom methods
 component parts      -> style.slot()
 outside styles       -> style.scope()
 style resolution     -> StyleTheme + combineStyle()
-component variants   -> scopes
+styling cases        -> scopes
 public style surface -> exposeStyle()
-component tokens     -> createToken() / createTokens()
-app values           -> createValues()
-theme overrides      -> createTheme()
+theme tokens         -> createToken() / createTokens()
+theme values         -> createValues()
+themes               -> createTheme()
 debugging            -> source-aware styles
 shipping             -> bundler integration + static extraction
 ```
@@ -48,14 +48,14 @@ component or app needs it.
 | Name component parts | Use slots for the component parts other code can style. |
 | Style component parts from outside | Use scopes to describe outside styles for public parts. |
 | Accept and resolve outside styles | Pass scopes through props and resolve them inside the component. |
-| Add variants and states | Model variants, states, and responsive changes as scopes. |
+| Use scopes for component styling cases | Cover variants, state, responsive rules, and parent interactions. |
 | Expose styleable parts | Export only the slots consumers may depend on. |
-| Theme component tokens | Use named tokens for component and design-system APIs. |
-| Theme app values | Use literal-facing values for app colors and spacing. |
-| Apply themes | Use `createTheme()` to override values for a subtree. |
-| Theme app with components | Use app themes and component themes together. |
+| Theming with tokens | Use tokens for stable themeable names. |
+| Theming with values | Use values when app literals should stay visible. |
+| Create themes | Use `createTheme()` to provide values for a subtree. |
+| Combine app and component themes | Use app themes and component themes together. |
 | Debug styles | Trace generated CSS back to authored styles. |
-| Ship Fluentic | Choose the production integration for your build system. |
+| Build for production | Choose the production integration for your build system. |
 
 Continue to [Style One Element](/docs/learn/style-one-element/) to write the
 smallest useful Fluentic style.

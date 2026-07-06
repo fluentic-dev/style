@@ -1,0 +1,125 @@
+---
+title: Theming With Tokens
+description: Expose component values that outside code can provide or override.
+---
+
+You have seen how slots let outside code style component parts. Sometimes the
+thing you want to expose is not a whole part, but a value used inside the part:
+surface color, text color, border color, radius, spacing, or another design
+decision.
+
+With Fluentic, you can use tokens to give those themeable values stable names
+to expose to outside code. Outside code can provide or override values for those
+tokens, while the component style keeps referring to the same tokens.
+
+For a single token, `createToken()` is enough:
+
+```ts
+const accent = createToken('#2563eb');
+
+const link = style({
+  color: accent,
+});
+```
+
+When you need to group tokens together, use `createTokens()`:
+
+```ts
+export const CardTokens = createTokens({
+  color: {
+    surface: '#ffffff',
+    text: '#111827',
+    border: '#d8e3df',
+    accent: '#2563eb',
+  },
+  radius: {
+    panel: 8,
+  },
+});
+```
+
+Component styles can then refer to those names:
+
+```ts
+export const cardStyles = {
+  root: style.slot({
+    backgroundColor: CardTokens.color.surface,
+    borderColor: CardTokens.color.border,
+    borderRadius: CardTokens.radius.panel,
+    color: CardTokens.color.text,
+  }),
+};
+```
+
+## Provide Token Values From Outside
+
+You have already used scopes to provide slot styles. The same scope can also
+provide token values. Instead of calling a slot, call the token with the value
+you want to provide:
+
+```ts
+export const darkCard = style.scope([
+  CardTokens.color.surface('#111827'),
+  CardTokens.color.text('#ffffff'),
+  CardTokens.color.border('#374151'),
+  CardTokens.color.accent('#60a5fa'),
+]);
+```
+
+A scope can provide slot styles and token values together:
+
+```ts
+export const featuredCard = style.scope([
+  CardTokens.color.accent('#60a5fa'),
+  cardStyles.root({
+    borderWidth: 2,
+  }),
+]);
+```
+
+## Expose Slots And Tokens Together
+
+When a component has both styleable slots and themeable tokens, you may want to
+expose them together. `exposeStyle(...)` supports both slots and tokens:
+
+```ts
+import { exposeStyle } from '@fluentic/style/utils';
+
+export const CardStyle = exposeStyle({
+  ...cardStyles,
+  tokens: CardTokens,
+});
+```
+
+It keeps slots and tokens from the object you pass in, and leaves other fields
+out. Nested token groups and nested slot groups are supported.
+
+This shape is only a convention. You can expose slots and tokens together,
+export `CardStyle` and `CardTokens` separately, rename the groups, or organize
+them however your component API should look:
+
+```ts
+export const CardStyle = exposeStyle({
+  root: cardStyles.root,
+  content: {
+    title: cardStyles.title,
+  },
+  tokens: CardTokens,
+});
+```
+
+That is useful for reusable components, component libraries, and design systems.
+The component style keeps using `CardTokens.color.surface` and
+`CardTokens.color.text`; outside code provides the values through the same
+scope path used for slot styles.
+
+Tokens are useful when a component or design system needs stable names for
+themeable values. They also have a cost: naming every app color or spacing value
+can make app code harder to read, because you see the token name instead of the
+literal value.
+
+For app code, Fluentic also has `createValues(...)` as an alternative to
+tokens.
+
+Continue to [Theming With Values](/docs/learn/theming-with-values/) to see how
+`values` can help when app literals should stay visible but still be themeable.

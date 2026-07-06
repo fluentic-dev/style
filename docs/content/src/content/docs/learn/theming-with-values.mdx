@@ -1,0 +1,145 @@
+---
+title: Theming With Values
+description: Use createValues() for app colors, spacing, and other values that may be themed later.
+---
+
+Component tokens are useful when a component wants to expose stable names for
+outside code to provide or override the values.
+
+App teams may want a different tradeoff. The actual color, spacing, border, or
+shadow can be easier to edit and review when the literal stays visible where it
+is used. `createValues(...)` lets app code keep using those visible values while
+still making them themeable.
+
+Start without labels when the literal value is enough:
+
+```ts
+import { createValues, style } from '@fluentic/style';
+
+export const color = createValues([
+  '#f5f7f6',
+  '#ffffff',
+  '#15211d',
+  '#d8e3df',
+  '#0f766e',
+]);
+
+export const space = createValues([4, 8, 12, 16, 24]);
+```
+
+Use those values directly in styles:
+
+```ts
+const page = style({
+  backgroundColor: color('#f5f7f6'),
+  color: color('#15211d'),
+});
+
+const panel = style({
+  backgroundColor: color('#ffffff'),
+  borderColor: color('#d8e3df'),
+  padding: space(16),
+});
+```
+
+The literal stays visible.
+
+Your editor can still show color previews, and search can find the original
+value.
+
+Under the hood, values still create themeable tokens, just like
+`createToken(...)` and `createTokens(...)` do. The difference is the authoring
+surface: tokens give a value a named export, while values let app code keep
+writing the literal it already understands.
+
+## Add Labels For Named Values
+
+Labels give a value a readable name while keeping the literal visible. That can
+make autocomplete, search, and theme overrides easier to work with.
+
+They are also useful when the same literal is used for different jobs. For
+example, `#ffffff` might be a surface color in one place and text on a dark
+accent in another place. In a later theme, those two uses may need different
+values.
+
+```ts
+export const color = createValues([
+  '#f5f7f6 | Canvas',
+  '#ffffff | Surface',
+  '#ffffff | AccentText',
+  '#15211d | Text',
+  '#d8e3df | Border',
+  '#0f766e | Accent',
+]);
+```
+
+Use the labeled value in styles:
+
+```ts
+const page = style({
+  backgroundColor: color('#f5f7f6 | Canvas'),
+  color: color('#15211d | Text'),
+});
+
+const primaryButton = style({
+  backgroundColor: color('#0f766e | Accent'),
+  color: color('#ffffff | AccentText'),
+});
+```
+
+The label is not a requirement. It is useful when the literal alone is too
+broad, or when a named value is easier to find and reuse.
+
+Value labels can use `|` or `;` as the separator. Fluentic uses the part before
+the separator as the CSS value, and keeps the full string as the value identity
+that themes can override later.
+
+```ts
+const color = createValues([
+  '#ffffff | Surface',
+  '#ffffff ; AccentText',
+]);
+```
+
+## Use Number Values
+
+Values are not only for strings such as colors, font families, or shadows.
+Spacing, radius, size, opacity, and other numeric values can use
+`createValues(...)` too:
+
+```ts
+export const space = createValues([4, 8, 12, 16, 24]);
+
+const panel = style({
+  padding: space(16),
+  gap: space(8),
+});
+```
+
+When numeric values also need labels, pass `Number` as the first argument. That
+lets the source use labeled strings while the value still resolves to the same
+kind of number value as `createValues([4, 8, 12])`:
+
+```ts
+export const space = createValues(Number, [
+  '4 | xs',
+  '8 | sm',
+  '12 | md',
+  '16 | lg',
+  '24 | xl',
+]);
+
+const panel = style({
+  padding: space('16 | lg'),
+  gap: space('8 | sm'),
+});
+```
+
+Use component tokens when names are the styling contract. Use app values when
+literal app values are clearer to edit and review.
+
+You now have both themeable sources: tokens and values.
+
+Continue to [Create Themes](/docs/learn/create-themes/) to see how
+`createTheme(...)` provides override values for them, such as dark mode or
+multiple app themes.

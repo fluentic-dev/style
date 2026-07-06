@@ -1,0 +1,166 @@
+---
+title: Create Themes
+description: Provide different token or value outputs for an app root or subtree.
+---
+
+You have now seen two ways to define values that can be themed:
+
+- tokens from `createToken(...)` and `createTokens(...)`;
+- values from `createValues(...)`.
+
+Both become themeable tokens under the hood. `createTheme(...)` provides
+override values for those sources in an app root or subtree.
+
+For app styling, start with values when the literal color, spacing, border, or
+shadow should stay visible in the style that uses it:
+
+```ts
+import { createTheme, createValues, style } from '@fluentic/style';
+
+export const color = createValues([
+  '#f5f7f6 | Canvas',
+  '#ffffff | Surface',
+  '#15211d | Text',
+  '#60716a | Muted',
+  '#d8e3df | Border',
+  '#0f766e | Accent',
+]);
+
+export const appStyles = {
+  root: style({
+    backgroundColor: color('#f5f7f6 | Canvas'),
+    color: color('#15211d | Text'),
+  }),
+  panel: style({
+    backgroundColor: color('#ffffff | Surface'),
+    borderColor: color('#d8e3df | Border'),
+  }),
+};
+```
+
+The style keeps the original literal visible. Use `createTheme(...)` to provide
+the override values a subtree should read:
+
+```ts
+export const darkTheme = createTheme([
+  color('#f5f7f6 | Canvas', '#101514'),
+  color('#ffffff | Surface', '#18211f'),
+  color('#15211d | Text', '#eef8f4'),
+  color('#60716a | Muted', '#a6bbb3'),
+  color('#d8e3df | Border', '#31443e'),
+  color('#0f766e | Accent', '#5eead4'),
+]);
+```
+
+Each item calls the same value source used by the style, then passes the value
+that theme should provide.
+
+## If Your App Prefers Tokens
+
+Some teams prefer a traditional token surface for app values too. That is fine.
+`createTheme(...)` works with tokens and values in the same way.
+
+```ts
+import { createTheme, createTokens, style } from '@fluentic/style';
+
+export const appTokens = createTokens({
+  color: {
+    canvas: '#f5f7f6',
+    surface: '#ffffff',
+    text: '#15211d',
+    border: '#d8e3df',
+    accent: '#0f766e',
+  },
+});
+
+export const appStyles = {
+  root: style({
+    backgroundColor: appTokens.color.canvas,
+    color: appTokens.color.text,
+  }),
+  panel: style({
+    backgroundColor: appTokens.color.surface,
+    borderColor: appTokens.color.border,
+  }),
+};
+
+export const darkTheme = createTheme([
+  appTokens.color.canvas('#101514'),
+  appTokens.color.surface('#18211f'),
+  appTokens.color.text('#eef8f4'),
+  appTokens.color.border('#31443e'),
+  appTokens.color.accent('#5eead4'),
+]);
+```
+
+Values help when a team does not want every app color, space, or shadow to
+become a named token before it can be themed. Tokens are still a good fit when
+the team prefers a named theme surface and wants those names to be the thing
+people read, reuse, and document.
+
+## Attach A Theme To A Subtree
+
+A theme applies where you attach it. Put it on the app root for an app-wide
+theme, or on a smaller container when only part of the page should read those
+override values.
+
+```tsx
+export function AppShell(props: { children: React.ReactNode }) {
+  return (
+    <main css={[appStyles.root, darkTheme]}>
+      {props.children}
+    </main>
+  );
+}
+```
+
+Everything inside that `main` reads the themed values. Styles outside it keep
+reading the defaults from `createValues(...)` or `createTokens(...)`.
+
+The styles do not need separate dark-mode versions. `appStyles.root` still
+refers to `color('#f5f7f6 | Canvas')` and `color('#15211d | Text')`. When
+`darkTheme` is attached, those same value calls resolve to the dark values
+inside that subtree.
+
+You can define multiple themes the same way:
+
+```ts
+export const highContrastTheme = createTheme([
+  color('#f5f7f6 | Canvas', '#000000'),
+  color('#ffffff | Surface', '#111111'),
+  color('#15211d | Text', '#ffffff'),
+  color('#d8e3df | Border', '#ffffff'),
+  color('#0f766e | Accent', '#22d3ee'),
+]);
+```
+
+Then choose which theme to attach:
+
+```tsx
+export function Dashboard(props: {
+  theme?: 'dark' | 'highContrast';
+  children: React.ReactNode;
+}) {
+  const theme = props.theme === 'highContrast'
+    ? highContrastTheme
+    : props.theme === 'dark'
+      ? darkTheme
+      : null;
+
+  return (
+    <main css={[appStyles.root, theme]}>
+      {props.children}
+    </main>
+  );
+}
+```
+
+That is the core theme flow:
+
+```txt
+define values or tokens -> createTheme([...overrides]) -> attach theme to a subtree
+```
+
+Continue to [Combine App And Component Themes](/docs/learn/combine-app-and-component-themes/)
+to see how app value themes and component slot themes are used together in real
+JSX.

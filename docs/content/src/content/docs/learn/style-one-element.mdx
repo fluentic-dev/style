@@ -27,5 +27,54 @@ That is enough when the style belongs to this element.
 
 That is it: define a style, then pass it to the `css` prop.
 
+## Reuse Style Objects
+
+When several styles share the same object fields, `style.plain(...)` gives you a
+small reusable object that can be spread into `style(...)`.
+
+```ts
+const roundedSurface = style.plain({
+  backgroundColor: '#ffffff',
+  borderRadius: 8,
+});
+
+const card = style({
+  ...roundedSurface,
+  padding: 16,
+});
+```
+
+Under the hood, `style.plain(...)` returns the same object provided to it. It is
+the same as writing the reusable object directly:
+
+```ts
+const roundedSurface = {
+  backgroundColor: '#ffffff',
+  borderRadius: 8,
+};
+```
+
+The benefit is in your editor: TypeScript checks the object against the style
+type used by `style(...)`, and autocomplete can suggest valid fields.
+
+Use `style.raw(...)` when the reusable object mixes normal CSS values with
+Fluentic values such as tokens. More details on tokens come later in
+[Theming With Tokens](/docs/learn/theming-with-tokens/).
+
+```ts
+import { createToken, style } from '@fluentic/style';
+
+const surfaceColor = createToken('#ffffff');
+
+const surface = style.raw({
+  backgroundColor: surfaceColor,
+});
+
+const card = style({
+  ...surface,
+  padding: 16,
+});
+```
+
 Continue to [Compose Element Styles](/docs/learn/compose-element-styles/) to
 learn how multiple styles on one element are ordered and resolved.

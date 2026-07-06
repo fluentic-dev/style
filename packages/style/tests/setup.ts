@@ -62,7 +62,7 @@ import { assertEnumSelector } from '../selector/assert';
 import { selector } from '../selector/selector';
 import { createDevSheet, createProdSheet } from '../sheet';
 import { getRuleCallsite } from '../sheet/sourcemap';
-import { createStyleFn, createTheme, createToken, createTokens } from '../style';
+import { createStyleFn, createTheme, createToken, createTokens, createValues } from '../style';
 import { traceCallsite } from '../utils/trace';
 
 export {
@@ -97,6 +97,7 @@ export {
   createThemeRule,
   createToken,
   createTokens,
+  createValues,
   createTransformFilter,
   createWebpackRuntimeModuleSource,
   CSS_CONFIG,

@@ -34,6 +34,7 @@ import {
   createThemeRule,
   createToken,
   createTokens,
+  createValues,
   type DebugData,
   ELEMENT_CSS_DATA_ATTR,
   equal,
@@ -66,6 +67,31 @@ import {
   transformRscElement,
   withTokens,
 } from './setup';
+
+test('createValues parses pipe and semicolon labels', () => {
+  const color = createValues([
+    '#ffffff | Surface',
+    '#111827; Text',
+  ]);
+  const space = createValues(Number, [
+    '8 | sm',
+    '12; md',
+  ]);
+
+  const surface = String(getToken(color('#ffffff | Surface')));
+  const text = String(getToken(color('#111827; Text')));
+  const small = String(getToken(space('8 | sm')));
+  const medium = String(getToken(space('12; md')));
+
+  includes(surface, '#ffffff');
+  includes(text, '#111827');
+  includes(small, '8');
+  includes(medium, '12');
+  notIncludes(surface, 'Surface');
+  notIncludes(text, 'Text');
+  notIncludes(small, 'sm');
+  notIncludes(medium, 'md');
+});
 
 test('pool prepends inherited scopes before own scopes', () => {
   const pool = createCombinedStylePool();

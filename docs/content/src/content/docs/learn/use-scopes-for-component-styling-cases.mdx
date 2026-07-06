@@ -1,0 +1,255 @@
+---
+title: Use Scopes For Component Styling Cases
+description: Use scopes for variants, state, responsive rules, and parent interactions.
+---
+
+You have seen how a scope can provide styles to component slots, and how a
+component resolves those styles with `combineStyle(...)`.
+
+That same path covers many day-to-day component styling cases. When a component
+changes because of a prop, state, viewport, or parent interaction, the change
+often affects several parts together.
+
+## Variants
+
+```ts
+const dangerButton = style.scope([
+  buttonStyles.root({
+    backgroundColor: '#dc2626',
+    color: 'white',
+  }),
+  buttonStyles.icon({
+    color: 'white',
+  }),
+]);
+
+const compactButton = style.scope([
+  buttonStyles.root({ padding: '4px 8px' }),
+  buttonStyles.label({ fontSize: 13 }),
+]);
+```
+
+A variant usually does not change only one element. A `danger` button may change
+the root color and icon color. A `compact` button may change both padding and
+label size.
+
+A variant can also provide interaction styles for the slot itself. The slot call
+is a style builder, so base styles and local states can stay together:
+
+```ts
+const primaryButton = style.scope([
+  buttonStyles.root({
+    backgroundColor: '#2563eb',
+    color: 'white',
+  }).hover({
+    backgroundColor: '#1d4ed8',
+  }).focusVisible({
+    outlineColor: '#93c5fd',
+  }),
+  buttonStyles.icon({
+    color: 'white',
+  }).hover({
+    transform: 'translateX(1px)',
+  }),
+]);
+```
+
+Here, `buttonStyles.root(...).hover(...)` means the `root` slot receives both
+the base variant style and the slot's own hover style.
+
+## State
+
+Component state can use the same shape:
+
+```ts
+const selectedButton = style.scope([
+  buttonStyles.root({
+    boxShadow: '0 0 0 2px currentColor',
+  }),
+  buttonStyles.label({
+    fontWeight: 800,
+  }),
+]);
+
+const loadingButton = style.scope([
+  buttonStyles.root({
+    cursor: 'progress',
+    opacity: 0.72,
+  }),
+  buttonStyles.icon({
+    animation: 'spin 900ms linear infinite',
+  }),
+]);
+```
+
+The component decides when those scopes participate. They can come from props,
+local state, context, or any component logic.
+
+State scopes can include local slot states too. For example, a selected item can
+have its selected base style and a hover style for the same slot:
+
+```ts
+const selectedInteractiveButton = style.scope([
+  buttonStyles.root({
+    boxShadow: '0 0 0 2px currentColor',
+  }).hover({
+    boxShadow: '0 0 0 3px currentColor',
+  }),
+  buttonStyles.label({
+    fontWeight: 800,
+  }),
+]);
+```
+
+## Responsive Component Styling
+
+Responsive component changes can stay grouped by component meaning too:
+
+```ts
+const mobileButton = style.scope().media('(max-width: 700px)', [
+  buttonStyles.root({ width: '100%' }),
+  buttonStyles.label({ fontSize: 13 }),
+]);
+```
+
+The media query applies to the group of slot styles, not to one style object.
+
+## Parent Interaction
+
+Scopes also help when the parent interaction should change several parts
+together. For example, a hovered button root can change the icon and label too:
+
+```ts
+const interactiveButton = style.scope()
+  .hover([
+    buttonStyles.root({ backgroundColor: '#1f2937' }),
+    buttonStyles.icon({ transform: 'translateX(1px)' }),
+  ])
+  .active([
+    buttonStyles.root({ transform: 'translateY(1px)' }),
+    buttonStyles.label({ opacity: 0.86 }),
+  ]);
+```
+
+Provided styles to parent and child parts are declared the same way inside the
+scope. The difference comes from where the component applies the scope.
+
+Inside the component, the difference is the target slot passed to the scope
+call.
+
+Target the button root when the interaction belongs to the button itself:
+
+```tsx
+const css = combineStyle(
+  buttonStyles,
+  interactiveButton(buttonStyles.root),
+);
+
+return (
+  <button css={css.root}>
+    <span css={css.icon}>{props.icon}</span>
+    <span css={css.label}>{props.children}</span>
+  </button>
+);
+```
+
+Target an outer slot when the interaction belongs to a wrapper that contains the
+button root. This assumes the wrapper is also defined as a slot:
+
+```tsx
+const css = combineStyle(
+  buttonStyles,
+  interactiveButton(buttonStyles.wrapper),
+);
+
+return (
+  <div css={css.wrapper}>
+    <button css={css.root}>
+      <span css={css.icon}>{props.icon}</span>
+      <span css={css.label}>{props.children}</span>
+    </button>
+  </div>
+);
+```
+
+With `bindScope(...)`, pass the same target slot first:
+
+```ts
+bindScope(
+  buttonStyles.root,
+  interactiveButton,
+  props.selected && selectedButton,
+  props.theme,
+);
+
+bindScope(
+  buttonStyles.wrapper,
+  interactiveButton,
+  props.selected && selectedButton,
+  props.theme,
+);
+```
+
+The target slot is where Fluentic anchors the parent state. If the target is
+`buttonStyles.root`, root styles apply to the root itself and child slot styles
+apply to their own slots under that root state.
+
+If the parent state belongs to an outer wrapper, make that wrapper a slot and
+target the scope there. The scope still provides styles to `root`, `icon`, and
+`label`; only the slot that owns the parent state changes.
+
+> The rule of thumb: anything added by the scope chain belongs to the target
+> slot the scope is attached to. Each slot call inside the scope items provides
+> styles to the slot it calls.
+
+That is the benefit: cross-part styling stays connected to slots and scope
+targets. The component can change its internal markup later without asking
+outside styles to follow DOM selectors.
+
+## Resolve The Cases Together
+
+Resolve these cases once inside the component, then render with the resolved
+styles.
+
+Fluentic understands the structure of styles, slots, and scopes, so the
+component can compose the inputs in one place with less manual wiring. JSX stays
+focused on attaching styles to elements.
+
+```tsx
+const css = combineStyle(
+  buttonStyles,
+  bindScope(
+    buttonStyles.root,
+    props.danger && dangerButton,
+    props.compact && compactButton,
+    props.selected && selectedButton,
+    props.loading && loadingButton,
+    mobileButton,
+    interactiveButton,
+    props.theme,
+  ),
+);
+```
+
+This keeps the styling flow consistent:
+
+```txt
+variant          -> scope
+component state  -> scope
+responsive rules -> scope
+parent state     -> scope
+theme            -> scope
+resolve          -> combineStyle()
+```
+
+The component owns the slots and chooses the target slot. Props, state, and
+responsive rules only decide which scopes participate in the resolved styles.
+
+That keeps component styling cases organized around component meaning:
+`danger`, `compact`, `selected`, `loading`, `mobile`, and `interactive`.
+
+Use regular element styles for local element styling. Use scopes when a
+component-level styling case needs to affect several supported slots together.
+
+Continue to [Expose Styleable Parts](/docs/learn/expose-styleable-parts/) to
+see how a component exposes the slots outside code can style.

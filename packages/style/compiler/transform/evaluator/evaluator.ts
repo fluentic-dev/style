@@ -1017,6 +1017,10 @@ function createCompiledValues(
 }
 
 function parseCompiledValue(value: unknown, isNumber: boolean) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+
+  value = String(value).split(/[;|]/)[0].trim();
+
   if (!isNumber) return value;
 
   const number = Number(value);

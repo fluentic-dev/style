@@ -1,0 +1,279 @@
+---
+title: Build For Production
+description: Add the right production integration without changing how you author Fluentic styles.
+---
+
+You have learned the Fluentic authoring model:
+
+```txt
+style() -> css arrays -> builder methods
+slots -> scopes -> combineStyle()
+tokens and values -> createTheme()
+debug metadata -> source-aware CSS
+```
+
+Production should not ask you to learn a second styling model.
+
+You keep writing the same Fluentic style code in runtime-only setup and in a
+bundler plugin setup. The difference is the delivery path: runtime-only creates
+CSS while the app runs, while the plugin can prepare and optimize CSS during the
+build.
+
+## Runtime First, Plugin Recommended
+
+Fluentic is runtime-first. That means you can install the package, enable the
+JSX runtime, and start using `style(...)` with the `css` prop before choosing a
+bundler integration.
+
+That is a good path for learning, prototypes, and early adoption.
+
+For production apps, use a Fluentic bundler plugin when one exists for your
+build system. The plugin keeps the same source model while adding:
+
+- static extraction for supported style chains;
+- CSS output that can be shipped as build assets;
+- better development CSS and sourcemaps;
+- production optimization around generated rules and runtime work.
+
+## What Extraction Does
+
+Static extraction is a build optimization. It does not change how you write
+style code.
+
+When the plugin recognizes a Fluentic style shape, it extracts the style
+structure. That is not an all-or-nothing pass that stops just because one
+property value is not known at build time.
+
+In these cases, Fluentic still emits CSS. The difference is what value the
+generated CSS declaration uses.
+
+When a property value is known at build time, the generated CSS can include the
+literal value:
+
+```ts
+const button = style({
+  borderRadius: 8,
+  padding: '8px 12px',
+}).hover({
+  opacity: 0.86,
+});
+```
+
+When a module-scope property value cannot be resolved to a final value at build
+time, the generated CSS uses a prepared CSS variable for that value:
+
+```ts
+const color = prefersDark ? '#f9fafb' : '#15211d';
+
+const title = style({
+  color,
+  fontWeight: 700,
+});
+```
+
+The compiler still recognizes the `style(...)` call. `fontWeight` can be
+emitted with a literal value. `color` is emitted as CSS too, but its CSS value
+is a CSS variable that Fluentic fills from the runtime value.
+
+Inline style chains can sometimes be defined inside components where they are
+needed. When they keep the same Fluentic shape, the compiler can still handle
+them. The compiler can hoist the inline chain to the module top level, as if it
+had been defined outside the component. Static values become literal CSS values;
+dynamic values become runtime data connected to prepared CSS variables:
+
+```tsx
+function Button(props: { color: string }) {
+  return (
+    <button
+      css={style({
+        borderRadius: 8,
+        color: props.color,
+      })}
+    />
+  );
+}
+```
+
+In that example, `borderRadius` is emitted with a literal value. `color` is also
+emitted as CSS, but its CSS value is a prepared CSS variable that Fluentic fills
+from `props.color` wherever that prepared style is applied.
+
+For the details of how hoisting works, see
+[Compiler Hoisting](/docs/design/compiler-hoisting/).
+
+The key is the Fluentic call shape. The compiler recognizes `style(...)`,
+`style.slot(...)`, and `style.scope(...)` patterns, so it can emit CSS for that
+structure. Build-known values become literal CSS values. Dynamic values become
+prepared CSS variables. The original style chains are replaced with prepared style
+data, so the production runtime can use the prepared result instead of rebuilding
+the same style chain in the browser.
+
+Runtime still handles the parts that are naturally render-time:
+
+- conditional entries in a `css` array;
+- `props.css` passed to a component root;
+- scopes passed through props;
+- `combineStyle(...)` at component boundaries;
+- dynamic token values and theme overrides;
+- values that depend on React props or state.
+
+So the split is:
+
+```txt
+recognized Fluentic style shape -> extracted CSS and prepared style data
+dynamic property values         -> CSS variables resolved at runtime
+render-time composition         -> resolved by Fluentic while React renders
+```
+
+## Keep The Extractable Shape
+
+For extraction, define styles from the calls the compiler recognizes:
+`style(...)`, `style.slot(...)`, and `style.scope(...)`. Keep the builder chain
+attached to that starting call so the compiler can see the whole style shape.
+
+```ts
+const button = style({
+  color: 'black',
+}).hover({
+  color: 'blue',
+});
+```
+
+The same applies to `style.slot(...)` and `style.scope(...)`. Inside those
+recognized shapes, property values can be static or dynamic.
+
+Avoid assigning a partial style definition and continuing the chain from that
+assigned value:
+
+```ts
+// ❌ Do not continue the chain from an assigned style definition.
+const interaction = style({
+  color: 'black',
+});
+
+const button = interaction.hover({
+  color: 'blue',
+});
+```
+
+That can work in runtime-only mode, but it hides the full chain from production
+extraction.
+
+When a style needs reusable interaction rules, define the reusable chain on its
+own and merge it inside the new chain:
+
+```ts
+const interaction = style({
+  color: 'black',
+}).hover({
+  color: 'blue',
+});
+
+const button = style({
+  borderRadius: 8,
+})
+  .merge(interaction)
+  .active({
+    transform: 'translateY(1px)',
+  });
+```
+
+For scopes, keep the slot override calls inline inside the `style.scope(...)`
+items or inside the arrays passed to scope builder methods:
+
+```ts
+// ✅ Keep slot override calls inline inside style.scope(...).
+function createPrimaryButtonTheme(color: string) {
+  return style.scope([
+    ButtonStyles.root({
+      backgroundColor: color,
+    }),
+  ]);
+}
+```
+
+Do not split the slot call away from the scope:
+
+```ts
+// ❌ Do not split slot override calls away from style.scope(...).
+function createPrimaryButtonTheme(color: string) {
+  const root = ButtonStyles.root({
+    backgroundColor: color,
+  });
+
+  return style.scope([root]);
+}
+```
+
+That gives the compiler the full scope shape: the scope call, the slot targets,
+and the provided styles. If a provided value is dynamic, Fluentic can keep that
+value on the runtime path while still extracting the recognized structure.
+
+## Choose The Integration
+
+For production, install and configure the Fluentic plugin that matches your
+build system. The plugin runs the extraction transform during the app build,
+collects the extracted CSS into build assets, and rewrites Fluentic imports to
+the extracted production runtime.
+
+Start with the guide for your bundler:
+
+| Environment | Start here |
+| --- | --- |
+| Next.js App Router | [Next.js](/docs/integrations/nextjs/) |
+| Vite + React | [Vite](/docs/integrations/vite/) |
+| Webpack | [Webpack](/docs/integrations/webpack/) |
+| Rspack | [Rspack](/docs/integrations/rspack/) |
+| Parcel 2 | [Parcel](/docs/integrations/parcel/) |
+| Farm | [Farm](/docs/integrations/farm/) |
+| Custom build system | [Custom Compiler](/docs/integrations/custom-compiler/) |
+| No plugin yet | [Runtime-Only Mode](/docs/integrations/runtime-only-mode/) |
+
+If your build system has a Fluentic plugin, use that path for production. If it
+does not, runtime-only mode keeps the same source model available while you
+decide on the integration path.
+
+## App Plugin, Library Source
+
+You may notice that Fluentic currently focuses on app bundler plugins. That is
+intentional.
+
+The Fluentic plugin is meant to run in the final app build, where the app knows
+the target bundler, CSS output, routes, and runtime mode. A UI library package
+usually does not need to run Fluentic extraction before publishing.
+
+Instead, publish the UI package so the consuming app can import its Fluentic
+components and style definitions. Then configure the app's Fluentic plugin to
+include that package in the files it can transform.
+
+That lets one app build collect and extract styles from both places:
+
+```txt
+app source files       -> transformed by the app Fluentic plugin
+UI package source      -> included in the app plugin transform
+final app build        -> extracted CSS and runtime wiring
+```
+
+This keeps library packages simpler. They can publish Fluentic components
+without choosing the consuming app's bundler strategy. The app remains the place
+that decides how Fluentic CSS is extracted, optimized, and served.
+
+## What To Check Before Shipping
+
+Before shipping a production app, check these things:
+
+- the app uses the plugin JSX entry, `@fluentic/style/plugin/jsx`, when a
+  bundler plugin is enabled;
+- the build includes the Fluentic plugin for your bundler;
+- UI packages that contain Fluentic source are included by the app plugin when
+  they need extraction;
+- static style chains start from `style(...)`, `style.slot(...)`, or
+  `style.scope(...)`;
+- component boundaries resolve outside styles with `combineStyle(...)`;
+- runtime-only setup is intentional when no production plugin is available.
+
+The important part is that production does not change how you write app styles
+or component code. It changes how Fluentic prepares CSS for the browser.
+
+Next, [Recap](/docs/learn/recap/) ties the Learn path together with a compact
+decision map.

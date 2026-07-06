@@ -11,14 +11,14 @@
     "name-component-parts",
     "style-component-parts-from-outside",
     "accept-and-resolve-outside-styles",
-    "add-variants-and-states",
+    "use-scopes-for-component-styling-cases",
     "expose-styleable-parts",
-    "theme-component-tokens",
-    "theme-app-values",
-    "apply-themes",
-    "theme-app-with-components",
+    "theming-with-tokens",
+    "theming-with-values",
+    "create-themes",
+    "combine-app-and-component-themes",
     "debug-styles",
-    "ship-fluentic",
+    "build-for-production",
     "recap"
   ]
 }

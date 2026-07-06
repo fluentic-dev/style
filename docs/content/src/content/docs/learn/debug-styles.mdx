@@ -1,34 +1,182 @@
 ---
 title: Debug Styles
-description: Trace generated CSS back to the style, slot, scope, token, or JSX source.
+description: Enable Fluentic dev utilities and trace generated CSS back to the source that authored it.
 ---
 
-Generated CSS is what the browser needs.
+You have now worked with styles, slots, scopes, tokens, values, and themes.
 
-Developers usually need the authored decision.
-
-When you inspect a rule, the useful path is:
+When a visual bug appears in the browser, the final CSS rule may have passed
+through several of those pieces before it reached the DOM. The useful question
+is rarely only "which class won?" It is usually:
 
 ```txt
-DOM element
-JSX element
-CSS property
-style property
-slot, scope, or token source
-original TypeScript value
+Which JSX element received this style?
+Which style, slot, or scope produced this rule?
+Did the value come from a token, app value, spread, merge, or theme?
 ```
 
-Fluentic keeps source information on the values you author:
+Fluentic keeps debug information close to the same model you used while
+authoring:
 
-- `style()` identifies one element style;
-- `style.slot()` identifies a component part;
-- `style.scope()` identifies a grouped override;
-- tokens and values identify shared value sources.
+```txt
+style()       -> one element style
+style.slot()  -> one component part
+style.scope() -> grouped outside styles for slots or tokens
+token/value   -> shared value source
+css prop      -> rendered JSX element
+```
 
-That gives generated CSS a path back to the source file and styling concept
-that produced it.
+The browser still shows normal CSS. Fluentic adds development metadata and
+utilities so that CSS can lead back to the TypeScript decision that produced it.
 
-The deeper tooling details live in [Tracing Styles In Real Apps](../beyond-the-basics/tracing-styles-in-real-apps).
+## Enable The Dev Utilities
 
-Continue to [Ship Fluentic](/docs/learn/ship-fluentic/) to connect the same
-source model to production output.
+Many debug commands are exposed through the browser console helper,
+`StyleDevUtils`. Enable it in development before using those commands.
+
+For a regular client app, import `enableStyleDevUtils` from
+`@fluentic/style/dev` and call it during development startup:
+
+```ts
+import { enableStyleDevUtils } from '@fluentic/style/dev';
+
+if (import.meta.env.DEV) {
+  enableStyleDevUtils();
+}
+```
+
+By default, this installs `window.StyleDevUtils`.
+
+You can also customize the helper name or silence the startup message:
+
+```ts
+enableStyleDevUtils({
+  name: 'FluenticStyleDev',
+  silent: true,
+});
+```
+
+You can try the debug workflow in the [Playground](/playground/) before wiring
+it into your own app.
+
+## Check The Active Debug Setup
+
+After enabling the helper, open the browser console and check what Fluentic
+debug features are active:
+
+```ts
+StyleDevUtils.info();
+StyleDevUtils.usage();
+StyleDevUtils.getConfig();
+```
+
+`info()` is usually the first command. It tells you the active runtime mode, CSS
+mode, priority mode, sourcemap mode, element marker state, and plugin state.
+
+`usage()` lists the commands available in the current setup. That matters
+because runtime-only apps and plugin-powered apps do not always expose the same
+debugging capabilities.
+
+## Follow The Right Trail
+
+Different bugs need different debug views.
+
+If the wrong DOM element is receiving a style, turn on element markers:
+
+```ts
+StyleDevUtils.setElementMarker.toOn();
+```
+
+Element markers add a development-only class to elements that receive a `css`
+prop. In DevTools, that marker helps connect the DOM element back to the JSX
+element that attached the style.
+
+If the CSS rule is correct but you need to find the source style, use style
+sourcemaps:
+
+```ts
+const sharedText = style.raw({
+  color: '#15211d',
+});
+
+const title = style({
+  ...sharedText,
+  fontWeight: 700,
+});
+```
+
+```ts
+StyleDevUtils.setSourcemapMode.toStyle();
+```
+
+`toStyle()` points the generated `color` rule at the `title` style that
+assembled it. That is useful when you are debugging the final component style.
+
+If the bug is inside a shared value that was spread or merged into another
+style, switch to value sourcemaps:
+
+```ts
+StyleDevUtils.setSourcemapMode.toValue();
+```
+
+`toValue()` points the same generated `color` rule at `sharedText` when
+Fluentic has that source information. That is useful when the reusable value
+itself is the thing you need to change.
+
+For priority debugging, switch between layer and sorted output:
+
+```ts
+StyleDevUtils.setPriorityMode.toLayer();
+StyleDevUtils.setPriorityMode.toSort();
+```
+
+Layer mode makes Fluentic priority buckets easier to inspect. Sort mode shows
+output closer to compact generated CSS.
+
+## Trace Runtime Sourcemaps
+
+Runtime-only development can also ask Fluentic to trace served JavaScript
+sourcemaps:
+
+```ts
+StyleDevUtils.traceSourcemap();
+```
+
+Use this when CSS comments or runtime callsites still point at generated files
+and you want Fluentic to remap them closer to the original TypeScript source.
+
+Bundler plugin setups can provide richer build-time source information, so this
+command is most useful when you are working without extraction or when you need
+to inspect runtime callsites.
+
+## Read A Styling Bug
+
+A practical debugging pass usually looks like this:
+
+```txt
+wrong element?
+  enable element markers -> find the JSX element with the css prop
+
+wrong rule?
+  use sourcemaps -> jump to the style property that produced the rule
+
+wrong spread or merged value?
+  switch between toStyle() and toValue()
+
+wrong component override?
+  follow the scope item -> slot or token it provided
+
+wrong theme value?
+  find the token or app value -> check the createTheme() override in the subtree
+```
+
+The goal is not to hide CSS. The goal is to make generated CSS explain which
+authored style decision should be changed.
+
+For the deeper debugging story, see
+[Debug Without Getting Lost](/docs/fluentic-approach/debug-without-getting-lost/).
+For the full setup and command reference, see
+[DevTools And Sourcemaps](/docs/beyond-the-basics/devtools-and-sourcemaps/).
+
+Continue to [Build For Production](/docs/learn/build-for-production/) to see
+how the same source model connects to production output and static extraction.

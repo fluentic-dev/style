@@ -3,7 +3,14 @@ title: Expose Styleable Parts
 description: Export only the component slots consumers may depend on.
 ---
 
-A component can have more internal styles than public styling targets.
+You have seen how scopes can cover many component styling cases once a
+component has slots.
+
+The next decision is which slots should be available outside the component.
+Some slots are part of the styling surface you want consumers to depend on.
+Other styles are only implementation details.
+
+A component can keep both kinds side by side:
 
 ```ts
 const styles = {
@@ -14,7 +21,7 @@ const styles = {
 };
 ```
 
-Only expose the parts consumers may rely on:
+Expose only the parts consumers may rely on:
 
 ```ts
 import { exposeStyle } from '@fluentic/style/utils';
@@ -26,22 +33,30 @@ export const CardStyle = exposeStyle({
 });
 ```
 
-Consumers target the exported surface:
+Outside code targets the exported surface:
 
 ```ts
-export const marketingCard = style.scope([
+export const featuredCard = style.scope([
   CardStyle.root({ backgroundColor: '#111827', color: 'white' }),
   CardStyle.title({ letterSpacing: 0.2 }),
 ]);
 ```
 
-This keeps the contract clear:
+`exposeStyle(...)` takes an object of styles and keeps only slots and tokens.
+Other values are left out. We will cover tokens in
+[the next page](/docs/learn/theming-with-tokens/).
 
-- exposed slots are supported customization points;
-- private styles can change with the implementation;
-- consumers do not target DOM selectors;
-- component docs can describe `CardStyle.root`, `CardStyle.title`, and
-  `CardStyle.body`.
+Nested fields and nested objects are supported too, so grouped slots can stay
+grouped in the exposed surface.
 
-Continue to [Theme Component Tokens](/docs/learn/theme-component-tokens/) to
-move from styleable component parts to themeable component values.
+This makes the outside styling surface explicit:
+
+- `CardStyle` contains only the parts outside code should style;
+- internal fields such as `measurementLayer` are not exposed;
+- consumers target stable slot names such as `CardStyle.root`,
+  `CardStyle.title`, and `CardStyle.body`;
+- the component can change private styles without changing the supported styling
+  surface.
+
+Continue to [Theming With Tokens](/docs/learn/theming-with-tokens/) to see how
+to make component values themeable, not only component parts styleable.
