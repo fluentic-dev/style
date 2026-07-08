@@ -1,5 +1,11 @@
 # @fluentic/style
 
+## 0.1.0-beta.1
+
+### Patch Changes
+
+- Add `createSelectorAssert` for typed custom selector validators and improve selector preset documentation.
+
 ## 0.1.0-beta.0
 
 ### First Public Beta
