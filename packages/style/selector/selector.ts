@@ -66,3 +66,9 @@ export function selectorPriority<Selectors extends Record<string, Selector>>(
 
   return selectors;
 }
+
+export function createSelectorAssert<const Arg extends string = string>(
+  fn: (arg: Arg) => void,
+) {
+  return fn as SelectorAssertFn<Arg>;
+}

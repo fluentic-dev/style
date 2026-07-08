@@ -45,11 +45,13 @@ enough.
 Selectors are one kind of vocabulary. Custom style fields are another.
 This page only covers selector vocabulary. For custom style object fields, see
 [Custom Style Fields](custom-style-fields).
+For the built-in selector sets, default priority order, and minimal selector
+presets, see [Selectors](../reference/selectors).
 
 Define the method once:
 
 ```ts
-import { createStyleFn, type CSSProperties, type } from '@fluentic/style';
+import { createStyleFn } from '@fluentic/style';
 import {
   assertEnumSelector,
   selector,
@@ -70,7 +72,6 @@ const prioritySelectors = selectorPriority(selectors, [
 ]);
 
 export const { style: ui } = createStyleFn({
-  style: type<CSSProperties>,
   selectors: prioritySelectors,
 });
 ```
@@ -102,13 +103,16 @@ of every component.
 
 ## Responsive Methods
 
-Selector methods can also wrap media queries.
+Selector methods can also wrap CSS at-rules such as media and container queries.
+When a selector template starts with `@`, Fluentic treats it as an at-rule
+selector. At-rule methods get a different chain signature from normal selector
+methods: their style argument can be a style object or a whole `style()` chain.
 
-Use fixed at-rule selectors when a design system wants named breakpoint
-methods:
+Use fixed at-rule selectors when a design system wants named breakpoint and
+container methods:
 
 ```ts
-import { createStyleFn, type CSSProperties, type } from '@fluentic/style';
+import { createStyleFn } from '@fluentic/style';
 import { selector } from '@fluentic/style/selector';
 
 const selectors = {
@@ -116,10 +120,11 @@ const selectors = {
   md: selector('@media (768px <= width < 1024px)', 'media'),
   lg: selector('@media (1024px <= width < 1280px)', 'media'),
   xl: selector('@media (min-width: 1280px)', 'media'),
+  cqSm: selector('@container (min-width: 320px)', 'container'),
+  cqMd: selector('@container (min-width: 640px)', 'container'),
 };
 
 export const { style: sx } = createStyleFn({
-  style: type<CSSProperties>,
   selectors,
 });
 ```
@@ -137,18 +142,36 @@ const grid = sx({
 });
 ```
 
+Because at-rule methods accept style chains, reusable interaction styles can be
+placed inside a media or container condition:
+
+```ts
+const interaction = sx().hover({
+  backgroundColor: '#eef2ff',
+}).focusVisible({
+  outline: '2px solid currentColor',
+});
+
+const card = sx({
+  padding: 16,
+}).cqSm(interaction);
+```
+
 Use argument selectors when the method should accept part of the query:
 
 ```ts
 const selectors = {
   below: selector('@media (max-width: $$)', 'media'),
   above: selector('@media (min-width: $$)', 'media'),
+  containerAbove: selector('@container (min-width: $$)', 'container'),
 };
 
 const panel = sx({
   padding: 16,
 }).below('700px', {
   padding: 10,
+}).containerAbove('520px', {
+  display: 'grid',
 });
 ```
 
@@ -160,6 +183,61 @@ Selector templates support three placeholders:
 $    one argument
 $$   one argument, or an array that expands into multiple rules
 ...  merge another style data object
+```
+
+Those placeholders also decide the chain method signature.
+
+Given a style type named `Style`, the mapping is:
+
+```ts
+selector(':hover')
+// hover(style: StyleObject<Style>)
+
+selector('[data-tone="$"]', assertEnumSelector('neutral', 'danger'))
+// tone(arg: 'neutral' | 'danger', style: StyleObject<Style>)
+
+selector('[data-state="$$"]', assertEnumSelector('open', 'closed'))
+// state(arg: 'open' | 'closed' | Array<'open' | 'closed'>, style: StyleObject<Style>)
+
+selector(':not($$)', 'arg')
+// not(arg: string | string[], style: StyleObject<Style>)
+
+selector('@media (max-width: $$)', 'media')
+// below(arg: string | string[], style: StyleObject<Style> | StyleData<Style>)
+// below(priority: number, arg: string | string[], style: StyleObject<Style> | StyleData<Style>)
+
+selector('@media (min-width: 768px)', 'media')
+// md(style: StyleObject<Style> | StyleData<Style>)
+// md(priority: number, style: StyleObject<Style> | StyleData<Style>)
+
+selector('...')
+// merge(style: StyleData<Style> | StyleData<Style>[])
+```
+
+`$` and `$$` both add an argument before the style object. The difference is
+that `$$` also accepts an array. Passing an array to `$$` is the same as calling
+the method once per item with the same style object.
+
+The argument type comes from the selector validator. Without a typed validator,
+the argument is `string`. With `assertEnumSelector(...)`, TypeScript narrows the
+method argument to that fixed vocabulary:
+
+```ts
+const selectors = {
+  tone: selector('[data-tone="$"]', assertEnumSelector('neutral', 'danger')),
+  // tone(arg: 'neutral' | 'danger', style: StyleObject<Style>)
+  state: selector('[data-state="$$"]', assertEnumSelector('open', 'closed')),
+  // state(arg: 'open' | 'closed' | Array<'open' | 'closed'>, style: StyleObject<Style>)
+};
+
+ui().tone('danger', { color: '#b91c1c' });
+ui().state(['open', 'closed'], { opacity: 1 });
+
+ui().tone('warning', { color: '#92400e' });
+//        ^ TypeScript error: expected 'neutral' | 'danger'
+
+ui().state(['open', 'pending'], { opacity: 0.7 });
+//                  ^ TypeScript error: expected 'open' | 'closed'
 ```
 
 Examples:
@@ -181,20 +259,77 @@ const item = ui().not(['[hidden]', '[aria-disabled="true"]'], {
 });
 ```
 
-That is equivalent to writing `.not(...)` twice.
+That behaves like calling the same method once for each selector value:
+
+```ts
+const item = ui()
+  .not('[hidden]', {
+    cursor: 'pointer',
+  })
+  .not('[aria-disabled="true"]', {
+    cursor: 'pointer',
+  });
+```
 
 ## Validators
 
 Use validators whenever a method accepts user input.
 
+The validator argument to `selector(...)` can be a built-in `SelectorType`
+string:
+
+```ts
+type SelectorType =
+  | 'local'
+  | 'arg'
+  | 'tag'
+  | 'attr'
+  | 'value'
+  | 'media'
+  | 'supports'
+  | 'container';
+```
+
 ```ts
 const selectors = {
   select: selector('$$', 'local'),
-  attr: selector('$', 'attr'),
+  attr: selector('[$]', 'attr'),
+  tag: selector('$', 'tag'),
   nthChild: selector(':nth-child($)', 'value'),
   media: selector('@media $$', 'media'),
   supports: selector('@supports $$', 'supports'),
   container: selector('@container $$', 'container'),
+};
+```
+
+Each string is shorthand for an exported validator function:
+
+| Validator | Guide | Examples |
+| --- | --- | --- |
+| Local selector<br />`'local'`<br />`assertLocalSelector` | For current-element selectors. Rejects tags, combinators, and selector lists. | ✅ Valid:&nbsp; `.selected`, `[data-open]`, `:focus-visible`<br />❌ Invalid:&nbsp; `button`, `.parent .child`, `.a, .b` |
+| Pseudo argument<br />`'arg'`<br />`assertPseudoArgSelector` | For arguments inside selectors such as `:not($$)` or `:is($$)`. Allows tags and current-element selectors. | ✅ Valid:&nbsp; `.selected`, `[hidden]`, `button`<br />❌ Invalid:&nbsp; `.parent .child`, `.a, .b` |
+| Tag selector<br />`'tag'`<br />`assertTagSelector` | For element-name arguments. Accepts one tag name only. | ✅ Valid:&nbsp; `button`, `a`<br />❌ Invalid:&nbsp; `.button`, `[data-button]`, `button.primary` |
+| Attribute fragment<br />`'attr'`<br />`assertAttrSelector` | For the value inserted inside an attribute template such as `[$]`. Pass the inside of the brackets, not the brackets. | ✅ Valid:&nbsp; `data-open`, `aria-current="page"`<br />❌ Invalid:&nbsp; `[data-open]`, `[aria-current="page"]` |
+| Raw value<br />`'value'`<br />`assertRawValue` | For CSS function arguments such as `:nth-child($)`. Rejects rule blocks. | ✅ Valid:&nbsp; `2n + 1`, `odd`<br />❌ Invalid:&nbsp; `{ color: red }` |
+| Media query<br />`'media'`<br />`assertMediaQuery` | For media query arguments. Rejects rule blocks. | ✅ Valid:&nbsp; `(min-width: 768px)`, `(hover: hover)`<br />❌ Invalid:&nbsp; `{ color: red }` |
+| Supports query<br />`'supports'`<br />`assertSupportsQuery` | For supports query arguments. Rejects rule blocks. | ✅ Valid:&nbsp; `(display: grid)`, `selector(:has(*))`<br />❌ Invalid:&nbsp; `{ color: red }` |
+| Container query<br />`'container'`<br />`assertContainerQuery` | For container query arguments. Rejects rule blocks. | ✅ Valid:&nbsp; `(min-width: 320px)`, `card (inline-size > 40rem)`<br />❌ Invalid:&nbsp; `{ color: red }` |
+
+Use the function form when you want a named import or want to compose validation
+yourself:
+
+```ts
+import {
+  assertAttrSelector,
+  assertLocalSelector,
+  assertMediaQuery,
+  selector,
+} from '@fluentic/style/selector';
+
+const selectors = {
+  select: selector('$$', assertLocalSelector),
+  attr: selector('[$]', assertAttrSelector),
+  media: selector('@media $$', assertMediaQuery),
 };
 ```
 
@@ -207,8 +342,54 @@ const selectors = {
 };
 ```
 
-The validator runs at runtime and during static extraction. TypeScript also
-narrows the chain method argument to the allowed literal values.
+Validators run in the dev/runtime path and during static extraction. Extracted
+production output does not keep runtime selector checks. TypeScript still narrows
+the chain method argument to the allowed literal values.
+
+## Custom Validators
+
+Custom validators use the same shape as the built-in functions: accept the raw
+string argument and throw when it is not valid.
+
+By default, the validator value is typed as `string`, so the chain method
+argument is also `string`:
+
+```ts
+import { createSelectorAssert, selector } from '@fluentic/style/selector';
+
+const assertDataName = createSelectorAssert((value) => {
+  if (!/^data-[a-z-]+$/.test(value)) {
+    throw new Error('attribute name must start with data-');
+  }
+});
+
+const selectors = {
+  data: selector('[$]', assertDataName),
+  // data(arg: string, style: StyleObject<Style>)
+};
+```
+
+You can also provide the value type. Fluentic uses that type for the chain
+method argument:
+
+```ts
+import { createSelectorAssert, selector } from '@fluentic/style/selector';
+
+const placements = ['top', 'right', 'bottom', 'left'] as const;
+
+type Placement = (typeof placements)[number];
+
+const assertPlacement = createSelectorAssert<Placement>((value) => {
+  if (!placements.includes(value)) {
+    throw new Error('placement must be top, right, bottom, or left');
+  }
+});
+
+const selectors = {
+  placement: selector('[data-placement="$"]', assertPlacement),
+  // placement(arg: Placement, style: StyleObject<Style>)
+};
+```
 
 ## Compiler Checks
 

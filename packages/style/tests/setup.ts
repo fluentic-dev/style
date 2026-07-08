@@ -59,7 +59,7 @@ import { clearRscStyleStore, getRscStyleCss } from '../runtime/rsc/styleStore';
 import { createThemeRule, getGlobalSheet, setGlobalSheet } from '../runtime/sheet';
 import { bindScope, type CombinedStyleFor, combineStyle, getToken } from '../runtime/style';
 import { assertEnumSelector } from '../selector/assert';
-import { selector } from '../selector/selector';
+import { createSelectorAssert, selector } from '../selector/selector';
 import { createDevSheet, createProdSheet } from '../sheet';
 import { getRuleCallsite } from '../sheet/sourcemap';
 import { createStyleFn, createTheme, createToken, createTokens, createValues } from '../style';
@@ -90,6 +90,7 @@ export {
   createProperty,
   createRscStylePayload,
   createScopeBuilder,
+  createSelectorAssert,
   createSlotBuilder,
   createStyleBuilder,
   createStyleFn,
@@ -97,8 +98,8 @@ export {
   createThemeRule,
   createToken,
   createTokens,
-  createValues,
   createTransformFilter,
+  createValues,
   createWebpackRuntimeModuleSource,
   CSS_CONFIG,
   DEV_CONFIG,

@@ -1,3 +1,4 @@
+import { createSelectorAssert } from './selector';
 import type { SelectorAssert, SelectorAssertFn } from './types';
 import { isAttrArg, isLocalSelector, isPseudoArgSelector, isRawValue, isTagSelector } from './validate';
 
@@ -46,86 +47,84 @@ export function assertEnumSelector<const Values extends readonly string[]>(
 export function assertEnumSelector<const Values extends readonly string[]>(
   ...values: Values
 ): SelectorAssertFn<Values[number]>;
-export function assertEnumSelector(
-  ...input: [readonly string[]] | string[]
-) {
+export function assertEnumSelector<const Values extends readonly string[]>(
+  ...input: [Values] | Values
+): SelectorAssertFn<Values[number]> {
   const values = Array.isArray(input[0]) ? input[0] : input;
 
-  const fn = (arg: string) => {
+  return createSelectorAssert<Values[number]>((arg) => {
     if (!values.includes(arg)) {
       throw new Error(`value must be one of: ${values.join(', ')}`);
     }
-  };
-
-  return fn as SelectorAssertFn<string>;
+  });
 }
 
-export function assertSelectorNotEmpty(value: string) {
+export const assertSelectorNotEmpty = createSelectorAssert((value) => {
   if (!value) {
     throw new Error('selector cannot be empty');
   }
-}
+});
 
-export function assertLocalSelector(value: string) {
+export const assertLocalSelector = createSelectorAssert((value) => {
   if (!isLocalSelector(value)) {
     throw new Error(
       'selector must target the current element only and cannot contain tags, combinators, or multiple selectors',
     );
   }
-}
+});
 
-export function assertPseudoArgSelector(value: string) {
+export const assertPseudoArgSelector = createSelectorAssert((value) => {
   if (!isPseudoArgSelector(value)) {
     throw new Error(
       'pseudo selector argument must contain only tags or selectors targeting the current element',
     );
   }
-}
+});
 
-export function assertTagSelector(value: string) {
+export const assertTagSelector = createSelectorAssert((value) => {
   if (!isTagSelector(value)) {
     throw new Error(
       'selector must be a single tag selector',
     );
   }
-}
+});
 
-export function assertAttrSelector(value: string) {
+export const assertAttrSelector = createSelectorAssert((value) => {
   if (!isAttrArg(value)) {
     throw new Error(
       'attribute selector value must not include "[" or "]"',
     );
   }
-}
+});
 
-export function assertRawValue(value: string) {
+export const assertRawValue = createSelectorAssert((value) => {
   if (!isRawValue(value)) {
     throw new Error(
       'value must not contain "{" or "}"',
     );
   }
-}
+});
 
-export function assertMediaQuery(value: string) {
+export const assertMediaQuery = createSelectorAssert((value) => {
   if (!isRawValue(value)) {
     throw new Error(
       'media query must not contain "{" or "}"',
     );
   }
-}
+});
 
-export function assertSupportsQuery(value: string) {
+export const assertSupportsQuery = createSelectorAssert((value) => {
   if (!isRawValue(value)) {
     throw new Error(
       'supports query must not contain "{" or "}"',
     );
   }
-}
+});
 
-export function assertContainerQuery(value: string) {
+export const assertContainerQuery = createSelectorAssert((value) => {
   if (!isRawValue(value)) {
     throw new Error(
       'container query must not contain "{" or "}"',
     );
   }
-}
+});

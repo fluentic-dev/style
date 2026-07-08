@@ -39,19 +39,90 @@ The default builder uses `PrioritySelectors`.
 
 ```ts
 import {
+  ArgSelectors,
+  AtRuleSelectors,
   MinimalPrioritySelectors,
   MinimalSelectors,
   PrioritySelectors,
+  PseudoArgSelectors,
+  PseudoElementSelectors,
+  PseudoSelectors,
+  selectorPriority,
   Selectors,
 } from '@fluentic/style/selector';
 ```
 
-| Preset | Use |
+| Export | Use |
 | --- | --- |
 | `Selectors` | Full selector set. |
 | `PrioritySelectors` | Full selector set plus default priority for common states. |
 | `MinimalSelectors` | Smaller practical set for design-system builders. |
 | `MinimalPrioritySelectors` | Minimal set plus default state priority. |
+| `PseudoSelectors` | State, child, type, and related pseudo-class methods. |
+| `PseudoElementSelectors` | Pseudo-element methods. |
+| `PseudoArgSelectors` | Pseudo-functions that accept arguments. |
+| `ArgSelectors` | General selector helpers: `attr`, `select`, and `merge`. |
+| `AtRuleSelectors` | At-rule helpers: `media`, `container`, and `supports`. |
+
+`Selectors` is the full default method map:
+
+```ts
+const Selectors = {
+  ...PseudoSelectors,
+  ...PseudoElementSelectors,
+  ...PseudoArgSelectors,
+  ...ArgSelectors,
+  ...AtRuleSelectors,
+};
+```
+
+`PrioritySelectors` adds the default state priority order:
+
+```ts
+const PrioritySelectors = selectorPriority(Selectors, [
+  'link',
+  'visited',
+  'hover',
+  'focusWithin',
+  'focus',
+  'focusVisible',
+  'active',
+  'disabled',
+]);
+```
+
+Later entries win earlier entries when both selectors match.
+
+`MinimalSelectors` keeps the smaller set most design-system builders usually
+need:
+
+```ts
+const MinimalSelectors = {
+  hover: PseudoSelectors.hover,
+  active: PseudoSelectors.active,
+  focus: PseudoSelectors.focus,
+  focusWithin: PseudoSelectors.focusWithin,
+  disabled: PseudoSelectors.disabled,
+
+  firstChild: PseudoSelectors.firstChild,
+  lastChild: PseudoSelectors.lastChild,
+
+  nthChild: PseudoArgSelectors.nthChild,
+  nthOfType: PseudoArgSelectors.nthOfType,
+
+  is: PseudoArgSelectors.is,
+  where: PseudoArgSelectors.where,
+  not: PseudoArgSelectors.not,
+  has: PseudoArgSelectors.has,
+
+  ...PseudoElementSelectors,
+  ...ArgSelectors,
+  ...AtRuleSelectors,
+};
+```
+
+`MinimalPrioritySelectors` applies the same default state priority to
+`MinimalSelectors`.
 
 Common method groups:
 

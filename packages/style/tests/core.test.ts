@@ -12,6 +12,7 @@ import {
   createCompiler,
   createDebugSlot,
   createDebugStyle,
+  createSelectorAssert,
   createStyleFn,
   CSS_CONFIG,
   type DebugData,
@@ -424,7 +425,10 @@ test('dev debug transform traces imported chain merge to leaf sources', () => {
   );
 
   includes(result.code, `.merge(sharedInteractive, { $$debug: true, loc: [6, 4]`);
-  includes(result.code, `"backgroundColor": { 0: [6, 4], 1: [10, 3, undefined, "source:///fixtures/merge_common.ts"] }`);
+  includes(
+    result.code,
+    `"backgroundColor": { 0: [6, 4], 1: [10, 3, undefined, "source:///fixtures/merge_common.ts"] }`,
+  );
   includes(result.code, `"borderColor": { 0: [6, 4], 1: [4, 3, undefined, "source:///fixtures/merge_common.ts"] }`);
   includes(result.code, `"color": { 0: [6, 4], 1: [12, 3, undefined, "source:///fixtures/merge_common.ts"] }`);
 });
@@ -631,6 +635,38 @@ test('custom selector assert can carry typed enum args', () => {
   }
 
   assertCompileError(error, 'value must be one of: brand, danger');
+});
+
+test('custom selector assert helper can carry typed args', () => {
+  const placementAssert = createSelectorAssert<'top' | 'right' | 'bottom' | 'left'>((value) => {
+    if (!['top', 'right', 'bottom', 'left'].includes(value)) {
+      throw new Error('placement must be top, right, bottom, or left');
+    }
+  });
+  const custom = createStyleFn({
+    style: null as any,
+    selectors: {
+      placement: selector('[data-placement="$"]', placementAssert),
+    },
+  }).style;
+
+  custom().placement('top', { opacity: 1 });
+
+  const checkTypesOnly = false as boolean;
+  if (checkTypesOnly) {
+    // @ts-expect-error custom assert narrows selector arg
+    custom().placement('center', { opacity: 0.5 });
+  }
+
+  let error: unknown = null;
+
+  try {
+    placementAssert('center');
+  } catch (err: unknown) {
+    error = err;
+  }
+
+  assertCompileError(error, 'placement must be top, right, bottom, or left');
 });
 
 test('custom builders support fixed media selector helpers', () => {
