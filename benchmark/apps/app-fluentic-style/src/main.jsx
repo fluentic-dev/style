@@ -95,24 +95,6 @@ function getStatusKey(row) {
   return 'active';
 }
 
-function getAccent(status) {
-  if (status === 'blocked') return '#dc2626';
-  if (status === 'trial') return '#b45309';
-  return '#0f766e';
-}
-
-function getSurface(status) {
-  if (status === 'blocked') return 'rgba(254,242,242,0.92)';
-  if (status === 'trial') return 'rgba(255,251,235,0.92)';
-  return 'rgba(240,253,250,0.92)';
-}
-
-function getRing(status) {
-  if (status === 'blocked') return 'rgba(220,38,38,0.22)';
-  if (status === 'trial') return 'rgba(180,83,9,0.22)';
-  return 'rgba(15,118,110,0.24)';
-}
-
 function getVariantKey(row, selected) {
   const status = getStatusKey(row);
   return selected ? `${status}Selected` : status;
