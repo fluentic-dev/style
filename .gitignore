@@ -32,4 +32,5 @@ docs/app/.astro/
 docs/app/.source/
 docs/app/dist/
 docs/app/out/
+docs/app/next-env.d.ts
 packages/style/README.md
