@@ -1,5 +1,25 @@
 # @fluentic/style
 
+## 0.1.0-beta.2
+
+### Minor Changes
+
+- Add class-name style chains with `createClassNameFn`, weighted utility values,
+  selector chaining, at-rule support, merge support, and static compiler
+  extraction.
+- Split the Tailwind preset into style-object and class-name entry points so
+  teams can choose object-first or utility-class authoring from the same preset
+  package.
+- Add named token compiler support and docs for transform extraction behavior.
+
+### Patch Changes
+
+- Improve debug class names for transformed class utilities, including readable
+  transform class metadata in extracted output.
+- Refresh docs for presets, class-name chains, numeric values, runtime/compiler
+  tradeoffs, plugin options, and imports.
+- Add a Vite React Tailwind className example app.
+
 ## 0.1.0-beta.1
 
 ### Patch Changes
