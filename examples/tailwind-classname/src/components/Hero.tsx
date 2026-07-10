@@ -72,8 +72,8 @@ export function Hero(props: HeroProps) {
             'text-lg',
           )}
         >
-          This example keeps Tailwind's familiar class-name surface while using typed Fluentic chains,
-          responsive selectors, and runtime themes that override the same named token ids.
+          This example keeps Tailwind's familiar class-name surface while using typed Fluentic chains, responsive
+          selectors, and runtime themes that override the same named token ids.
         </p>
 
         <div

@@ -992,7 +992,7 @@ test('scope dedupes token overrides by token id', () => {
 
 test('scope merge dedupes token overrides by token id', () => {
   const token = createToken('blue');
-  const scopeFn = createScopeBuilder<Record<string, unknown>, typeof ArgSelectors>(ArgSelectors);
+  const scopeFn = createScopeBuilder<typeof ArgSelectors>(ArgSelectors);
   const first = style.scope([
     token('red'),
   ]);

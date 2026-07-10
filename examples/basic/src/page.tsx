@@ -177,35 +177,57 @@ export function Page(props: PageProps) {
             <Button>Save</Button>
           </div>
           <div css={debugRowText.testGrid}>
-            <Button css={debugRowText.card} debugTarget="scope-merge" theme={mergedCancelButtonTheme}>
+            <Button css={debugRowText.card} debugTarget='scope-merge' theme={mergedCancelButtonTheme}>
               <span css={debugRowText.stack}>
                 <span css={debugRowText.title}>Scope merge</span>
-                <span css={debugRowText.detail}>self: <span css={debugRowText.code}>outline</span></span>
-                <span css={debugRowText.detail}>.merge: <span css={debugRowText.code}>box-shadow</span></span>
+                <span css={debugRowText.detail}>
+                  self: <span css={debugRowText.code}>outline</span>
+                </span>
+                <span css={debugRowText.detail}>
+                  .merge: <span css={debugRowText.code}>box-shadow</span>
+                </span>
               </span>
             </Button>
-            <Button css={[mergedButtonStyle, debugRowText.card]} debugTarget="style-merge">
+            <Button css={[mergedButtonStyle, debugRowText.card]} debugTarget='style-merge'>
               <span css={debugRowText.stack}>
                 <span css={debugRowText.title}>Style merge</span>
-                <span css={debugRowText.detail}>self: <span css={debugRowText.code}>background-color</span></span>
-                <span css={debugRowText.detail}>...spread: <span css={debugRowText.code}>box-shadow</span></span>
-                <span css={debugRowText.detail}>.merge: <span css={debugRowText.code}>transition</span></span>
+                <span css={debugRowText.detail}>
+                  self: <span css={debugRowText.code}>background-color</span>
+                </span>
+                <span css={debugRowText.detail}>
+                  ...spread: <span css={debugRowText.code}>box-shadow</span>
+                </span>
+                <span css={debugRowText.detail}>
+                  .merge: <span css={debugRowText.code}>transition</span>
+                </span>
               </span>
             </Button>
-            <button css={[slotChainCss.container, debugRowText.card]} data-debug-target="slot-chain-merge">
+            <button css={[slotChainCss.container, debugRowText.card]} data-debug-target='slot-chain-merge'>
               <span css={[slotChainCss.label, debugRowText.stack]}>
                 <span css={debugRowText.title}>Slot chain merge</span>
-                <span css={debugRowText.detail}>self: <span css={debugRowText.code}>color</span></span>
-                <span css={debugRowText.detail}>...spread: <span css={debugRowText.code}>background-color</span></span>
-                <span css={debugRowText.detail}>.merge: <span css={debugRowText.code}>outline</span></span>
+                <span css={debugRowText.detail}>
+                  self: <span css={debugRowText.code}>color</span>
+                </span>
+                <span css={debugRowText.detail}>
+                  ...spread: <span css={debugRowText.code}>background-color</span>
+                </span>
+                <span css={debugRowText.detail}>
+                  .merge: <span css={debugRowText.code}>outline</span>
+                </span>
               </span>
             </button>
-            <Button css={debugRowText.card} debugTarget="slot-override-chain-merge" theme={slotOverrideChainTheme}>
+            <Button css={debugRowText.card} debugTarget='slot-override-chain-merge' theme={slotOverrideChainTheme}>
               <span css={debugRowText.stack}>
                 <span css={debugRowText.title}>Slot override merge</span>
-                <span css={debugRowText.detail}>self: <span css={debugRowText.code}>color</span></span>
-                <span css={debugRowText.detail}>...spread: <span css={debugRowText.code}>background-color</span></span>
-                <span css={debugRowText.detail}>.merge: <span css={debugRowText.code}>outline</span></span>
+                <span css={debugRowText.detail}>
+                  self: <span css={debugRowText.code}>color</span>
+                </span>
+                <span css={debugRowText.detail}>
+                  ...spread: <span css={debugRowText.code}>background-color</span>
+                </span>
+                <span css={debugRowText.detail}>
+                  .merge: <span css={debugRowText.code}>outline</span>
+                </span>
               </span>
             </Button>
           </div>

@@ -1,5 +1,5 @@
-import { defineConfig, defineDocs } from 'fumadocs-mdx/config';
 import { pageSchema } from 'fumadocs-core/source/schema';
+import { defineConfig, defineDocs } from 'fumadocs-mdx/config';
 import githubDarkDefault from 'shiki/themes/github-dark-default.mjs';
 import githubLightDefault from 'shiki/themes/github-light-default.mjs';
 

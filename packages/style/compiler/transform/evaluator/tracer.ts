@@ -1,7 +1,7 @@
 import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
-import { TRACE_STYLE, TRACE_VALUE } from '../../../builder/data/debug';
 import { BUILDER_TYPE_SCOPE } from '../../../builder/data';
+import { TRACE_STYLE, TRACE_VALUE } from '../../../builder/data/debug';
 import { createExtractedScope, createExtractedStyle } from '../../../builder/extract';
 import type { ExtractedStyleTuple } from '../../../builder/extract';
 import type { CompilerInternal } from '../../compiler';
@@ -20,13 +20,7 @@ import type { BabelCore, BabelTypes } from '../utils/babel';
 import { babelTransformOptions } from '../utils/babel';
 import { getProjectFileId } from '../utils/path';
 import type { CompiledStyleObject, CompiledStyleObjectLocations, EvalScope } from './evaluator';
-import {
-  COMPILED_STYLE_OBJECT_LOCATIONS,
-  evalFail,
-  evalOk,
-  evaluateEnumDeclaration,
-  evaluateNode,
-} from './evaluator';
+import { COMPILED_STYLE_OBJECT_LOCATIONS, evalFail, evalOk, evaluateEnumDeclaration, evaluateNode } from './evaluator';
 import type { EvalModuleBindings, EvalResult, EvalSlotRef, ImportMap, ResolveImportFn } from './types';
 
 export type Tracer = ReturnType<typeof createTracer>;

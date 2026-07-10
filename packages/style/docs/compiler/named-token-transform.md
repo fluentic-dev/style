@@ -166,7 +166,7 @@ withTokens(style, [
   token(
     featured
       ? 'var(--token-app-color-accentSoft-..., #d9f4ee)'
-      : 'var(--token-app-color-panel-..., #ffffff)'
+      : 'var(--token-app-color-panel-..., #ffffff)',
   ),
 ]);
 ```

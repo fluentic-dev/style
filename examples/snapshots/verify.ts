@@ -252,7 +252,8 @@ async function verify006() {
     },
     {
       description: 'does not emit raw Tailwind named refs as CSS values',
-      pass: (s) => !s.includes('$blue.600') &&
+      pass: (s) =>
+        !s.includes('$blue.600') &&
         !s.includes('$accent') &&
         !s.includes('$border') &&
         !s.includes('$panel'),
@@ -262,26 +263,31 @@ async function verify006() {
   const compiledChecks: Check[] = [
     {
       description: 'does not preserve the Tailwind style function or transform helper',
-      pass: (s) => !s.includes('transformExtractedValue') &&
+      pass: (s) =>
+        !s.includes('transformExtractedValue') &&
         !s.includes('import { tw }') &&
         !s.includes('import { Colors, tw }'),
     },
     {
       description: 'top-level inline Tailwind branches are compiled to token var strings',
-      pass: (s) => /topLevelFeatured \? "var\(--token-snapshot-tailwind-color-blue-600-/.test(s) &&
+      pass: (s) =>
+        /topLevelFeatured \? "var\(--token-snapshot-tailwind-color-blue-600-/.test(s) &&
         /: "var\(--token-snapshot-tailwind-color-emerald-600-/.test(s) &&
         /topLevelFeatured \? "var\(--token-snapshot-tailwind-color-accent-/.test(s) &&
         /: "var\(--token-snapshot-tailwind-color-border-/.test(s),
     },
     {
       description: 'component-local inline Tailwind branches keep hoisted token binding with compiled values',
-      pass: (s) => /withTokens\(_fluenticStyle\d*, \[[\s\S]*_fluenticToken3\(featured \? "var\(--token-snapshot-tailwind-color-accentSoft-/.test(s) &&
+      pass: (s) =>
+        /withTokens\(_fluenticStyle\d*, \[[\s\S]*_fluenticToken3\(featured \? "var\(--token-snapshot-tailwind-color-accentSoft-/
+          .test(s) &&
         /_fluenticToken4\(featured \? "var\(--token-snapshot-tailwind-color-accent-/.test(s) &&
         /_fluenticToken5\(featured \? "var\(--token-snapshot-tailwind-color-panelRaised-/.test(s),
     },
     {
       description: 'dynamic named token values use the regular extracted token path',
-      pass: (s) => s.includes("import { Colors } from './style'") &&
+      pass: (s) =>
+        s.includes("import { Colors } from './style'") &&
         s.includes("['Starter', Colors.blue[600]]") &&
         /withTokens\(_fluenticStyle\d*, \[_fluenticToken7\(swatch\)\]\)/.test(s),
     },

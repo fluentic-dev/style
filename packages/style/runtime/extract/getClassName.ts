@@ -24,12 +24,7 @@ import {
 import { getStylePropCacheValue } from '../core/cache/propCache';
 import { getResolvedStyleItemTokenValues, isResolvedStyleItem } from '../core/cache/resolvedItem';
 import { walkRecursiveItems } from '../core/cache/utils/walk';
-import {
-  type ClassNameProps,
-  type ClassNameResult,
-  mergeClassName,
-  mergeStyle,
-} from '../core/className';
+import { type ClassNameProps, type ClassNameResult, mergeClassName, mergeStyle } from '../core/className';
 import type { StyleProp } from '../types';
 
 type TokenValues = Record<string, unknown> | null;

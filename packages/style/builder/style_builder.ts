@@ -131,7 +131,7 @@ export function createSlotBuilder<Style, Selectors extends SelectorsRecord>(
   return fn as unknown as SlotFn<Style>;
 }
 
-export function createScopeBuilder<Style, Selectors extends SelectorsRecord>(
+export function createScopeBuilder<Selectors extends SelectorsRecord>(
   selectors: Selectors,
 ) {
   type ScopeFn =

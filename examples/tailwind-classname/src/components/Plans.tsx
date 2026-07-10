@@ -82,46 +82,46 @@ export function Plans() {
       ).lg('[grid-template-columns:repeat(3,_minmax(0,_1fr))]')}
     >
       {plans.map(([title, price, body, cardStyle, swatch]) => (
-          <article
-            css={cardStyle}
-            key={title}
-          >
-            <span css={swatch} />
-            <div>
-              <h2
-                css={cx(
-                  'm-0',
-                  'text-xl',
-                  'font-black',
-                  '[letter-spacing:0]',
-                )}
-              >
-                {title}
-              </h2>
-              <p
-                css={cx(
-                  'm-0',
-                  'text-sm',
-                  'leading-relaxed',
-                  '[color:color-mix(in_oklab,_currentColor_66%,_transparent)]',
-                )}
-              >
-                {body}
-              </p>
-            </div>
-            <strong
+        <article
+          css={cardStyle}
+          key={title}
+        >
+          <span css={swatch} />
+          <div>
+            <h2
               css={cx(
-                'mt-auto',
-                'text-3xl',
+                'm-0',
+                'text-xl',
                 'font-black',
-                'leading-none',
                 '[letter-spacing:0]',
               )}
             >
-              {price}
-            </strong>
-          </article>
-        ))}
+              {title}
+            </h2>
+            <p
+              css={cx(
+                'm-0',
+                'text-sm',
+                'leading-relaxed',
+                '[color:color-mix(in_oklab,_currentColor_66%,_transparent)]',
+              )}
+            >
+              {body}
+            </p>
+          </div>
+          <strong
+            css={cx(
+              'mt-auto',
+              'text-3xl',
+              'font-black',
+              'leading-none',
+              '[letter-spacing:0]',
+            )}
+          >
+            {price}
+          </strong>
+        </article>
+      ))}
     </section>
   );
 }

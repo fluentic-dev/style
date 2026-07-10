@@ -1,4 +1,4 @@
-import { focusRing, tw } from '../style';
+import { tw } from '../style';
 import { Metric } from './Metric';
 import type { ThemeOption } from './theme';
 

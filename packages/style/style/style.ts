@@ -50,7 +50,7 @@ export function createStyleFn<
 
   const fnStyle = createStyleBuilder<Style, Selectors>(selectors, transform);
   const fnSlot = createSlotBuilder<Style, Selectors>(selectors, transform);
-  const fnScope = createScopeBuilder<Style, Selectors>(selectors);
+  const fnScope = createScopeBuilder<Selectors>(selectors);
 
   const fnValue: Types['ValueFn'] = (value, weight) => {
     return [weight, value];

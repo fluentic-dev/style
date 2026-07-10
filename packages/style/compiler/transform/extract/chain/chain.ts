@@ -43,7 +43,12 @@ import {
   isStyleTokenOverrideData,
   type StyleTokenOverride,
 } from '../../../../style/token';
-import { classNameValue, isClassNameValue, type ClassNameTransform, type StyleTransform } from '../../../../style/transform';
+import {
+  type ClassNameTransform,
+  classNameValue,
+  isClassNameValue,
+  type StyleTransform,
+} from '../../../../style/transform';
 import { isAtRuleRef } from '../../../../style/valueRef';
 import { hashString } from '../../../../utils/hash';
 import type { CompilerOptions } from '../../../compiler/types';
@@ -59,7 +64,12 @@ import {
 import type { EvalResult } from '../../evaluator/types';
 import type { BabelTypes } from '../../utils/babel';
 import { validateResolvedSelectorValue, validateSelectorDefinition } from '../../utils/selector';
-import { extractStyleChain, STATIC_MERGE_METHOD, type StyleChainMethod, type StyleChainParseResult } from './extract_chain';
+import {
+  extractStyleChain,
+  STATIC_MERGE_METHOD,
+  type StyleChainMethod,
+  type StyleChainParseResult,
+} from './extract_chain';
 import type {
   CompiledChainData,
   CompiledCssItem,
