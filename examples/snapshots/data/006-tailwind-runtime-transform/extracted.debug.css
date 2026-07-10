@@ -1,0 +1,26 @@
+@layer reset, css, override;
+@layer css {
+.border-bvffmo1{border: 1px solid}
+.padding-jus0s20{padding: 1rem}
+.color-bhvjcp4{color: var(--var-o2cnu50)}
+.display-grid-byw9cz2{display: grid}
+.gap-dnpg8g0{gap: 1rem}
+.display-flex-rak8gp0{display: flex}
+.gap-lss4fn0{gap: 1rem}
+.border-by4aau8{border: 1px solid}
+.min-height-m7wol50{min-height: 14.5rem}
+.padding-ba2nkh0{padding: 1.25rem}
+.display-block-b7y018m{display: block}
+.width-b5u8lpv{width: 3rem}
+.height-bqr6ok0{height: 3rem}
+.border-color-bswox76{border-color: var(--var-i7awe00)}
+.border-color-bag4qwo{border-color: var(--var-n5tknl0)}
+.background-color-c41zqz0{background-color: var(--var-gcu4580)}
+.background-color-white-bovvp2a{background-color: white}
+.flex-column-v22jid0{flex-direction: column}
+.background-color-bdpz68b{background-color: var(--var-g9wr0z0)}
+.background-color-b4wq19y{background-color: var(--var-rvckzo0)}
+.border-color-hover-fu6etd0:hover{border-color: var(--var-cns3eo0)}
+.border-color-hover-cijv2f0:hover{border-color: var(--var-bl6zn73)}
+.background-color-hover-c72eqh0:hover{background-color: var(--var-qh45190)}
+}

@@ -1,0 +1,24 @@
+@layer reset, css, override;
+@layer css {
+.b3cpjgx{border: 1px solid}
+.o7dkd70{padding: 1rem}
+.lm9gi00{color: var(--var-o2cnu50)}
+.jgp0up0{display: grid}
+.j550dy0{gap: 1rem}
+.fruelm0{display: flex}
+.bc7gmho{min-height: 14.5rem}
+.yy6azw0{padding: 1.25rem}
+.irneu20{display: block}
+.m72p5c0{width: 3rem}
+.bpm7y8x{height: 3rem}
+.fve7pl0{border-color: var(--var-i7awe00)}
+.g0t7pm0{border-color: var(--var-n5tknl0)}
+.b0bjfj4{background-color: var(--var-gcu4580)}
+.h44xih0{background-color: white}
+.oez5rp0{flex-direction: column}
+.m1p2pp0{background-color: var(--var-g9wr0z0)}
+.btdi9x7{background-color: var(--var-rvckzo0)}
+.bfptscc:hover{border-color: var(--var-cns3eo0)}
+.d64fkt0:hover{border-color: var(--var-bl6zn73)}
+.c4ao1t0:hover{background-color: var(--var-qh45190)}
+}

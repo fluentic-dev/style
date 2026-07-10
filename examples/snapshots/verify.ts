@@ -233,7 +233,85 @@ async function verify005() {
   return cssOk && compiledOk;
 }
 
-const ok = (await verify002()) && (await verify003()) && (await verify004()) && (await verify005());
+async function verify006() {
+  console.log('\nVerifying snapshot 006-tailwind-runtime-transform (dynamic utility transform runtime values)');
+
+  const id = '006-tailwind-runtime-transform';
+  const css = await readSnapshot(id, 'extracted.css');
+  const compiledFile = await resolveCompiledSnapshot(id);
+  const compiled = await readSnapshot(id, compiledFile);
+
+  const cssChecks: Check[] = [
+    {
+      description: 'emits CSS variables for runtime Tailwind utility values',
+      pass: (s) => s.includes('background-color: var(--var-') && s.includes('border-color: var(--var-'),
+    },
+    {
+      description: 'static Tailwind scale values are resolved in extracted CSS',
+      pass: (s) => s.includes('padding: 1rem') && s.includes('min-height: 14.5rem'),
+    },
+    {
+      description: 'does not emit raw Tailwind named refs as CSS values',
+      pass: (s) => !s.includes('$blue.600') &&
+        !s.includes('$accent') &&
+        !s.includes('$border') &&
+        !s.includes('$panel'),
+    },
+  ];
+
+  const compiledChecks: Check[] = [
+    {
+      description: 'does not preserve the Tailwind style function or transform helper',
+      pass: (s) => !s.includes('transformExtractedValue') &&
+        !s.includes('import { tw }') &&
+        !s.includes('import { Colors, tw }'),
+    },
+    {
+      description: 'top-level inline Tailwind branches are compiled to token var strings',
+      pass: (s) => /topLevelFeatured \? "var\(--token-snapshot-tailwind-color-blue-600-/.test(s) &&
+        /: "var\(--token-snapshot-tailwind-color-emerald-600-/.test(s) &&
+        /topLevelFeatured \? "var\(--token-snapshot-tailwind-color-accent-/.test(s) &&
+        /: "var\(--token-snapshot-tailwind-color-border-/.test(s),
+    },
+    {
+      description: 'component-local inline Tailwind branches keep hoisted token binding with compiled values',
+      pass: (s) => /withTokens\(_fluenticStyle\d*, \[[\s\S]*_fluenticToken3\(featured \? "var\(--token-snapshot-tailwind-color-accentSoft-/.test(s) &&
+        /_fluenticToken4\(featured \? "var\(--token-snapshot-tailwind-color-accent-/.test(s) &&
+        /_fluenticToken5\(featured \? "var\(--token-snapshot-tailwind-color-panelRaised-/.test(s),
+    },
+    {
+      description: 'dynamic named token values use the regular extracted token path',
+      pass: (s) => s.includes("import { Colors } from './style'") &&
+        s.includes("['Starter', Colors.blue[600]]") &&
+        /withTokens\(_fluenticStyle\d*, \[_fluenticToken7\(swatch\)\]\)/.test(s),
+    },
+    {
+      description: 'ordinary dynamic extracted style remains token-bound without transformExtractedValue',
+      pass: (s) => /withTokens\(_fluenticStyle\d*, \[_fluenticToken\(color\), _fluenticToken\d*\(color\)\]\)/.test(s),
+    },
+    {
+      description: 'hoisted token placeholders are declared before styles that reference them',
+      pass: (s) =>
+        s.indexOf('const _fluenticToken = createExtractedToken') <
+          s.indexOf('const _fluenticStyle = createExtractedStyle') &&
+        s.indexOf('const _fluenticToken3 = createExtractedToken') <
+          s.indexOf('const _fluenticStyle3 = createExtractedStyle') &&
+        s.indexOf('const _fluenticToken7 = createExtractedToken') <
+          s.indexOf('const _fluenticStyle4 = createExtractedStyle'),
+    },
+  ];
+
+  const cssOk = check(id, 'extracted.css', css, cssChecks);
+  const compiledOk = check(id, compiledFile, compiled, compiledChecks);
+
+  return cssOk && compiledOk;
+}
+
+const ok = (await verify002()) &&
+  (await verify003()) &&
+  (await verify004()) &&
+  (await verify005()) &&
+  (await verify006());
 
 if (!ok) {
   console.error('\nVerification FAILED. Run "npm run generate" first if files are missing.');

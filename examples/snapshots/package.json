@@ -9,8 +9,9 @@
     "generate:003": "tsx generate.ts 003-explicit-scope",
     "generate:004": "tsx generate.ts 004-nested-tokens",
     "generate:005": "tsx generate.ts 005-custom-design-system",
+    "generate:006": "tsx generate.ts 006-tailwind-runtime-transform",
     "verify": "tsx verify.ts",
-    "generate-and-verify": "tsx generate.ts 002-transform && tsx generate.ts 003-explicit-scope && tsx generate.ts 004-nested-tokens && tsx generate.ts 005-custom-design-system && tsx verify.ts"
+    "generate-and-verify": "tsx generate.ts 002-transform && tsx generate.ts 003-explicit-scope && tsx generate.ts 004-nested-tokens && tsx generate.ts 005-custom-design-system && tsx generate.ts 006-tailwind-runtime-transform && tsx verify.ts"
   },
   "dependencies": {
     "@fluentic/style": "workspace:*"
