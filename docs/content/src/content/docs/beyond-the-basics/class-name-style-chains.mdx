@@ -160,8 +160,14 @@ show a readable name such as `bg-accent--abc` instead of a generic atomic label.
 
 ## Is It Type-Safe?
 
-It can be. Class-name type safety comes from the class-name type accepted by
-your transform.
+It can be. Class-name type safety is user-land TypeScript: Fluentic does not
+ship one global list of valid class names, because the class-name language is
+defined by your app, preset, or design system.
+
+The important part is that your class-name transform is a normal TypeScript
+function. The class-name type you give to `classNameTransform<T>(...)` becomes
+the type accepted by the generated `cx(...)` function, including nested arrays,
+conditional falsey values, selector methods, and `cx.weight(...)`.
 
 For a small project dialect, that can be a plain string union:
 
@@ -181,6 +187,11 @@ When that type is used by `classNameTransform<UiClassName>(...)` and passed to
 cx('inline-flex', 'px-4'); // ok
 cx('px-999'); // TypeScript error
 ```
+
+The transform logic can use the same TypeScript patterns you would use for any
+typed function: `if` statements, `switch`, lookup tables, generated maps,
+template literal types, branded strings, or helper functions that validate and
+convert class names into style object data.
 
 Larger dialects can use TypeScript template string types instead of writing one
 giant union by hand. Fluentic's built-in
@@ -239,7 +250,8 @@ values.
 ## What The Builder Accepts
 
 Class-name style chains accept nested arrays and falsey conditional values, so
-you can keep normal React branching:
+you can compose class names with the same conditional patterns you already use
+in JSX:
 
 ```tsx
 cx(
@@ -251,7 +263,10 @@ cx(
 ```
 
 If one class should win another declaration in the same group, use a weighted
-token:
+token. `cx.weight(className, priority)` gives a class-name token explicit value
+priority, the same way
+[`style.value(value, priority)`](/docs/fluentic-approach/override-without-guessing/#value-priority-is-explicit)
+does for a value in a style object:
 
 ```tsx
 cx(
