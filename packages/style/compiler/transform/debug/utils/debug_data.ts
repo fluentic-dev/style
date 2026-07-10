@@ -23,6 +23,7 @@ export function buildDebugDataObject(
   tokenNameFormat: TokenNameFormat = DEFAULT_CONFIG.tokenNameFormat!,
   styleArg: CallArg = node.arguments[0],
   locOverride?: BabelTypes.SourceLocation['start'] | null,
+  classNameArg: boolean = false,
 ) {
   const loc = locOverride ?? node.loc?.start;
   const line = loc?.line ?? 1;
@@ -57,6 +58,13 @@ export function buildDebugDataObject(
     ),
   ];
 
+  if (classNameArg) {
+    properties.push(t.objectProperty(
+      t.identifier('classNames'),
+      buildClassNames(t, node.arguments),
+    ));
+  }
+
   properties.push(t.objectProperty(
     t.identifier('sourceUrl'),
     sourceUrlRef,
@@ -70,6 +78,71 @@ export function buildDebugDataObject(
   }
 
   return t.objectExpression(properties);
+}
+
+function buildClassNames(
+  t: typeof BabelTypes,
+  args: CallArgs,
+) {
+  const classNames = new Map<string, BabelTypes.SourceLocation['start']>();
+
+  for (const arg of args) collectClassNameLoc(arg, classNames);
+
+  const fields: BabelTypes.ObjectProperty[] = [];
+
+  for (const [className, loc] of classNames) {
+    fields.push(t.objectProperty(
+      t.stringLiteral(className),
+      buildLoc(t, loc.line, loc.column + 1),
+    ));
+  }
+
+  return t.objectExpression(fields);
+}
+
+function collectClassNameLoc(
+  arg: BabelTypes.Node | null | undefined,
+  classNames: Map<string, BabelTypes.SourceLocation['start']>,
+) {
+  if (!arg) return;
+
+  if (arg.type === 'StringLiteral') {
+    const loc = arg.loc?.start;
+    if (loc) classNames.set(arg.value, loc);
+    return;
+  }
+
+  if (arg.type === 'TemplateLiteral' && arg.expressions.length === 0) {
+    const loc = arg.loc?.start;
+    if (loc) classNames.set(arg.quasis[0]?.value.cooked ?? arg.quasis[0]?.value.raw ?? '', loc);
+    return;
+  }
+
+  if (arg.type === 'ArrayExpression') {
+    for (const item of arg.elements) collectClassNameLoc(item, classNames);
+    return;
+  }
+
+  if (arg.type === 'ConditionalExpression') {
+    collectClassNameLoc(arg.consequent, classNames);
+    collectClassNameLoc(arg.alternate, classNames);
+    return;
+  }
+
+  if (arg.type === 'LogicalExpression') {
+    collectClassNameLoc(arg.left, classNames);
+    collectClassNameLoc(arg.right, classNames);
+    return;
+  }
+
+  if (
+    arg.type === 'CallExpression' &&
+    arg.callee.type === 'MemberExpression' &&
+    arg.callee.property.type === 'Identifier' &&
+    arg.callee.property.name === 'weight'
+  ) {
+    collectClassNameLoc(arg.arguments[0], classNames);
+  }
 }
 
 function getShortLabel(label: string) {

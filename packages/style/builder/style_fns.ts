@@ -65,7 +65,7 @@ export function createScopeFns(
   );
 }
 
-function createFns(
+export function createFns(
   selectors: SelectorsRecord,
   fnPrefix: string,
   createFn: CreateFn,

@@ -1,18 +1,17 @@
-import { getNamedToken } from '../../dialect';
-import { isStyleTokenData } from '../../style/token';
-import { styleTransform } from '../../style/transform';
-import type { CSSProperties } from '../../style/types';
-import { defaultTailwindTheme } from './theme';
+import { getNamedToken } from '../../../dialect';
+import { isStyleTokenData } from '../../../style/token';
+import { styleTransform } from '../../../style/transform';
+import type { CSSProperties } from '../../../style/types';
+import { defaultTailwindTheme } from '../theme';
 import type {
   MergeTailwindTheme,
   TailwindDefaultTheme,
-  TailwindExtendedStyle,
   TailwindScale,
-  TailwindStyle,
   TailwindStyleConfig,
   TailwindStyleTransformOptions,
   TailwindTheme,
-} from './types';
+} from '../types';
+import type { TailwindExtendedStyle, TailwindStyle } from './types';
 
 type CssOutput = Record<string, unknown>;
 type UtilityResolver<Theme extends TailwindTheme> = (

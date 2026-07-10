@@ -575,6 +575,7 @@ test('jsx element marker rules use top dev sheet tags with chunking', () => {
         elementClassNameFormat: 'elm-(name)',
       },
     });
+    DEV_CONFIG.stylePriorityMode = 'layer';
     DEV_CONFIG.sheetMaxRules = 1;
 
     transformElement({

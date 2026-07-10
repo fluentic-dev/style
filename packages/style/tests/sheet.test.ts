@@ -58,14 +58,14 @@ test('dev sheet keeps layer tag first and chunks rule tags', () => {
 
   equal(document.head.childNodes.length, 3);
   equal(document.head.childNodes[0].getAttribute('data-css-sheet'), 'layers');
-  equal(document.head.childNodes[1].getAttribute('data-css-sheet'), 'rules');
-  equal(document.head.childNodes[2].getAttribute('data-css-sheet'), 'rules');
-  includes(document.head.childNodes[0].textContent, '@layer a, css.');
+  includes(document.head.childNodes[1].getAttribute('data-css-sheet') ?? '', 'rules ');
+  includes(document.head.childNodes[2].getAttribute('data-css-sheet') ?? '', 'rules ');
+  includes(document.head.childNodes[0].textContent, '@layer a, css, b;');
   includes(document.head.childNodes[0].textContent, ', b;');
-  includes(document.head.childNodes[1].textContent, '@layer css.');
-  includes(document.head.childNodes[1].textContent, '{.one{color:red}}');
-  includes(document.head.childNodes[2].textContent, '@layer css.');
-  includes(document.head.childNodes[2].textContent, '{.two{color:blue}}');
+  includes(document.head.childNodes[1].textContent, '@layer css');
+  includes(document.head.childNodes[1].textContent, '.one{color:red}');
+  includes(document.head.childNodes[2].textContent, '@layer css');
+  includes(document.head.childNodes[2].textContent, '.two{color:blue}');
   includes(document.head.childNodes[1].textContent, 'sourceMappingURL=');
   equal(
     getInlineSourceMap(document.head.childNodes[1].textContent).sources[0],
@@ -84,7 +84,7 @@ test('build dev config preserves default sourcemap settings', () => {
   equal(DEV_CONFIG.isDev, true);
   equal(DEV_CONFIG.isSourcemapEnabled, true);
   equal(DEV_CONFIG.sourcemapLocationMode, 'style');
-  equal(DEV_CONFIG.stylePriorityMode, 'layer');
+  equal(DEV_CONFIG.stylePriorityMode, 'sort');
 
   IS_DEV.isDev = false;
   setDevRuntimeOptions(null);
@@ -115,10 +115,10 @@ test('dev sheet top tags stay before normal tags and still chunk', () => {
   top.flush();
 
   equal(document.head.childNodes[0].getAttribute('data-css-sheet'), 'top layers');
-  equal(document.head.childNodes[1].getAttribute('data-css-sheet'), 'top rules');
-  equal(document.head.childNodes[2].getAttribute('data-css-sheet'), 'top rules');
+  includes(document.head.childNodes[1].getAttribute('data-css-sheet') ?? '', 'top rules ');
+  includes(document.head.childNodes[2].getAttribute('data-css-sheet') ?? '', 'top rules ');
   equal(document.head.childNodes[3].getAttribute('data-css-sheet'), 'layers');
-  equal(document.head.childNodes[4].getAttribute('data-css-sheet'), 'rules');
+  includes(document.head.childNodes[4].getAttribute('data-css-sheet') ?? '', 'rules ');
   includes(document.head.childNodes[1].textContent, '.top-one{color:blue}');
   includes(document.head.childNodes[2].textContent, '.top-two{color:green}');
 });
@@ -412,6 +412,8 @@ test('runtime trace parses browser stack frames with source labels', () => {
 });
 
 test('dev sheet writes one generated css line per sourcemap rule', () => {
+  configureTestRuntime({ dev: true, priorityMode: 'layer' });
+
   const document = createFakeDocument();
   const sheet = createDevSheet({
     document: document as unknown as Document,

@@ -31,6 +31,7 @@ export type DebugData = {
   loc: DebugLoc;
   label: DebugLabel;
   fields?: Record<string, DebugLoc | Record<number, DebugLoc>>;
+  classNames?: Record<string, DebugLoc>;
   vars?: Record<string, string>;
   sourceUrl: string;
   code?: string;

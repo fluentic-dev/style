@@ -1,2 +1,2 @@
-import '../shared/config';
+import '../shared/config_dev';
 import '../shared/dev';

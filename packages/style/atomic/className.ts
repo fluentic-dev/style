@@ -1,10 +1,12 @@
 import type { BuilderCallsite, ItemSelector } from '../builder/data';
-import type { ClassNameFormat, ScopeClassNameFormat } from '../config/types';
+import { CSS_CONFIG } from '../config/config/css';
+import { DEV_CONFIG } from '../config/config/dev';
+import type { ClassNameFormat, ScopeClassNameFormat, TransformClassNameFormat } from '../config/types';
 import { hashString } from '../utils/hash';
-import { getDebugClassName, getDebugScopeClassName } from './debug/className';
+import { getDebugClassName, getDebugScopeClassName, getDebugTransformClassName } from './debug/className';
 import { getDebugPropertyName } from './debug/property';
 import { getDebugAtRuleName, getDebugSelectorName } from './debug/selector';
-import { getIdentifierSafeHash } from './utils/css';
+import { getIdentifierSafeHash } from './utils/hash';
 import { getSelectorHash, getSelectorText } from './utils/selector';
 
 export function getAtomicClassName(
@@ -18,6 +20,9 @@ export function getAtomicClassName(
   localClassName: boolean,
   debugClassName: boolean,
   classNameFormat: ClassNameFormat | null,
+  transformClassName: string | null,
+  transformClassNameFormat: TransformClassNameFormat | null,
+  hashLength: number | null = null,
 ) {
   let hash = property;
 
@@ -28,9 +33,20 @@ export function getAtomicClassName(
   hash += '\n' + (atRule ? atRule.map(getSelectorHash).join('\n') : '');
   hash += '\n' + getCallsiteHash(callsite, localClassName);
 
-  hash = getIdentifierSafeHash(hash);
+  hash = getIdentifierSafeHash(
+    hash,
+    hashLength ?? getRuntimeClassNameHashLength(debugClassName),
+  );
 
   if (!debugClassName) return hash;
+
+  if (transformClassName) {
+    return getDebugTransformClassName(
+      transformClassNameFormat,
+      hash,
+      { className: transformClassName },
+    );
+  }
 
   const propertyName = getDebugPropertyName(property, value);
 
@@ -57,6 +73,11 @@ export function getAtomicClassName(
   );
 
   return className;
+}
+
+function getRuntimeClassNameHashLength(debugClassName: boolean) {
+  if (debugClassName && DEV_CONFIG.isDev) return DEV_CONFIG.hashLength ?? CSS_CONFIG.hashLength ?? 3;
+  return CSS_CONFIG.hashLength ?? 7;
 }
 
 export function getScopeClassName(

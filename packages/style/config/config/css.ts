@@ -6,13 +6,16 @@ import type {
   ScopeClassNameFormat,
   ThemeNameFormat,
   TokenNameFormat,
+  TransformClassNameFormat,
 } from '../types';
 
 export type CssConfig = {
   layer: boolean;
   layers?: string[];
   layerNamespace?: string;
+  hashLength?: number;
   classNameFormat?: ClassNameFormat;
+  transformClassNameFormat?: TransformClassNameFormat;
   scopeClassNameFormat?: ScopeClassNameFormat;
   elementClassNameFormat?: ElementClassNameFormat;
   themeNameFormat?: ThemeNameFormat;

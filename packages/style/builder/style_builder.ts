@@ -134,9 +134,9 @@ export function createSlotBuilder<Style, Selectors extends SelectorsRecord>(
 export function createScopeBuilder<Style, Selectors extends SelectorsRecord>(
   selectors: Selectors,
 ) {
-  type ScopeFn<Style> =
-    & ScopeSelfFn<Style, Selectors>
-    & ScopeBuilder<Style, Selectors>;
+  type ScopeFn =
+    & ScopeSelfFn<Selectors>
+    & ScopeBuilder<Selectors>;
 
   const fns = createScopeFns(selectors, FnPrefixScope, cloneScope);
 
@@ -166,7 +166,7 @@ export function createScopeBuilder<Style, Selectors extends SelectorsRecord>(
 
   traceMarker(fn, 'scope');
 
-  return fn as unknown as ScopeFn<Style>;
+  return fn as unknown as ScopeFn;
 }
 
 function createCallableSlot<Style>(

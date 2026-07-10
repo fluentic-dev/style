@@ -52,7 +52,7 @@ export function createNameFormatter<Info extends object>(
       return name.replace(HASH_TOKEN, hash);
     }
 
-    return name ? (name + '-' + hash) : hash;
+    return name ? (name + '--' + hash) : hash;
   };
 }
 

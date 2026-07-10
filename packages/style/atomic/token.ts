@@ -1,7 +1,9 @@
+import { CSS_CONFIG } from '../config/config/css';
 import type { TokenNameFormat, TokenNameInfo } from '../config/types';
 import { getStyleTokenId, type StyleTokenData, type StyleTokenOverride } from '../style/token';
-import { getCssVar, getCssVarRawFallback, getIdentifierSafeHash } from './utils/css';
+import { getCssVar, getCssVarRawFallback } from './utils/css';
 import { createNameFormatter } from './utils/format';
+import { getIdentifierSafeHash } from './utils/hash';
 
 export const TOKEN_NAME_FORMAT = 'token[-(name)]-$hash';
 
@@ -15,7 +17,7 @@ export function getTokenVarName(
 
   const name = formatTokenName(
     format || TOKEN_NAME_FORMAT,
-    getIdentifierSafeHash(id),
+    getIdentifierSafeHash(id, CSS_CONFIG.hashLength),
     { name: id },
   );
 

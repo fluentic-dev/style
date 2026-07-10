@@ -1,6 +1,6 @@
 import picomatch from 'picomatch';
 import { PrioritySelectors } from '../../selector/presets';
-import { getStyleFnMeta, type StyleFn, type StyleFnMeta } from '../../style/style';
+import { getStyleFnMeta, type StyleFnMeta, type StyleFnWithMeta } from '../../style/style';
 import { isFunction, toArray } from '../../utils/object';
 import { FN_STYLE, IMPORT_PATHS } from './constants';
 
@@ -13,7 +13,7 @@ export type ImportSourcePattern = string | RegExp;
 export type ImportSourceCheckFn = (args: ImportSourceInfo) => boolean;
 
 export type ImportSource = {
-  styleFn: StyleFn;
+  styleFn: StyleFnWithMeta;
   source?: ImportSourcePattern | ImportSourcePattern[];
   name?: string | string[];
   check?: ImportSourceCheckFn;
@@ -30,6 +30,7 @@ export type ImportSourceMatcher = (importSource: ImportSourceInfo) => StyleFnMet
 type SourceMatchFn = (source: string) => boolean;
 
 const DefaultStyleFnMeta: StyleFnMeta = {
+  mode: 'StyleObject',
   selectors: PrioritySelectors,
   transform: null,
 };

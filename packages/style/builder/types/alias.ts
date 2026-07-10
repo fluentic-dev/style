@@ -22,9 +22,9 @@ export function slotOverrideRule<Style, Selectors>() {
   return {} as SlotOverrideRule<Style>;
 }
 
-export function scopeRule<Style, Selectors>() {
-  type ScopeRule<Style> = ScopeBuilder<Style, Selectors> & Collapse;
-  return {} as ScopeRule<Style>;
+export function scopeRule<Selectors>() {
+  type ScopeRule = ScopeBuilder<Selectors> & Collapse;
+  return {} as ScopeRule;
 }
 
 export function typeAliases<Style, Selectors>() {
@@ -33,12 +33,12 @@ export function typeAliases<Style, Selectors>() {
   type StyleRule<Style> = ReturnType<typeof styleRule<Style, Selectors>>;
   type SlotRule<Style> = ReturnType<typeof slotRule<Style, Selectors>>;
   type SlotOverrideRule<Style> = ReturnType<typeof slotOverrideRule<Style, Selectors>>;
-  type ScopeRule<Style> = ReturnType<typeof scopeRule<Style, Selectors>>;
+  type ScopeRule = ReturnType<typeof scopeRule<Selectors>>;
 
   type StyleFn<Style> = StyleSelfFn<Style, Selectors> & {
     (style?: StyleObject<Style>): ReturnType<typeof styleRule<Style, Selectors>>;
     slot: SlotFn<Style>;
-    scope: ScopeFn<Style>;
+    scope: ScopeFn;
     value: ValueFn;
     raw: RawFn<Style>;
     plain: PlainFn<Style>;
@@ -58,19 +58,19 @@ export function typeAliases<Style, Selectors>() {
 
   type SlotFn<Style> = SlotSelfFn<Style, Selectors>;
 
-  type ScopeFn<Style> =
-    & ScopeSelfFn<Style, Selectors>
-    & ScopeBuilder<Style, Selector>;
+  type ScopeFn =
+    & ScopeSelfFn<Selectors>
+    & ScopeBuilder<Selector>;
 
   type Types<Style> = {
     StyleRule: StyleRule<Style>;
     SlotRule: SlotRule<Style>;
     SlotOverrideRule: SlotOverrideRule<Style>;
-    ScopeRule: ScopeRule<Style>;
+    ScopeRule: ScopeRule;
     //
     StyleFn: StyleFn<Style>;
     SlotFn: SlotFn<Style>;
-    ScopeFn: ScopeFn<Style>;
+    ScopeFn: ScopeFn;
     //
     ValueFn: ValueFn;
     RawFn: RawFn<Style>;

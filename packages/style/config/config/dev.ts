@@ -1,4 +1,5 @@
 import { globalData } from '../../utils/global';
+import { normalizeHashLength } from '../../utils/hash';
 import { unsetAll } from '../../utils/object';
 import type { BuildDevConfig } from '../build';
 import type { SourcemapLocationMode, StylePriorityMode } from '../types';
@@ -13,6 +14,7 @@ export type DevConfig = {
 
   sheetMaxRules: number;
   sheetStyleTagNonce: string | null;
+  hashLength: number | null;
 
   stylePriorityMode: StylePriorityMode;
   sourcemapLocationMode: SourcemapLocationMode;
@@ -29,8 +31,9 @@ export const DEV_CONFIG_DEFAULT: DevConfig = {
 
   sheetMaxRules: 1000,
   sheetStyleTagNonce: null,
+  hashLength: null,
 
-  stylePriorityMode: 'layer',
+  stylePriorityMode: 'sort',
   sourcemapLocationMode: 'style',
 
   isElementClassNameEnabled: true,
@@ -70,6 +73,7 @@ export type DevRuntimeOptions = {
   sourcemapMode?: SourcemapLocationMode | null;
   elementClassName?: boolean | null;
   checkSelector?: boolean | null;
+  hashLength?: number | null;
 };
 
 export function getBuildDevConfig() {
@@ -141,5 +145,9 @@ function setOptions(
 
   if (typeof options.checkSelector === 'boolean') {
     config.isCheckSelectorEnabled = options.checkSelector;
+  }
+
+  if (typeof options.hashLength === 'number') {
+    config.hashLength = normalizeHashLength(options.hashLength);
   }
 }

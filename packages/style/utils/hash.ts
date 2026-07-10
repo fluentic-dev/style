@@ -20,3 +20,7 @@ export function hashString(str: string) {
 
   return (hash >>> 0).toString(36).padEnd(7, '0');
 }
+
+export function normalizeHashLength(length: number) {
+  return Number.isFinite(length) ? Math.max(1, Math.floor(length)) : 7;
+}

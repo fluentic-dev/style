@@ -14,7 +14,7 @@ import {
   writePluginCacheFile,
 } from '../../utils';
 import { formatError } from '../../utils/misc';
-import { getStyleEntryDefines, getStyleRuntimeMode } from '../../utils/runtimeEntry';
+import { createStyleEntryGlobalSource, getStyleEntryDefines, getStyleRuntimeMode } from '../../utils/runtimeEntry';
 import type { SourcemapSidecar } from '../../utils/sidecar';
 import { getSourcemapSidecar } from '../../utils/sidecar';
 import { resolveDevSourcemapMode } from '../../utils/sourcemap';
@@ -52,8 +52,6 @@ export function createVitePluginState(options: PluginOptions) {
     },
 
     getHtmlEntryScript() {
-      if (this.isServe()) return [];
-
       return [{
         tag: 'script',
         attrs: { type: 'module' },
@@ -64,12 +62,19 @@ export function createVitePluginState(options: PluginOptions) {
 
     loadRuntimeModule() {
       const current = this.getState();
+      const buildConfig = getPluginBuildConfig(options);
+      const buildDevConfig = getPluginBuildDevConfig(options);
+      const configSource = createStyleEntryGlobalSource(
+        buildConfig,
+        buildDevConfig,
+        sidecar?.getBaseUrl() || null,
+      );
 
-      if (current.dev) return 'export {};';
+      if (current.dev) return `${configSource}\nexport {};`;
 
       const cssFilePath = writePluginCacheFile(current, BUNDLE_CSS_FILE, EXTRACTED_CSS_MARKER);
 
-      return `import ${JSON.stringify(toViteFsImport(cssFilePath))};\n`;
+      return `${configSource}\nimport ${JSON.stringify(toViteFsImport(cssFilePath))};\n`;
     },
 
     async ensureSidecarStarted() {

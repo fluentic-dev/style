@@ -38,6 +38,7 @@ import {
 } from '../css';
 import { traceDevSourcemaps } from '../dev/trace';
 import { enableStyleDevUtils } from '../dev/utils';
+import { createNamedTokens } from '../dialect';
 import { plugin as viteStylePlugin } from '../plugin/bundler/vite';
 import { createWebpackRuntimeModuleSource, prependWebpackRuntimeEntry } from '../plugin/bundler/webpack/utils';
 import { injectDevCssLink } from '../plugin/nextjs/html';
@@ -63,7 +64,6 @@ import { createSelectorAssert, selector } from '../selector/selector';
 import { createDevSheet, createProdSheet } from '../sheet';
 import { getRuleCallsite } from '../sheet/sourcemap';
 import { createStyleFn, createTheme, createToken, createTokens, createValues } from '../style';
-import { createNamedTokens } from '../dialect';
 import { traceCallsite } from '../utils/trace';
 
 export {
@@ -260,14 +260,15 @@ function assertCombineStyleTypes() {
 void assertCombineStyleTypes;
 
 export function configureTestRuntime(options: TestRuntimeOptions = {}) {
-  const { dev, priorityMode, sourcemapMode, elementClassName, checkSelector, ...runtimeOptions } = options;
+  const { dev, priorityMode, sourcemapMode, elementClassName, checkSelector, hashLength, ...runtimeOptions } = options;
 
   resetTestConfig(CSS_CONFIG, CSS_CONFIG_DEFAULT);
   resetTestConfig(DEV_CONFIG, DEV_CONFIG_DEFAULT);
   resetTestConfig(RUNTIME_CONFIG, RUNTIME_CONFIG_DEFAULT);
+  setDevRuntimeOptions(null);
   configureStyleRuntime(runtimeOptions);
 
-  setDevRuntimeOptions({ priorityMode, sourcemapMode, elementClassName, checkSelector });
+  setDevRuntimeOptions({ priorityMode, sourcemapMode, elementClassName, checkSelector, hashLength });
   if (typeof dev === 'boolean') DEV_CONFIG.isDev = dev;
 }
 

@@ -1,4 +1,5 @@
 import { createScopeBuilder, createSlotBuilder, createStyleBuilder, type SelectorsRecord } from '../builder';
+import type { ClassNameFn } from '../builder/classname';
 import { isStyleData } from '../builder/data';
 import { mergeStyleData } from '../builder/style_data';
 import { createDefaultFnResult } from '../builder/style_fns';
@@ -9,15 +10,22 @@ import { symbol } from '../utils/global';
 import { type } from '../utils/type';
 import type { Type } from '../utils/type';
 import { createStyleKeyframes } from './keyframes';
-import type { StyleTransform } from './transform';
+import type { ClassNameTransform, StyleTransform } from './transform';
 import type { CSSProperties } from './types';
 
 const META: unique symbol = symbol('style.fn:meta');
 
-export type StyleFnMeta = {
-  selectors: SelectorsRecord;
-  transform: StyleTransform | null;
-};
+export type StyleFnMeta =
+  | {
+    mode: 'StyleObject';
+    selectors: SelectorsRecord;
+    transform: StyleTransform | null;
+  }
+  | {
+    mode: 'ClassName';
+    selectors: SelectorsRecord;
+    transform: ClassNameTransform;
+  };
 
 export const { style } = createStyleFn({
   style: type<CSSProperties>,
@@ -74,11 +82,12 @@ export function createStyleFn<
   style.merge = fnMerge;
 
   const meta: StyleFnMeta = {
+    mode: 'StyleObject',
     selectors,
     transform: transform ?? null,
   };
 
-  Object.assign(style, { [META]: meta });
+  assignStyleFnMeta(style, meta);
 
   return { style };
 }
@@ -107,6 +116,16 @@ function mergeStyleResult(
   return target;
 }
 
-export function getStyleFnMeta(styleFn: StyleFn) {
+export type StyleFnWithMeta = StyleFn | ClassNameFn<any, any>;
+
+export function assignStyleFnMeta<T extends object>(
+  styleFn: T,
+  meta: StyleFnMeta,
+) {
+  Object.assign(styleFn, { [META]: meta });
+  return styleFn;
+}
+
+export function getStyleFnMeta(styleFn: StyleFnWithMeta) {
   return (styleFn as any)[META] as StyleFnMeta;
 }

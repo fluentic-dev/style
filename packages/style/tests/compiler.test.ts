@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { formatClassName } from '../atomic/debug/className';
 import { compareLayerPriority, type LayerPriority } from '../atomic/layer';
+import { escapeCssIdent } from '../atomic/utils/css';
 import { normalizeDebugKeywordValue, normalizePropertyName, sanitizeDebugPropertyName } from '../atomic/utils/debug';
 import { CompilerRuntimeMode } from '../compiler';
 import webpackLoader from '../plugin/bundler/webpack/loader';
@@ -14,6 +15,7 @@ import {
   defaultTailwindColors,
   TailwindSelectors,
 } from '../presets/tailwind';
+import { classNameTransform, classNameValue, createClassNameFn } from '../style';
 import {
   assertCompileError,
   before,
@@ -57,6 +59,11 @@ test('debug utility normalizers keep property and keyword names class-safe', () 
   equal(normalizeDebugKeywordValue(' Inline-Flex '), 'inline-flex');
   equal(normalizeDebugKeywordValue('-invalid'), null);
   equal(normalizeDebugKeywordValue('var(--x)'), null);
+
+  equal(
+    escapeCssIdent('[background-color:color-mix(in_oklab,_currentColor_12%,_transparent)]--abc'),
+    '\\[background-color\\:color-mix\\(in_oklab\\,_currentColor_12\\%\\,_transparent\\)\\]--abc',
+  );
 });
 
 test('debug class name formatter drops optional segments and applies length modes', () => {
@@ -70,7 +77,7 @@ test('debug class name formatter drops optional segments and applies length mode
       selector: 'hover',
       value: 'red',
     }),
-    'card-conte-color-hover-red-abc123',
+    'card-conte-color-hover-red--abc123',
   );
 
   equal(
@@ -81,7 +88,7 @@ test('debug class name formatter drops optional segments and applies length mode
       selector: 'focus',
       value: null,
     }),
-    'dark--focus-def456',
+    'dark--focus--def456',
   );
 
   equal(
@@ -92,7 +99,7 @@ test('debug class name formatter drops optional segments and applies length mode
       selector: null,
       value: null,
     }),
-    'color-ghi789',
+    'color--ghi789',
   );
 
   equal(
@@ -244,10 +251,10 @@ export const theme = createTheme([color('red')]);
     { rootDir: '/project' },
   );
 
-  includes(result.code, 'createTheme([color(\'red\')], "');
+  includes(result.code, "createTheme([color('red')], \"");
   includes(result.code, 'filePath: _styleDebugSourceUrl');
   includes(result.code, 'line: 5');
-  notIncludes(result.code, 'color(\'red\', {');
+  notIncludes(result.code, "color('red', {");
 });
 
 test('debug transform maps slot override chain merge fields to the merge call', () => {
@@ -368,6 +375,91 @@ const button = style({ color: 'black' })
   includes(css, 'color: red');
   includes(css, ':focus-visible');
   includes(css, 'outline-color: purple');
+});
+
+test('compiler extracts class name style chains', () => {
+  const { className: cx } = createClassNameFn({
+    selectors: {
+      hover: selector(':hover'),
+    },
+    transform: classNameTransform({
+      transform(className) {
+        if (className === 'text-red') return { color: 'red' };
+        if (className === 'bg-blue') return { backgroundColor: 'blue' };
+        return {};
+      },
+    }),
+  });
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+    importSources: [{
+      source: './style',
+      name: 'cx',
+      styleFn: cx,
+    }],
+  });
+  const result = compiler.transform(
+    `
+import { cx } from './style';
+
+const button = cx('text-red').hover('bg-blue');
+`,
+    '/tmp/compiler-classname.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\\n');
+
+  includes(result.code, 'createExtractedStyle');
+  includes(css, 'color: red');
+  includes(css, 'background-color: blue');
+  includes(css, ':hover');
+});
+
+test('compiler uses transform class name labels when extracting classNameValue', () => {
+  const sx = createStyleFn({
+    style: null as any,
+    selectors: {},
+    transform: {
+      transform() {
+        return {
+          color: classNameValue('red', 'text-danger'),
+        };
+      },
+    },
+  }).style;
+  const compiler = createCompiler({
+    layer: false,
+    css: {
+      debugClassName: true,
+      transformClassNameFormat: '$hash--(className)',
+    },
+    importSources: [{
+      source: './sx',
+      name: 'sx',
+      styleFn: sx,
+    }],
+  });
+  const result = compiler.transform(
+    `
+import { sx } from './sx';
+
+const button = sx({
+  color: 'ignored',
+});
+`,
+    '/tmp/compiler-transform-class-name-value.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(css, '--text-danger');
+  includes(css, 'color: red');
+  notIncludes(css, 'color-red-');
 });
 
 test('compiler preserves extracted style merge item order', () => {
@@ -3218,6 +3310,27 @@ const rule = style({ width: 18, display: 'flex', color: 'red' });
   includes(css, '{width: 18px}');
   includes(css, '{display: flex}');
   includes(css, '{color: red}');
+});
+
+test('compiler hash length is configurable', () => {
+  const compiler = createCompiler({ layer: false, css: { hashLength: 3 } });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const rule = style({ width: 18, display: 'flex', color: 'red' });
+`,
+    '/tmp/compiler-class-name-hash-length.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const classNames = getCssClassNames(result.css);
+
+  equal(classNames.length, 3);
+  for (const className of classNames) {
+    equal(className.slice(className.lastIndexOf('-') + 1).length, 3);
+  }
 });
 
 test('compiler debug extracted css keeps readable values and hash suffix', () => {

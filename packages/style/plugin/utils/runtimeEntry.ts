@@ -55,3 +55,15 @@ export function getStyleEntryDefines(
 
   return defines;
 }
+
+export function createStyleEntryGlobalSource(
+  buildConfig: BuildConfig,
+  buildDevConfig: BuildDevConfig | null,
+  sidecarUrl: string | null,
+) {
+  const defines = getStyleEntryDefines(buildConfig, buildDevConfig, sidecarUrl, false);
+
+  return Object.entries(defines)
+    .map(([key, value]) => `globalThis[${JSON.stringify(key)}] = ${JSON.stringify(value)};`)
+    .join('\n');
+}

@@ -1,7 +1,10 @@
+import { CSS_CONFIG } from '../config/config/css';
+import { DEV_CONFIG } from '../config/config/dev';
 import type { ElementClassNameFormat, ElementClassNameInfo } from '../config/types';
-import { escapeCssIdent, getIdentifierSafeHash } from './utils/css';
+import { escapeCssIdent } from './utils/css';
 import { sanitizeDebugName } from './utils/debug';
 import { createNameFormatter } from './utils/format';
+import { getIdentifierSafeHash } from './utils/hash';
 
 export const ELEMENT_CLASS_NAME_FORMAT = '@(name)';
 
@@ -15,7 +18,7 @@ export function getElementClassName(
   elementClassNameFormat: ElementClassNameFormat | null,
 ) {
   const name = sanitizeDebugName(label) || null;
-  const hash = getIdentifierSafeHash(id);
+  const hash = getIdentifierSafeHash(id, DEV_CONFIG.hashLength ?? CSS_CONFIG.hashLength ?? 3);
 
   return formatElementClassName(
     elementClassNameFormat || ELEMENT_CLASS_NAME_FORMAT,

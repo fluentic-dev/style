@@ -15,8 +15,8 @@ import {
   SELECTOR_MERGE,
 } from '../../../../builder/data';
 import {
-  BUILDER_STATE,
   BUILDER_SLOT_ID,
+  BUILDER_STATE,
   BUILDER_TYPE_SCOPE,
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
@@ -34,7 +34,7 @@ import type {
   RuntimeSlotOverrideItem,
   RuntimeStyleItem,
 } from '../../../../builder/data/state';
-import type { ClassNameFormat, TokenNameFormat } from '../../../../config/types';
+import type { ClassNameFormat, TokenNameFormat, TransformClassNameFormat } from '../../../../config/types';
 import type { Selector } from '../../../../selector/types';
 import type { StyleFnMeta } from '../../../../style/style';
 import {
@@ -43,7 +43,7 @@ import {
   isStyleTokenOverrideData,
   type StyleTokenOverride,
 } from '../../../../style/token';
-import type { StyleTransform } from '../../../../style/transform';
+import { classNameValue, isClassNameValue, type ClassNameTransform, type StyleTransform } from '../../../../style/transform';
 import { isAtRuleRef } from '../../../../style/valueRef';
 import { hashString } from '../../../../utils/hash';
 import type { CompilerOptions } from '../../../compiler/types';
@@ -59,7 +59,7 @@ import {
 import type { EvalResult } from '../../evaluator/types';
 import type { BabelTypes } from '../../utils/babel';
 import { validateResolvedSelectorValue, validateSelectorDefinition } from '../../utils/selector';
-import { extractStyleChain, STATIC_MERGE_METHOD, type StyleChainParseResult } from './extract_chain';
+import { extractStyleChain, STATIC_MERGE_METHOD, type StyleChainMethod, type StyleChainParseResult } from './extract_chain';
 import type {
   CompiledChainData,
   CompiledCssItem,
@@ -72,6 +72,8 @@ type SelectorsMap = Record<string, Selector>;
 
 type CssConfig = {
   classNameFormat: ClassNameFormat | null;
+  transformClassNameFormat: TransformClassNameFormat | null;
+  hashLength: number;
   tokenNameFormat: TokenNameFormat | null;
   localClassName: boolean;
   debugClassName: boolean;
@@ -318,6 +320,12 @@ export function compileChain(
   styleNames: Set<string> = new Set(),
 ): CompiledChainData | null {
   const css = getCssConfig(opts);
+
+  if (meta.mode === 'ClassName') {
+    if (chain.kind !== 'style') return null;
+    return compileClassNameChain(chain, meta.selectors, fileId, scope, css, meta.transform, styleNames, opts);
+  }
+
   const selectors = meta.selectors;
   const transform = meta.transform;
 
@@ -344,6 +352,8 @@ function getCssConfig(
 
   return {
     classNameFormat: css?.classNameFormat ?? DEFAULT_CONFIG.classNameFormat ?? null,
+    transformClassNameFormat: css?.transformClassNameFormat ?? DEFAULT_CONFIG.transformClassNameFormat ?? null,
+    hashLength: css?.hashLength ?? DEFAULT_CONFIG.hashLength ?? 7,
     tokenNameFormat: css?.tokenNameFormat ?? DEFAULT_CONFIG.tokenNameFormat ?? null,
     localClassName: css?.localClassName ?? DEFAULT_CONFIG.localClassName,
     debugClassName: css?.debugClassName ?? DEFAULT_CONFIG.debugClassName,
@@ -397,6 +407,331 @@ function compileStyleChain(
   }
 
   return { type: 'style', items, rules };
+}
+
+function compileClassNameChain(
+  chain: NonNullable<StyleChainParseResult>,
+  selectors: SelectorsMap,
+  fileId: string,
+  scope: EvalScope,
+  cssConfig: CssConfig,
+  transform: ClassNameTransform,
+  styleNames: Set<string>,
+  options: CompilerOptions,
+): CompiledChainData | null {
+  const items: CompiledItem[] = [];
+  const rules: CssExtractRule[] = [];
+
+  if (
+    !compileClassNameArgsInto(
+      chain.baseArgs,
+      0,
+      null,
+      null,
+      fileId,
+      scope,
+      cssConfig,
+      transform,
+      BUILDER_TYPE_STYLE,
+      null,
+      items,
+      rules,
+    )
+  ) {
+    return null;
+  }
+
+  let i = 0;
+  while (i < chain.methods.length) {
+    const method = chain.methods[i];
+    const result = compileClassNameChainMethod(
+      method,
+      selectors,
+      fileId,
+      scope,
+      cssConfig,
+      transform,
+      items,
+      rules,
+      styleNames,
+      options,
+    );
+    if (!result) return null;
+    i++;
+  }
+
+  return { type: 'style', items, rules };
+}
+
+function compileClassNameChainMethod(
+  method: StyleChainMethod,
+  selectors: SelectorsMap,
+  fileId: string,
+  scope: EvalScope,
+  cssConfig: CssConfig,
+  transform: ClassNameTransform,
+  items: CompiledItem[],
+  rules: CssExtractRule[],
+  styleNames: Set<string>,
+  options: CompilerOptions,
+): boolean {
+  const selector = selectors[method.name];
+  if (!selector) return false;
+  validateSelectorDefinition(options.dev?.checkSelector, `style.${method.name}`, selector, method.nameNode);
+
+  const selectorStr = selector.selector.trim();
+
+  if (selectorStr === SELECTOR_MERGE) {
+    const localChain = getLocalStyleChainArg(method.args[0], scope, styleNames);
+    const localMeta = localChain ? scope.styleMetas?.get(localChain.rootName) : null;
+
+    if (localChain?.kind === 'style' && localMeta?.mode === 'ClassName') {
+      const result = compileClassNameChain(
+        localChain,
+        localMeta.selectors,
+        fileId,
+        scope,
+        cssConfig,
+        localMeta.transform,
+        styleNames,
+        options,
+      );
+      if (!result) return false;
+      items.push(...result.items);
+      rules.push(...result.rules);
+      return true;
+    }
+
+    return false;
+  }
+
+  if (selectorStr.startsWith(SELECTOR_AT_RULE)) {
+    const isMedia = selectorStr.startsWith(SELECTOR_MEDIA) || selectorStr.startsWith(SELECTOR_CONTAINER);
+    const hasArg = selectorStr.includes(SELECTOR_ARGS);
+    const priority = getAtRulePriority(selector.priority, isMedia, method.args[0]);
+    let argOffset = 0;
+
+    if (isMedia && isNumericLiteral(method.args[0])) {
+      argOffset = 1;
+    }
+
+    let atRule = selectorStr;
+    if (hasArg) {
+      const queryArg = evaluateNode(method.args[argOffset], scope);
+      validateResolvedSelectorValue(
+        options.dev?.checkSelector,
+        `style.${method.name}`,
+        selector,
+        queryArg,
+        method.args[argOffset],
+      );
+      throwIfRequiredStaticSelectorValue(options, `style.${method.name}`, queryArg);
+      if (!queryArg.ok) return false;
+
+      const [before, after] = selectorStr.split(SELECTOR_ARGS);
+      atRule = before + String(queryArg.value) + (after ?? '');
+    }
+
+    const atRuleSelector: ItemSelector = priority !== null ? [atRule, priority] : atRule;
+    const classNameOffset = hasArg ? argOffset + 1 : argOffset;
+
+    return compileClassNameArgsInto(
+      method.args,
+      classNameOffset,
+      null,
+      [atRuleSelector],
+      fileId,
+      scope,
+      cssConfig,
+      transform,
+      BUILDER_TYPE_STYLE,
+      null,
+      items,
+      rules,
+    );
+  }
+
+  if (selectorStr.includes(SELECTOR_ARGS) || selectorStr.includes(SELECTOR_ARG)) {
+    const hasArgsTemplate = selectorStr.includes(SELECTOR_ARGS);
+    const splitToken = hasArgsTemplate ? SELECTOR_ARGS : SELECTOR_ARG;
+    const [before, after] = selectorStr.split(splitToken);
+
+    const selectorArg = evaluateNode(method.args[0], scope);
+    validateResolvedSelectorValue(
+      options.dev?.checkSelector,
+      `style.${method.name}`,
+      selector,
+      selectorArg,
+      method.args[0],
+    );
+    if (!selectorArg.ok) return false;
+
+    const selectorText = before + normalizeSelectorArg(String(selectorArg.value ?? '')) + (after ?? '');
+    const itemSelector: ItemSelector = selector.priority !== null ? [selectorText, selector.priority] : selectorText;
+
+    return compileClassNameArgsInto(
+      method.args,
+      1,
+      itemSelector,
+      null,
+      fileId,
+      scope,
+      cssConfig,
+      transform,
+      BUILDER_TYPE_STYLE,
+      null,
+      items,
+      rules,
+    );
+  }
+
+  const itemSelector: ItemSelector = selector.priority !== null
+    ? [selectorStr, selector.priority]
+    : selectorStr;
+
+  return compileClassNameArgsInto(
+    method.args,
+    0,
+    itemSelector,
+    null,
+    fileId,
+    scope,
+    cssConfig,
+    transform,
+    BUILDER_TYPE_STYLE,
+    null,
+    items,
+    rules,
+  );
+}
+
+function compileClassNameArgsInto(
+  args: readonly BabelTypes.Node[],
+  startIndex: number,
+  selector: ItemSelector | null,
+  atRules: ItemSelector[] | null,
+  fileId: string,
+  scope: EvalScope,
+  cssConfig: CssConfig,
+  transform: ClassNameTransform,
+  type: ExtractedCssBuilderType,
+  slotId: string | null,
+  items: CompiledItem[],
+  rules: CssExtractRule[],
+): boolean {
+  if (startIndex >= args.length) return true;
+
+  const styleObj: Record<string, unknown> = {};
+
+  let i = startIndex;
+  while (i < args.length) {
+    const arg = evaluateNode(args[i], scope);
+    if (!arg.ok) {
+      throwIfRequiredStaticStyleValue(arg);
+      return false;
+    }
+
+    if (!appendClassNameArgStyle(arg.value, transform, styleObj)) return false;
+    i++;
+  }
+
+  return addStyleItems(
+    styleObj,
+    selector,
+    null,
+    atRules,
+    fileId,
+    type,
+    slotId,
+    items,
+    rules,
+    cssConfig,
+  );
+}
+
+function appendClassNameArgStyle(
+  value: unknown,
+  transform: ClassNameTransform,
+  styleObj: Record<string, unknown>,
+): boolean {
+  if (!value) return true;
+
+  if (typeof value === 'string') {
+    Object.assign(styleObj, decorateClassNameStyle(transform.transform(value), value));
+    return true;
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (!appendClassNameArgStyle(item, transform, styleObj)) return false;
+    }
+    return true;
+  }
+
+  if (isWeightedClassName(value)) {
+    const transformed = decorateClassNameStyle(transform.transform(value.className), value.className);
+    Object.assign(styleObj, applyClassNameWeight(transformed, value.weight));
+    return true;
+  }
+
+  return false;
+}
+
+function decorateClassNameStyle(
+  style: Record<string, unknown>,
+  className: string,
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  for (const [property, value] of Object.entries(style)) {
+    if (value === null || value === undefined) {
+      result[property] = value;
+      continue;
+    }
+
+    if (Array.isArray(value) && value.length === 2 && typeof value[0] === 'number') {
+      const rawValue = value[1];
+      result[property] = isClassNameValue(rawValue)
+        ? value
+        : [value[0], classNameValue(rawValue, className)];
+      continue;
+    }
+
+    result[property] = isClassNameValue(value) ? value : classNameValue(value, className);
+  }
+
+  return result;
+}
+
+function isWeightedClassName(
+  value: unknown,
+): value is { className: string; weight: number; } {
+  return !!value &&
+    typeof value === 'object' &&
+    typeof (value as { className?: unknown; }).className === 'string' &&
+    typeof (value as { weight?: unknown; }).weight === 'number';
+}
+
+function applyClassNameWeight(
+  style: Record<string, unknown>,
+  weight: number,
+): Record<string, unknown> {
+  const weighted: Record<string, unknown> = {};
+
+  for (const [property, value] of Object.entries(style)) {
+    if (value === null || value === undefined) {
+      weighted[property] = value;
+      continue;
+    }
+
+    const rawValue = Array.isArray(value) && value.length === 2 && typeof value[0] === 'number'
+      ? value[1]
+      : value;
+
+    weighted[property] = [weight, rawValue];
+  }
+
+  return weighted;
 }
 
 function compileStyleChainInto(
@@ -751,10 +1086,10 @@ function compileScopeMethod(
           cssConfig,
           items,
           cssRules,
-            transform,
-            options,
-            callsiteOverride,
-          )
+          transform,
+          options,
+          callsiteOverride,
+        )
       ) {
         return false;
       }
@@ -887,7 +1222,7 @@ function resolveSlotOverrideNode(
     const overrideItem = overrideItems[i];
     const mergedAtRules = mergeAtRules(atRules, overrideItem.atRules);
 
-    if (overrideItem.chain && overrideItem.meta) {
+    if (overrideItem.chain && overrideItem.meta?.mode === 'StyleObject') {
       if (
         !compileStyleChainInto(
           overrideItem.chain,
@@ -1935,6 +2270,9 @@ function addRuntimeScopeItem(
     cssConfig.localClassName,
     cssConfig.debugClassName,
     cssConfig.classNameFormat,
+    sourceItem.transformClassName ?? null,
+    cssConfig.transformClassNameFormat,
+    cssConfig.hashLength,
   );
 
   const item: CompiledItem = createCompiledItem(
@@ -2171,6 +2509,9 @@ function addRuntimeStyleItem(
     cssConfig.localClassName,
     cssConfig.debugClassName,
     cssConfig.classNameFormat,
+    sourceItem.transformClassName ?? null,
+    cssConfig.transformClassNameFormat,
+    cssConfig.hashLength,
   );
 
   const item: CompiledItem = createCompiledItem(
@@ -2306,10 +2647,16 @@ function addStyleItems(
 
     let priority: number | null = null;
     let value: unknown = rawValue;
+    let transformClassName: string | null = null;
 
     if (Array.isArray(rawValue) && rawValue.length === 2 && typeof rawValue[0] === 'number') {
       priority = rawValue[0];
       value = rawValue[1];
+    }
+
+    if (isClassNameValue(value)) {
+      transformClassName = value.className;
+      value = value.value;
     }
 
     if (value === null || value === undefined) {
@@ -2373,6 +2720,9 @@ function addStyleItems(
       cssConfig.localClassName,
       cssConfig.debugClassName,
       cssConfig.classNameFormat,
+      transformClassName,
+      cssConfig.transformClassNameFormat,
+      cssConfig.hashLength,
     );
 
     const item: CompiledItem = createCompiledItem(

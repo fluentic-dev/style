@@ -6,6 +6,7 @@ import { CSS_CONFIG } from '../../../config/config/css';
 import { DEBUG_CONFIG } from '../../../config/config/debug';
 import { DEV_CONFIG } from '../../../config/config/dev';
 import { isStyleTokenData, isStyleTokenOverrideData, type StyleTokenData } from '../../../style/token';
+import { isClassNameValue } from '../../../style/transform';
 import type { StyleObject, StyleValueTuple } from '../../../style/types';
 import { type AtRuleRef, isAtRuleRef } from '../../../style/valueRef';
 import {
@@ -72,6 +73,7 @@ export function mergeBuilderData<Data extends BuilderData>(
   let token: StyleTokenData | null;
   let ref: AtRuleRef | null;
   let variableName: string | null;
+  let transformClassName: string | null;
   let lookupIndex: number;
 
   if (isStyleData(style)) {
@@ -122,6 +124,12 @@ export function mergeBuilderData<Data extends BuilderData>(
         valueRaw = (valueRaw as StyleValueTuple)[1];
       }
 
+      transformClassName = null;
+      if (isClassNameValue(valueRaw)) {
+        transformClassName = valueRaw.className;
+        valueRaw = valueRaw.value;
+      }
+
       ref = isAtRuleRef(valueRaw) ? valueRaw : null;
       if (ref) valueRaw = ref.value;
 
@@ -145,6 +153,7 @@ export function mergeBuilderData<Data extends BuilderData>(
         className: '',
         property,
         value,
+        transformClassName,
         variable: ref
           ? [ITEM_VALUE_TYPE_AT_RULE_REF, ref]
           : variableName && token
@@ -225,6 +234,8 @@ export function mergeBuilderData<Data extends BuilderData>(
       DEV_CONFIG.isLocalClassNameEnabled,
       DEBUG_CONFIG.isDebugClassNameEnabled,
       CSS_CONFIG.classNameFormat ?? null,
+      runtimeItem.transformClassName ?? null,
+      CSS_CONFIG.transformClassNameFormat ?? null,
     );
 
     runtimeItem.dedupe = dedupe;

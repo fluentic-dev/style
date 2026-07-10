@@ -5,13 +5,7 @@ import { DEV_CONFIG } from '../../../config/config/dev';
 import { getStyleTokenId, isStyleTokenOverrideData, type StyleTokenOverride } from '../../../style/token';
 import { BUILDER_SLOT_ID, BUILDER_STATE, BUILDER_TYPE_SCOPE, BUILDER_TYPE_SLOT_OVERRIDE } from '../const';
 import type { BuilderCallsite, ScopeData, SlotOverrideData } from '../data';
-import {
-  getDebugFieldCallsite,
-  TRACE_STYLE,
-  TRACE_VALUE,
-  type DebugData,
-  type DebugLoc,
-} from '../debug';
+import { type DebugData, type DebugLoc, getDebugFieldCallsite, TRACE_STYLE, TRACE_VALUE } from '../debug';
 import { isScopeData, isSlotOverrideData } from '../is';
 import type { ItemSelector, ItemValue, RuntimeScopeItem, RuntimeSlotOverrideItem, StateItem } from '../state';
 import { cloneData, logInvalidData } from './utils';
@@ -125,6 +119,8 @@ export function mergeScopeData(
           DEV_CONFIG.isLocalClassNameEnabled,
           DEBUG_CONFIG.isDebugClassNameEnabled,
           CSS_CONFIG.classNameFormat ?? null,
+          scopeItem.transformClassName ?? null,
+          CSS_CONFIG.transformClassNameFormat ?? null,
         );
 
         scopeItem.dedupe = dedupe;
@@ -176,6 +172,7 @@ export function mergeScopeData(
         className: '',
         property: overrideItem.property,
         value: overrideItem.value,
+        transformClassName: overrideItem.transformClassName,
         token: overrideItem.token,
         selector: overrideItem.selector,
         atRule,
@@ -212,6 +209,8 @@ export function mergeScopeData(
         DEV_CONFIG.isLocalClassNameEnabled,
         DEBUG_CONFIG.isDebugClassNameEnabled,
         CSS_CONFIG.classNameFormat ?? null,
+        scopeItem.transformClassName ?? null,
+        CSS_CONFIG.transformClassNameFormat ?? null,
       );
 
       scopeItem.dedupe = dedupe;

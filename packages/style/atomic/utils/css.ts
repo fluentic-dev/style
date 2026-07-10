@@ -1,5 +1,3 @@
-import { hashString } from '../../utils/hash';
-
 export function getCssVar(varName: string, value: string) {
   return 'var(' + varName + ', ' + escapeCssValue(value) + ')';
 }
@@ -21,29 +19,56 @@ export function escapeCssValue(value: string): string {
 }
 
 export function escapeCssIdent(ident: string): string {
-  const escaped = ident.replace(/([[\]():.#,>+~*=!|^$@])/g, '\\$1');
+  let result = '';
 
-  if (/^[0-9]/.test(escaped)) {
-    return '\\3' + escaped[0] + ' ' + escaped.slice(1);
+  for (let i = 0; i < ident.length; i++) {
+    const char = ident.charAt(i);
+    const code = ident.charCodeAt(i);
+    const nextCode = ident.charCodeAt(i + 1);
+
+    if (code === 0) {
+      result += '\uFFFD';
+      continue;
+    }
+
+    if (
+      (code >= 1 && code <= 31) ||
+      code === 127 ||
+      (i === 0 && code >= 48 && code <= 57) ||
+      (i === 1 && code >= 48 && code <= 57 && ident.charCodeAt(0) === 45)
+    ) {
+      result += '\\' + code.toString(16) + ' ';
+      continue;
+    }
+
+    if (i === 0 && code === 45 && ident.length === 1) {
+      result += '\\-';
+      continue;
+    }
+
+    if (code >= 0xD800 && code <= 0xDBFF && nextCode >= 0xDC00 && nextCode <= 0xDFFF) {
+      result += char + ident.charAt(++i);
+      continue;
+    }
+
+    if (
+      code >= 128 ||
+      code === 45 ||
+      code === 95 ||
+      (code >= 48 && code <= 57) ||
+      (code >= 65 && code <= 90) ||
+      (code >= 97 && code <= 122)
+    ) {
+      result += char;
+      continue;
+    }
+
+    result += '\\' + char;
   }
 
-  if (/^-[0-9]/.test(escaped)) {
-    return '-\\3' + escaped[1] + ' ' + escaped.slice(2);
-  }
-
-  return escaped;
+  return result;
 }
 
 export function sanitizeCssIdentName(value: string, fallback: string = '') {
   return value.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || fallback;
-}
-
-export function getIdentifierSafeHash(value: string) {
-  const hash = hashString(value);
-
-  const first = hash.charCodeAt(0);
-
-  if (first < 48 || first > 57) return hash;
-
-  return String.fromCharCode(97 + first - 48) + hash.slice(1);
 }

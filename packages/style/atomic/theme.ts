@@ -1,8 +1,10 @@
+import { CSS_CONFIG } from '../config/config/css';
 import type { ThemeNameFormat, ThemeNameInfo, TokenNameFormat } from '../config/types';
 import type { StyleTokenOverride } from '../style/token';
 import { getTokenOverrideValue, getTokenVarName } from './token';
-import { escapeCssIdent, escapeCssValue, getIdentifierSafeHash } from './utils/css';
+import { escapeCssIdent, escapeCssValue } from './utils/css';
 import { createNameFormatter } from './utils/format';
+import { getIdentifierSafeHash } from './utils/hash';
 
 export const THEME_NAME_FORMAT = 'theme[-(name)]-$hash';
 
@@ -15,7 +17,7 @@ export function createThemeClassName(
 ) {
   return formatThemeName(
     themeNameFormat || THEME_NAME_FORMAT,
-    getIdentifierSafeHash(id),
+    getIdentifierSafeHash(id, CSS_CONFIG.hashLength),
     { name },
   );
 }

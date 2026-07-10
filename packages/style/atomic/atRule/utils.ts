@@ -1,9 +1,10 @@
+import { CSS_CONFIG } from '../../config/config/css';
 import { type NamedAtRuleFormat, type NamedAtRuleInfo, type TokenNameFormat } from '../../config/types';
 import { getStyleTokenId, isStyleTokenData, type StyleTokenData } from '../../style/token';
 import { getCssPropertyName } from '../property';
 import { getTokenVar } from '../token';
-import { getIdentifierSafeHash } from '../utils/css';
 import { createNameFormatter } from '../utils/format';
+import { getIdentifierSafeHash } from '../utils/hash';
 import { getCssPropertyValue } from '../value';
 
 export function createAtRuleNameFormatter(defaultFormat: NamedAtRuleFormat, prefix?: string) {
@@ -14,7 +15,7 @@ export function createAtRuleNameFormatter(defaultFormat: NamedAtRuleFormat, pref
     id: string,
     info: NamedAtRuleInfo,
   ) => {
-    const hash = getIdentifierSafeHash(id);
+    const hash = getIdentifierSafeHash(id, CSS_CONFIG.hashLength);
     const name = formatter(format || defaultFormat, hash, info);
 
     if (!prefix) return name;

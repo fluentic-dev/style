@@ -80,6 +80,7 @@ export type RuntimeItemData = {
   className: string;
   property: string;
   value: ItemValue;
+  transformClassName?: string | null;
   variable?: ExtractedItemValue;
   token?: StyleTokenData | null;
   selector: ItemSelector | null;

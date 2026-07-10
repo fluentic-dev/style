@@ -44,8 +44,8 @@ type StyleAtRuleArgsFn<Style, Self, Arg extends string> = StyleAtRuleFn<Style, S
 type StyleMediaArgFn<Style, Self, Arg extends string> = StyleMediaFn<Style, Self, Arg>;
 type StyleMediaArgsFn<Style, Self, Arg extends string> = StyleMediaFn<Style, Self, Arg | Arg[]>;
 
-type SelectorString<S> = S extends Selector<infer T, any> ? T : S;
-type SelectorArg<S> = S extends Selector<any, infer Arg> ? Arg : string;
+export type SelectorString<S> = S extends Selector<infer T, any> ? T : S;
+export type SelectorArg<S> = S extends Selector<any, infer Arg> ? Arg : string;
 
 type GetArgFn<
   Selector,
@@ -54,7 +54,7 @@ type GetArgFn<
   : Selector extends `${string}$${string}` ? Fns['Arg']
   : Fns['Default'];
 
-type GetFn<
+export type GetSelectorFn<
   Selector,
   Fns extends Record<
     'MediaNoArg' | 'MediaArg' | 'MediaArgs' | 'AtRuleNoArg' | 'AtRuleArg' | 'AtRuleArgs' | 'Args' | 'Arg' | 'Default',
@@ -78,7 +78,7 @@ type GetFn<
   }>;
 
 type GetStyleFn<Selector, Style, Self> = SelectorString<Selector> extends '...' ? StyleMergeFn<Style, Self>
-  : GetFn<SelectorString<Selector>, {
+  : GetSelectorFn<SelectorString<Selector>, {
     MediaNoArg: StyleMediaNoArgFn<Style, Self>;
     MediaArgs: StyleMediaArgsFn<Style, Self, SelectorArg<Selector>>;
     MediaArg: StyleMediaArgFn<Style, Self, SelectorArg<Selector>>;
@@ -126,7 +126,7 @@ type ScopeAtRuleArgsFn<Style, Result, Arg extends string> = ScopeAtRuleFn<Style,
 type ScopeMediaArgFn<Style, Result, Arg extends string> = ScopeMediaFn<Style, Result, Arg>;
 type ScopeMediaArgsFn<Style, Result, Arg extends string> = ScopeMediaFn<Style, Result, Arg | Arg[]>;
 
-type GetScopeFn<Selector, Style, Result> = GetFn<SelectorString<Selector>, {
+type GetScopeFn<Selector, Style, Result> = GetSelectorFn<SelectorString<Selector>, {
   MediaNoArg: ScopeMediaNoArgFn<Style, Result>;
   MediaArgs: ScopeMediaArgsFn<Style, Result, SelectorArg<Selector>>;
   MediaArg: ScopeMediaArgFn<Style, Result, SelectorArg<Selector>>;
@@ -148,9 +148,9 @@ export type SlotSelfFn<Style, Selectors> = (
   style?: StyleObject<Style>,
 ) => ReturnType<typeof slotRule<Style, Selectors>>;
 
-export type ScopeSelfFn<Style, Selectors> = (
+export type ScopeSelfFn<Selectors> = (
   styles?: ScopeItems,
-) => ReturnType<typeof scopeRule<Style, Selectors>>;
+) => ReturnType<typeof scopeRule<Selectors>>;
 
 export type StyleSelectorFns<Style, Selectors> = {
   [P in keyof Selectors]: GetStyleFn<
@@ -176,10 +176,10 @@ export type SlotOverrideSelectorFns<Style, Selectors> = {
   >;
 };
 
-export type ScopeSelectorFns<Style, Selectors> = {
+export type ScopeSelectorFns<Selectors> = {
   [P in keyof Selectors]: GetScopeFn<
     Selectors[P],
     ScopeItems,
-    ReturnType<typeof scopeRule<Style, Selectors>>
+    ReturnType<typeof scopeRule<Selectors>>
   >;
 };

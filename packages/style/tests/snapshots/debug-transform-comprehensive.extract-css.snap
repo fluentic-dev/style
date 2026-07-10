@@ -1,18 +1,18 @@
 @layer css;
 @layer css {
 .theme-lvb6tl0-bcmdhyx{--token-tokens-3qz6j00--color--bg-gsgl540:#f8fafc;--token-tokens-3qz6j00--color--fg-cc84fw0:#0f172a}
-.padding-gs244e0{padding: 12px}
-.color-iayy6t0{color: #111827}
-.color-br62w1f{color: #111827}
-.box-shadow-byxkme1{box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12)}
-.border-color-b2rga6s{border-color: var(--var-vfnc6k0, var(--token-tokens-3qz6j00--color--accent-cu25p10, #2563eb))}
-.background-color-b4mcwga{background-color: #f8fafc}
-.font-size-bhgqjrg{font-size: 14px}
-.font-size-ia0h460{font-size: 14px}
-.background-color-bivhs4p{background-color: var(--var-ixn6uy0, var(--token-tokens-3qz6j00--color--bg-gsgl540, #ffffff))}
-.box-shadow-n55rl70{box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08)}
-.color-trkda60{color: #334155}
-@media (max-width: 700px){.max-700px-padding-mtnjvq0{padding: 8px}}
-.hover-border-color-hr74se0:where(.-hover-border-color-hr74se0:hover),:where(.-hover-border-color-hr74se0:hover) .hover-border-color-hr74se0{border-color: #94a3b8}
-.color-hover-rrfbjz0:hover{color: var(--var-d2bnon0, var(--token-tokens-3qz6j00--color--accent-cu25p10, #2563eb))}
+.padding--gs244e0{padding: 12px}
+.color--iayy6t0{color: #111827}
+.color--br62w1f{color: #111827}
+.box-shadow--byxkme1{box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12)}
+.border-color--b2rga6s{border-color: var(--var-vfnc6k0, var(--token-tokens-3qz6j00--color--accent-cu25p10, #2563eb))}
+.background-color--b4mcwga{background-color: #f8fafc}
+.font-size--bhgqjrg{font-size: 14px}
+.font-size--ia0h460{font-size: 14px}
+.background-color--bivhs4p{background-color: var(--var-ixn6uy0, var(--token-tokens-3qz6j00--color--bg-gsgl540, #ffffff))}
+.box-shadow--n55rl70{box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08)}
+.color--trkda60{color: #334155}
+@media (max-width: 700px){.max-700px-padding--mtnjvq0{padding: 8px}}
+.hover-border-color--hr74se0:where(.-hover-border-color--hr74se0:hover),:where(.-hover-border-color--hr74se0:hover) .hover-border-color--hr74se0{border-color: #94a3b8}
+.color-hover--rrfbjz0:hover{color: var(--var-d2bnon0, var(--token-tokens-3qz6j00--color--accent-cu25p10, #2563eb))}
 }

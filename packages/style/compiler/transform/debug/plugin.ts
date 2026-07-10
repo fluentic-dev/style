@@ -1,7 +1,7 @@
-import { SELECTOR_MERGE } from '../../../builder/data/selector';
 import { BUILDER_STATE } from '../../../builder/data/const';
-import { TRACE_STYLE, TRACE_VALUE, type DebugLoc } from '../../../builder/data/debug';
+import { type DebugLoc, TRACE_STYLE, TRACE_VALUE } from '../../../builder/data/debug';
 import { isScopeData, isStyleData } from '../../../builder/data/is';
+import { SELECTOR_MERGE } from '../../../builder/data/selector';
 import type { RuntimeItem } from '../../../builder/data/state';
 import type { CheckSelectorMode, SourcemapLocationMode } from '../../../config/types';
 import type { StyleFnMeta } from '../../../style/style';
@@ -11,12 +11,12 @@ import {
   DEBUG_SOURCE_CONTENT_VAR,
   DEBUG_SOURCE_URL_VAR,
   DEFAULT_CONFIG,
+  FN_CREATE_THEME,
   FN_STYLE_KEYFRAMES,
   FN_STYLE_MERGE,
   FN_STYLE_PLAIN,
   FN_STYLE_RAW,
   FN_STYLE_SCOPE,
-  FN_CREATE_THEME,
   IMPORT_PATHS,
 } from '../../utils/constants';
 import { createImportSourceMatcher, type ImportSourceMatcher } from '../../utils/import_source';
@@ -181,6 +181,10 @@ export function createDebugPlugin(args: PluginArgs) {
           const sourceContentRef = sourceContent
             ? getSourceContentId(t, state)
             : null;
+          const rootName = getStyleChainRootName(path.node.callee, state.styleNames);
+          const isClassNameCall = rootName
+            ? state.styleMetas.get(rootName)?.mode === 'ClassName'
+            : false;
 
           path.node.arguments.push(
             buildDebugDataObject(
@@ -192,6 +196,7 @@ export function createDebugPlugin(args: PluginArgs) {
               options.css?.tokenNameFormat ?? DEFAULT_CONFIG.tokenNameFormat,
               getDebugStyleArg(t, path, state, options.dev?.sourcemapMode ?? 'style'),
               getDebugCallLoc(path, state),
+              isClassNameCall,
             ),
           );
         },

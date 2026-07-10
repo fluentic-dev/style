@@ -1,11 +1,14 @@
+import { getElementClassName } from '../atomic/element';
 import {
   createDefaultedTailwindStyleConfig,
+  createTailwindClassNameTransform,
   createTailwindExtendedStyleTransform,
   createTailwindStyleConfig,
   createTailwindStyleTransform,
   defaultTailwindColors,
   TailwindSelectors,
 } from '../presets/tailwind';
+import { classNameTransform, classNameValue, createClassNameFn, getStyleFnMeta } from '../style';
 import {
   assertCompileError,
   assertEnum,
@@ -179,6 +182,34 @@ test('builder callables are trace-marked for runtime callsites', () => {
   assertRunTestsCallsite(getRuntimeCallsite(tracedStyleHover, 1));
   assertRunTestsCallsite(getRuntimeCallsite(tracedSlot));
   assertRunTestsCallsite(getRuntimeCallsite(tracedOverride));
+});
+
+test('style function meta distinguishes style object and class name builders', () => {
+  const styleTransform = createTailwindStyleTransform(createTailwindStyleConfig({}));
+  const { style: customStyle } = createStyleFn({
+    selectors: TailwindSelectors,
+    transform: styleTransform,
+  });
+
+  const classNameTransformValue = classNameTransform({
+    transform(className: string) {
+      return { color: className };
+    },
+  });
+  const { className } = createClassNameFn({
+    selectors: TailwindSelectors,
+    transform: classNameTransformValue,
+  });
+
+  const styleMeta = getStyleFnMeta(customStyle);
+  const classNameMeta = getStyleFnMeta(className);
+
+  equal(styleMeta.mode, 'StyleObject');
+  equal(styleMeta.selectors, TailwindSelectors);
+  equal(styleMeta.transform, styleTransform);
+  equal(classNameMeta.mode, 'ClassName');
+  equal(classNameMeta.selectors, TailwindSelectors);
+  equal(classNameMeta.transform, classNameTransformValue);
 });
 
 test('builder callables prefer injected debug callsites over runtime traces', () => {
@@ -923,6 +954,10 @@ test('tailwind preset accepts fluentic tokens directly', () => {
 });
 
 test('scope chains accept mixed style function items', () => {
+  type CssStyle = {
+    color?: string;
+    padding?: number;
+  };
   const Colors = createNamedTokens('test.tailwind.scope.color', {
     accent: '#2563eb',
   });
@@ -934,7 +969,7 @@ test('scope chains accept mixed style function items', () => {
       },
     })),
   }).style;
-  const css = createStyleFn({
+  const css = createStyleFn<CssStyle, typeof TailwindSelectors>({
     selectors: TailwindSelectors,
   }).style;
   const twSlot = tw.slot({
@@ -949,6 +984,9 @@ test('scope chains accept mixed style function items', () => {
   const scope = css.scope().hover([
     twSlot({ bg: '$accent' }),
     cssSlot({ color: 'red' }),
+  ]);
+  tw.scope([
+    cssSlot({ padding: 8 }),
   ]);
   const styles = {
     twSlot,
@@ -1242,6 +1280,183 @@ test('runtime config resets scope target prefix to default when omitted', () => 
   configureTestRuntime({ dev: false });
   equal(CSS_CONFIG.scopeClassNameFormat, undefined);
   equal(getScopeParentClassName('hover-bg'), '-hover-bg');
+});
+
+test('transform classNameValue customizes runtime debug class names', () => {
+  configureTestRuntime({ dev: true });
+
+  const { style: namedStyle } = createStyleFn({
+    selectors: TailwindSelectors,
+    transform: {
+      transform() {
+        return {
+          color: classNameValue('red', 'text-danger'),
+        };
+      },
+    },
+  });
+
+  const result = getClassName(namedStyle({ color: 'ignored' }));
+
+  configureTestRuntime({ dev: false });
+
+  includes(result.className ?? '', 'text-danger-');
+  notIncludes(result.className ?? '', 'color-red-');
+});
+
+test('runtime debug class names use short hashes', () => {
+  configureTestRuntime({ dev: true });
+
+  const result = getClassName(style({
+    color: classNameValue('red', 'text-danger'),
+  }));
+  const markerClassName = getElementClassName(
+    'Button',
+    '/src/App.tsx\n10:5',
+    null,
+  );
+
+  configureTestRuntime({ dev: false });
+
+  const classNameHash = result.className?.match(/text-danger--([a-zA-Z0-9]+)\b/)?.[1];
+  const markerHash = markerClassName.match(/@button--([a-zA-Z0-9]+)\b/)?.[1];
+
+  equal(classNameHash?.length, 3);
+  equal(markerHash?.length, 3);
+});
+
+test('runtime debug hash length can be configured', () => {
+  configureTestRuntime({ dev: true, hashLength: 5 });
+
+  const result = getClassName(style({
+    color: classNameValue('red', 'text-danger'),
+  }));
+
+  configureTestRuntime({ dev: false });
+
+  const classNameHash = result.className?.match(/text-danger--([a-zA-Z0-9]+)\b/)?.[1];
+
+  equal(classNameHash?.length, 5);
+});
+
+test('runtime debug hash length falls back to css hash length', () => {
+  configureTestRuntime({ dev: true, css: { hashLength: 4 } });
+
+  const cssResult = getClassName(style({
+    color: classNameValue('red', 'text-danger'),
+  }));
+  const cssClassName = cssResult.className;
+
+  configureTestRuntime({ dev: true, css: { hashLength: 4 }, hashLength: 5 });
+
+  const devResult = getClassName(style({
+    color: classNameValue('blue', 'text-info'),
+  }));
+
+  configureTestRuntime({ dev: false });
+
+  const cssHash = cssClassName?.match(/text-danger--([a-zA-Z0-9]+)\b/)?.[1];
+  const devHash = devResult.className?.match(/text-info--([a-zA-Z0-9]+)\b/)?.[1];
+
+  equal(cssHash?.length, 4);
+  equal(devHash?.length, 5);
+});
+
+test('class name builder preserves input tokens as debug class labels', () => {
+  configureTestRuntime({ dev: true });
+
+  const { className: cx } = createClassNameFn({
+    selectors: TailwindSelectors,
+    transform: createTailwindClassNameTransform(createTailwindStyleConfig({})),
+  });
+  const result = getClassName(cx('flex', 'items-center'));
+
+  configureTestRuntime({ dev: false });
+
+  includes(result.className ?? '', 'flex-');
+  includes(result.className ?? '', 'items-center-');
+  notIncludes(result.className ?? '', 'display-flex-');
+  notIncludes(result.className ?? '', 'align-items-center-');
+});
+
+test('class name debug data maps emitted rules to source class tokens', () => {
+  configureTestRuntime({ dev: true });
+
+  const { className: cx } = createClassNameFn({
+    selectors: TailwindSelectors,
+    transform: classNameTransform({
+      transform(className: string) {
+        if (className === 'flex') return { display: 'flex' };
+        if (className === 'text-danger') return { color: 'red' };
+        return {};
+      },
+    }),
+  });
+  const css = cx('flex', 'text-danger', {
+    $$debug: true,
+    loc: [1, 1],
+    label: ['cx', 'cx', 'class-name.ts'],
+    classNames: {
+      flex: [10, 7],
+      'text-danger': [11, 7],
+    },
+    sourceUrl: '/src/class-name.ts',
+  } as any);
+  const rules = getSheetRules(css);
+  const displayRule = rules.find((rule) => rule.css.includes('display: flex'));
+  const colorRule = rules.find((rule) => rule.css.includes('color: red'));
+
+  configureTestRuntime({ dev: false });
+
+  equal(displayRule?.callsite?.line, 10);
+  equal(colorRule?.callsite?.line, 11);
+});
+
+test('dev debug transform injects class token locations for class name builders', () => {
+  const { className: cx } = createClassNameFn({
+    selectors: TailwindSelectors,
+    transform: classNameTransform({
+      transform(className: string) {
+        return className === 'flex' ? { display: 'flex' } : { color: 'red' };
+      },
+    }),
+  });
+  const result = injectStyleDebugData(
+    `
+import { cx } from './style';
+
+const root = cx('flex', 'text-danger');
+`,
+    '/tmp/class-name-debug.ts',
+    {
+      importSources: [{
+        source: './style',
+        name: 'cx',
+        styleFn: cx,
+      }],
+    },
+  );
+
+  includes(result.code, 'classNames');
+  includes(result.code, '"flex"');
+  includes(result.code, '"text-danger"');
+});
+
+test('transformClassNameFormat controls transform-returned class name labels', () => {
+  configureTestRuntime({
+    dev: true,
+    css: {
+      transformClassNameFormat: '$hash--(className)',
+    },
+  });
+
+  const result = getClassName(style({
+    color: classNameValue('red', 'text-danger'),
+  }));
+
+  configureTestRuntime({ dev: false });
+
+  includes(result.className ?? '', '--text-danger');
 });
 
 test('runtime config preserves layer placeholder for priority expansion', () => {

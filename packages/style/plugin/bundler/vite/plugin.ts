@@ -43,8 +43,9 @@ export function plugin(options: PluginOptions = {}): Plugin {
       return getVirtualModuleId(id);
     },
 
-    load(id) {
+    async load(id) {
       if (getVirtualModuleId(id) === RESOLVED_RUNTIME_MODULE_ID) {
+        await state.ensureSidecarStarted();
         return state.loadRuntimeModule();
       }
     },

@@ -10,6 +10,10 @@ export type ClassNameInfo = {
   value: string | null;
 };
 
+export type TransformClassNameInfo = {
+  className: string;
+};
+
 export type ScopeClassNameInfo = {
   className: string;
 };
@@ -36,6 +40,9 @@ export type VarNameInfo = {
 
 export type ClassNameFormatFn = (info: ClassNameInfo) => string;
 export type ClassNameFormat = string | ClassNameFormatFn;
+
+export type TransformClassNameFormatFn = (info: TransformClassNameInfo) => string;
+export type TransformClassNameFormat = string | TransformClassNameFormatFn;
 
 export type ScopeClassNameFormatFn = (info: ScopeClassNameInfo) => string;
 export type ScopeClassNameFormat = string | ScopeClassNameFormatFn;
