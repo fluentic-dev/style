@@ -104,7 +104,7 @@ Use `dev` to control how development CSS is represented while debugging:
 ```ts
 stylePlugin({
   dev: {
-    priorityMode: 'layer',
+    priorityMode: 'sort',
     sourcemapMode: 'style',
     elementClassName: true,
     checkSelector: true,
@@ -144,7 +144,7 @@ StyleDevUtils.reset();
 ```
 
 For Next.js App Router, enable those utilities with `<StyleDev
-enableStyleDevUtils />` in the root layout. See the [Next.js](../nextjs)
+enableStyleDevUtils />` in the root layout. See the [Next.js](/docs/integrations/nextjs/)
 setup.
 
 ## Debug Sourcemaps

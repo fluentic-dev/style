@@ -11,6 +11,7 @@
     "why-themes-are-data",
     "why-tokens-and-app-values-split",
     "the-style-data-model",
+    "runtime-capable-compiler-optimized",
     "runtime-resolution-and-cache",
     "why-extraction-needs-structure",
     "compiler-hoisting",

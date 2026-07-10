@@ -200,6 +200,29 @@ const saveButton = style({
 <button css={saveButton}>Save changes</button>;
 ```
 
+Some teams prefer class-name syntax, especially when they already know a utility
+language like Tailwind. Fluentic supports that too. The input looks different,
+but the result is still a Fluentic style chain that can be used in the same
+`css` prop:
+
+```tsx
+const saveButton = cx(
+  'inline-flex',
+  'items-center',
+  compact ? 'px-3' : 'px-5',
+  danger && 'bg-danger',
+)
+  .hover('bg-danger-hover')
+  .md('px-6');
+
+<button css={saveButton}>Save changes</button>;
+```
+
+Class-name chains need a transform that gives the class names meaning. For the
+practical setup path, see
+[Class Name Style Chains](/docs/beyond-the-basics/class-name-style-chains/). For
+Tailwind-like class names, see [Tailwind Presets](/docs/presets/tailwind/).
+
 The mind shift happens when the element stops being the whole story. A reusable
 component has internal markup, public parts, and state that may need to change
 more than one part at the same time. The good part is that you do not need to
@@ -324,5 +347,5 @@ The next section turns that shape into practice. It starts with one styled
 element, then builds toward reusable components, app themes, debugging, and
 component libraries.
 
-Start with [Style One Element](../learn/style-one-element), then write the smallest
-possible style before introducing any component concepts.
+Start with [Style One Element](/docs/learn/style-one-element/), then write the
+smallest possible style before introducing any component concepts.

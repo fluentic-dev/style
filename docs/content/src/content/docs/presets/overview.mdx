@@ -1,0 +1,78 @@
+---
+title: Presets Overview
+description: Use familiar styling dialects without changing Fluentic's model.
+---
+
+Presets are optional dialect helpers.
+
+They do not replace Fluentic's style model.
+
+They package common transform and selector conventions so a project can start
+from a familiar vocabulary, then keep using the same Fluentic primitives:
+
+```txt
+utility props -> transform -> CSS declarations
+chains        -> states, selectors, and media
+slots/scopes  -> component contracts
+tokens/themes -> values and overrides
+compiler      -> extraction where possible
+runtime       -> dynamic values where needed
+```
+
+That means a preset can feel familiar without forcing a new condition syntax or
+component model.
+
+For example, the Tailwind presets can give you utility-style object fields:
+
+```tsx
+tw({ px: '$4', py: '$2', bg: color.accent, rounded: '$md' })
+  .hover({ bg: color.accentHover })
+  .md({ px: '$6' });
+```
+
+Or Tailwind-like class names:
+
+```tsx
+cx('px-4', 'py-2', 'bg-accent', 'rounded-md')
+  .hover('bg-accent-hover')
+  .md('px-6');
+```
+
+The utility fields and class names are preset vocabulary.
+
+The `.hover(...)` and `.md(...)` calls are normal Fluentic chains.
+
+## Why Presets Exist
+
+Design systems often already have a dialect.
+
+Some teams like Tailwind-style scales and property names. Others have their own
+product language. Fluentic's transform API lets those dialects live in userland
+TypeScript, while the compiler can still extract static declarations and leave
+dynamic values on the runtime path.
+
+Presets provide a supported starting point for popular dialects.
+
+They are not required for plain Fluentic usage.
+
+## Available Presets
+
+| Preset | Import | Use |
+| --- | --- | --- |
+| Tailwind | `@fluentic/style/presets/tailwind` | Tailwind-like object fields or class names with Fluentic chains and tokens. |
+
+## When To Use A Preset
+
+Use a preset when its vocabulary is already familiar to your team:
+
+```ts
+tw({ px: '$4', py: '$2', bg: color.accent });
+```
+
+Use a custom transform when your project has its own language:
+
+```ts
+card({ tone: 'danger', density: 'compact' });
+```
+
+Both paths keep the same extraction, runtime, slot, scope, and token behavior.

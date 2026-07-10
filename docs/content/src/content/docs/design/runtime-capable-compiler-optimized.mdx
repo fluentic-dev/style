@@ -1,0 +1,64 @@
+---
+title: Runtime-Capable, Compiler-Optimized
+description: Fluentic keeps the core styling model usable as JavaScript and TypeScript, then lets the compiler extract and optimize what is safe.
+---
+
+Fluentic's core styling model is runtime-capable, not compiler-required.
+
+That distinction matters. The APIs produce style data that normal JavaScript and
+TypeScript can create, compose, branch, and pass through React. A compiler can
+then lift static work out of that model when it is safe, but the compiler is not
+the source of truth for what a Fluentic style means.
+
+```txt
+authoring model -> runtime can resolve it
+                -> compiler can optimize it
+```
+
+This keeps development flexible. In dev mode, style edits can follow the same
+module update path as the rest of the app. The bundler already has to support
+JavaScript and TypeScript hot updates, so Fluentic does not need every dev
+server to become a special CSS coordination layer before styles can work.
+
+It also keeps the production path open. Static declarations can be extracted,
+deduped, sorted, and emitted as CSS. Dynamic values that depend on props,
+themes, or app composition can stay on the runtime path.
+
+```txt
+development -> normal JS/TS modules, dynamic composition, regular HMR
+production  -> extracted CSS where possible, runtime support where needed
+```
+
+## Why Not Extraction-First?
+
+Extraction-first systems often make the compiler the foundation of the styling
+model. That can produce good static output, but it also means development,
+composition, and hot updates depend heavily on build-tool integration.
+
+Fluentic takes the opposite dependency shape:
+
+```txt
+runtime capability first
+compiler optimization second
+```
+
+The runtime path proves that the style model works as application code. The
+compiler improves the delivery format when it can prove a value is static
+enough to extract.
+
+## What This Does Not Mean
+
+Runtime-capable does not mean every production style must stay in the browser.
+
+It means the model has a correct runtime interpretation. Production builds can
+still remove work from the browser through extraction and hoisting. The
+important part is that runtime support remains available for the pieces React
+still decides at render time.
+
+That is the flexibility Fluentic is designed around:
+
+```txt
+use runtime when the app is dynamic
+use the compiler when the build can prove the work is static
+keep one authoring model for both
+```

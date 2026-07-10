@@ -27,6 +27,31 @@ That is enough when the style belongs to this element.
 
 That is it: define a style, then pass it to the `css` prop.
 
+If your team prefers class-name syntax, Fluentic supports that too. The call
+arguments look different from an object style chain, but selector chains like
+`.hover(...)` and `.md(...)` stay familiar, and both forms produce a style value
+for the same `css` prop:
+
+```tsx
+const saveButton = style({
+  display: 'inline-flex',
+  alignItems: 'center',
+  paddingInline: 16,
+});
+
+const saveButtonClassName = cx(
+  'inline-flex',
+  'items-center',
+  'px-4',
+);
+```
+
+Class-name chains need a transform or preset that knows what each class name
+means. For Tailwind-like class names, use the
+[Tailwind Class Name Preset](/docs/presets/tailwind/class-name/). For the
+builder shape and custom transform details, see
+[Class Name Style Chains](/docs/beyond-the-basics/class-name-style-chains/).
+
 ## Reuse Style Objects
 
 When several styles share the same object fields, `style.plain(...)` gives you a

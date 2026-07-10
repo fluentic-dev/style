@@ -4,6 +4,9 @@ description: Use atomic CSS extraction as an optimization while keeping runtime,
 ---
 
 Fluentic does not treat extraction as the foundation of the styling model.
+It is [runtime-capable and compiler-optimized](../design/runtime-capable-compiler-optimized):
+the core model can run as JavaScript and TypeScript, while the compiler lifts
+out static work when it is safe.
 
 The foundation is the authored value:
 

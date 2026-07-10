@@ -24,6 +24,7 @@ stylePlugin({
     layers: ['reset', '$layer', 'app'],
     layerNamespace: 'fluentic',
     classNameFormat: 'f-[(property)]-$hash',
+    hashLength: 7,
     scopeClassNameFormat: 'scope-$hash',
     elementClassNameFormat: '@(name)',
     themeNameFormat: 'theme-(name)-$hash',
@@ -33,10 +34,11 @@ stylePlugin({
     debugClassName: true,
   },
   dev: {
-    priorityMode: 'layer',
+    priorityMode: 'sort',
     sourcemapMode: 'style',
     elementClassName: true,
     checkSelector: true,
+    hashLength: 3,
   },
 });
 ```
@@ -119,7 +121,7 @@ stylePlugin({
 
 This is what lets extraction understand merged chains from more than one style
 function. See
-[Multiple Style Functions](../beyond-the-basics/multiple-style-functions).
+[Multiple Style Functions](/docs/beyond-the-basics/multiple-style-functions/).
 
 ## CSS Options
 
@@ -131,6 +133,7 @@ function. See
 | `layers` | Configure layer order. Use `$layer` where Fluentic priority layers should be inserted. |
 | `layerNamespace` | Prefix generated priority layer names. |
 | `classNameFormat` | Format atomic class names. Supports strings or functions. |
+| `hashLength` | Set generated `$hash` length. Defaults to `7`. |
 | `scopeClassNameFormat` | Format scope target class names. |
 | `elementClassNameFormat` | Format development element marker class names. |
 | `themeNameFormat` | Format generated theme class names. |
@@ -222,6 +225,7 @@ stylePlugin({
 | `sourcemapMode` | `style` traces merged/spread styles to the consuming style site. `value` traces to the original value source when possible. |
 | `elementClassName` | Add development marker classes to DOM elements with a `css` prop. |
 | `checkSelector` | Validate static selector arguments. Use `force` to keep checks even when runtime checks would normally be skipped. |
+| `hashLength` | Override development `$hash` length. Defaults to `3`. |
 
 ## Sourcemap Options
 

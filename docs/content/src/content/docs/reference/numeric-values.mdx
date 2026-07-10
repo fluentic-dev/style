@@ -1,0 +1,114 @@
+---
+title: Numeric Values
+description: How Fluentic serializes number values and unitless CSS properties.
+---
+
+Fluentic follows the common CSS-in-JS numeric value rule:
+
+```ts
+style({
+  padding: 12,
+  gap: 8,
+  fontWeight: 700,
+  opacity: 0.72,
+});
+```
+
+Length-like properties receive `px`:
+
+```css
+padding: 12px;
+gap: 8px;
+```
+
+Unitless CSS properties stay unitless:
+
+```css
+font-weight: 700;
+opacity: 0.72;
+```
+
+Use a string when you want a different unit or a CSS expression:
+
+```ts
+style({
+  padding: '1rem',
+  width: 'calc(100% - 2rem)',
+  transitionDuration: '180ms',
+});
+```
+
+## Tailwind Preset
+
+The Tailwind preset keeps the same numeric rule.
+
+```ts
+ui({
+  px: 4,
+  py: '$4',
+});
+```
+
+This means:
+
+```css
+padding-inline: 4px;
+padding-block: 1rem;
+```
+
+Use `$4` for a Tailwind-like scale lookup. Use `4` for a literal numeric CSS
+value that serializes according to the property.
+
+## Unitless Properties
+
+These properties do not receive `px` when their value is a number:
+
+| Property |
+| --- |
+| `animationIterationCount` |
+| `aspectRatio` |
+| `borderImageOutset` |
+| `borderImageSlice` |
+| `borderImageWidth` |
+| `boxFlex` |
+| `boxFlexGroup` |
+| `boxOrdinalGroup` |
+| `columnCount` |
+| `columns` |
+| `fillOpacity` |
+| `flex` |
+| `flexGrow` |
+| `flexNegative` |
+| `flexOrder` |
+| `flexPositive` |
+| `flexShrink` |
+| `floodOpacity` |
+| `fontWeight` |
+| `gridArea` |
+| `gridColumn` |
+| `gridColumnEnd` |
+| `gridColumnSpan` |
+| `gridColumnStart` |
+| `gridRow` |
+| `gridRowEnd` |
+| `gridRowSpan` |
+| `gridRowStart` |
+| `imageOrientation` |
+| `lineClamp` |
+| `lineHeight` |
+| `opacity` |
+| `order` |
+| `orphans` |
+| `scale` |
+| `stopOpacity` |
+| `strokeDasharray` |
+| `strokeDashoffset` |
+| `strokeMiterlimit` |
+| `strokeOpacity` |
+| `strokeWidth` |
+| `tabSize` |
+| `widows` |
+| `zIndex` |
+| `zoom` |
+
+All other numeric property values are serialized with `px`.

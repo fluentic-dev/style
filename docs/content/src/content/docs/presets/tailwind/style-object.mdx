@@ -1,0 +1,938 @@
+---
+title: Tailwind Style Object Preset
+description: Use Tailwind-like utility object fields with Fluentic chains.
+---
+
+The Tailwind style object preset provides a Tailwind-like utility dialect as a
+normal Fluentic style transform.
+
+It keeps the Fluentic split:
+
+```txt
+utility props -> declarations
+chain methods -> conditions
+tokens        -> values
+```
+
+So instead of Tailwind variant prefixes:
+
+```tsx
+className="px-4 py-2 hover:bg-blue-700 md:px-6"
+```
+
+you write utility props and Fluentic chains:
+
+```tsx
+css={tw({ px: '$4', py: '$2', bg: '$accent' })
+  .hover({ bg: '$accentHover' })
+  .md({ px: '$6' })}
+```
+
+The preset is an extension utility, not a separate styling model. It gives teams
+Tailwind's familiar vocabulary with a small syntax shift: utility names become
+object fields, theme scale segments become `$...` refs, and variants become
+Fluentic chains.
+
+The tradeoff is that object syntax is a bit more verbose than class strings.
+What it gives back is normal TypeScript: checked fields, native autocomplete,
+grouped conditions, and dynamic values without leaving the same style call.
+That can help in complex styles: the property appears once, the condition only
+wraps the values that change, and variants like hover or media do not need to be
+repeated for every property.
+
+```tsx
+// Tailwind class strings usually repeat variants and push dynamic choices into
+// string assembly, for example:
+// clsx(
+//   compact ? 'px-3 md:px-4' : 'px-5 md:px-6',
+//   danger ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700',
+//   'py-2 text-white',
+// )
+
+const button = tw({
+  px: compact ? '$3' : '$5',
+  py: '$2',
+  bg: danger ? '$red.600' : '$blue.600',
+  text: '$white',
+})
+  .hover({
+    bg: danger ? '$red.700' : '$blue.700',
+  })
+  .md({
+    px: compact ? '$4' : '$6',
+  });
+```
+
+With plain Tailwind classes, conditional styling usually means assembling class
+strings. With the preset, those conditions are ordinary typed values and chain
+calls, while static declarations are extracted in extracted mode.
+
+Inline chains are still a production-friendly code shape. In extracted
+mode, the compiler can hoist supported static `tw(...)` chains out of component
+render and emit the CSS at build time, so an inline chain has the same steady
+runtime shape as a style declared outside the component. Dynamic values stay
+dynamic, but the static declarations around them can still be extracted. See
+[Compiler Hoisting](../../../design/compiler-hoisting) for the details.
+
+## Setup
+
+Create a style function from the preset transform and selectors:
+
+```ts
+import { createStyleFn } from '@fluentic/style';
+import {
+  createDefaultedTailwindStyleConfig,
+  createTailwindStyleTransform,
+  TailwindSelectors,
+} from '@fluentic/style/presets/tailwind';
+import { createNamedTokens } from '@fluentic/style/dialect';
+
+export const Colors = createNamedTokens('app.color', {
+  accent: '#2563eb',
+  accentHover: '#1d4ed8',
+});
+
+const config = createDefaultedTailwindStyleConfig({
+  theme: {
+    colors: Colors,
+    spacing: {
+      18: '4.5rem',
+    },
+  },
+});
+const transform = createTailwindStyleTransform(config);
+
+export const { style: tw } = createStyleFn({
+  selectors: TailwindSelectors,
+  transform,
+});
+```
+
+`createTailwindStyleTransform(...)` is strict: it exposes the Tailwind dialect
+fields, not every CSS property. For raw CSS properties, compose with your normal
+Fluentic style function through `.merge(...)`, or opt into
+`createTailwindExtendedStyleTransform(...)`.
+
+Use it like any other Fluentic style function:
+
+```tsx
+const button = tw({
+  inlineFlex: true,
+  items: 'center',
+  gap: '$2',
+  px: '$4',
+  py: '$2',
+  bg: '$accent',
+  text: '$white',
+  rounded: '$md',
+  font: '$semibold',
+})
+  .hover({ bg: '$accentHover' })
+  .focusVisible({ outlineColor: '$accent' })
+  .md({ px: '$6' });
+```
+
+## Migrating From Tailwind
+
+The preset keeps Tailwind's utility vocabulary, but moves it into Fluentic's
+style object and chain model.
+
+That means you still recognize the Tailwind naming, but you write in Fluentic's
+shape:
+
+```txt
+property utility -> object field
+theme segment    -> $ scale reference
+variant prefix   -> chain method
+```
+
+```tsx
+// Tailwind
+<button className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 md:px-6" />
+
+// Fluentic Tailwind preset
+<button
+  css={tw({
+    inlineFlex: true,
+    items: 'center',
+    gap: '$2',
+    rounded: '$md',
+    bg: '$blue.600',
+    px: '$4',
+    py: '$2',
+    text: '$white',
+  })
+    .hover({ bg: '$blue.700' })
+    .md({ px: '$6' })}
+/>
+```
+
+The main shift is:
+
+| Tailwind class | Fluentic Tailwind preset |
+| --- | --- |
+| `px-4` | `px: '$4'` |
+| `bg-blue-600` | `bg: '$blue.600'` |
+| `text-white` | `text: '$white'` |
+| `font-semibold` | `font: '$semibold'` |
+| `rounded-md` | `rounded: '$md'` |
+| `hover:bg-blue-700` | `.hover({ bg: '$blue.700' })` |
+| `md:px-6` | `.md({ px: '$6' })` |
+
+### Why `$2` Instead Of `2`
+
+Tailwind uses `2` as a scale key in class names like `px-2`. In JavaScript
+objects, `px: 2` is ambiguous: it can look like a literal `2px`, a CSS number,
+or a Tailwind spacing scale lookup.
+
+The preset uses `$...` for Tailwind-like theme references:
+
+```ts
+tw({
+  px: '$2', // theme.spacing[2] -> 0.5rem
+  py: '$4', // theme.spacing[4] -> 1rem
+  gap: 2, // literal CSS number -> 2px
+  maxW: '42rem', // literal CSS value
+});
+```
+
+That `$` convention is not Fluentic core. It is the syntax this preset chooses
+for the Tailwind dialect so scale lookups are visually obvious and literal CSS
+values remain literal. Bare numbers follow the default Fluentic numeric value
+rule: length-like properties receive `px`, and unitless CSS properties stay
+unitless. See [Numeric Values](../../../reference/numeric-values).
+
+The Tailwind style object preset is also not a lock-in layer. It is built from normal
+Fluentic primitives: `createStyleFn(...)`, `styleTransform(...)`, selectors, and
+named tokens. You can define a different Tailwind dialect, a Panda-like dialect,
+or your own product-specific utility language in userland.
+
+The implementation is intentionally small enough to inspect:
+
+| Source | Link |
+| --- | --- |
+| Tailwind preset | [packages/style/presets/tailwind](https://github.com/fluentic-dev/style/tree/main/packages/style/presets/tailwind) |
+| Named token helpers | [packages/style/dialect](https://github.com/fluentic-dev/style/tree/main/packages/style/dialect) |
+| Object example app | [examples/tailwind](https://github.com/fluentic-dev/style/tree/main/examples/tailwind) |
+
+## Options
+
+`createTailwindStyleTransform(...)` accepts a `TailwindStyleConfig` and exposes
+the Tailwind utility dialect only:
+
+```ts
+type TailwindStyleConfig = {
+  theme: TailwindTheme;
+};
+```
+
+Use `createTailwindStyleConfig(...)` for a plain config. It does not include
+Tailwind defaults unless you put them there.
+
+Use `createDefaultedTailwindStyleConfig(...)` when you want the built-in
+Tailwind-like non-color scales merged with your additions. This gives you refs
+such as `$4`, `$base`, `$screen`, `$2xl`, `$bold`, and `$lg` without opting into
+the default Tailwind color palette:
+
+```ts
+const config = createDefaultedTailwindStyleConfig({
+  theme: {
+    colors: Colors,
+  },
+});
+
+const transform = createTailwindStyleTransform(config);
+```
+
+Color palettes are explicit. If you want Tailwind's default palette too, spread
+`defaultTailwindColors` into the color scale you pass to the config:
+
+```ts
+import {
+  createDefaultedTailwindStyleConfig,
+  defaultTailwindColors,
+} from '@fluentic/style/presets/tailwind';
+import { createNamedTokens } from '@fluentic/style/dialect';
+
+const Colors = createNamedTokens('app.color', {
+  ...defaultTailwindColors,
+  accent: '#2563eb',
+  accentHover: '#1d4ed8',
+});
+
+const config = createDefaultedTailwindStyleConfig({
+  theme: {
+    colors: Colors,
+  },
+});
+```
+
+If you want a style function that also accepts raw CSS properties, use the
+extended transform:
+
+```ts
+import { createTailwindExtendedStyleTransform } from '@fluentic/style/presets/tailwind';
+
+const transform = createTailwindExtendedStyleTransform(config);
+```
+
+If you want to control merging yourself, import `defaultTailwindStyleConfig`
+and `mergeTailwindStyleConfig(...)`. `defaultTailwindColors` stays a plain
+spreadable color scale, so you can decide exactly where the palette joins your
+own colors.
+
+Supported theme scales:
+
+```ts
+type TailwindTheme = {
+  spacing?: Record<string | number, unknown>;
+  colors?: Record<string | number, unknown>;
+  radii?: Record<string | number, unknown>;
+  fontSizes?: Record<string | number, unknown>;
+  fontWeights?: Record<string | number, unknown>;
+  lineHeights?: Record<string | number, unknown>;
+  letterSpacings?: Record<string | number, unknown>;
+  shadows?: Record<string | number, unknown>;
+  sizes?: Record<string | number, unknown>;
+  zIndices?: Record<string | number, unknown>;
+  opacity?: Record<string | number, unknown>;
+};
+```
+
+## Value Resolution
+
+Values are resolved by the utility field.
+
+Spacing utilities read from `theme.spacing`:
+
+```ts
+tw({ px: '$4', py: '$2' });
+```
+
+With the default scale, that becomes:
+
+```ts
+{
+  paddingInline: '1rem',
+  paddingBlock: '0.5rem',
+}
+```
+
+Color utilities read from `theme.colors`.
+
+```ts
+tw({ bg: '$blue.600', text: '$white' });
+```
+
+With the default scale, that becomes:
+
+```ts
+{
+  backgroundColor: 'oklch(54.6% 0.245 262.881)',
+  color: '#fff',
+}
+```
+
+Values without `$` are treated as literal CSS values:
+
+```ts
+tw({
+  px: 4, // padding-inline: 4px
+  opacity: 0.72, // opacity: 0.72
+  w: 'calc(100% - 1rem)',
+});
+```
+
+Fluentic tokens can still be used directly as values. The `$...` syntax is only
+for Tailwind-like theme refs:
+
+```ts
+tw({ bg: color.accent, text: color.onAccent });
+```
+
+## Theming With Scales
+
+Most Tailwind users start with plain literal theme values. The preset supports
+that directly:
+
+```ts
+const config = createDefaultedTailwindStyleConfig({
+  theme: {
+    colors: {
+      accent: '#2563eb',
+      accentHover: '#1d4ed8',
+      panel: '#ffffff',
+    },
+  },
+});
+const transform = createTailwindStyleTransform(config);
+
+tw({
+  bg: '$accent',
+  text: '$white',
+}).hover({
+  bg: '$accentHover',
+});
+```
+
+That is already useful: the component uses semantic names like `$accent`, while
+the theme config stays as plain data.
+
+When those values need theming for dark mode, brand skins, or a multi-theme app,
+use named tokens for the same scale:
+
+```ts
+import { createNamedTokens } from '@fluentic/style/dialect';
+
+export const Colors = createNamedTokens('app.color', {
+  accent: '#2563eb',
+  accentHover: '#1d4ed8',
+  panel: '#ffffff',
+});
+
+const config = createDefaultedTailwindStyleConfig({
+  theme: { colors: Colors },
+});
+const transform = createTailwindStyleTransform(config);
+
+tw({
+  bg: '$accent',
+}).hover({
+  bg: '$accentHover',
+});
+```
+
+Named tokens use deterministic token ids. That lets the build-time compiler
+transform a `$accent` reference into a known token id, and lets runtime theme
+code create the same token identity without carrying the whole color scale or
+mapping data. Use the same `Colors` object to create theme overrides:
+
+```ts
+import { createTheme } from '@fluentic/style';
+import { Colors } from './style';
+
+export const brandTheme = createTheme([
+  Colors.accent('#60a5fa'),
+  Colors.accentHover('#2563eb'),
+]);
+```
+
+Then apply the theme as normal Fluentic style data:
+
+```tsx
+<section css={brandTheme}>
+  <button css={tw({ bg: '$accent' }).hover({ bg: '$accentHover' })} />
+</section>
+```
+
+## Split Scales For Tree-Shaking
+
+Keep shared scales and named tokens in a separate module when they are used by
+both the Tailwind transform and runtime theme code.
+
+This keeps runtime imports from pulling in the style function, the Tailwind
+transform, or the compiler-facing configuration module.
+
+```txt
+src/style/tokens.ts  -> shared scales and named tokens
+src/style/tw.ts      -> createTailwindStyleTransform + createStyleFn
+src/style/theme.ts   -> createTheme runtime themes
+```
+
+Define token-backed scales in a small data module:
+
+```ts
+// src/style/tokens.ts
+import { createNamedTokens } from '@fluentic/style/dialect';
+
+export const Colors = createNamedTokens('app.color', {
+  accent: '#2563eb',
+  accentHover: '#1d4ed8',
+  panel: '#ffffff',
+});
+```
+
+Use the scale in the Tailwind style function module:
+
+```ts
+// src/style/tw.ts
+import { createStyleFn } from '@fluentic/style';
+import {
+  createDefaultedTailwindStyleConfig,
+  createTailwindStyleTransform,
+  TailwindSelectors,
+} from '@fluentic/style/presets/tailwind';
+import { Colors } from './tokens';
+
+const config = createDefaultedTailwindStyleConfig({
+  theme: { colors: Colors },
+});
+const transform = createTailwindStyleTransform(config);
+
+export const { style: tw } = createStyleFn({
+  selectors: TailwindSelectors,
+  transform,
+});
+```
+
+Use the same `Colors` object from runtime theme code:
+
+```ts
+// src/style/theme.ts
+import { createTheme } from '@fluentic/style';
+import { Colors } from './tokens';
+
+export const brandTheme = createTheme([
+  Colors.accent('#60a5fa'),
+  Colors.accentHover('#2563eb'),
+]);
+```
+
+Then app code can import only what it needs:
+
+```tsx
+import { brandTheme } from './style/theme';
+import { tw } from './style/tw';
+
+<section css={brandTheme}>
+  <button css={tw({ bg: '$accent' }).hover({ bg: '$accentHover' })} />
+</section>;
+```
+
+In extracted builds, the style function and transform are normally removed from
+the app runtime when only extracted styles remain. Splitting tokens and themes
+keeps the runtime path small and avoids importing preset configuration just to
+apply a theme.
+
+## Utility Reference
+
+This section lists the utility fields currently implemented by the preset.
+
+The default transform intentionally excludes raw CSS properties. Use core
+Fluentic styles for normal CSS and merge them with the Tailwind dialect when a
+style needs both:
+
+```ts
+import { style } from '@fluentic/style';
+
+const motion = style({
+  transform: 'translateY(-1px)',
+});
+
+const button = tw({ px: '$4' }).merge(motion);
+```
+
+Or create the style function with `createTailwindExtendedStyleTransform(...)`
+when you want utility fields and native CSS properties accepted in the same
+object:
+
+```ts
+import { createStyleFn } from '@fluentic/style';
+import { createTailwindExtendedStyleTransform, TailwindSelectors } from '@fluentic/style/presets/tailwind';
+
+const transform = createTailwindExtendedStyleTransform(config);
+const { style: twx } = createStyleFn({ selectors: TailwindSelectors, transform });
+
+twx({
+  px: '$4',
+  transform: 'translateY(-1px)',
+});
+```
+
+### Display
+
+| Tailwind | Preset |
+| --- | --- |
+| `block` | `block: true` |
+| `inline-block` | `inlineBlock: true` |
+| `flex` | `flex: true` |
+| `inline-flex` | `inlineFlex: true` |
+| `grid` | `grid: true` |
+| `hidden` | `hidden: true` |
+
+```ts
+tw({
+  inlineFlex: true,
+  hidden: collapsed,
+});
+```
+
+`flex` can also carry a literal flex value:
+
+```ts
+tw({
+  flex: '1 1 0%',
+});
+```
+
+### Flexbox Alignment
+
+| Tailwind family | Preset field |
+| --- | --- |
+| `flex-row`, `flex-col`, `flex-row-reverse`, `flex-col-reverse` | `direction` |
+| `flex-wrap`, `flex-wrap-reverse` | `wrap` |
+| `items-*` | `items` |
+| `justify-*` | `justify` |
+| `content-*` | `content` |
+| `self-*` | `self` |
+
+```ts
+tw({
+  flex: true,
+  direction: 'col',
+  wrap: true,
+  items: 'center',
+  justify: 'between',
+  content: 'center',
+  self: 'stretch',
+});
+```
+
+### Spacing
+
+Spacing fields read from `theme.spacing` when the value starts with `$`.
+
+| Tailwind family | Preset fields |
+| --- | --- |
+| `p-*`, `px-*`, `py-*` | `p`, `px`, `py` |
+| `pt-*`, `pr-*`, `pb-*`, `pl-*` | `pt`, `pr`, `pb`, `pl` |
+| `ps-*`, `pe-*` | `ps`, `pe` |
+
+```ts
+tw({
+  p: '$4',
+  px: '$6',
+  py: '$3',
+  pt: '$2',
+  pe: '$5',
+});
+```
+
+Literal CSS values are still literal:
+
+```ts
+tw({
+  px: 'clamp(1rem, 2vw, 2rem)',
+});
+```
+
+### Margin
+
+Margin fields read from `theme.spacing`, and also accept `auto`.
+
+| Tailwind family | Preset fields |
+| --- | --- |
+| `m-*`, `mx-*`, `my-*` | `m`, `mx`, `my` |
+| `mt-*`, `mr-*`, `mb-*`, `ml-*` | `mt`, `mr`, `mb`, `ml` |
+| `ms-*`, `me-*` | `ms`, `me` |
+
+```ts
+tw({
+  mx: 'auto',
+  mt: '$8',
+  mb: '$4',
+});
+```
+
+### Gap
+
+| Tailwind family | Preset fields |
+| --- | --- |
+| `gap-*` | `gap` |
+| `gap-x-*` | `gapX` |
+| `gap-y-*` | `gapY` |
+
+```ts
+tw({
+  grid: true,
+  gap: '$4',
+  gapX: '$6',
+  gapY: '$3',
+});
+```
+
+### Size
+
+Size fields resolve against `theme.sizes` first, then `theme.spacing`.
+
+| Tailwind family | Preset fields |
+| --- | --- |
+| `w-*`, `h-*` | `w`, `h` |
+| `min-w-*`, `max-w-*` | `minW`, `maxW` |
+| `min-h-*`, `max-h-*` | `minH`, `maxH` |
+| `size-*` | `size` |
+
+```ts
+tw({
+  w: '$full',
+  maxW: '$screen',
+  h: '$24',
+  minH: '$screen',
+  size: '$12',
+});
+```
+
+Custom sizes can be added through the transform theme:
+
+```ts
+const config = createDefaultedTailwindStyleConfig({
+  theme: {
+    sizes: {
+      content: 'min(100%, 72rem)',
+    },
+  },
+});
+const transform = createTailwindStyleTransform(config);
+
+tw({ w: '$content' });
+```
+
+### Colors
+
+Color fields read from `theme.colors`. `createDefaultedTailwindStyleConfig(...)`
+does not include Tailwind colors by default, so product/theme color names stay
+owned by your app.
+
+| Tailwind family | Preset field |
+| --- | --- |
+| `bg-*` | `bg` |
+| `text-*` | `text` |
+| `border-*` | `borderColor` |
+| `outline-*` | `outlineColor` |
+| `ring-*` | `ringColor` |
+
+```ts
+tw({
+  bg: '$accent',
+  text: '$accentText',
+  borderColor: '$accentHover',
+  outlineColor: '$accent',
+  ringColor: '$accent',
+});
+```
+
+Named tokens can be used as a color scale:
+
+```ts
+const Colors = createNamedTokens('app.color', {
+  accent: '#2563eb',
+  accentHover: '#1d4ed8',
+});
+
+const config = createDefaultedTailwindStyleConfig({
+  theme: { colors: Colors },
+});
+const transform = createTailwindStyleTransform(config);
+
+tw({ bg: '$accent' }).hover({ bg: '$accentHover' });
+```
+
+When you do want the familiar Tailwind palette names, opt into them explicitly:
+
+```ts
+import { defaultTailwindColors } from '@fluentic/style/presets/tailwind';
+import { createNamedTokens } from '@fluentic/style/dialect';
+
+const Colors = createNamedTokens('app.color', {
+  ...defaultTailwindColors,
+  accent: '#2563eb',
+  accentHover: '#1d4ed8',
+});
+
+const config = createDefaultedTailwindStyleConfig({
+  theme: { colors: Colors },
+});
+
+tw({
+  bg: '$blue.600',
+  text: '$white',
+  borderColor: '$blue.700',
+});
+```
+
+### Typography
+
+Tailwind overloads `text-*` for both color and font size. The preset mirrors
+that behavior:
+
+```ts
+tw({
+  text: '$white', // color
+});
+
+tw({
+  text: '$2xl', // font size
+});
+```
+
+You can also use explicit typography fields:
+
+| Tailwind family | Preset field |
+| --- | --- |
+| `text-*` size | `text` or `textSize` |
+| `text-*` color | `text` |
+| `text-left`, `text-center`, `text-right`, `text-justify`, `text-start`, `text-end` | `text` or `align` |
+| `font-*` weight | `font` |
+| `leading-*` | `leading` |
+| `tracking-*` | `tracking` |
+
+```ts
+tw({
+  textSize: '$lg',
+  font: '$semibold',
+  leading: '$relaxed',
+  tracking: '$wide',
+  align: 'center',
+});
+```
+
+### Radius
+
+| Tailwind family | Preset fields |
+| --- | --- |
+| `rounded-*` | `rounded` |
+| `rounded-t-*`, `rounded-r-*`, `rounded-b-*`, `rounded-l-*` | `roundedT`, `roundedR`, `roundedB`, `roundedL` |
+| `rounded-tl-*`, `rounded-tr-*`, `rounded-br-*`, `rounded-bl-*` | `roundedTl`, `roundedTr`, `roundedBr`, `roundedBl` |
+
+```ts
+tw({
+  rounded: '$xl',
+  roundedT: '$2xl',
+  roundedBl: '$none',
+});
+```
+
+### Effects And Stack
+
+| Tailwind family | Preset field |
+| --- | --- |
+| `shadow-*` | `shadow` |
+| `opacity-*` | `opacity` |
+| `z-*` | `z` |
+
+```ts
+tw({
+  shadow: '$lg',
+  opacity: '$90',
+  z: '$10',
+});
+```
+
+The opacity and z-index fields also accept literal numbers:
+
+```ts
+tw({
+  opacity: 0.72,
+  z: 100,
+});
+```
+
+### Position
+
+| Tailwind family | Preset fields |
+| --- | --- |
+| `relative`, `absolute`, `fixed`, `sticky` | `relative`, `absolute`, `fixed`, `sticky` |
+| `inset-*`, `inset-x-*`, `inset-y-*` | `inset`, `insetX`, `insetY` |
+| `top-*`, `right-*`, `bottom-*`, `left-*` | `top`, `right`, `bottom`, `left` |
+
+```ts
+tw({
+  absolute: true,
+  inset: '$0',
+  top: '$4',
+  right: '$4',
+});
+```
+
+### Interaction
+
+| Tailwind family | Preset field |
+| --- | --- |
+| `select-none`, `select-text`, `select-all`, `select-auto` | `select` |
+| `cursor-*` | `cursor` |
+| `pointer-events-none`, `pointer-events-auto` | `pointerEvents` |
+
+```ts
+tw({
+  cursor: 'pointer',
+  select: 'none',
+  pointerEvents: 'auto',
+});
+```
+
+### Overflow
+
+Overflow is exposed as utility fields:
+
+```ts
+tw({
+  overflow: 'hidden',
+  overflowX: 'auto',
+  overflowY: 'clip',
+});
+```
+
+## Selectors
+
+`TailwindSelectors` includes the default Fluentic priority selectors plus
+responsive helpers:
+
+```ts
+tw({ px: '$4' })
+  .hover({ bg: color.accentHover })
+  .focusVisible({ outlineColor: '$accent' })
+  .md({ px: '$6' })
+  .lg({ px: '$8' });
+```
+
+Responsive helpers:
+
+| Method | Media query |
+| --- | --- |
+| `.sm(...)` | `(min-width: 640px)` |
+| `.md(...)` | `(min-width: 768px)` |
+| `.lg(...)` | `(min-width: 1024px)` |
+| `.xl(...)` | `(min-width: 1280px)` |
+| `.xxl(...)` | `(min-width: 1536px)` |
+
+Tailwind's `2xl` breakpoint is exposed as `.xxl(...)` because chain methods
+cannot start with a number. It maps to the same `1536px` media query.
+
+The preset also includes `.dark(...)` for a `.dark` ancestor convention.
+
+## What Is Not Copied
+
+The preset copies the Tailwind utility dialect into object fields and Fluentic
+chains. It does not parse Tailwind class strings.
+
+These Tailwind features intentionally remain outside the first preset surface:
+
+| Tailwind feature | Fluentic path |
+| --- | --- |
+| Variant prefixes like `hover:` and `md:` | Chain methods like `.hover(...)` and `.md(...)` |
+| Arbitrary selector variants | Custom Fluentic selectors |
+| Arbitrary class values like `bg-[...]` | Literal object values |
+| Slash opacity shorthand like `bg-blue-600/50` | Explicit color value or token |
+| `group-*` and `peer-*` variants | Add project selectors with `createSelector(...)` |
+
+## Extraction And Dynamic Values
+
+The preset is a normal Fluentic transform.
+
+Static declarations can be extracted by the compiler:
+
+```ts
+tw({ px: '$4', py: '$2' });
+```
+
+Dynamic values can stay dynamic:
+
+```tsx
+tw({
+  px: compact ? '$2' : '$4',
+  bg: active ? color.accent : color.surface,
+});
+```
+
+You do not switch APIs between build-time CSS and runtime values. Fluentic keeps
+the same style data model and splits the output work where it can.

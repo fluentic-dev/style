@@ -1,0 +1,134 @@
+---
+title: Tailwind Presets
+description: Use Tailwind's familiar utility vocabulary through Fluentic style chains.
+---
+
+The Tailwind presets are for teams that already think in Tailwind naming:
+`px-4`, `bg-blue-600`, `rounded-lg`, `font-semibold`, responsive breakpoints,
+hover states, and theme scales.
+
+Fluentic keeps that familiar vocabulary, but does not copy Tailwind's whole
+syntax model. Conditions stay as Fluentic chains, values can still be tokens,
+styles can still flow through slots and scopes, and static declarations can
+still be extracted by the compiler.
+
+```txt
+Tailwind names -> Fluentic transform -> CSS declarations
+states/media   -> Fluentic chains
+theme scales   -> plain values or named tokens
+```
+
+There are two Tailwind surfaces.
+
+| Surface | Use when |
+| --- | --- |
+| [Style Object](/docs/presets/tailwind/style-object/) | You want TypeScript object fields, checked values, and grouped dynamic branches. |
+| [Class Name](/docs/presets/tailwind/class-name/) | You want Tailwind-like class strings while keeping Fluentic chains and debugging. |
+
+Both surfaces use the same Tailwind config shape, selectors, named tokens, and
+compiler/runtime split. The difference is only the input syntax.
+
+## Style Object
+
+The object surface turns utility families into fields and scale lookups into
+`$...` refs:
+
+```tsx
+css={tw({
+  inlineFlex: true,
+  items: 'center',
+  gap: '$2',
+  px: '$4',
+  py: '$2',
+  bg: '$blue.600',
+  text: '$white',
+  rounded: '$md',
+})
+  .hover({ bg: '$blue.700' })
+  .md({ px: '$6' })}
+```
+
+This is usually nicer when conditions affect several values together or when a
+style wants native TypeScript object composition.
+
+## Class Name
+
+The classname surface keeps class names close to Tailwind syntax, but variants
+still become chains:
+
+```tsx
+css={cx(
+  'inline-flex',
+  'items-center',
+  'gap-2',
+  compact ? 'px-3' : 'px-5',
+  'py-2',
+  danger ? 'bg-red-600' : 'bg-blue-600',
+  'text-white',
+  'rounded-md',
+)
+  .hover(danger ? 'bg-red-700' : 'bg-blue-700')
+  .md('px-6')}
+```
+
+This is useful when a team wants class-name muscle memory without giving up
+Fluentic's source tracing, runtime branches, typed transforms, and extracted CSS
+path.
+
+## Coverage
+
+The presets aim to cover the most common Tailwind utility families: display,
+flex and grid layout, spacing, sizing, colors, typography, borders, radius,
+shadows, position, overflow, interaction states, responsive breakpoints, and
+arbitrary CSS values.
+
+Some Tailwind features are intentionally different:
+
+| Tailwind feature | Fluentic path |
+| --- | --- |
+| `hover:` and `md:` prefixes | `.hover(...)` and `.md(...)` chain calls |
+| `2xl:` prefix | `.xxl(...)`, because method names cannot start with a number |
+| Project-specific variants | Add custom Fluentic selectors |
+| Theme values | Plain scales, named tokens, or explicit default palette opt-in |
+
+The goal is practical Tailwind familiarity, not a byte-for-byte clone of the
+Tailwind compiler. If a utility family is important and not covered yet, it can
+be added in the preset transform without changing Fluentic's core model.
+
+## Shared Configuration
+
+Both Tailwind surfaces use `createDefaultedTailwindStyleConfig(...)` when you
+want the built-in non-color scales:
+
+```ts
+import {
+  createDefaultedTailwindStyleConfig,
+  defaultTailwindColors,
+} from '@fluentic/style/presets/tailwind';
+import { createNamedTokens } from '@fluentic/style/dialect';
+
+export const Colors = createNamedTokens('app.color', {
+  ...defaultTailwindColors,
+  accent: '#2563eb',
+  accentHover: '#1d4ed8',
+});
+
+export const tailwindConfig = createDefaultedTailwindStyleConfig({
+  theme: {
+    colors: Colors,
+    spacing: {
+      18: '4.5rem',
+    },
+  },
+});
+```
+
+Colors are explicit. `createDefaultedTailwindStyleConfig(...)` gives you common
+spacing, sizing, font, radius, shadow, opacity, and breakpoint scales, but it
+does not automatically opt your app into Tailwind's default color palette. Spread
+`defaultTailwindColors` only when you want those names.
+
+Next:
+
+- [Style Object](/docs/presets/tailwind/style-object/) explains the object-field dialect.
+- [Class Name](/docs/presets/tailwind/class-name/) explains the class-name dialect.

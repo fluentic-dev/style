@@ -4,6 +4,7 @@
     "overview",
     "imports",
     "style",
+    "numeric-values",
     "style-slot",
     "style-scope",
     "combine-style",

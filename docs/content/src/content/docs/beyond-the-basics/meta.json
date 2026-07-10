@@ -8,6 +8,7 @@
     "tracing-styles-in-real-apps",
     "devtools-and-sourcemaps",
     "custom-style-builders",
+    "class-name-style-chains",
     "custom-style-fields",
     "custom-chain-methods",
     "multiple-style-functions"

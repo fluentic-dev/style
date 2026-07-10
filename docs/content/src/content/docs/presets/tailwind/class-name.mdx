@@ -1,0 +1,232 @@
+---
+title: Tailwind Class Name Preset
+description: Use Tailwind-like class names with Fluentic chain methods.
+---
+
+The Tailwind classname preset lets you write familiar utility class names while
+keeping Fluentic's chain model.
+
+```tsx
+css={cx(
+  'inline-flex',
+  'items-center',
+  'gap-2',
+  compact ? 'px-3' : 'px-5',
+  'py-2',
+  danger ? 'bg-red-600' : 'bg-blue-600',
+  'text-white',
+  'rounded-md',
+)
+  .hover(danger ? 'bg-red-700' : 'bg-blue-700')
+  .focusVisible('outline-blue-600')
+  .md('px-6')}
+```
+
+The important difference from Tailwind is that variants are not prefixes inside
+the string. They are Fluentic chains. That keeps conditions grouped, source
+traceable, and compatible with the same selector customization used by object
+styles.
+
+## Setup
+
+Create a classname function from the Tailwind classname preset:
+
+```ts
+import { createClassNameFn } from '@fluentic/style';
+import {
+  createDefaultedTailwindStyleConfig,
+  createTailwindClassNamePreset,
+} from '@fluentic/style/presets/tailwind';
+import { createNamedTokens } from '@fluentic/style/dialect';
+
+export const Colors = createNamedTokens('app.color', {
+  accent: '#2563eb',
+  accentHover: '#1d4ed8',
+  accentText: '#ffffff',
+});
+
+const config = createDefaultedTailwindStyleConfig({
+  theme: {
+    colors: Colors,
+  },
+});
+
+const tailwind = createTailwindClassNamePreset(config);
+
+export const { className: cx } = createClassNameFn({
+  selectors: tailwind.selectors,
+  transform: tailwind.transform,
+});
+```
+
+Use it like any other Fluentic style value:
+
+```tsx
+const button = cx(
+  'inline-flex',
+  'items-center',
+  'gap-2',
+  'rounded-md',
+  'bg-accent',
+  'text-accent-text',
+  'px-4',
+  'py-2',
+  'font-semibold',
+)
+  .hover('bg-accent-hover')
+  .md('px-6');
+
+<button css={button}>Save changes</button>;
+```
+
+## Input Shape
+
+The builder owns flattening. You can pass strings, falsey conditional values,
+weighted class-name items, and nested arrays:
+
+```tsx
+cx(
+  'flex',
+  'items-center',
+  compact ? 'px-3' : 'px-5',
+  danger && 'bg-red-600',
+  ['text-white', active && 'ring-2'],
+  cx.weight('shadow-lg', 1),
+);
+```
+
+Truthy class names are transformed one at a time. False, null, and undefined
+are ignored.
+
+## Chains Instead Of Prefixes
+
+Tailwind class syntax usually repeats the variant prefix:
+
+```tsx
+className="px-4 py-2 bg-blue-600 hover:bg-blue-700 md:px-6"
+```
+
+The Fluentic classname preset keeps each condition as a chain call:
+
+```tsx
+cx('px-4', 'py-2', 'bg-blue-600')
+  .hover('bg-blue-700')
+  .md('px-6');
+```
+
+That means project variants can be added with normal Fluentic selectors, and the
+same method names work for object-style and classname-style Tailwind builders.
+
+Responsive helpers:
+
+| Method | Media query |
+| --- | --- |
+| `.sm(...)` | `(min-width: 640px)` |
+| `.md(...)` | `(min-width: 768px)` |
+| `.lg(...)` | `(min-width: 1024px)` |
+| `.xl(...)` | `(min-width: 1280px)` |
+| `.xxl(...)` | `(min-width: 1536px)` |
+
+Tailwind's `2xl` breakpoint is exposed as `.xxl(...)` because chain methods
+cannot start with a number.
+
+## Theme Values
+
+Class tokens resolve against the same Tailwind config used by the object preset.
+
+```ts
+const config = createDefaultedTailwindStyleConfig({
+  theme: {
+    colors: Colors,
+    spacing: {
+      18: '4.5rem',
+    },
+    sizes: {
+      content: 'min(100%, 72rem)',
+    },
+  },
+});
+```
+
+Then class names use Tailwind-style names:
+
+```tsx
+cx(
+  'w-content',
+  'px-18',
+  'bg-accent',
+  'text-accent-text',
+);
+```
+
+Camel-case theme keys become kebab-case class segments. For example,
+`accentHover` is written as `bg-accent-hover`.
+
+Colors are explicit. To use Tailwind's default palette names like `blue-600`,
+spread `defaultTailwindColors` into your color scale:
+
+```ts
+import {
+  createDefaultedTailwindStyleConfig,
+  defaultTailwindColors,
+} from '@fluentic/style/presets/tailwind';
+import { createNamedTokens } from '@fluentic/style/dialect';
+
+const Colors = createNamedTokens('app.color', {
+  ...defaultTailwindColors,
+  accent: '#2563eb',
+});
+
+const config = createDefaultedTailwindStyleConfig({
+  theme: { colors: Colors },
+});
+```
+
+## Arbitrary Values
+
+Use Tailwind-like arbitrary values when a utility needs a literal value:
+
+```tsx
+cx(
+  'max-w-[48rem]',
+  '[grid-template-columns:repeat(3,_minmax(0,_1fr))]',
+  '[transition:background-color_160ms_ease,_transform_160ms_ease]',
+);
+```
+
+Inside arbitrary values, underscores become spaces.
+
+## Utility Families
+
+The classname preset focuses on the common Tailwind utility families:
+
+| Family | Examples |
+| --- | --- |
+| Display and position | `block`, `inline-flex`, `grid`, `relative`, `absolute` |
+| Flex alignment | `flex-col`, `flex-wrap`, `items-center`, `justify-between` |
+| Spacing | `p-4`, `px-6`, `mt-auto`, `gap-3` |
+| Size | `w-full`, `max-w-[48rem]`, `min-h-screen`, `size-12` |
+| Colors | `bg-accent`, `text-white`, `border-blue-700`, `outline-accent` |
+| Typography | `text-sm`, `font-semibold`, `leading-relaxed` |
+| Visual | `rounded-lg`, `shadow-xl`, `border-[1px_solid]` |
+| Interaction | `cursor-pointer`, `outline-none`, `whitespace-nowrap` |
+| Overflow | `overflow-hidden`, `overflow-x-auto` |
+
+For utilities that are not covered yet, use an arbitrary property class or add
+the utility to a custom classname transform.
+
+## Debug Class Names
+
+The classname transform can preserve readable utility labels in generated debug
+CSS. Fluentic still appends a hash so callsites stay isolated, but DevTools can
+show class names like `bg-accent--abc` instead of a generic atomic name.
+
+That is why classname syntax is still useful even though Fluentic emits CSS:
+the source token can survive into debugging while the compiler and runtime keep
+their normal extraction and isolation behavior.
+
+## Examples
+
+See the classname Tailwind example app:
+
+[examples/tailwind-classname](https://github.com/fluentic-dev/style/tree/main/examples/tailwind-classname)

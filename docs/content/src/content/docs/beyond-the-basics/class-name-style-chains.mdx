@@ -1,0 +1,264 @@
+---
+title: Class Name Style Chains
+description: Use class-name syntax when a transform can map class names to Fluentic styles.
+---
+
+Fluentic's built-in `style(...)` function uses object syntax:
+
+```tsx
+const saveButton = style({
+  border: 0,
+  borderRadius: 8,
+  padding: '8px 12px',
+});
+```
+
+That is why most core examples start with objects: the fields are direct CSS,
+easy to type, and do not need a separate utility vocabulary.
+
+Some teams prefer class-name syntax, especially when they already know a utility
+language like Tailwind. Fluentic supports that too. A class name only means
+something after a transform decides what it maps to:
+
+```txt
+"px-4"        -> padding-inline: 1rem
+"bg-accent"  -> background-color: var(--token-app-color-accent)
+"rounded-md" -> border-radius: 0.375rem
+```
+
+That mapping is project or preset vocabulary. You can write it yourself, or use
+a Fluentic preset for a popular dialect so you do not have to start from
+scratch.
+
+Notice: to use class-name syntax, create your own function with
+`createClassNameFn(...)` and provide the transform logic for your class names.
+Fluentic also provides presets out of the box for popular dialects, such as the
+[Tailwind Class Name Preset](/docs/presets/tailwind/class-name/). See that page
+for Tailwind-specific setup and customization, or see
+[Create A Class Name Function](#create-a-class-name-function) below for the
+basic `createClassNameFn(...)` shape.
+
+In extracted production builds, static classname chains are transformed during
+the build and emitted as CSS. For those extracted styles, the class-name
+transform is not bundled into your built app and does not run in the browser.
+This lets you keep a familiar class-name syntax while still getting Fluentic's
+compiled CSS output and a small runtime.
+
+## Same Result, Different Input
+
+`createClassNameFn(...)` creates a style chain from class-name items:
+
+```tsx
+const saveButton = cx(
+  'inline-flex',
+  'items-center',
+  compact ? 'px-3' : 'px-5',
+  danger && 'bg-danger',
+)
+  .hover('bg-danger-hover')
+  .md('px-6');
+
+<button css={saveButton}>Save changes</button>;
+```
+
+That looks different from `style(...)`, but the result is still Fluentic style
+data. It can go into the same `css` prop, merge with other styles, flow through
+slots and scopes, use the same selector chains, and participate in the same
+debugging and extraction path.
+
+```tsx
+<button css={[
+  saveButton,
+  disabled && cx('opacity-50', 'cursor-not-allowed'),
+]}>
+  Save changes
+</button>
+```
+
+The difference is only the input syntax:
+
+| Input | Good for |
+| --- | --- |
+| `style({ paddingInline: 16 })` | Direct CSS object styles. |
+| `tw({ px: '$4' })` | Tailwind-like object fields. |
+| `cx('px-4')` | Tailwind-like class names. |
+
+All three produce style chains that Fluentic can use in the same places.
+
+## Create A Class Name Function
+
+Fluentic does not know what class names should mean in your app.
+
+`flex` and `items-center` might be Tailwind utilities. `button` might be a CSS
+module class. `surface-raised` might be your design system. Those are different
+languages.
+
+So Fluentic keeps the core builder generic. You provide selectors and a
+class-name transform:
+
+```ts
+import {
+  classNameTransform,
+  createClassNameFn,
+  type CSSProperties,
+} from '@fluentic/style';
+
+type UiClassName =
+  | 'inline-flex'
+  | 'items-center'
+  | 'px-4'
+  | 'bg-accent'
+  | 'bg-accent-hover';
+
+const transform = classNameTransform<UiClassName>({
+  transform(className) {
+    const css: CSSProperties = {};
+
+    if (className === 'inline-flex') css.display = 'inline-flex';
+    if (className === 'items-center') css.alignItems = 'center';
+    if (className === 'px-4') css.paddingInline = '1rem';
+    if (className === 'bg-accent') css.backgroundColor = 'var(--accent)';
+    if (className === 'bg-accent-hover') {
+      css.backgroundColor = 'var(--accent-hover)';
+    }
+
+    return css;
+  },
+});
+
+export const { className: cx } = createClassNameFn({
+  selectors,
+  transform,
+});
+```
+
+The builder handles the chain shape and input flattening. The transform handles
+the class-name vocabulary.
+
+The transform returns ordinary style object data. If a declaration should keep a
+readable class-name label in generated debug CSS, return `classNameValue(...)`
+for that value:
+
+```ts
+import { classNameValue } from '@fluentic/style';
+
+const transform = classNameTransform<UiClassName>({
+  transform(className) {
+    if (className === 'bg-accent') {
+      return {
+        backgroundColor: classNameValue('var(--accent)', 'bg-accent'),
+      };
+    }
+
+    return {};
+  },
+});
+```
+
+Fluentic still appends its hash to keep callsites isolated, but DevTools can
+show a readable name such as `bg-accent--abc` instead of a generic atomic label.
+
+## Is It Type-Safe?
+
+It can be. Class-name type safety comes from the class-name type accepted by
+your transform.
+
+For a small project dialect, that can be a plain string union:
+
+```ts
+type UiClassName =
+  | 'inline-flex'
+  | 'items-center'
+  | 'px-4'
+  | 'bg-accent'
+  | 'bg-accent-hover';
+```
+
+When that type is used by `classNameTransform<UiClassName>(...)` and passed to
+`createClassNameFn(...)`, TypeScript checks calls to `cx(...)`:
+
+```tsx
+cx('inline-flex', 'px-4'); // ok
+cx('px-999'); // TypeScript error
+```
+
+Larger dialects can use TypeScript template string types instead of writing one
+giant union by hand. Fluentic's built-in
+[Tailwind Class Name Preset](/docs/presets/tailwind/class-name/) does this for
+Tailwind-like utilities, so names such as `px-4`, `bg-accent`, and `text-sm`
+can be checked from the configured theme scales. When the class-name function is
+typed this way, invalid string literals are reported by TypeScript at the
+`cx(...)` call site.
+
+## Use A Preset When You Can
+
+For Tailwind-like class names, use the Tailwind classname preset:
+
+```ts
+import { createClassNameFn } from '@fluentic/style';
+import {
+  createDefaultedTailwindStyleConfig,
+  createTailwindClassNamePreset,
+} from '@fluentic/style/presets/tailwind';
+
+const config = createDefaultedTailwindStyleConfig({
+  theme: {
+    colors: Colors,
+  },
+});
+
+const tailwind = createTailwindClassNamePreset(config);
+
+export const { className: cx } = createClassNameFn({
+  selectors: tailwind.selectors,
+  transform: tailwind.transform,
+});
+```
+
+Then component code can stay close to Tailwind class names:
+
+```tsx
+const button = cx(
+  'inline-flex',
+  'items-center',
+  'gap-2',
+  'rounded-md',
+  'bg-accent',
+  'text-accent-text',
+  'px-4',
+  'py-2',
+)
+  .hover('bg-accent-hover')
+  .md('px-6');
+```
+
+See [Tailwind Class Name Preset](/docs/presets/tailwind/class-name/) for the
+Tailwind-specific setup, theme scales, supported utility families, and arbitrary
+values.
+
+## What The Builder Accepts
+
+Class-name style chains accept nested arrays and falsey conditional values, so
+you can keep normal React branching:
+
+```tsx
+cx(
+  'flex',
+  ['items-center', compact ? 'gap-2' : 'gap-4'],
+  active && 'ring-2',
+  disabled ? 'opacity-50' : 'cursor-pointer',
+);
+```
+
+If one class should win another declaration in the same group, use a weighted
+token:
+
+```tsx
+cx(
+  'bg-blue-600',
+  danger && cx.weight('bg-red-600', 1),
+);
+```
+
+Continue to [Compose Element Styles](/docs/learn/compose-element-styles/) to
+see how multiple style chains are ordered and resolved together.

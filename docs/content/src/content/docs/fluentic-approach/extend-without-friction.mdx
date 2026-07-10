@@ -37,6 +37,51 @@ custom methods     -> repeated selectors become typed chain methods
 multiple builders  -> separate vocabularies meet at the component boundary
 ```
 
+This is also how a larger dialect can exist without becoming a new core model.
+For example, Fluentic can ship a Tailwind-like preset that reflects Tailwind's
+familiar vocabulary while keeping Fluentic's object styles and chains:
+
+```tsx
+ui({
+  inlineFlex: true,
+  items: 'center',
+  gap: '$2',
+  px: '$4',
+  py: '$2',
+  bg: '$blue.600',
+  text: '$white',
+  rounded: '$md',
+})
+  .hover({ bg: '$blue.700' })
+  .md({ px: '$6' });
+```
+
+That works because the preset is just a style transform plus selectors. The
+transform maps utility fields to CSS declarations. The selectors provide chain
+methods like `.hover(...)` and `.md(...)`.
+
+Teams that prefer class strings can use the same extension idea with a
+classname builder:
+
+```tsx
+cx(
+  'inline-flex',
+  'items-center',
+  'gap-2',
+  compact ? 'px-3' : 'px-5',
+  'py-2',
+  danger && 'bg-red-600',
+  'text-white',
+  'rounded-md',
+)
+  .hover(danger ? 'bg-red-700' : 'bg-blue-700')
+  .md('px-6');
+```
+
+The syntax is different, but the boundary is still a transform plus
+selectors: class names become CSS declarations, and chain methods express the
+conditions.
+
 ## Custom Fields
 
 Custom fields are for project-specific style object properties.
@@ -65,6 +110,38 @@ const layoutTransform = styleTransform<LayoutStyle>({
 
 The transform is the boundary: authors can write `row` and `gapX`, and the
 builder turns those fields into ordinary CSS.
+
+The same idea scales from a few local shorthands to a complete utility
+vocabulary:
+
+```tsx
+type UtilityStyle = CSSProperties & {
+  px?: '$2' | '$4' | '$6' | CSSProperties['paddingInline'];
+  bg?: '$blue.600' | '$blue.700' | CSSProperties['backgroundColor'];
+  rounded?: '$md' | '$lg' | CSSProperties['borderRadius'];
+};
+
+const utilityTransform = styleTransform<UtilityStyle>({
+  transform(style) {
+    const { px, bg, rounded, ...css } = style;
+
+    if (px === '$4') css.paddingInline = '1rem';
+    else if (px !== undefined) css.paddingInline = px;
+
+    if (bg === '$blue.600') css.backgroundColor = 'oklch(54.6% 0.245 262.881)';
+    else if (bg !== undefined) css.backgroundColor = bg;
+
+    if (rounded === '$md') css.borderRadius = '0.375rem';
+    else if (rounded !== undefined) css.borderRadius = rounded;
+
+    return css;
+  },
+});
+```
+
+The built-in Tailwind preset is a convenience version of this pattern. It is
+not a special compiler mode and it does not block you from defining a different
+dialect for your own design system.
 
 ## Custom Chain Methods
 
@@ -95,26 +172,195 @@ The selector stays in one place. If the project changes from
 `aria-selected="true"` to another state attribute, update the builder instead
 of every component.
 
+Tailwind-style variants are the same concept expressed as chain methods:
+
+```tsx
+const selectors = {
+  hover: selector(':hover'),
+  md: selector('@media (min-width: 768px)', 'media'),
+};
+
+const button = ui({ px: '$4', bg: '$blue.600' })
+  .hover({ bg: '$blue.700' })
+  .md({ px: '$6' });
+```
+
+The dialect can preserve familiar names, but the conditions remain normal
+Fluentic chains with TypeScript autocomplete.
+
 For selector arguments like `$`, `$$`, merge placeholders, enum arguments, and
 validation, see
-[Selector Arguments](../../beyond-the-basics/custom-chain-methods#selector-arguments)
-and [Validators](../../beyond-the-basics/custom-chain-methods#validators).
+[Selector Arguments](/docs/beyond-the-basics/custom-chain-methods/#selector-arguments)
+and [Validators](/docs/beyond-the-basics/custom-chain-methods/#validators).
 
 ## Build The Style Function
 
-`createStyleFn(...)` puts the custom style type, transform, and selectors into
-one style function:
+At this point there are two pieces of project vocabulary:
+
+```txt
+transform -> accepted object fields and how they become CSS
+selectors -> accepted chain methods and what conditions they mean
+```
+
+`createStyleFn(...)` puts those pieces behind one style function:
 
 ```tsx
-export const { style: ui } = createStyleFn({
-  style: type<LayoutStyle>,
-  transform: layoutTransform,
+export const { style: ui } = createStyleFn<LayoutStyle>({
   selectors,
+  transform: layoutTransform,
 });
 ```
 
-Now `ui(...)`, `ui.slot(...)`, and `ui.scope(...)` all share the same fields and
-chain methods.
+Now the base call and the chain methods share the same typed object shape:
+
+```tsx
+const card = ui({
+  row: true,
+  gapX: 12,
+})
+  .selected({
+    backgroundColor: '#eef2ff',
+  })
+  .below('700px', {
+    gapX: 8,
+  });
+```
+
+The same vocabulary is available wherever that builder creates style data:
+
+```tsx
+const cardStyles = {
+  root: ui.slot({
+    row: true,
+    gapX: 12,
+  }),
+  label: ui.slot({
+    fontWeight: 700,
+  }),
+};
+
+const compact = ui.scope().below('700px', [
+  cardStyles.root({ gapX: 8 }),
+  cardStyles.label({ fontSize: 13 }),
+]);
+```
+
+That is the handoff from "some helper functions" to a real styling dialect. The
+project terms work in local element styles, chained selectors, component slots,
+scopes, keyframes, and extracted CSS because they all go through the same
+builder.
+
+So far, the first argument is still a style object. If the project wants
+class-name syntax instead, the next builder family uses the same idea with a
+different input shape.
+
+## Class Name Style Chains
+
+`createClassNameFn(...)` is the class-string sibling of `createStyleFn(...)`.
+It is useful when the team wants Tailwind-like class strings, but still wants
+Fluentic's chain data, extraction path, and source-traceable generated CSS.
+
+The important idea is the same as custom style fields: the builder keeps the
+Fluentic chain shape, and the transform maps project vocabulary to CSS. Object
+builders transform object fields. Class-name builders transform class names.
+
+The builder owns the flattening rules. It accepts strings, conditional falsey
+values, weighted class-name items, and nested arrays:
+
+```tsx
+const button = cx(
+  'inline-flex',
+  'items-center',
+  ['gap-2', compact ? 'px-3' : 'px-5'],
+  danger && 'bg-red-600',
+  cx.weight('ring-2', 1),
+)
+  .hover('bg-red-700', 'text-white')
+  .md('px-6');
+```
+
+The transform stays focused on one job: turn each final class name into normal
+style object data.
+
+```ts
+import {
+  classNameTransform,
+  createClassNameFn,
+  type CSSProperties,
+} from '@fluentic/style';
+
+type UiClassName =
+  | 'inline-flex'
+  | 'items-center'
+  | 'px-4'
+  | 'bg-accent'
+  | 'bg-accent-hover'
+  | 'ring-2';
+
+const uiClassTransform = classNameTransform<UiClassName>({
+  transform(className) {
+    const css: CSSProperties = {};
+
+    if (className === 'inline-flex') css.display = 'inline-flex';
+    if (className === 'items-center') css.alignItems = 'center';
+    if (className === 'px-4') css.paddingInline = '1rem';
+    if (className === 'bg-accent') css.backgroundColor = 'var(--accent)';
+    if (className === 'bg-accent-hover') {
+      css.backgroundColor = 'var(--accent-hover)';
+    }
+    if (className === 'ring-2') css.boxShadow = '0 0 0 2px currentColor';
+
+    return css;
+  },
+});
+
+export const { className: cx } = createClassNameFn({
+  selectors,
+  transform: uiClassTransform,
+});
+```
+
+That means a classname dialect does not need a separate component styling
+model. It can merge with object styles, target the same selectors, and compose
+through the same `css` prop shape.
+
+For Tailwind-like class names, use the preset pieces instead of writing every
+mapping by hand:
+
+```ts
+import { createClassNameFn } from '@fluentic/style';
+import {
+  createDefaultedTailwindStyleConfig,
+  createTailwindClassNamePreset,
+} from '@fluentic/style/presets/tailwind';
+
+const config = createDefaultedTailwindStyleConfig({
+  theme: {
+    colors: Colors,
+  },
+});
+
+const tailwind = createTailwindClassNamePreset(config);
+
+export const { className: cx } = createClassNameFn({
+  selectors: tailwind.selectors,
+  transform: tailwind.transform,
+});
+```
+
+Use the [Tailwind Presets](/docs/presets/tailwind/) page for the shared Tailwind
+theme configuration: defaulted scales, explicit color palettes, and named
+tokens. The classname builder uses the same configured theme, but writes the
+utility as `bg-accent` instead of `bg: '$accent'`.
+
+If a transform wants the emitted debug class name to keep a readable utility
+label, it can return `classNameValue(...)` for that declaration. Fluentic still
+adds the hash suffix, so callsites remain isolated while DevTools point back to
+the original source.
+
+For the full setup flow, transform shape, type-safety notes, and production
+extraction behavior, see
+[Class Name Style Chains](/docs/beyond-the-basics/class-name-style-chains/).
 
 ## More Than One Builder
 
