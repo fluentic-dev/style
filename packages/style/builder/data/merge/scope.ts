@@ -16,26 +16,26 @@ import { isScopeData, isSlotOverrideData } from '../is';
 import type { ItemSelector, ItemValue, RuntimeScopeItem, RuntimeSlotOverrideItem, StateItem } from '../state';
 import { cloneData, logInvalidData } from './utils';
 
-export type ScopeItem<Style = unknown> =
-  | SlotOverrideData<Style>
-  | ScopeData<Style>
+export type ScopeItem =
+  | SlotOverrideData<any>
+  | ScopeData
   | StyleTokenOverride
   | false
   | null
   | undefined;
 
-export type ScopeItems<Style = unknown> =
-  | ScopeItem<Style>
-  | ScopeItem<Style>[];
+export type ScopeItems =
+  | ScopeItem
+  | ScopeItem[];
 
-export function mergeScopeData<Style>(
-  scope: ScopeData<Style>,
+export function mergeScopeData(
+  scope: ScopeData,
   callsite: BuilderCallsite | null,
-  items: ScopeItems<Style> | null,
+  items: ScopeItems | null,
   debug: DebugData | null,
   parentSelector: ItemSelector | null,
   scopeAtRule: ItemSelector | null,
-): ScopeData<Style> {
+): ScopeData {
   if (!items) return scope;
 
   const sourceItems = Array.isArray(items) ? items : [items];
@@ -45,7 +45,7 @@ export function mergeScopeData<Style>(
     debug,
   );
 
-  let source: ScopeItem<Style>;
+  let source: ScopeItem;
   let item: StateItem;
   let lookupIndex: number;
   let priority: number | null;
@@ -228,7 +228,7 @@ export function mergeScopeData<Style>(
     }
   }
 
-  return data as ScopeData<Style>;
+  return data as ScopeData;
 }
 
 function addTokenOverride(

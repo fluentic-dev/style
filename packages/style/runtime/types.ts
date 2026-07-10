@@ -10,7 +10,7 @@ export type RecursiveProp<Item> =
   | Falsy
   | readonly RecursiveProp<Item>[];
 
-export type StyleItem = ScopeTargetData<any> | StyleTokenOverride<any>;
+export type StyleItem = ScopeTargetData | StyleTokenOverride<any>;
 
 export type StyleItems = (StyleItem | Falsy)[];
 
@@ -22,7 +22,7 @@ export type StyleProp = RecursiveProp<RuntimeStylePropItem>;
 
 export type StyleTokenInput<T> = T | StyleTokenData<T>;
 
-export type StyleTheme = RecursiveProp<ScopeData<any>>;
+export type StyleTheme = RecursiveProp<ScopeData>;
 
 export type RuntimeStyleAttributes = {
   css?: StyleProp;

@@ -27,10 +27,10 @@ import { resolveCallsite, transformStyle } from './utils';
 
 type Fns = Record<string, Function>;
 type CreateFnResult<Data extends BuilderData> = (data: Data, fns: Fns) => Data;
-type CloneScope<Style> = (
-  source: ScopeData<Style>,
+type CloneScope = (
+  source: ScopeData,
   callsite: BuilderCallsite | null,
-) => ScopeData<Style>;
+) => ScopeData;
 type CreateFn = (fns: Fns, fnName: string, selector: Selector) => Function | undefined;
 
 export const createDefaultFnResult = <Data extends BuilderData>(data: Data, fns: Fns) => {
@@ -53,10 +53,10 @@ export function createStyleFns<Data extends BuilderData>(
   );
 }
 
-export function createScopeFns<Style>(
+export function createScopeFns(
   selectors: SelectorsRecord,
   fnPrefix: string,
-  cloneScope: CloneScope<Style>,
+  cloneScope: CloneScope,
 ) {
   return createFns(
     selectors,
@@ -356,11 +356,11 @@ function createSimpleFn<Data extends BuilderData>(
   };
 }
 
-function createScopeFn<Style>(
+function createScopeFn(
   fnPrefix: string,
   fnName: string,
   fnSelector: Selector,
-  cloneScope: CloneScope<Style>,
+  cloneScope: CloneScope,
 ) {
   const selector = fnSelector.selector.trim();
 
@@ -385,12 +385,12 @@ function createScopeFn<Style>(
   return createScopeSimpleFn(fnSelector, cloneScope);
 }
 
-function createScopeMergeFn<Style>(
-  cloneScope: CloneScope<Style>,
+function createScopeMergeFn(
+  cloneScope: CloneScope,
 ) {
   return function(
-    this: ScopeData<Style>,
-    data: ScopeItems<Style>,
+    this: ScopeData,
+    data: ScopeItems,
     debug?: DebugData,
   ) {
     const callsite = resolveCallsite(debug);
@@ -407,11 +407,11 @@ function createScopeMergeFn<Style>(
   };
 }
 
-function createScopeAtRuleFn<Style>(
+function createScopeAtRuleFn(
   fnPrefix: string,
   fnName: string,
   fnSelector: Selector,
-  cloneScope: CloneScope<Style>,
+  cloneScope: CloneScope,
 ) {
   const isMedia = fnSelector.selector.startsWith(SELECTOR_MEDIA) ||
     fnSelector.selector.startsWith(SELECTOR_CONTAINER);
@@ -421,16 +421,16 @@ function createScopeAtRuleFn<Style>(
 
   type Params = [
     arg: string | string[],
-    data: ScopeItems<Style>,
+    data: ScopeItems,
     debug?: DebugData,
   ];
 
   type PriorityParams = [priority: number, ...Params];
-  type SelfParams = [data: ScopeItems<Style>, debug?: DebugData];
+  type SelfParams = [data: ScopeItems, debug?: DebugData];
   type PrioritySelfParams = [priority: number, ...SelfParams];
 
   return function(
-    this: ScopeData<Style>,
+    this: ScopeData,
     ...params: Params | PriorityParams | SelfParams | PrioritySelfParams
   ) {
     let arg: Params[0];
@@ -492,19 +492,19 @@ function createScopeAtRuleFn<Style>(
   };
 }
 
-function createScopeArgsFn<Style>(
+function createScopeArgsFn(
   fnPrefix: string,
   fnName: string,
   fnSelector: Selector,
-  cloneScope: CloneScope<Style>,
+  cloneScope: CloneScope,
 ) {
   const [before, after] = fnSelector.selector.split(SELECTOR_ARGS);
   const priority = fnSelector.priority;
 
   return function(
-    this: ScopeData<Style>,
+    this: ScopeData,
     arg: string | string[],
-    data: ScopeItems<Style>,
+    data: ScopeItems,
     debug?: DebugData,
   ) {
     const args = Array.isArray(arg) ? arg : [arg];
@@ -537,19 +537,19 @@ function createScopeArgsFn<Style>(
   };
 }
 
-function createScopeArgFn<Style>(
+function createScopeArgFn(
   fnPrefix: string,
   fnName: string,
   fnSelector: Selector,
-  cloneScope: CloneScope<Style>,
+  cloneScope: CloneScope,
 ) {
   const [before, after] = fnSelector.selector.split(SELECTOR_ARG);
   const priority = fnSelector.priority;
 
   return function(
-    this: ScopeData<Style>,
+    this: ScopeData,
     arg: string,
-    data: ScopeItems<Style>,
+    data: ScopeItems,
     debug?: DebugData,
   ) {
     const callsite = resolveCallsite(debug);
@@ -572,16 +572,16 @@ function createScopeArgFn<Style>(
   };
 }
 
-function createScopeSimpleFn<Style>(
+function createScopeSimpleFn(
   fnSelector: Selector,
-  cloneScope: CloneScope<Style>,
+  cloneScope: CloneScope,
 ) {
   const selector = fnSelector.selector;
   const priority = fnSelector.priority;
 
   return function(
-    this: ScopeData<Style>,
-    data: ScopeItems<Style>,
+    this: ScopeData,
+    data: ScopeItems,
     debug?: DebugData,
   ) {
     const callsite = resolveCallsite(debug);
@@ -598,14 +598,14 @@ function createScopeSimpleFn<Style>(
   };
 }
 
-function mergeScopeItems<Style>(
-  scope: ScopeData<Style>,
+function mergeScopeItems(
+  scope: ScopeData,
   callsite: BuilderCallsite | null,
-  data: ScopeItems<Style>,
+  data: ScopeItems,
   debug: DebugData | null,
   selector: ItemSelector | null,
   atRule: ItemSelector | null,
-  cloneScope: CloneScope<Style>,
+  cloneScope: CloneScope,
 ) {
   return mergeScopeData(cloneScope(scope, callsite), callsite, data, debug, selector, atRule);
 }

@@ -58,9 +58,9 @@ export function createSlotOverrideData<Style>(
   };
 }
 
-export function createScopeData<Style>(
+export function createScopeData(
   callsite: BuilderCallsite | null,
-): BuilderData<Style, typeof BUILDER_TYPE_SCOPE> {
+): BuilderData<unknown, typeof BUILDER_TYPE_SCOPE> {
   return {
     [BUILDER_TYPE]: BUILDER_TYPE_SCOPE,
     [BUILDER_STATE]: { items: [], lookup: {} },
@@ -68,10 +68,10 @@ export function createScopeData<Style>(
   };
 }
 
-export function createScopeTargetData<Style>(
-  scope: ScopeData<Style>,
-  slot: SlotData<Style>,
-): ScopeTargetData<Style> {
+export function createScopeTargetData(
+  scope: ScopeData,
+  slot: SlotData<any>,
+): ScopeTargetData {
   return {
     [BUILDER_TYPE]: BUILDER_TYPE_SCOPE_TARGET,
     [BUILDER_SCOPE]: scope,

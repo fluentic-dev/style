@@ -138,9 +138,9 @@ export function createScopeBuilder<Style, Selectors extends SelectorsRecord>(
     & ScopeSelfFn<Style, Selectors>
     & ScopeBuilder<Style, Selectors>;
 
-  const fns = createScopeFns<Style>(selectors, FnPrefixScope, cloneScope);
+  const fns = createScopeFns(selectors, FnPrefixScope, cloneScope);
 
-  const fn = (items?: ScopeItems<Style>, debug?: DebugData) => {
+  const fn = (items?: ScopeItems, debug?: DebugData) => {
     if (isDebugData(items) && debug === undefined) {
       debug = items;
       items = undefined;
@@ -148,7 +148,7 @@ export function createScopeBuilder<Style, Selectors extends SelectorsRecord>(
 
     const callsite = resolveCallsite(debug);
 
-    const scope = createCallableScope(createScopeData<Style>(callsite), fns);
+    const scope = createCallableScope(createScopeData(callsite), fns);
 
     if (!items) return scope;
 
@@ -203,13 +203,13 @@ function createCallableSlot<Style>(
   return callable;
 }
 
-function createCallableScope<Style>(
-  data: ReturnType<typeof createScopeData<Style>>,
+function createCallableScope(
+  data: ReturnType<typeof createScopeData>,
   fns: Record<string, Function>,
-): ScopeData<Style> {
-  const scope = ((slot: SlotData<Style>) => {
-    return createScopeTargetData(scope as ScopeData<Style>, slot);
-  }) as ScopeData<Style>;
+): ScopeData {
+  const scope = ((slot: SlotData<any>) => {
+    return createScopeTargetData(scope as ScopeData, slot);
+  }) as ScopeData;
 
   traceMarker(scope, 'scope.target');
   Object.setPrototypeOf(scope, fns);
@@ -218,12 +218,12 @@ function createCallableScope<Style>(
   return scope;
 }
 
-function cloneScope<Style>(
-  source: ScopeData<Style>,
+function cloneScope(
+  source: ScopeData,
   callsite: BuilderCallsite | null,
 ) {
   const scope = createCallableScope(
-    createScopeData<Style>(callsite ?? source[BUILDER_CALLSITE]),
+    createScopeData(callsite ?? source[BUILDER_CALLSITE]),
     Object.getPrototypeOf(source),
   );
 

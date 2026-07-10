@@ -46,6 +46,6 @@ export type SlotOverrideBuilder<Style, Selectors> =
   & SlotOverrideBuilderFns<Style, Selectors>;
 
 export type ScopeBuilder<Style, Selectors> =
-  & ScopeData<Style>
+  & ScopeData
   & ScopeFns<Style, Selectors>
   & {};

@@ -18,7 +18,7 @@ import { type CacheTreeNode, createCacheTreeNode, getCacheTreeChild } from './ut
 export type CombinedStylePool = {
   get<Styles extends object>(
     styles: Styles,
-    inheritedScopes: readonly (ScopeTargetData<any> | Falsy)[],
+    inheritedScopes: readonly (ScopeTargetData | Falsy)[],
     items: readonly (StyleItem | Falsy)[],
     prevTokensData?: StyleTokenValues | null,
   ): CombinedStylePoolResult<Styles>;

@@ -29,7 +29,7 @@ export function getScopeTargetSlotId(data: ScopeTargetData) {
   return data[BUILDER_SCOPE_ID];
 }
 
-export function getScopeTargetScope<Style>(data: ScopeTargetData<Style>) {
+export function getScopeTargetScope(data: ScopeTargetData) {
   return data[BUILDER_SCOPE];
 }
 
@@ -49,11 +49,11 @@ export function isSlotOverrideData<Style>(value: unknown): value is SlotOverride
   return getBuilderType(value) === BUILDER_TYPE_SLOT_OVERRIDE;
 }
 
-export function isScopeData<Style>(value: unknown): value is ScopeData<Style> {
+export function isScopeData(value: unknown): value is ScopeData {
   return getBuilderType(value) === BUILDER_TYPE_SCOPE;
 }
 
-export function isScopeTargetData<Style>(value: unknown): value is ScopeTargetData<Style> {
+export function isScopeTargetData(value: unknown): value is ScopeTargetData {
   return getBuilderType(value) === BUILDER_TYPE_SCOPE_TARGET;
 }
 

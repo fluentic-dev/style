@@ -28,8 +28,8 @@ export type AnyBuilderData<Style = unknown> =
   | StyleData<Style>
   | SlotData<Style>
   | SlotOverrideData<Style>
-  | ScopeData<Style>
-  | ScopeTargetData<Style>
+  | ScopeData
+  | ScopeTargetData
   | ThemeData;
 
 export type StyleData<Style = unknown> =
@@ -44,15 +44,15 @@ export type SlotOverrideData<Style = unknown> =
   & BuilderData<Style, typeof BUILDER_TYPE_SLOT_OVERRIDE>
   & { [BUILDER_SLOT_ID]: string; };
 
-export type ScopeData<Style = unknown> =
-  & BuilderData<Style, typeof BUILDER_TYPE_SCOPE>
+export type ScopeData =
+  & BuilderData<unknown, typeof BUILDER_TYPE_SCOPE>
   & {
-    (slot: SlotData<Style>): ScopeTargetData<Style>;
+    (slot: SlotData<any>): ScopeTargetData;
   };
 
-export type ScopeTargetData<Style = unknown> = {
+export type ScopeTargetData = {
   [BUILDER_TYPE]: typeof BUILDER_TYPE_SCOPE_TARGET;
-  [BUILDER_SCOPE]: ScopeData<Style>;
+  [BUILDER_SCOPE]: ScopeData;
   [BUILDER_SCOPE_ID]: string;
 };
 

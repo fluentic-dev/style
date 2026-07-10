@@ -149,7 +149,7 @@ export type SlotSelfFn<Style, Selectors> = (
 ) => ReturnType<typeof slotRule<Style, Selectors>>;
 
 export type ScopeSelfFn<Style, Selectors> = (
-  styles?: ScopeItems<Style>,
+  styles?: ScopeItems,
 ) => ReturnType<typeof scopeRule<Style, Selectors>>;
 
 export type StyleSelectorFns<Style, Selectors> = {
@@ -179,7 +179,7 @@ export type SlotOverrideSelectorFns<Style, Selectors> = {
 export type ScopeSelectorFns<Style, Selectors> = {
   [P in keyof Selectors]: GetScopeFn<
     Selectors[P],
-    ScopeItems<Style>,
+    ScopeItems,
     ReturnType<typeof scopeRule<Style, Selectors>>
   >;
 };
