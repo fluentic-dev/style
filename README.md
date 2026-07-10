@@ -8,9 +8,10 @@ explores a specific question inside that space: what if styles composed around
 React components the same way props and state do?
 
 With Fluentic, you start simple with type-safe `style(...)` and the JSX `css`
-prop. When a component needs variants, themes, nested parts, or consumer
-overrides, add slots, scopes, tokens, and `combineStyle(...)` so those styles
-stay organized around the component.
+prop. If your team prefers utility class names, you can also create class-name
+style chains, including a Tailwind-like preset. When a component needs variants,
+themes, nested parts, or consumer overrides, add slots, scopes, tokens, and
+`combineStyle(...)` so those styles stay organized around the component.
 
 For production builds, styles are extracted into static atomic CSS output.
 Dynamic values from props and state still work as usual.
@@ -99,6 +100,49 @@ export function Card() {
 
 That is the smallest version of Fluentic Style: type-safe styles, selectors, and
 a `css` prop.
+
+## Class Name Chains
+
+Fluentic's default authoring path is object style chains, but class-name chains
+are supported too. A class-name chain still produces Fluentic style data, so it
+can use the same `css` prop, selector methods, slots, scopes, debugging, runtime
+resolution, and production extraction path.
+
+```tsx
+import { createClassNameFn } from '@fluentic/style';
+import {
+  createTailwindClassNamePreset,
+  defaultTailwindTheme,
+} from '@fluentic/style/presets/tailwind';
+
+const tailwind = createTailwindClassNamePreset({
+  theme: defaultTailwindTheme,
+});
+
+export const { className: cx } = createClassNameFn({
+  selectors: tailwind.selectors,
+  transform: tailwind.transform,
+});
+
+const button = cx(
+  'inline-flex',
+  'items-center',
+  'gap-2',
+  'rounded-md',
+  'bg-blue-600',
+  'px-4',
+  'py-2',
+  'text-white',
+)
+  .hover('bg-blue-700')
+  .md('px-6');
+```
+
+Class names get their meaning from a user-land transform or a preset. See
+[Class Name Style Chains](https://fluenticstack.com/style/docs/beyond-the-basics/class-name-style-chains/)
+for the generic API, or
+[Tailwind Class Name Preset](https://fluenticstack.com/style/docs/presets/tailwind/class-name/)
+for the built-in Tailwind-like class-name vocabulary.
 
 ## Scale Into Components
 
@@ -333,7 +377,19 @@ For Next.js and other bundlers, see the
 Benchmarks live in the repository's `benchmark/` folder and run against
 production builds. Current benchmark snapshots:
 
-React app, 1500-row dashboard:
+The main production checks are runtime cost and bundle size. In the production
+path most apps use, Fluentic extracts CSS at build time and ships the extracted
+production runtime for `css` prop composition, dynamic values, class-name
+merging, and token resolution. That runtime entry currently reports `5.00 KB`
+min+gzip.
+Browser and SSR benchmarks track whether style resolution stays fast in
+app-shaped renders. See the
+[Bundle Size](https://fluenticstack.com/style/docs/benchmark/bundle-size/),
+[React App](https://fluenticstack.com/style/docs/benchmark/react-app/), and
+[SSR Style](https://fluenticstack.com/style/docs/benchmark/ssr-style/) reports
+for what each number measures and how to rerun it.
+
+[React app](https://fluenticstack.com/style/docs/benchmark/react-app/), 1500-row dashboard:
 
 | Case                       | Mount      | Style Update |
 | -------------------------- | ---------- | ------------ |
@@ -347,7 +403,7 @@ React app, 1500-row dashboard:
 | vanilla-extract DOM        | `39.85 ms` | `17.65 ms`   |
 | CSS Modules DOM            | `40.35 ms` | `17.75 ms`   |
 
-SSR render-only, 500 rows:
+[SSR render-only](https://fluenticstack.com/style/docs/benchmark/ssr-style/), 500 rows:
 
 | Case            | Dashboard Mean | Composition Mean |
 | --------------- | -------------- | ---------------- |
@@ -357,7 +413,7 @@ SSR render-only, 500 rows:
 | Fluentic token  | `7.667 ms`     | `8.253 ms`       |
 | StyleX          | `6.826 ms`     | `8.059 ms`       |
 
-Compiler transform, 100 files per corpus:
+[Compiler transform](https://fluenticstack.com/style/docs/benchmark/compiler/), 100 files per corpus:
 
 | Corpus        | Fluentic Warm | StyleX Babel |
 | ------------- | ------------- | ------------ |
@@ -371,23 +427,24 @@ and the public suite list.
 
 ## Package Exports
 
-| Import                           | Purpose                                                                                                                  |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `@fluentic/style`                | Runtime API, style builders, hooks, tokens, themes, and types.                                                           |
-| `@fluentic/style/css`            | CSS helper APIs for keyframes, font faces, and at-rules.                                                                 |
-| `@fluentic/style/selector`       | Selector constructors, validators, presets, and priority helpers.                                                        |
-| `@fluentic/style/config`         | Runtime configuration helpers.                                                                                           |
-| `@fluentic/style/compiler`       | Node-only compiler entry used by build integrations and compiler benchmarks.                                             |
-| `@fluentic/style/dev`            | Development utilities.                                                                                                   |
-| `@fluentic/style/dev/rsc`        | React Server Component dev client boundary.                                                                              |
-| `@fluentic/style/jsx`            | [JSX import source without a bundler plugin](https://fluenticstack.com/style/docs/integrations/runtime-only-mode/).      |
-| `@fluentic/style/plugin/jsx`     | [JSX import source after adding a bundler plugin](https://fluenticstack.com/style/docs/integrations/jsx-runtime-setup/). |
-| `@fluentic/style/plugin/nextjs`  | [Next.js App Router integration](https://fluenticstack.com/style/docs/integrations/nextjs/).                             |
-| `@fluentic/style/plugin/vite`    | [Vite plugin](https://fluenticstack.com/style/docs/integrations/vite/).                                                  |
-| `@fluentic/style/plugin/webpack` | [Webpack plugin](https://fluenticstack.com/style/docs/integrations/webpack/).                                            |
-| `@fluentic/style/plugin/rspack`  | [Rspack plugin](https://fluenticstack.com/style/docs/integrations/rspack/).                                              |
-| `@fluentic/style/plugin/farm`    | [Farm plugin](https://fluenticstack.com/style/docs/integrations/farm/).                                                  |
-| `@fluentic/style/plugin/parcel`  | [Parcel plugin](https://fluenticstack.com/style/docs/integrations/parcel/).                                              |
+| Import                             | Purpose                                                                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `@fluentic/style`                  | Runtime API, style builders, hooks, tokens, themes, and types.                                                           |
+| `@fluentic/style/css`              | CSS helper APIs for keyframes, font faces, and at-rules.                                                                 |
+| `@fluentic/style/selector`         | Selector constructors, validators, presets, and priority helpers.                                                        |
+| `@fluentic/style/config`           | Runtime configuration helpers.                                                                                           |
+| `@fluentic/style/compiler`         | Node-only compiler entry used by build integrations and compiler benchmarks.                                             |
+| `@fluentic/style/presets/tailwind` | [Tailwind-like object fields and class-name chains](https://fluenticstack.com/style/docs/presets/tailwind/).             |
+| `@fluentic/style/dev`              | Development utilities.                                                                                                   |
+| `@fluentic/style/dev/rsc`          | React Server Component dev client boundary.                                                                              |
+| `@fluentic/style/jsx`              | [JSX import source without a bundler plugin](https://fluenticstack.com/style/docs/integrations/runtime-only-mode/).      |
+| `@fluentic/style/plugin/jsx`       | [JSX import source after adding a bundler plugin](https://fluenticstack.com/style/docs/integrations/jsx-runtime-setup/). |
+| `@fluentic/style/plugin/nextjs`    | [Next.js App Router integration](https://fluenticstack.com/style/docs/integrations/nextjs/).                             |
+| `@fluentic/style/plugin/vite`      | [Vite plugin](https://fluenticstack.com/style/docs/integrations/vite/).                                                  |
+| `@fluentic/style/plugin/webpack`   | [Webpack plugin](https://fluenticstack.com/style/docs/integrations/webpack/).                                            |
+| `@fluentic/style/plugin/rspack`    | [Rspack plugin](https://fluenticstack.com/style/docs/integrations/rspack/).                                              |
+| `@fluentic/style/plugin/farm`      | [Farm plugin](https://fluenticstack.com/style/docs/integrations/farm/).                                                  |
+| `@fluentic/style/plugin/parcel`    | [Parcel plugin](https://fluenticstack.com/style/docs/integrations/parcel/).                                              |
 
 ## Repository Guide
 
