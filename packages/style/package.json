@@ -133,6 +133,10 @@
       "types": "./dialect/extracted/index.ts",
       "import": "./dist/dialect/extracted/index.js"
     },
+    "./presets/tailwind": {
+      "types": "./presets/tailwind/index.ts",
+      "import": "./dist/presets/tailwind/index.js"
+    },
     "./dev": {
       "types": "./dev/index.ts",
       "import": "./dist/dev.js"
@@ -234,6 +238,7 @@
     "entry",
     "dialect",
     "runtime",
+    "presets",
     "selector",
     "sheet",
     "atRule",
@@ -247,6 +252,7 @@
     "dev": "tsdown --watch",
     "prepack": "node ../../scripts/sync-package-readme.mjs copy",
     "postpack": "node ../../scripts/sync-package-readme.mjs clean",
+    "bench:autocomplete": "pnpm --filter @benchmark/main bench:autocomplete",
     "report:bundle": "node ./scripts/report-bundle.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "tsx ./tests/run-tests.ts"

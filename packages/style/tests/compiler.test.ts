@@ -9,6 +9,12 @@ import webpackLoader from '../plugin/bundler/webpack/loader';
 import { webpackRegistry } from '../plugin/bundler/webpack/utils';
 import { writeCacheFile } from '../plugin/utils/cache';
 import {
+  createDefaultedTailwindStyleConfig,
+  createTailwindStyleTransform,
+  defaultTailwindColors,
+  TailwindSelectors,
+} from '../presets/tailwind';
+import {
   assertCompileError,
   before,
   BUILDER_STATE,
@@ -818,6 +824,103 @@ const button = style.merge(
   includes(css, 'flex-direction: row');
   includes(css, ':hover');
   includes(css, 'color: blue');
+});
+
+test('compiler transforms dynamic tailwind scale refs before hoisting runtime variables', () => {
+  const tw = createStyleFn({
+    selectors: TailwindSelectors,
+    transform: createTailwindStyleTransform(createDefaultedTailwindStyleConfig({
+      theme: {
+        colors: defaultTailwindColors,
+      },
+    })),
+  }).style;
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+    importSources: [{
+      source: './tw',
+      name: 'tw',
+      styleFn: tw,
+    }],
+  });
+  const result = compiler.transform(
+    `
+import { tw } from './tw';
+
+export function Button({ isDanger }: { isDanger: boolean }) {
+  return (
+    <button
+      css={tw({
+        px: '$4',
+        bg: isDanger ? '$red.600' : '$blue.600',
+      }).hover({
+        bg: isDanger ? '$red.700' : '$blue.700',
+      })}
+    />
+  );
+}
+`,
+    '/tmp/compiler-tailwind-dynamic.tsx',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(css, 'padding-inline: 1rem');
+  includes(css, 'background-color: var(--var-');
+  includes(css, ':hover');
+  includes(result.code, 'oklch(57.7% 0.245 27.325)');
+  includes(result.code, 'oklch(54.6% 0.245 262.881)');
+  includes(result.code, 'oklch(50.5% 0.213 27.518)');
+  includes(result.code, 'oklch(48.8% 0.243 264.376)');
+  notIncludes(result.code, 'transformExtractedValue');
+  notIncludes(result.code, "from './tw'");
+  notIncludes(result.code, '$red.600');
+  notIncludes(result.code, '$blue.600');
+  notIncludes(result.code, '$red.700');
+  notIncludes(result.code, '$blue.700');
+});
+
+test('compiler leaves opaque tailwind runtime values on regular token binding path', () => {
+  const tw = createStyleFn({
+    selectors: TailwindSelectors,
+    transform: createTailwindStyleTransform(createDefaultedTailwindStyleConfig({
+      theme: {
+        colors: defaultTailwindColors,
+      },
+    })),
+  }).style;
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+    importSources: [{
+      source: './tw',
+      name: 'tw',
+      styleFn: tw,
+    }],
+  });
+  const result = compiler.transform(
+    `
+import { tw } from './tw';
+
+export function Swatch({ swatch }) {
+  return <span css={tw({ bg: swatch })} />;
+}
+`,
+    '/tmp/compiler-tailwind-opaque-runtime.tsx',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  includes(result.code, 'createExtractedToken');
+  includes(result.code, 'withTokens');
+  includes(result.code, '_fluenticToken(swatch)');
+  includes(result.css.join('\n'), 'background-color: var(--var-');
+  notIncludes(result.code, 'transformExtractedValue');
+  notIncludes(result.code, "from './tw'");
+  notIncludes(result.code, '$blue.600');
 });
 
 test('compiler importSources can match source by regexp', () => {
@@ -2971,6 +3074,77 @@ export const styles = {
   notEqual(textVar, bgVar);
   includes(css, '--token-' + textVar + ':white');
   includes(css, '--token-' + bgVar + ':var(--token-');
+});
+
+test('compiler extracts createTheme from named token proxy members', () => {
+  const compiler = createCompiler({ layer: false, css: { themeNamePrefix: 'theme-' } });
+  const result = compiler.transform(
+    `
+import { createTheme } from '@fluentic/style';
+import { createNamedTokens } from '@fluentic/style/dialect';
+
+export const Colors = createNamedTokens('app.color', {
+  accent: '#2563eb',
+  accentHover: '#1d4ed8',
+});
+
+export const Themes = {
+  brand: createTheme([
+    Colors.accent('#60a5fa'),
+    Colors.accentHover('#2563eb'),
+  ]),
+};
+`,
+    '/tmp/compiler-named-token-theme.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\\n');
+
+  includes(result.code, 'createExtractedTheme');
+  includes(css, '.theme-');
+  includes(css, '--token-app-color-accent-');
+  includes(css, '--token-app-color-accentHover-');
+  includes(css, ':#60a5fa');
+  includes(css, ':#2563eb');
+  notIncludes(result.code, 'createTheme,');
+});
+
+test('compiler extracts createTheme from named token proxy members with spread color scales', () => {
+  const compiler = createCompiler({ layer: false, css: { themeNamePrefix: 'theme-' } });
+  const result = compiler.transform(
+    `
+import { createTheme } from '@fluentic/style';
+import { createNamedTokens } from '@fluentic/style/dialect';
+import { defaultTailwindColors } from '@fluentic/style/presets/tailwind';
+
+export const Colors = createNamedTokens('app.color', {
+  ...defaultTailwindColors,
+  accent: '#2563eb',
+});
+
+export const Themes = {
+  brand: createTheme([
+    Colors.accent('#60a5fa'),
+    Colors.blue['600']('#2563eb'),
+  ]),
+};
+`,
+    testDir + '/compiler-named-token-theme-spread-scale.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\\n');
+
+  includes(result.code, 'createExtractedTheme');
+  includes(css, '.theme-');
+  includes(css, '--token-app-color-accent-');
+  includes(css, '--token-app-color-blue-600-');
+  includes(css, ':#60a5fa');
+  includes(css, ':#2563eb');
+  notIncludes(result.code, 'createTheme,');
 });
 
 test('compiler keeps token identity across separately extracted theme and style modules', () => {

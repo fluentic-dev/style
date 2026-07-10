@@ -1,4 +1,12 @@
 import {
+  createDefaultedTailwindStyleConfig,
+  createTailwindExtendedStyleTransform,
+  createTailwindStyleConfig,
+  createTailwindStyleTransform,
+  defaultTailwindColors,
+  TailwindSelectors,
+} from '../presets/tailwind';
+import {
   assertCompileError,
   assertEnum,
   assertRunTestsCallsite,
@@ -12,8 +20,12 @@ import {
   createCompiler,
   createDebugSlot,
   createDebugStyle,
+  createNamedTokens,
   createSelectorAssert,
   createStyleFn,
+  createTheme,
+  createThemeRule,
+  createToken,
   CSS_CONFIG,
   type DebugData,
   deepEqual,
@@ -688,6 +700,297 @@ test('custom builders support fixed media selector helpers', () => {
   includes(css, 'color: black');
   includes(css, 'color: blue');
   includes(css, 'color: red');
+});
+
+test('tailwind preset maps utility props through normal style chains', () => {
+  const Colors = createNamedTokens('test.tailwind.color', {
+    accent: '#2563eb',
+    accentHover: '#1d4ed8',
+    accentText: '#fff',
+  });
+  const transform = createTailwindStyleTransform(createDefaultedTailwindStyleConfig({
+    theme: {
+      colors: Colors,
+    },
+  }));
+  const ui = createStyleFn({
+    selectors: TailwindSelectors,
+    transform,
+  }).style;
+  const rule = ui({
+    inlineFlex: true,
+    items: 'center',
+    px: '$4',
+    py: '$2',
+    bg: '$accent',
+    text: '$accentText',
+    rounded: '$md',
+    font: '$semibold',
+  })
+    .hover({ bg: '$accentHover' })
+    .md({ px: '$6' });
+  const css = getSheetRules(rule).map((item) => item.css).join('\n');
+
+  includes(css, 'display: inline-flex');
+  includes(css, 'align-items: center');
+  includes(css, 'padding-inline: 1rem');
+  includes(css, 'padding-block: 0.5rem');
+  includes(css, 'background-color: var(');
+  includes(css, '#2563eb');
+  includes(css, '#fff');
+  includes(css, 'border-radius: 0.375rem');
+  includes(css, 'font-weight: 600');
+  includes(css, ':hover');
+  includes(css, '#1d4ed8');
+  includes(css, '@media (min-width: 768px)');
+  includes(css, 'padding-inline: 1.5rem');
+});
+
+test('tailwind preset type-checks scale refs', () => {
+  const Colors = createNamedTokens('test.tailwind.type.color', {
+    accent: '#2563eb',
+  });
+  const transform = createTailwindStyleTransform(createDefaultedTailwindStyleConfig({
+    theme: {
+      colors: Colors,
+    },
+  }));
+  const ui = createStyleFn({
+    selectors: TailwindSelectors,
+    transform,
+  }).style;
+  const cssUi = createStyleFn({
+    selectors: TailwindSelectors,
+    transform: createTailwindExtendedStyleTransform(createDefaultedTailwindStyleConfig({
+      theme: {
+        colors: Colors,
+      },
+    })),
+  }).style;
+
+  ui({
+    bg: '$accent',
+    text: '$base',
+    px: '$4',
+    maxW: '42rem',
+  });
+  cssUi({ color: '$accent2' });
+
+  const plainUi = createStyleFn({
+    selectors: TailwindSelectors,
+    transform: createTailwindStyleTransform(createTailwindStyleConfig({
+      theme: {
+        colors: Colors,
+      },
+    })),
+  }).style;
+
+  plainUi({ bg: '$accent' });
+
+  // @ts-expect-error native CSS properties need createTailwindExtendedStyleTransform
+  ui({ color: 'red' });
+
+  // @ts-expect-error defaulted config includes non-color scales, not the default color palette
+  ui({ bg: '$amber.500' });
+
+  // @ts-expect-error default color palette refs need defaultTailwindColors
+  plainUi({ bg: '$amber.500' });
+
+  // @ts-expect-error unknown named color ref
+  ui({ bg: '$accent2' });
+
+  // @ts-expect-error unknown spacing ref
+  ui({ px: '$space-never' });
+});
+
+test('tailwind preset resolves default non-color scale refs', () => {
+  const transform = createTailwindStyleTransform(createDefaultedTailwindStyleConfig({}));
+  const ui = createStyleFn({
+    selectors: TailwindSelectors,
+    transform,
+  }).style;
+  const css = getSheetRules(ui({
+    textSize: '$base',
+    minH: '$screen',
+  })).map((item) => item.css).join('\n');
+
+  includes(css, 'font-size: 1rem');
+  includes(css, 'min-height: 100vh');
+});
+
+test('tailwind color palette refs are explicit opt in', () => {
+  const transform = createTailwindStyleTransform(createDefaultedTailwindStyleConfig({
+    theme: {
+      colors: defaultTailwindColors,
+    },
+  }));
+  const ui = createStyleFn({
+    selectors: TailwindSelectors,
+    transform,
+  }).style;
+  const css = getSheetRules(ui({
+    bg: '$blue.600',
+    text: '$slate.50',
+  })).map((item) => item.css).join('\n');
+
+  includes(css, 'background-color: oklch(54.6% 0.245 262.881)');
+  includes(css, 'color: oklch(98.4% 0.003 247.858)');
+});
+
+test('tailwind preset keeps defaults opt in at runtime', () => {
+  const transform = createTailwindStyleTransform({
+    theme: {},
+  });
+  const ui = createStyleFn({
+    selectors: TailwindSelectors,
+    transform,
+  }).style;
+  const css = getSheetRules(ui({
+    bg: '$blue.600' as any,
+  })).map((item) => item.css).join('\n');
+
+  includes(css, 'background-color: $blue.600');
+});
+
+test('tailwind plain config helper does not include default palette refs', () => {
+  const transform = createTailwindStyleTransform(createTailwindStyleConfig({}));
+  const ui = createStyleFn({
+    selectors: TailwindSelectors,
+    transform,
+  }).style;
+  const css = getSheetRules(ui({
+    bg: '$blue.600' as any,
+  })).map((item) => item.css).join('\n');
+
+  includes(css, 'background-color: $blue.600');
+});
+
+test('tailwind preset extends default scales with custom scale entries', () => {
+  const transform = createTailwindStyleTransform(createDefaultedTailwindStyleConfig({
+    theme: {
+      spacing: {
+        18: '4.5rem',
+      },
+      sizes: {
+        card: '22rem',
+      },
+    },
+  }));
+  const ui = createStyleFn({
+    selectors: TailwindSelectors,
+    transform,
+  }).style;
+  const css = getSheetRules(ui({
+    size: '$12',
+    p: '$18',
+    minH: '$card',
+  })).map((item) => item.css).join('\n');
+
+  includes(css, 'width: 3rem');
+  includes(css, 'height: 3rem');
+  includes(css, 'padding: 4.5rem');
+  includes(css, 'min-height: 22rem');
+});
+
+test('tailwind preset treats bare numbers as literal css numbers', () => {
+  const transform = createTailwindStyleTransform(createDefaultedTailwindStyleConfig({}));
+  const ui = createStyleFn({
+    selectors: TailwindSelectors,
+    transform,
+  }).style;
+  const css = getSheetRules(ui({
+    px: 4,
+    py: '$4',
+    opacity: 0.5,
+  })).map((item) => item.css).join('\n');
+
+  includes(css, 'padding-inline: 4px');
+  includes(css, 'padding-block: 1rem');
+  includes(css, 'opacity: 0.5');
+});
+
+test('tailwind preset accepts fluentic tokens directly', () => {
+  const accent = createToken('#16a34a');
+  const transform = createTailwindStyleTransform(createDefaultedTailwindStyleConfig({}));
+  const ui = createStyleFn({
+    selectors: TailwindSelectors,
+    transform,
+  }).style;
+  const css = getSheetRules(ui({ bg: accent })).map((item) => item.css).join('\n');
+
+  includes(css, 'var(');
+  includes(css, '#16a34a');
+});
+
+test('scope chains accept mixed style function items', () => {
+  const Colors = createNamedTokens('test.tailwind.scope.color', {
+    accent: '#2563eb',
+  });
+  const tw = createStyleFn({
+    selectors: TailwindSelectors,
+    transform: createTailwindStyleTransform(createDefaultedTailwindStyleConfig({
+      theme: {
+        colors: Colors,
+      },
+    })),
+  }).style;
+  const css = createStyleFn({
+    selectors: TailwindSelectors,
+  }).style;
+  const twSlot = tw.slot({
+    bg: '$accent',
+    px: '$4',
+  });
+  const cssSlot = css.slot({
+    color: 'black',
+    padding: 4,
+  });
+
+  const scope = css.scope().hover([
+    twSlot({ bg: '$accent' }),
+    cssSlot({ color: 'red' }),
+  ]);
+  const styles = {
+    twSlot,
+    cssSlot,
+  };
+  const scoped = combineStyle(styles, scope(twSlot));
+
+  tw.scope().hover([
+    twSlot({ px: '$6' }),
+    cssSlot({ padding: 8 }),
+  ]);
+
+  // @ts-expect-error slot override call still owns its style shape
+  twSlot({ color: 'red' });
+
+  const rules = getSheetRules(scoped.twSlot).map((item) => item.css).join('\n');
+
+  includes(rules, ':hover');
+  includes(rules, 'background-color: var(');
+});
+
+test('named tokens use stable ids for theme overrides', () => {
+  const first = createNamedTokens('test.named.color', {
+    accent: '#2563eb',
+  });
+  const second = createNamedTokens('test.named.color', {
+    accent: '#2563eb',
+  });
+  const styles = {
+    root: style.slot({
+      color: first.accent,
+    }),
+  };
+  const themed = createTheme([
+    second.accent('#60a5fa'),
+  ]);
+  const result = getClassName(styles.root);
+  const rule = createThemeRule(themed);
+
+  includes(result.className ?? '', 'color');
+  includes(rule, '--token-test-named-color-accent-');
+  includes(rule, ':#60a5fa');
 });
 
 test('dev debug transform traces imported selector constants', () => {

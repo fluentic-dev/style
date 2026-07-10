@@ -8,6 +8,7 @@
     "bench": "node bench.mjs",
     "bench:correctness": "node correctness-bench.mjs",
     "bench:compiler": "node compiler-bench.mjs",
+    "bench:autocomplete": "node autocomplete-bench.mjs",
     "bench:dynamic-values": "BENCH_KIND=dynamic-value-browser-benchmark BENCH_LABEL='Dynamic value benchmark' OUTPUT_PREFIX=dynamic-values VARIANTS=fluenticDynamicVars,fluenticInlineDynamicValues,gooberDynamicVars,emotionDynamicVars,styledComponentsDynamicVars node fluentic-cache-bench.mjs",
     "bench:fluentic-cache": "node fluentic-cache-bench.mjs",
     "bench:ssr-style": "node ssr-style-bench.mjs"

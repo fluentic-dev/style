@@ -1,0 +1,28 @@
+import { createStyleFn, createToken } from '@fluentic/style';
+import {
+  createDefaultedTailwindStyleConfig,
+  createTailwindExtendedStyleTransform,
+  TailwindSelectors,
+} from '@fluentic/style/presets/tailwind';
+import { Colors } from './colors';
+
+const tailwindConfig = createDefaultedTailwindStyleConfig({
+  theme: {
+    colors: Colors,
+    spacing: {
+      18: '4.5rem',
+      112: '28rem',
+    },
+    sizes: {
+      content: 'min(100%, 1160px)',
+      card: '14.5rem',
+    },
+  },
+});
+
+export const { style: tw } = createStyleFn({
+  selectors: TailwindSelectors,
+  transform: createTailwindExtendedStyleTransform(tailwindConfig),
+});
+
+export const focusRing = createToken('0 0 0 3px rgb(56 189 248 / 0.35)');

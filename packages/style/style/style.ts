@@ -29,10 +29,10 @@ export type StyleFn<Style = any, Selectors extends SelectorsRecord = any> = Retu
 >['style'];
 
 export function createStyleFn<
-  Style,
-  const Selectors extends SelectorsRecord,
+  Style = CSSProperties,
+  const Selectors extends SelectorsRecord = typeof PrioritySelectors,
 >(args: {
-  style: Type<Style>;
+  style?: Type<Style>;
   selectors: Selectors;
   transform?: StyleTransform<Style> | null;
 }) {

@@ -13,6 +13,7 @@
     "bench:fluentic-cache": "pnpm --filter @fluentic/style build && pnpm --filter @benchmark/main bench:fluentic-cache",
     "bench:ssr-style": "pnpm --filter @fluentic/style build && pnpm --filter @benchmark/main bench:ssr-style",
     "bench:compiler": "pnpm --filter @fluentic/style build && pnpm --filter @benchmark/main bench:compiler",
+    "bench:autocomplete": "pnpm --filter @benchmark/main bench:autocomplete",
     "sync:package-readme": "node scripts/sync-package-readme.mjs copy",
     "test": "pnpm --filter @fluentic/style test",
     "changeset": "changeset",

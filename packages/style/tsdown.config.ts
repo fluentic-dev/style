@@ -16,6 +16,7 @@ export default [
       'selector/index': 'selector/index.ts',
       'dialect/index': 'dialect/index.ts',
       'dialect/extracted/index': 'dialect/extracted/index.ts',
+      'presets/tailwind/index': 'presets/tailwind/index.ts',
       'dev': 'dev/index.ts',
       'jsx/jsx-runtime': 'jsx/runtime/jsx_runtime.ts',
       'jsx/jsx-dev-runtime': 'jsx/runtime/jsx_dev_runtime.ts',
