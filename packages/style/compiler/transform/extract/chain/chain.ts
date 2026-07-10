@@ -1,7 +1,7 @@
 import { getAtomicClassName, getClassNameDedupe } from '../../../../atomic/className';
 import { LayerDefaultPriority } from '../../../../atomic/layer';
 import { buildAtomicRule, getAtomicRuleLayerPriority } from '../../../../atomic/rule';
-import { getTokenVar, getTokenVarName } from '../../../../atomic/token';
+import { getTokenOverrideValue, getTokenVar, getTokenVarName } from '../../../../atomic/token';
 import { getCssVarRawFallback } from '../../../../atomic/utils/css';
 import { shouldAppendCssPx } from '../../../../atomic/value';
 import { getLocalVarName } from '../../../../atomic/var';
@@ -98,8 +98,210 @@ type TraceCallsiteOverride = RuntimeStyleItem['callsite'];
 function applyTransform(
   styleObj: Record<string, unknown>,
   transform: StyleTransform | null,
+  cssConfig: CssConfig,
 ): Record<string, unknown> {
-  return transform ? transform.transform(styleObj) : styleObj;
+  if (!transform) return styleObj;
+
+  const input = transformRuntimeValues(styleObj, transform, cssConfig);
+  const transformed = transform.transform(input);
+
+  return carryTransformedLocations(input, transformed, transform);
+}
+
+function transformRuntimeValues(
+  styleObj: Record<string, unknown>,
+  transform: StyleTransform,
+  cssConfig: CssConfig,
+): Record<string, unknown> {
+  let result: Record<string, unknown> | null = null;
+
+  for (const [property, rawValue] of Object.entries(styleObj)) {
+    const value = getPriorityTupleValue(rawValue);
+    const runtimeValue = getCompiledRuntimeValue(value);
+    if (!runtimeValue) continue;
+
+    const transformedRuntimeValue = transformRuntimeExpression(property, runtimeValue, transform, cssConfig);
+    if (transformedRuntimeValue === runtimeValue) continue;
+
+    result ??= cloneCompiledStyleObject(styleObj);
+    result[property] = Array.isArray(rawValue) && rawValue.length === 2 && typeof rawValue[0] === 'number'
+      ? [rawValue[0], createCompiledRuntimeValue(transformedRuntimeValue)]
+      : createCompiledRuntimeValue(transformedRuntimeValue);
+  }
+
+  return result ?? styleObj;
+}
+
+function getPriorityTupleValue(value: unknown) {
+  return Array.isArray(value) && value.length === 2 && typeof value[0] === 'number'
+    ? value[1]
+    : value;
+}
+
+function cloneCompiledStyleObject(
+  styleObj: Record<string, unknown>,
+): Record<string, unknown> {
+  const cloned = { ...styleObj };
+  const locations = (styleObj as CompiledStyleObject)[COMPILED_STYLE_OBJECT_LOCATIONS];
+
+  if (locations) {
+    Object.defineProperty(cloned, COMPILED_STYLE_OBJECT_LOCATIONS, {
+      configurable: true,
+      enumerable: false,
+      value: locations,
+    });
+  }
+
+  return cloned;
+}
+
+function createCompiledRuntimeValue(
+  runtimeValue: BabelTypes.Expression,
+): CompiledRuntimeValue {
+  return {
+    [COMPILED_RUNTIME_VALUE]: runtimeValue,
+  };
+}
+
+function transformRuntimeExpression(
+  property: string,
+  expression: BabelTypes.Expression,
+  transform: StyleTransform,
+  cssConfig: CssConfig,
+): BabelTypes.Expression {
+  if (expression.type === 'StringLiteral') {
+    const transformed = transform.transform({ [property]: expression.value });
+    const transformedValue = normalizeRuntimeTransformedValue(
+      getSingleTransformedValue(transformed),
+      cssConfig,
+    );
+
+    return createPrimitiveExpression(expression, transformedValue) ?? expression;
+  }
+
+  if (expression.type === 'ConditionalExpression') {
+    const consequent = transformRuntimeExpression(
+      property,
+      expression.consequent as BabelTypes.Expression,
+      transform,
+      cssConfig,
+    );
+    const alternate = transformRuntimeExpression(
+      property,
+      expression.alternate as BabelTypes.Expression,
+      transform,
+      cssConfig,
+    );
+
+    return consequent === expression.consequent && alternate === expression.alternate
+      ? expression
+      : ({
+        ...expression,
+        consequent,
+        alternate,
+      } as BabelTypes.Expression);
+  }
+
+  return expression;
+}
+
+function getSingleTransformedValue(
+  transformed: Record<string, unknown>,
+) {
+  const values = Object.values(transformed);
+  if (!values.length) return undefined;
+
+  return values[0];
+}
+
+function normalizeRuntimeTransformedValue(
+  value: unknown,
+  cssConfig: CssConfig,
+) {
+  if (isStyleTokenOverrideData(value)) {
+    return getTokenOverrideValue(value, cssConfig.tokenNameFormat);
+  }
+
+  if (isStyleTokenData(value)) {
+    return getTokenVar(value, cssConfig.tokenNameFormat);
+  }
+
+  return value;
+}
+
+function createPrimitiveExpression(
+  original: BabelTypes.Expression,
+  value: unknown,
+): BabelTypes.Expression | null {
+  if (original.type === 'StringLiteral' && value === original.value) return null;
+
+  if (typeof value === 'string') {
+    return {
+      ...original,
+      type: 'StringLiteral',
+      value,
+    } as BabelTypes.Expression;
+  }
+
+  if (typeof value === 'number') {
+    return {
+      ...original,
+      type: 'NumericLiteral',
+      value,
+    } as BabelTypes.Expression;
+  }
+
+  if (typeof value === 'boolean') {
+    return {
+      ...original,
+      type: 'BooleanLiteral',
+      value,
+    } as BabelTypes.Expression;
+  }
+
+  if (value === null) {
+    return {
+      ...original,
+      type: 'NullLiteral',
+    } as BabelTypes.Expression;
+  }
+
+  return null;
+}
+
+function carryTransformedLocations(
+  input: Record<string, unknown>,
+  transformed: Record<string, unknown>,
+  transform: StyleTransform,
+): Record<string, unknown> {
+  const inputLocations = (input as CompiledStyleObject)[COMPILED_STYLE_OBJECT_LOCATIONS];
+  if (!inputLocations) return transformed;
+
+  const transformedLocations = (transformed as CompiledStyleObject)[COMPILED_STYLE_OBJECT_LOCATIONS];
+  const locations: typeof inputLocations = {
+    ...transformedLocations,
+  };
+
+  for (const [property, loc] of Object.entries(inputLocations)) {
+    if (property in transformed && !locations[property]) {
+      locations[property] = loc;
+    }
+
+    const single = transform.transform({ [property]: input[property] });
+    for (const transformedProperty of Object.keys(single)) {
+      locations[transformedProperty] ??= loc;
+    }
+  }
+
+  if (!Object.keys(locations).length) return transformed;
+
+  Object.defineProperty(transformed, COMPILED_STYLE_OBJECT_LOCATIONS, {
+    configurable: true,
+    enumerable: false,
+    value: locations,
+  });
+
+  return transformed;
 }
 
 /**
@@ -219,7 +421,7 @@ function compileStyleChainInto(
       throwIfRequiredStaticStyleValue(styleArg);
       return false;
     }
-    const styleObj = applyTransform(styleArg.value as Record<string, unknown>, transform);
+    const styleObj = applyTransform(styleArg.value as Record<string, unknown>, transform, cssConfig);
     if (
       !addStyleItems(
         styleObj,
@@ -289,7 +491,7 @@ function compileSlotChain(
       throwIfRequiredStaticStyleValue(styleArg);
       return null;
     }
-    const styleObj = applyTransform(styleArg.value as Record<string, unknown>, transform);
+    const styleObj = applyTransform(styleArg.value as Record<string, unknown>, transform, cssConfig);
     if (!addStyleItems(styleObj, null, null, null, fileId, BUILDER_TYPE_SLOT, slotId, items, rules, cssConfig)) {
       return null;
     }
@@ -674,7 +876,7 @@ function resolveSlotOverrideNode(
   if (node.type !== 'CallExpression') return false;
 
   // Extract the call chain to find the slot reference
-  const overrideChain = extractOverrideChain(node, selectors, scope, fileId, transform, options);
+  const overrideChain = extractOverrideChain(node, selectors, scope, fileId, cssConfig, transform, options);
   if (!overrideChain) return false;
 
   const { slotId, items: overrideItems } = overrideChain;
@@ -768,6 +970,7 @@ function extractOverrideChain(
   selectors: SelectorsMap,
   scope: EvalScope,
   fileId: string,
+  cssConfig: CssConfig,
   transform: StyleTransform | null,
   options: CompilerOptions,
 ): OverrideChain | null {
@@ -783,7 +986,7 @@ function extractOverrideChain(
     const obj = callee.object;
 
     if (obj.type === 'CallExpression') {
-      const inner = extractOverrideChain(obj, selectors, scope, fileId, transform, options);
+      const inner = extractOverrideChain(obj, selectors, scope, fileId, cssConfig, transform, options);
       if (!inner) return null;
 
       const overrideItem = resolveOverrideMethod(
@@ -792,6 +995,7 @@ function extractOverrideChain(
         callee.property as BabelTypes.Node,
         selectors,
         scope,
+        cssConfig,
         transform,
         options,
       );
@@ -813,7 +1017,7 @@ function extractOverrideChain(
     const styleArg = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
     if (!styleArg.ok) return null;
     items.push({
-      styleObj: applyTransform((styleArg.value as Record<string, unknown>) ?? {}, transform),
+      styleObj: applyTransform((styleArg.value as Record<string, unknown>) ?? {}, transform, cssConfig),
       selector: null,
       atRules: null,
     });
@@ -828,6 +1032,7 @@ function resolveOverrideMethod(
   nameNode: BabelTypes.Node | undefined,
   selectors: SelectorsMap,
   scope: EvalScope,
+  cssConfig: CssConfig,
   transform: StyleTransform | null,
   options: CompilerOptions,
 ): OverrideItem | null {
@@ -867,7 +1072,7 @@ function resolveOverrideMethod(
     }
 
     return {
-      styleObj: applyTransform((styleArg.value as Record<string, unknown>) ?? {}, transform),
+      styleObj: applyTransform((styleArg.value as Record<string, unknown>) ?? {}, transform, cssConfig),
       selector: null,
       atRules: null,
       callsiteOverride,
@@ -901,7 +1106,7 @@ function resolveOverrideMethod(
     const atRuleSelector: ItemSelector = priority !== null ? [atRule, priority] : atRule;
 
     return {
-      styleObj: applyTransform(styleArg.value as Record<string, unknown>, transform),
+      styleObj: applyTransform(styleArg.value as Record<string, unknown>, transform, cssConfig),
       selector: null,
       atRules: [atRuleSelector],
     };
@@ -923,7 +1128,7 @@ function resolveOverrideMethod(
     const itemSelector: ItemSelector = sel.priority !== null ? [selectorText, sel.priority] : selectorText;
 
     return {
-      styleObj: applyTransform(styleArg.value as Record<string, unknown>, transform),
+      styleObj: applyTransform(styleArg.value as Record<string, unknown>, transform, cssConfig),
       selector: itemSelector,
       atRules: null,
     };
@@ -933,7 +1138,7 @@ function resolveOverrideMethod(
   if (!styleArg.ok) return null;
 
   return {
-    styleObj: applyTransform(styleArg.value as Record<string, unknown>, transform),
+    styleObj: applyTransform(styleArg.value as Record<string, unknown>, transform, cssConfig),
     selector: sel.priority !== null ? [selectorStr, sel.priority] : selectorStr,
     atRules: null,
   };
@@ -1134,7 +1339,7 @@ function compileChainMethod(
     throwIfRequiredStaticStyleValue(styleArg);
     return false;
   }
-  const styleObj = applyTransform(styleArg.value as Record<string, unknown>, transform);
+  const styleObj = applyTransform(styleArg.value as Record<string, unknown>, transform, cssConfig);
 
   return addStyleItems(
     styleObj,
@@ -1388,7 +1593,7 @@ function compileAtRuleMethod(
       return false;
     }
     return addStyleItems(
-      applyTransform(evaled.value as Record<string, unknown>, transform),
+      applyTransform(evaled.value as Record<string, unknown>, transform, cssConfig),
       null,
       null,
       nextAtRules,
@@ -1408,7 +1613,7 @@ function compileAtRuleMethod(
   }
 
   return addStyleItems(
-    applyTransform(styleResult.value as Record<string, unknown>, transform),
+    applyTransform(styleResult.value as Record<string, unknown>, transform, cssConfig),
     null,
     null,
     nextAtRules,
@@ -1459,7 +1664,7 @@ function compileArgMethod(
     ? selectorArg.value
     : [selectorArg.value];
 
-  const styleObj = applyTransform(styleResult.value as Record<string, unknown>, transform);
+  const styleObj = applyTransform(styleResult.value as Record<string, unknown>, transform, cssConfig);
 
   let i = 0;
   while (i < selectorValues.length) {

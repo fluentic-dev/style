@@ -9,4 +9,11 @@ export {
   mergeStyle,
 } from './core';
 export { bindScope, type CombinedStyleFor, combineScope, combineStyle } from './style';
-export type { DomElementProps, RuntimeStyleAttributes, StyleProp, StyleTheme, StyleTokenInput } from './types';
+export type {
+  DomElementProps,
+  RuntimeStyleAttributes,
+  StyleProp,
+  StyleTheme,
+  StyleTokenInput,
+  TokenTheme,
+} from './types';

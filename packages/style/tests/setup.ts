@@ -63,6 +63,7 @@ import { createSelectorAssert, selector } from '../selector/selector';
 import { createDevSheet, createProdSheet } from '../sheet';
 import { getRuleCallsite } from '../sheet/sourcemap';
 import { createStyleFn, createTheme, createToken, createTokens, createValues } from '../style';
+import { createNamedTokens } from '../dialect';
 import { traceCallsite } from '../utils/trace';
 
 export {
@@ -84,6 +85,7 @@ export {
   createFontFace,
   createFontPaletteValues,
   createKeyframes,
+  createNamedTokens,
   createPluginCompiler,
   createPositionTry,
   createProdSheet,

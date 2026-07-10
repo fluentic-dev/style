@@ -9,6 +9,6 @@ export {
   mergeStyle,
 } from '../../runtime/extract/getClassName';
 export { bindScope, type CombinedStyleFor, combineScope, combineStyle, getToken } from '../../runtime/style';
-export type { StyleProp, StyleTheme, StyleTokenInput } from '../../runtime/types';
+export type { StyleProp, StyleTheme, StyleTokenInput, TokenTheme } from '../../runtime/types';
 
 export type { CSS, CSSProperties, CSSPropertyName, CSSValueExclude } from '../../atomic/utils/types';

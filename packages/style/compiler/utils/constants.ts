@@ -7,6 +7,7 @@ const pkg = '@fluentic/style';
 export const STYLE_IMPORT_PATH = pkg;
 export const STYLE_CSS_IMPORT_PATH = pkg + '/css';
 export const STYLE_UTILS_IMPORT_PATH = pkg + '/utils';
+export const STYLE_DIALECT_IMPORT_PATH = pkg + '/dialect';
 export const STYLE_DEV_RSC_IMPORT_PATH = pkg + '/dev/rsc';
 export const STYLE_ENTRY_PROD_EXTRACT_IMPORT_PATH = pkg + '/entry/prod/extract';
 export const STYLE_EXTRACT_RUNTIME_IMPORT_PATH = pkg + '/entry/prod/runtime';
@@ -21,6 +22,7 @@ export const DEFAULT_CONFIG = {
 export const IMPORT_PATHS = [
   STYLE_IMPORT_PATH,
   STYLE_CSS_IMPORT_PATH,
+  STYLE_DIALECT_IMPORT_PATH,
   STYLE_DEV_RSC_IMPORT_PATH,
 ];
 
@@ -38,6 +40,8 @@ export const FN_STYLE_MERGE = 'merge';
 
 export const FN_CREATE_TOKEN = 'createToken';
 export const FN_CREATE_TOKENS = 'createTokens';
+export const FN_CREATE_NAMED_TOKEN = 'createNamedToken';
+export const FN_CREATE_NAMED_TOKENS = 'createNamedTokens';
 export const FN_CREATE_VALUES = 'createValues';
 export const FN_CREATE_THEME = 'createTheme';
 export const FN_EXPOSE_STYLE = 'exposeStyle';

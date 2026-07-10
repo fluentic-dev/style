@@ -592,8 +592,10 @@ function insertHoistedDeclarations(
     firstRuntimeIndex++;
   }
 
+  let runtimeInsertIndex = firstRuntimeIndex;
+
   declarations.forEach((item) => {
-    let insertIndex = firstRuntimeIndex;
+    let insertIndex = runtimeInsertIndex;
 
     item.dependencies.forEach((name) => {
       const dependencyIndex = findTopLevelDeclarationIndex(body, name);
@@ -603,6 +605,7 @@ function insertHoistedDeclarations(
     });
 
     body.splice(insertIndex, 0, item.declaration);
+    runtimeInsertIndex = insertIndex + 1;
   });
 }
 

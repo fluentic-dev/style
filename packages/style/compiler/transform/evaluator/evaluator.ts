@@ -16,6 +16,7 @@ import {
 import { CSS_CONFIG } from '../../../config/config/css';
 import { CSS_EXTRA_CONFIG } from '../../../config/config/css_extra';
 import type { NamedAtRuleFormat, TokenNameFormat } from '../../../config/types';
+import { createNamedToken, createNamedTokens } from '../../../dialect';
 import { transformKeyframes } from '../../../style/keyframes';
 import type { StyleFnMeta } from '../../../style/style';
 import {
@@ -44,6 +45,8 @@ import {
   FN_CREATE_PROPERTY,
   FN_CREATE_TOKEN,
   FN_CREATE_TOKENS,
+  FN_CREATE_NAMED_TOKEN,
+  FN_CREATE_NAMED_TOKENS,
   FN_CREATE_VALUES,
   FN_EXPOSE_STYLE,
   FN_FONT_SRC,
@@ -152,6 +155,7 @@ export function evaluateNode(
     case 'ParenthesizedExpression':
     case 'TSAsExpression':
     case 'TSNonNullExpression':
+    case 'TSSatisfiesExpression':
     case 'TSTypeAssertion':
       return evaluateNode((node as any).expression, scope);
 
@@ -263,7 +267,7 @@ function evaluateMember(node: BabelTypes.MemberExpression, scope: EvalScope): Ev
     const obj = evaluateNode(node.object, scope);
     if (!obj.ok) return obj;
 
-    if (obj.value && typeof obj.value === 'object') {
+    if (obj.value && (typeof obj.value === 'object' || typeof obj.value === 'function')) {
       return evalOk((obj.value as any)[key.value as string]);
     }
 
@@ -275,7 +279,7 @@ function evaluateMember(node: BabelTypes.MemberExpression, scope: EvalScope): Ev
   if (!obj.ok) return obj;
 
   if (obj.value == null) return evalFail(`Cannot access .${prop} on null/undefined`);
-  if (typeof obj.value !== 'object' && typeof obj.value !== 'string') {
+  if (typeof obj.value !== 'object' && typeof obj.value !== 'function' && typeof obj.value !== 'string') {
     return evalFail(`Cannot access .${prop} on ${typeof obj.value}`);
   }
 
@@ -605,6 +609,31 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
       if (!debugId.ok) return debugId;
 
       return evalOk(createCompiledTokens(value.value, scope, node.loc?.start, node, debugId.value));
+    }
+
+    if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_NAMED_TOKEN) {
+      const id = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+      if (!id.ok) return id;
+      if (typeof id.value !== 'string') return evalFail('createNamedToken id must be a static string');
+
+      const value = evaluateNode(node.arguments[1] as BabelTypes.Node, scope);
+      if (!value.ok) return value;
+
+      return evalOk(createNamedToken(id.value, value.value));
+    }
+
+    if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_NAMED_TOKENS) {
+      const namespace = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+      if (!namespace.ok) return namespace;
+      if (typeof namespace.value !== 'string') return evalFail('createNamedTokens namespace must be a static string');
+
+      const values = evaluateNode(node.arguments[1] as BabelTypes.Node, scope);
+      if (!values.ok) return values;
+      if (!values.value || typeof values.value !== 'object') {
+        return evalFail('createNamedTokens values must be a static object');
+      }
+
+      return evalOk(createNamedTokens(namespace.value, values.value as object));
     }
 
     if (imp && imp.source === STYLE_UTILS_IMPORT_PATH && imp.name === FN_EXPOSE_STYLE) {

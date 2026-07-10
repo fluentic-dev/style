@@ -9,4 +9,4 @@ export {
   combineStyle,
   getToken,
 } from '../../runtime/extract';
-export type { StyleProp, StyleTheme, StyleTokenInput } from '../../runtime/types';
+export type { StyleProp, StyleTheme, StyleTokenInput, TokenTheme } from '../../runtime/types';

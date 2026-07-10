@@ -17,6 +17,7 @@ export type ResolveFileFn = (info: ResolveFileInfo) => ResolvedFile | null;
 const contentCache = new Map<string, ResolvedFile>();
 
 const resolver = new ResolverFactory({
+  conditionNames: ['import', 'module', 'default', 'types'],
   extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts'],
   mainFiles: ['index'],
 });

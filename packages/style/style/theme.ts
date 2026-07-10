@@ -8,6 +8,8 @@ import type { StyleTokenOverride } from './token';
 
 const idCounter = createIdCounter('theme');
 
+export type TokenTheme = ThemeData;
+
 export function resetStyleThemeIdCounter() {
   idCounter.value = 0;
 }
@@ -15,12 +17,12 @@ export function resetStyleThemeIdCounter() {
 export function createTheme(
   tokens: readonly StyleTokenOverride[],
   stableId?: StableId | string,
-): ThemeData;
+): TokenTheme;
 export function createTheme(
   tokens: readonly StyleTokenOverride[],
   stableId?: StableId | string,
   callsite?: BuilderCallsite | null,
-): ThemeData {
+): TokenTheme {
   const normalizedStableId = typeof stableId === 'string'
     ? { name: stableId, id: stableId }
     : stableId;

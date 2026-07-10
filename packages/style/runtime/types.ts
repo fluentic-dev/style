@@ -24,6 +24,8 @@ export type StyleTokenInput<T> = T | StyleTokenData<T>;
 
 export type StyleTheme = RecursiveProp<ScopeData>;
 
+export type TokenTheme = ThemeData;
+
 export type RuntimeStyleAttributes = {
   css?: StyleProp;
 };

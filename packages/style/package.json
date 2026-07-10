@@ -125,6 +125,14 @@
       "types": "./selector/index.ts",
       "import": "./dist/selector/index.js"
     },
+    "./dialect": {
+      "types": "./dialect/index.ts",
+      "import": "./dist/dialect/index.js"
+    },
+    "./dialect/extracted": {
+      "types": "./dialect/extracted/index.ts",
+      "import": "./dist/dialect/extracted/index.js"
+    },
     "./dev": {
       "types": "./dev/index.ts",
       "import": "./dist/dev.js"
@@ -224,6 +232,7 @@
     "jsx",
     "plugin",
     "entry",
+    "dialect",
     "runtime",
     "selector",
     "sheet",
