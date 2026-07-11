@@ -2,29 +2,32 @@
 
 ## 0.1.0-beta.2
 
-### Minor Changes
+This beta adds class-name style chains, Tailwind presets, and compiler support
+for transform-driven styling.
 
-- Add class-name style chains with `createClassNameFn`, weighted utility values,
-  selector chaining, at-rule support, merge support, and static compiler
-  extraction.
-- Split the Tailwind preset into style-object and class-name entry points so
-  teams can choose object-first or utility-class authoring from the same preset
-  package.
-- Add named token compiler support and docs for transform extraction behavior.
+### Highlights
 
-### Patch Changes
-
-- Improve debug class names for transformed class utilities, including readable
-  transform class metadata in extracted output.
-- Refresh docs for presets, class-name chains, numeric values, runtime/compiler
-  tradeoffs, plugin options, and imports.
-- Add a Vite React Tailwind className example app.
+- Add `createClassNameFn` for class-name-driven style builders.
+- Support nested class-name values, conditional falsey entries, weighted
+  class-name tokens, selector chaining, at-rules, and merges.
+- Add compiler extraction for class-name style chains.
+- Add Tailwind presets for both style-object and class-name authoring.
+- Add `classNameTransform`, `classNameValue`, and transform metadata for
+  preserving source class labels in emitted rules.
+- Add named token compiler support for static extraction and theme override
+  identity.
+- Add configurable transform class-name formatting and hash length behavior for
+  debug output.
 
 ## 0.1.0-beta.1
 
-### Patch Changes
+This patch beta improves typed selector authoring and documentation.
 
-- Add `createSelectorAssert` for typed custom selector validators and improve selector preset documentation.
+### Changes
+
+- Add `createSelectorAssert` for typed custom selector validators.
+- Keep the public beta API moving with small usability refinements after
+  `0.1.0-beta.0`.
 
 ## 0.1.0-beta.0
 

@@ -31,6 +31,7 @@
   },
   "changesets": [
     "first-public-beta-release-notes",
-    "typed-selector-asserts"
+    "typed-selector-asserts",
+    "classname-tailwind-compiler"
   ]
 }
