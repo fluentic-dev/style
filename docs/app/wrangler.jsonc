@@ -5,11 +5,7 @@
   "main": "./src/worker.js",
   "routes": [
     {
-      "pattern": "fluenticstack.com/style",
-      "zone_name": "fluenticstack.com"
-    },
-    {
-      "pattern": "fluenticstack.com/style/*",
+      "pattern": "fluenticstack.com/style*",
       "zone_name": "fluenticstack.com"
     }
   ],
