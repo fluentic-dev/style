@@ -55,7 +55,211 @@ function Card(props: {
   ...
 </Card>`;
 
-const previewCodeHtml = highlightPreviewCode(previewCode);
+const utilityPreviewCode = `import {
+  createStyleFn, style,
+  type StyleProp, type StyleTheme,
+  combineStyle, bindScope,
+} from '@fluentic/style';
+import {
+  TailwindSelectors,
+  createTailwindStyleTransform,
+} from '@fluentic/style/presets/tailwind';
+
+const { style: tw } = createStyleFn({
+  selectors: TailwindSelectors,
+  transform: createTailwindStyleTransform(config),
+});
+
+const card = {
+  container: tw({
+    rounded: '$2xl',
+    p: '$5',
+  }),
+  title: tw({
+    text: '$xl',
+    font: '$bold',
+  }),
+  body: tw({
+    leading: '$relaxed',
+  }),
+};
+
+const productCard = style.scope([
+  card.container({
+    bg: '$gray.900',
+    text: '$white',
+  }),
+  card.title({
+    tracking: '[0.2px]',
+  }),
+]);
+
+function Card(props: {
+  title: string;
+  css?: StyleProp;
+  theme?: StyleTheme;
+  children: React.ReactNode;
+}) {
+  const css = combineStyle(
+    card,
+    bindScope(card.container, props.theme),
+  );
+
+  return (
+    <article css={[css.container, props.css]}>
+      <h2 css={css.title}>{props.title}</h2>
+      <div css={css.body}>{props.children}</div>
+    </article>
+  );
+}
+
+<Card theme={productCard} title="Revenue">
+  ...
+</Card>`;
+
+const tailwindPreviewCode = `import {
+  createClassNameFn, style,
+  type StyleProp, type StyleTheme,
+  combineStyle, bindScope,
+} from '@fluentic/style';
+import {
+  TailwindSelectors,
+  createTailwindClassNameTransform,
+} from '@fluentic/style/presets/tailwind';
+
+const { className: cx } = createClassNameFn({
+  selectors: TailwindSelectors,
+  transform: createTailwindClassNameTransform(config),
+});
+
+const card = {
+  container: cx('rounded-2xl', 'p-5'),
+  title: cx('text-xl', 'font-bold'),
+  body: cx('leading-relaxed'),
+};
+
+const productCard = style.scope([
+  card.container(
+    'bg-gray-900',
+    'text-white',
+  ),
+  card.title('tracking-[0.2px]'),
+]);
+
+function Card(props: {
+  title: string;
+  css?: StyleProp;
+  theme?: StyleTheme;
+  children: React.ReactNode;
+}) {
+  const css = combineStyle(
+    card,
+    bindScope(card.container, props.theme),
+  );
+
+  return (
+    <article css={[css.container, props.css]}>
+      <h2 css={css.title}>{props.title}</h2>
+      <div css={css.body}>{props.children}</div>
+    </article>
+  );
+}
+
+<Card theme={productCard} title="Revenue">
+  ...
+</Card>`;
+
+const customVocabularyCode = `const panel = ui({
+  stack: 'vertical',
+  gap: '$3',
+  surface: 'raised',
+  radius: 'lg',
+})
+  .selected({ surface: 'accent' })
+  .md({ gap: '$4' });
+
+const toolbar = ui({
+  stack: 'horizontal',
+  align: 'center',
+  gap: '$2',
+});
+
+<Panel css={panel}>
+  <Toolbar css={toolbar} />
+</Panel>`;
+
+const tailwindObjectFlavorCode = `const { style: tw } = createStyleFn({
+  selectors: TailwindSelectors,
+  transform: createTailwindStyleTransform(config),
+});
+
+const button = tw({
+  inlineFlex: true,
+  items: 'center',
+  gap: '$2',
+  rounded: '$md',
+  bg: '$accent',
+  text: '$accentText',
+  px: '$4',
+  py: '$2',
+  font: '$semibold',
+})
+  .hover({ bg: '$accentHover' })
+  .md({ px: '$6' });`;
+
+const tailwindClassFlavorCode = `const { className: cx } = createClassNameFn({
+  selectors: TailwindSelectors,
+  transform: createTailwindClassNameTransform(config),
+});
+
+const button = cx(
+  'inline-flex',
+  'items-center',
+  'gap-2',
+  'rounded-md',
+  'bg-accent',
+  'text-accent-text',
+  'px-4',
+  'py-2',
+  'font-semibold',
+)
+  .hover('bg-accent-hover')
+  .md('px-6');`;
+
+const previewTabs = [
+  ['css', 'CSS-like', 'card.css.tsx', previewCode],
+  ['utility', 'Utility-like', 'card.utility.tsx', utilityPreviewCode],
+  ['tailwind', 'Tailwind-like', 'card.tailwind.tsx', tailwindPreviewCode],
+];
+
+const syntaxCards = [
+  [
+    'CSS-like out of the box',
+    'Start with normal CSS property names and TypeScript style objects. No custom vocabulary required.',
+  ],
+  [
+    'Fully custom vocabulary',
+    'Add fields, tokens, variants, utilities, and selectors that match your product and design system.',
+  ],
+  [
+    'Same compiler path',
+    'Your custom style data still works with slots, scopes, runtime values, source tracing, and extracted CSS.',
+  ],
+];
+
+const tailwindFlavorCards = [
+  [
+    'Object fields',
+    'Use utility-style fields, checked scale refs, and grouped dynamic branches inside a TypeScript object.',
+    tailwindObjectFlavorCode,
+  ],
+  [
+    'Class names',
+    'Keep Tailwind class-name muscle memory while variants stay as Fluentic chains.',
+    tailwindClassFlavorCode,
+  ],
+];
+
 const ownershipOutsideCode = `const productCard = style.scope([
   card.container({
     backgroundColor: '#111827',
@@ -92,6 +296,7 @@ function Card(props: CardProps) {
 
 const ownershipOutsideCodeHtml = highlightPreviewCode(ownershipOutsideCode);
 const ownershipInsideCodeHtml = highlightPreviewCode(ownershipInsideCode);
+const customVocabularyCodeHtml = highlightPreviewCode(customVocabularyCode);
 
 function highlightPreviewCode(code: string) {
   const tokenPattern =
@@ -311,9 +516,78 @@ export default function HomePage() {
               <i />
               <i />
             </span>
-            <span>card-style.tsx</span>
+            <span>Pick an authoring style</span>
           </div>
-          <pre className='home-code'><code dangerouslySetInnerHTML={{ __html: previewCodeHtml }} /></pre>
+          <div className='home-code-tabs'>
+            {previewTabs.map(([id, label], index) => (
+              <input
+                defaultChecked={index === 0}
+                id={`home-code-tab-${id}`}
+                key={id}
+                name='home-code-tab'
+                type='radio'
+              />
+            ))}
+            <div className='home-code-tab-labels' role='tablist' aria-label='Code preview options'>
+              {previewTabs.map(([id, label]) => (
+                <label htmlFor={`home-code-tab-${id}`} key={id} role='tab'>
+                  {label}
+                </label>
+              ))}
+            </div>
+            <div className='home-code-panels'>
+              {previewTabs.map(([id, _label, fileName, code]) => (
+                <div className={`home-code-panel home-code-panel-${id}`} key={id}>
+                  <div className='home-code-file'>{fileName}</div>
+                  <pre className='home-code'><code dangerouslySetInnerHTML={{ __html: highlightPreviewCode(code) }} /></pre>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className='home-syntax' aria-labelledby='syntax-title'>
+        <div className='home-section-head'>
+          <h2 id='syntax-title'>Build the styling vocabulary your design system needs.</h2>
+          <p>
+            Fluentic starts with CSS-like style objects out of the box. When your design system needs more, you can add
+            typed fields, tokens, variants, utilities, and selector methods so your team can author styles in product
+            terms without leaving the same component-owned styling model.
+          </p>
+        </div>
+        <div className='home-syntax-grid'>
+          <div className='home-syntax-code'>
+            <div className='home-code-file'>design-system-style.tsx</div>
+            <pre className='home-code'><code dangerouslySetInnerHTML={{ __html: customVocabularyCodeHtml }} /></pre>
+          </div>
+          <div className='home-syntax-cards'>
+            {syntaxCards.map(([title, body]) => (
+              <article key={title}>
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className='home-tailwind' aria-labelledby='tailwind-title'>
+        <div className='home-section-head'>
+          <h2 id='tailwind-title'>Tailwind-like authoring comes in two flavors.</h2>
+          <p>
+            The Tailwind preset is a built-in example of Fluentic customization: use utility object fields when you want
+            typed values, or class-name strings when you want familiar Tailwind muscle memory.
+          </p>
+        </div>
+        <div className='home-tailwind-grid'>
+          {tailwindFlavorCards.map(([title, body, code]) => (
+            <article key={title}>
+              <h3>{title}</h3>
+              <p>{body}</p>
+              <pre className='home-code'><code dangerouslySetInnerHTML={{ __html: highlightPreviewCode(code) }} /></pre>
+            </article>
+          ))}
         </div>
       </section>
 
