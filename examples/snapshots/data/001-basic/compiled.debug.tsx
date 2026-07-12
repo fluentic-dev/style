@@ -46,7 +46,7 @@ const styles = {
     ['d1c10h0', 'background-color-hover--bevm3we', [
       1,
       '--var-cap3zp0',
-      createExtractedToken('token-1jb1zmc', 'blue', null, null),
+      createExtractedToken('token-1jb1zmc', 'blue', null, null, '--token-v95nzv0'),
       1,
     ]],
   ]),

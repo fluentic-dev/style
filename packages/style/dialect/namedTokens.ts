@@ -1,6 +1,14 @@
-import { sanitizeCssIdentName } from '../atomic/utils/css';
-import { type StyleToken, TOKEN_ID, TOKEN_NAME, TOKEN_OVERRIDE } from '../style/token';
-import { createToken } from '../style/value';
+import { getTokenVarName } from '../atomic/token';
+import { sanitizeCssIdentName } from '../atomic/utils/cssIdent';
+import { CSS_CONFIG } from '../config/config/css';
+import {
+  createStyleToken,
+  type StyleToken,
+  TOKEN_ID,
+  TOKEN_NAME,
+  TOKEN_OVERRIDE,
+  TOKEN_VAR_NAME,
+} from '../style/token';
 
 type ValueRecord = Record<PropertyKey, unknown>;
 
@@ -21,7 +29,9 @@ type NamedTokenRoot = {
 const ROOT = Symbol('fluentic.namedTokens.root');
 
 export function createNamedToken<T>(id: string, value?: T): NamedToken<T> {
-  return createToken(value, createNamedTokenId(id)) as NamedToken<T>;
+  const token = createStyleToken(value, createNamedTokenId(id)) as NamedToken<T>;
+  token[TOKEN_VAR_NAME] = getTokenVarName(token, CSS_CONFIG.tokenNameFormat ?? null);
+  return token;
 }
 
 export function createNamedTokens<T extends object>(
@@ -68,6 +78,7 @@ function createNamedTokenProxy(
       if (
         property === TOKEN_ID ||
         property === TOKEN_NAME ||
+        property === TOKEN_VAR_NAME ||
         property === TOKEN_OVERRIDE ||
         property === 'value' ||
         property === 'ref'

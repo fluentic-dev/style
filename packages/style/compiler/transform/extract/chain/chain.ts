@@ -2,7 +2,7 @@ import { getAtomicClassName, getClassNameDedupe } from '../../../../atomic/class
 import { LayerDefaultPriority } from '../../../../atomic/layer';
 import { buildAtomicRule, getAtomicRuleLayerPriority } from '../../../../atomic/rule';
 import { getTokenOverrideValue, getTokenVar, getTokenVarName } from '../../../../atomic/token';
-import { getCssVarRawFallback } from '../../../../atomic/utils/css';
+import { getCssVarRawFallback } from '../../../../atomic/utils/cssVar';
 import { shouldAppendCssPx } from '../../../../atomic/value';
 import { getLocalVarName } from '../../../../atomic/var';
 import {

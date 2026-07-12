@@ -4,10 +4,10 @@ import {
   configureTestRuntime,
   createCompiler,
   createExtractedSlot,
-  createTheme,
+  createStableTheme,
+  createStableToken,
+  createStableTokens,
   createThemeRule,
-  createToken,
-  createTokens,
   ELEMENT_CSS_DATA_ATTR,
   equal,
   fileURLToPath,
@@ -24,9 +24,9 @@ import {
 } from './setup';
 
 test('invariant: runtime token identity uses stable ids for nested tokens and aliases', () => {
-  const base = createToken('blue', 'invariant-base');
-  const alias = createToken(base, 'invariant-alias');
-  const tokens = createTokens({
+  const base = createStableToken('blue', 'invariant-base');
+  const alias = createStableToken(base, 'invariant-alias');
+  const tokens = createStableTokens({
     color: {
       text: 'black',
       surface: 'white',
@@ -72,13 +72,13 @@ test('invariant: extracted theme and style modules share imported token ids', ()
 });
 
 test('invariant: theme override class stays overridable by local dynamic token value', () => {
-  const token = createToken('blue', 'invariant-theme-local');
+  const token = createStableToken('blue', 'invariant-theme-local');
   const tokenStyles = {
     container: style.slot({
       color: token,
     }),
   };
-  const theme = createTheme([token('red')], 'invariant-theme');
+  const theme = createStableTheme([token('red')], 'invariant-theme');
   const css = combineStyle(tokenStyles, token('green'));
   const result = resolveStyleProp([theme, css.container as any]);
   const rule = createThemeRule(theme);
@@ -96,7 +96,7 @@ test('invariant: theme override class stays overridable by local dynamic token v
 });
 
 test('invariant: extracted dynamic variables preserve token fallback chain', () => {
-  const token = createToken('blue', 'invariant-extracted-token');
+  const token = createStableToken('blue', 'invariant-extracted-token');
   const css = createExtractedSlot('invariant-extracted-slot', [
     [
       'invariant-dedupe',
@@ -118,7 +118,7 @@ test('invariant: rsc style prop serialization removes functions and emits dev pa
   setBuildMeta({ dev: true, extract: false, hoist: false, rsc: true, css: null });
 
   try {
-    const token = createToken('blue', 'invariant-rsc');
+    const token = createStableToken('blue', 'invariant-rsc');
     const rscStyles = {
       root: style.slot({
         color: token,

@@ -9,10 +9,10 @@ const tokens = createTokens({
     accent: '#2563eb'
   }
 }, "tokens-3qz6j00");
-const appTheme = createExtractedTheme("lvb6tl0", "theme-lvb6tl0-bcmdhyx");
+const appTheme = createExtractedTheme("lvb6tl0", "theme-bcmdhyx");
 const styles = {
-  panel: createExtractedSlot("1ryb5oa", [["1ffb9qm", "padding--bdgz721"], ["mwx9540", "background-color--swvf9p0"], ["18q1j80", "color--ha2v6h0"], ["1ut2mip", "font-size--ukgzgk0"], ["109h4xq", "border-color--bkojgu0", [1, "--var-vfnc6k0", createExtractedToken("tokens-3qz6j00--color--accent", "#2563eb", null, "color--accent"), 1]], ["1kkptnv", "max-700px-padding--brihkx1"]]),
-  action: createExtractedStyleMerge([["18q1j80", "color--ha2v6h0"], ["1ut2mip", "font-size--ukgzgk0"], ["mwx9540", "background-color--xn8dux0", [1, "--var-ixn6uy0", createExtractedToken("tokens-3qz6j00--color--bg", "#ffffff", null, "color--bg"), 1]]], sharedInteractive, [["1qmb2bt", "color-hover--eeydj60", [1, "--var-d2bnon0", createExtractedToken("tokens-3qz6j00--color--accent", "#2563eb", null, "color--accent"), 1]]])
+  panel: createExtractedSlot("1ryb5oa", [["1ffb9qm", "padding--bdgz721"], ["mwx9540", "background-color--swvf9p0"], ["18q1j80", "color--ha2v6h0"], ["1ut2mip", "font-size--ukgzgk0"], ["109h4xq", "border-color--bkojgu0", [1, "--var-vfnc6k0", createExtractedToken("tokens-3qz6j00--color--accent", "#2563eb", null, "color--accent", "--token-color--accent-cu25p10"), 1]], ["1kkptnv", "max-700px-padding--brihkx1"]]),
+  action: createExtractedStyleMerge([["18q1j80", "color--ha2v6h0"], ["1ut2mip", "font-size--ukgzgk0"], ["mwx9540", "background-color--xn8dux0", [1, "--var-ixn6uy0", createExtractedToken("tokens-3qz6j00--color--bg", "#ffffff", null, "color--bg", "--token-color--bg-gsgl540"), 1]]], sharedInteractive, [["1qmb2bt", "color-hover--eeydj60", [1, "--var-d2bnon0", createExtractedToken("tokens-3qz6j00--color--accent", "#2563eb", null, "color--accent", "--token-color--accent-cu25p10"), 1]]])
 };
 const baseScope = createExtractedScope([[4, "1ryb5oa", "1qi6vb6", "box-shadow--bgoxg5v"]]);
 const mergedScope = createExtractedScope([[4, "1ryb5oa", "1qi6vb6", "box-shadow--bgoxg5v"], [4, "1ryb5oa", "eoxpgd0", "hover-border-color--kcoo2h0", 1]]);

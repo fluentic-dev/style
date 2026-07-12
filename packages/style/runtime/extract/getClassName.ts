@@ -1,4 +1,3 @@
-import { getTokenVar as getAtomicTokenVar, getTokenVarName as getAtomicTokenVarName } from '../../atomic/token';
 import {
   BUILDER_STATE,
   BUILDER_TYPE,
@@ -12,20 +11,15 @@ import {
 } from '../../builder/data/const';
 import type { StateItem } from '../../builder/data/state';
 import { getExtractedTokenBoundData, isExtractedTokenBoundData } from '../../builder/extract/withTokens';
-import { CSS_CONFIG } from '../../config/config/css';
+import { getStyleTokenId, isStyleTokenData, isStyleTokenOverrideData } from '../../builder/token/data';
 import { RUNTIME_CONFIG } from '../../config/config/runtime';
-import {
-  getStyleTokenId,
-  isStyleTokenData,
-  isStyleTokenOverrideData,
-  type StyleTokenData,
-  type StyleTokenOverride,
-} from '../../style/token';
+import type { StyleTokenData, StyleTokenOverride } from '../../style/token';
 import { getStylePropCacheValue } from '../core/cache/propCache';
 import { getResolvedStyleItemTokenValues, isResolvedStyleItem } from '../core/cache/resolvedItem';
 import { walkRecursiveItems } from '../core/cache/utils/walk';
 import { type ClassNameProps, type ClassNameResult, mergeClassName, mergeStyle } from '../core/className';
 import type { StyleProp } from '../types';
+import { getExtractedTokenVar, getExtractedTokenVarName } from './token';
 
 type TokenValues = Record<string, unknown> | null;
 
@@ -453,11 +447,11 @@ function mergeResolvedTokenValues(
 }
 
 function getTokenVarName(token: StyleTokenData | StyleTokenOverride) {
-  return getAtomicTokenVarName(token, CSS_CONFIG.tokenNameFormat ?? null);
+  return getExtractedTokenVarName(token);
 }
 
 function getTokenVar(token: StyleTokenData): string {
-  return getAtomicTokenVar(token, CSS_CONFIG.tokenNameFormat ?? null);
+  return getExtractedTokenVar(token);
 }
 
 function setStyleValue(

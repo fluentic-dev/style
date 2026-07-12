@@ -1,6 +1,7 @@
 import type { DebugData } from '../builder/data/debug';
+import { getChildStyleTokenName } from '../builder/token/name';
 import { hashString } from '../utils/hash';
-import { createStyleToken, getChildStyleTokenName, type StyleToken, type StyleTokenOverride } from './token';
+import { createStyleToken, type StyleToken, type StyleTokenOverride } from './token';
 
 export type ValueBase = string | number;
 export type InferValue<T extends ValueBase> = T extends string ? string : T extends number ? number : ValueBase;
@@ -11,29 +12,28 @@ export type StyleValueFn<T extends ValueBase, Value extends ValueBase> = {
   (value: T, provide: Value | StyleToken<Value>, debug: DebugData): StyleTokenOverride<Value>;
 };
 
-export function createToken<T>(value: T | StyleToken<T>, debugId?: string) {
-  return createStyleToken(value, debugId);
+export function createToken<T>(value: T | StyleToken<T>): StyleToken<T>;
+export function createToken<T>(value: T | StyleToken<T>, stableId?: string) {
+  return createStyleToken(value, stableId);
 }
 
 export function createValues<const T extends ValueBase>(
   values: readonly T[],
-  debugId?: string,
 ): StyleValueFn<T, InferValue<T>>;
 export function createValues<const T extends ValueBase>(
   type: NumberConstructor,
   values: readonly T[],
-  debugId?: string,
 ): StyleValueFn<T, number>;
 export function createValues(
   ...args: [NumberConstructor, readonly ValueBase[], string?] | [readonly ValueBase[], string?]
 ): StyleValueFn<any, any> {
   let values: readonly ValueBase[] = args[0] as readonly ValueBase[];
   let isNumber = false;
-  let debugId = args[1] as string | undefined;
+  let stableId = args[1] as string | undefined;
 
   if (args[0] === Number) {
     values = args[1] as readonly ValueBase[];
-    debugId = args[2] as string | undefined;
+    stableId = args[2] as string | undefined;
     isNumber = true;
   }
 
@@ -48,8 +48,8 @@ export function createValues(
       value,
       createStyleToken(
         parseValue(value, isNumber),
-        getChildDebugId(debugId, hashString(String(value))),
-        getChildStyleTokenName(debugId ?? null, getValueDebugName(value)),
+        getChildStableId(stableId, hashString(String(value))),
+        getChildStyleTokenName(stableId ?? null, getValueDebugName(value)),
       ),
     );
   }
@@ -80,11 +80,11 @@ export function createValues(
   return fn;
 }
 
-function getChildDebugId(
-  debugId: string | undefined,
+function getChildStableId(
+  stableId: string | undefined,
   child: string,
 ) {
-  return debugId ? debugId + '--' + child : undefined;
+  return stableId ? stableId + '--' + child : undefined;
 }
 
 function getValueDebugName(value: ValueBase) {

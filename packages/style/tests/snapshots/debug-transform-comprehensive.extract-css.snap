@@ -1,6 +1,6 @@
 @layer css;
 @layer css {
-.theme-lvb6tl0-bcmdhyx{--token-color--bg-gsgl540:#f8fafc;--token-color--fg-cc84fw0:#0f172a}
+.theme-bcmdhyx{--token-color--bg-gsgl540:#f8fafc;--token-color--fg-cc84fw0:#0f172a}
 .padding--bdgz721{padding: 12px}
 .color--ha2v6h0{color: #111827}
 .box-shadow--jlvme90{box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12)}

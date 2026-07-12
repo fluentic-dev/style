@@ -1,4 +1,4 @@
-import { symbol } from '../../utils/global';
+import { symbol } from '../../utils/symbol';
 
 export const BUILDER_TYPE: unique symbol = symbol('builder.type');
 export const BUILDER_STATE: unique symbol = symbol('builder.state');

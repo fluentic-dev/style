@@ -1,5 +1,5 @@
 import { createThemeClassName } from '../../../atomic/theme';
-import { sanitizeCssIdentName } from '../../../atomic/utils/css';
+import { sanitizeCssIdentName } from '../../../atomic/utils/cssIdent';
 import type { ThemeNameFormat } from '../../../config/types';
 import { hashString } from '../../../utils/hash';
 import {

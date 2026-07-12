@@ -16,7 +16,6 @@ export function resetStyleThemeIdCounter() {
 
 export function createTheme(
   tokens: readonly StyleTokenOverride[],
-  stableId?: StableId | string,
 ): TokenTheme;
 export function createTheme(
   tokens: readonly StyleTokenOverride[],

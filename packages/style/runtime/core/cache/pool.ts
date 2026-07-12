@@ -1,8 +1,6 @@
 import { BUILDER_STATE } from '../../../builder/data/const';
 import type { ScopeData, ScopeTargetData } from '../../../builder/data/data';
 import { getScopeTargetScope, getScopeTargetSlotId, isScopeTargetData } from '../../../builder/data/is';
-import { CSS_CONFIG } from '../../../config/config/css';
-import { RUNTIME_CONFIG } from '../../../config/config/runtime';
 import type { Falsy, StyleItem } from '../../types';
 import type { CombinedStyle } from '../combinedStyle';
 import { createCombinedStyleFacade } from './item';
@@ -12,6 +10,7 @@ import {
   createMutableTokenValues,
   finishTokenValues,
   type StyleTokenValues,
+  type TokenValueResolver,
 } from './tokenValues';
 import { type CacheTreeNode, createCacheTreeNode, getCacheTreeChild } from './utils/tree';
 
@@ -38,7 +37,7 @@ type PoolValue = {
   tokenCache: TokenWrapperCache | null;
   h: boolean;
   s: StyleTokenValues | null;
-  f: typeof CSS_CONFIG.tokenNameFormat;
+  f: unknown;
   updatedAt: number;
 };
 
@@ -47,31 +46,17 @@ type PoolNode = CacheTreeNode<unknown, PoolValue>;
 const DEFAULT_TTL = 1000 * 60 * 5;
 const TOKEN_WRAPPER_CACHE_LIMIT = 32;
 
-let configuredPool: CombinedStylePool | null = null;
-let configuredPoolTTL = -1;
-
-export function getCombinedStylePool() {
-  const ttl = RUNTIME_CONFIG.runtimeCacheTTL;
-
-  if (
-    !configuredPool ||
-    configuredPoolTTL !== ttl
-  ) {
-    configuredPool = createCombinedStylePool(ttl);
-    configuredPoolTTL = ttl;
-  }
-
-  return configuredPool;
-}
-
-export function createCombinedStylePool(ttl = DEFAULT_TTL): CombinedStylePool {
+export function createCombinedStylePool(
+  resolver: TokenValueResolver,
+  ttl = DEFAULT_TTL,
+): CombinedStylePool {
   const root = createPoolNode();
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   return {
     get(styles, inheritedScopes, items, prevTokensData = null) {
       if (ttl === 0) {
-        const collected = collectItems(null, items, prevTokensData);
+        const collected = collectItems(null, items, prevTokensData, resolver);
         const allScopes = concatScopes(inheritedScopes, collected.scopes);
 
         return {
@@ -86,7 +71,7 @@ export function createCombinedStylePool(ttl = DEFAULT_TTL): CombinedStylePool {
 
       node = walkScopes(node, inheritedScopes);
 
-      const collected = collectItems(node, items, prevTokensData);
+      const collected = collectItems(node, items, prevTokensData, resolver);
       node = collected.node ?? node;
       node.value.updatedAt = now;
 
@@ -171,6 +156,7 @@ function collectItems(
   node: PoolNode | null,
   items: readonly (StyleItem | Falsy)[],
   prevTokensData: StyleTokenValues | null,
+  resolver: TokenValueResolver,
 ) {
   const scopes: ScopeTargetData[] = [];
   const tokens = createMutableTokenValues(prevTokensData);
@@ -179,12 +165,12 @@ function collectItems(
   for (let i = 0, len = items.length; i < len; i++) {
     const item = items[i];
 
-    if (addTokenOverride(tokens, item)) continue;
+    if (addTokenOverride(tokens, item, resolver)) continue;
 
     if (isScopeTargetData(item)) {
       scopes.push(item);
       currentNode = currentNode ? walkScope(currentNode, item) : null;
-      addTokenValues(tokens, getScopeTokenValues(currentNode, getScopeTargetScope(item)));
+      addTokenValues(tokens, getScopeTokenValues(currentNode, getScopeTargetScope(item), resolver));
     }
   }
 
@@ -232,10 +218,9 @@ function walkScope(
 function getScopeTokenValues(
   node: PoolNode | null,
   scope: ScopeData,
+  resolver: TokenValueResolver,
 ) {
-  const tokenNameFormat = CSS_CONFIG.tokenNameFormat;
-
-  if (node && node.value.h && node.value.f === tokenNameFormat) {
+  if (node && node.value.h && node.value.f === resolver.key) {
     return node.value.s;
   }
 
@@ -243,7 +228,7 @@ function getScopeTokenValues(
   const items = scope[BUILDER_STATE].items;
 
   for (let i = 0, len = items.length; i < len; i++) {
-    addTokenOverride(values, items[i]);
+    addTokenOverride(values, items[i], resolver);
   }
 
   const tokens = finishTokenValues(null, values);
@@ -251,7 +236,7 @@ function getScopeTokenValues(
   if (node) {
     node.value.h = true;
     node.value.s = tokens;
-    node.value.f = tokenNameFormat;
+    node.value.f = resolver.key;
   }
 
   return tokens;

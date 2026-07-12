@@ -24,6 +24,7 @@ import {
 } from './item';
 import { getStylePropCacheValue } from './propCache';
 import { createStylePropResult, emptyStylePropResult, type ResolvedStyleProp } from './result';
+import { runtimeTokenValueResolver } from './token';
 import { mergeTokenOverrides, mergeTokenValues, type StyleTokenValues } from './tokenValues';
 import { walkRecursiveItems } from './utils/walk';
 
@@ -197,7 +198,7 @@ function normalizeStylePropItem(
     const bound = getExtractedTokenBoundData(item);
     if (stableTokenBound) return normalizeStylePropItem(bound.data, true);
 
-    const tokens = mergeTokenOverrides(null, bound.tokens);
+    const tokens = mergeTokenOverrides(null, bound.tokens, runtimeTokenValueResolver);
 
     if (isStyleData(bound.data) || isSlotData(bound.data)) {
       return createResolvedStyleItem(bound.data, [], tokens);
@@ -224,7 +225,7 @@ function getStylePropCacheKey(
   if (RUNTIME_CONFIG.isHoist && isExtractedTokenBoundData(item)) {
     const bound = getExtractedTokenBoundData(item);
     const key = getStylePropCacheKey(bound.data, tokenBindings);
-    const tokens = mergeTokenOverrides(null, bound.tokens);
+    const tokens = mergeTokenOverrides(null, bound.tokens, runtimeTokenValueResolver);
 
     if (key && tokens) {
       tokenBindings.push({ data: key, tokens });

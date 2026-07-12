@@ -78,7 +78,7 @@ const comprehensiveSource = [
 ].join('\n');
 
 const tokenNamesSource = [
-  `import { createToken, createTokens, createValues, style } from '@fluentic/style';`,
+  `import { createTheme, createToken, createTokens, createValues, style } from '@fluentic/style';`,
   ``,
   `const accent = createToken('#2563eb', 'accent');`,
   `const anonymous = createToken('#f8fafc');`,
@@ -101,6 +101,13 @@ const tokenNamesSource = [
   `  '#ffffff | Surface',`,
   `  '#111827; Text',`,
   `]);`,
+  ``,
+  `export const lightTheme = createTheme([`,
+  `  theme.background.page('#f8fafc'),`,
+  `], 'theme-light');`,
+  `export const brandTheme = createTheme([`,
+  `  theme.text.body('#0f172a'),`,
+  `], 'themes--brand');`,
   ``,
   `export const card = style({`,
   `  backgroundColor: theme.background.page,`,
@@ -160,8 +167,12 @@ test('snapshot: token names cover createToken createTokens createValues', () => 
   includes(css, '--token-space--lg-');
   includes(css, '--token-tone--Surface-');
   includes(css, '--token-tone--Text-');
+  includes(css, '.theme-light-');
+  includes(css, '.theme-brand-');
   notIncludes(css, '--token-token-');
   notIncludes(css, '--token-tokens-');
+  notIncludes(css, '.theme-theme-');
+  notIncludes(css, '.theme-themes-');
 
   assertSnapshot('token-names.extract.snap', extract.code);
   assertSnapshot('token-names.extract-css.snap', css);

@@ -1,5 +1,5 @@
+import { TOKEN_ID, TOKEN_OVERRIDE } from '../../../builder/token/symbols';
 import { getNamedToken } from '../../../dialect';
-import { isStyleTokenData } from '../../../style/token';
 import { styleTransform } from '../../../style/transform';
 import type { CSSProperties } from '../../../style/types';
 import { defaultTailwindTheme } from '../theme';
@@ -372,7 +372,7 @@ function mapUtility(property: string, values: Record<string, unknown>): UtilityR
 }
 
 function resolveScale(scale: TailwindScale | undefined, value: unknown) {
-  if (!scale || isStyleTokenData(value)) return value;
+  if (!scale || isTailwindStyleTokenData(value)) return value;
   if (Array.isArray(scale)) return resolveScales(scale, value);
 
   const key = getScaleRef(value);
@@ -388,7 +388,7 @@ function resolveScale(scale: TailwindScale | undefined, value: unknown) {
 }
 
 function resolveScales(scales: (TailwindScale | undefined)[], value: unknown) {
-  if (isStyleTokenData(value)) return value;
+  if (isTailwindStyleTokenData(value)) return value;
 
   const key = getScaleRef(value);
   if (key === null) return value;
@@ -405,6 +405,12 @@ function resolveScales(scales: (TailwindScale | undefined)[], value: unknown) {
   }
 
   return value;
+}
+
+function isTailwindStyleTokenData(value: unknown) {
+  return !!value &&
+    typeof (value as { [TOKEN_ID]?: unknown; })[TOKEN_ID] === 'string' &&
+    (value as { [TOKEN_OVERRIDE]?: true; })[TOKEN_OVERRIDE] !== true;
 }
 
 function getScaleValue(scale: TailwindScale, key: string) {

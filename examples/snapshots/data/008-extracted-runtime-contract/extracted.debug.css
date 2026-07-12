@@ -1,0 +1,32 @@
+@layer reset, css, override;
+@layer css {
+.theme-tof6p90{--token-color--surface-b17qwr8:#ffffff;--token-color--text-kk0tpy0:#172033;--token-color--muted-jeweu00:#64748b;--token-color--accent-bp94rm7:#2563eb}
+.theme-by5mfzn{--token-color--surface-b17qwr8:#f8fbff;--token-color--accent-bp94rm7:var(--token-accentAlias-bttzc66, var(--token-accent-b8ztlsd, #2563eb))}
+.border--b3cpjgx{border: 1px solid}
+.radius--hy0rrn0{border-radius: var(--var-b6gq4v1, var(--token-radius--panel-be5nmme, 18))}
+.color--btv6i4h{color: var(--var-wmnena0, var(--token-color--text-kk0tpy0, #172033))}
+.display-grid--jgp0up0{display: grid}
+.gap--b3nre13{gap: var(--var-bkkqp80, var(--token-space--sm-betrnld, 10))}
+.padding--b81090p{padding: var(--var-nr0cnd0, var(--token-space--md-tlp1ht0, 18))}
+.color--b58xz2m{color: var(--var-b82qjwe, var(--token-color--text-kk0tpy0, #172033))}
+.margin--fy69b50{margin: 0px}
+.radius--bc2df5r{border-radius: var(--var-b2sn26q, var(--token-radius--pill-iefqc30, 999))}
+.color--bfko2p9{color: #ffffff}
+.padding--mgzjey0{padding: 5px 9px}
+.width-fit-content--hjsx5a0{width: fit-content}
+.border-color--bui5b8d{border-color: var(--var-i9z5gd0, var(--token-color--accent-bp94rm7, #2563eb))}
+.background-color--fzx0c90{background-color: var(--var-u7016b0, var(--token-color--surface-b17qwr8, #ffffff))}
+.font-size--dox5r50{font-size: 22px}
+.font-800--kfbuc00{font-weight: 800}
+.background-color--bkxzgvi{background-color: var(--var-bkggln0, var(--token-color--accent-bp94rm7, #2563eb))}
+.font-size--cwxf320{font-size: 12px}
+.font-700--bs1kyyx{font-weight: 700}
+.outline-color--bhjx1sg{outline-color: var(--var-vreqfj0)}
+.outline-style-solid--bqsvnad{outline-style: solid}
+.outline-width--jvs87g0{outline-width: var(--var-f09vld0)}
+.box-shadow--jvi87p0{box-shadow: 0 18px 44px rgba(37, 99, 235, 0.16)}
+.background-color--cbhig30{background-color: var(--var-gpi4cr0, var(--token-accent-b8ztlsd, #2563eb))}
+.hover-color--bhna0yz:where(.-hover-color--bhna0yz:hover),:where(.-hover-color--bhna0yz:hover) .hover-color--bhna0yz{color: var(--var-buaj12r, var(--token-color--accent-bp94rm7, #2563eb))}
+.hover-border-color--bbthf2i:where(.-hover-border-color--bbthf2i:hover),:where(.-hover-border-color--bbthf2i:hover) .hover-border-color--bbthf2i{border-color: var(--var-b4n6vpa, var(--token-accentAlias-bttzc66, var(--token-accent-b8ztlsd, #2563eb)))}
+.background-color-hover--bbimfhr:hover{background-color: var(--var-bftb5iz, var(--token-tone--Soft-nhhpaz0, #eff6ff))}
+}

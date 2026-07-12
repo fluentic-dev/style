@@ -1,9 +1,9 @@
 import type { ItemSelector } from '../builder/data/state';
 import type { ScopeClassNameFormat } from '../config/types';
-import { getScopeClassName } from './className';
 import { LayerMediaPriorities, type LayerPriority, LayerSelectorPriorities } from './layer';
 import { getCssPropertyName, getPropertyPriority } from './property';
-import { escapeCssIdent } from './utils/css';
+import { getScopeClassName } from './scope';
+import { escapeCssIdent } from './utils/cssIdent';
 import { getSelectorPriority, getSelectorText } from './utils/selector';
 import { getCssPropertyValue } from './value';
 

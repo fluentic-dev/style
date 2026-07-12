@@ -1,4 +1,5 @@
-import { type CombinedStyleArg, getCombinedStyle } from '../core/cache/combine';
+import type { CombinedStyleArg } from '../core/cache/combine';
+import { getCombinedStyle } from '../core/cache/combineRuntime';
 import type { CombinedStyle } from '../core/combinedStyle';
 
 export type StyleCombiner<T extends object> = (

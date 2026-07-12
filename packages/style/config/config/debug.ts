@@ -36,3 +36,14 @@ export function setDebugClassNameDefault(value: boolean) {
   if (DEBUG_CONFIG.isDebugClassNameConfigured) return;
   DEBUG_CONFIG.isDebugClassNameEnabled = value;
 }
+
+export function setBuildDebugClassName(
+  value: boolean | undefined,
+  fallback: boolean,
+) {
+  if (typeof value === 'boolean') {
+    setDebugClassNameEnabled(value);
+  } else {
+    setDebugClassNameDefault(fallback);
+  }
+}

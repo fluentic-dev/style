@@ -1,7 +1,7 @@
 import { CSS_CONFIG } from '../config/config/css';
 import { DEV_CONFIG } from '../config/config/dev';
 import type { ElementClassNameFormat, ElementClassNameInfo } from '../config/types';
-import { escapeCssIdent } from './utils/css';
+import { escapeCssIdent } from './utils/cssIdent';
 import { sanitizeDebugName } from './utils/debug';
 import { createNameFormatter } from './utils/format';
 import { getIdentifierSafeHash } from './utils/hash';

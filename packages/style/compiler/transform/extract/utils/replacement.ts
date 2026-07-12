@@ -1,3 +1,4 @@
+import { getTokenVarName } from '../../../../atomic/token';
 import {
   BUILDER_TYPE_SCOPE,
   BUILDER_TYPE_SLOT,
@@ -10,6 +11,7 @@ import {
 import type { BuilderType, ExtractedItemValue } from '../../../../builder/data/state';
 import { getStyleTokenId, getStyleTokenName, isStyleTokenData, type StyleTokenData } from '../../../../style/token';
 import type { AtRuleRefData } from '../../../../style/valueRef';
+import { DEFAULT_CONFIG } from '../../../utils/constants';
 import {
   FN_CREATE_EXTRACTED_SCOPE,
   FN_CREATE_EXTRACTED_SLOT,
@@ -325,6 +327,7 @@ function buildExtractedTokenExpression(
   state: ExtractPluginState,
 ): BabelTypes.Expression {
   state.usedHelpers.add(FN_CREATE_EXTRACTED_TOKEN);
+  const tokenNameFormat = state.options.css?.tokenNameFormat ?? DEFAULT_CONFIG.tokenNameFormat ?? null;
 
   return t.callExpression(
     t.identifier(FN_CREATE_EXTRACTED_TOKEN),
@@ -333,6 +336,7 @@ function buildExtractedTokenExpression(
       literalExpression(t, token.value),
       token.ref ? buildExtractedTokenExpression(t, token.ref, state) : t.nullLiteral(),
       getStyleTokenName(token) ? t.stringLiteral(getStyleTokenName(token)!) : t.nullLiteral(),
+      t.stringLiteral(getTokenVarName(token, tokenNameFormat)),
     ],
   );
 }

@@ -1,6 +1,4 @@
-import { getTokenOverrideValue } from '../../../atomic/token';
-import { CSS_CONFIG } from '../../../config/config/css';
-import { getStyleTokenId, isStyleTokenOverrideData, type StyleTokenOverride } from '../../../style/token';
+import type { StyleTokenOverride } from '../../../style/token';
 import { hasOwn } from '../../../utils/object';
 
 export type StyleTokenValues = {
@@ -16,6 +14,13 @@ export type MutableTokenValues = {
   index: Record<string, number> | null;
 };
 
+export type TokenValueResolver = {
+  key: unknown;
+  is(item: unknown): item is StyleTokenOverride;
+  id(token: StyleTokenOverride): string;
+  value(token: StyleTokenOverride): unknown;
+};
+
 export function createMutableTokenValues(base: StyleTokenValues | null): MutableTokenValues {
   return {
     ids: base ? base.ids.slice() : null,
@@ -25,13 +30,14 @@ export function createMutableTokenValues(base: StyleTokenValues | null): Mutable
   };
 }
 
-export function addTokenOverride(values: MutableTokenValues, item: unknown) {
-  if (!isStyleTokenOverrideData(item)) return false;
+export function addTokenOverride(
+  values: MutableTokenValues,
+  item: unknown,
+  resolver: TokenValueResolver,
+) {
+  if (!resolver.is(item)) return false;
 
-  const id = getStyleTokenId(item);
-  const value = getTokenOverrideValue(item, CSS_CONFIG.tokenNameFormat ?? null);
-
-  addTokenValue(values, id, value);
+  addTokenValue(values, resolver.id(item), resolver.value(item));
   return true;
 }
 
@@ -75,9 +81,10 @@ export function addTokenValues(
 export function addTokenOverrides(
   values: MutableTokenValues,
   overrides: readonly StyleTokenOverride[],
+  resolver: TokenValueResolver,
 ) {
   for (let i = 0, len = overrides.length; i < len; i++) {
-    addTokenOverride(values, overrides[i]);
+    addTokenOverride(values, overrides[i], resolver);
   }
 }
 
@@ -112,12 +119,13 @@ export function mergeTokenValues(
 export function mergeTokenOverrides(
   base: StyleTokenValues | null,
   overrides: readonly StyleTokenOverride[],
+  resolver: TokenValueResolver,
 ): StyleTokenValues | null {
   if (!overrides.length) return base;
 
   const values = createMutableTokenValues(base);
 
-  addTokenOverrides(values, overrides);
+  addTokenOverrides(values, overrides, resolver);
 
   return finishTokenValues(base, values);
 }

@@ -42,7 +42,12 @@ const styles = {
     ['1phh07j', 'bn5yexc', [1, '--var-lh6v6q0', density * 4, 1]],
     ['dz1dcy0', 'bkx1zo2'],
     ['1tysl6a', 'p8rx110', [1, '--var-cap3zp0', density * 3, 1]],
-    ['d1c10h0', 'bevm3we', [1, '--var-cap3zp0', createExtractedToken('token-1jb1zmc', 'blue', null, null), 1]],
+    ['d1c10h0', 'bevm3we', [
+      1,
+      '--var-cap3zp0',
+      createExtractedToken('token-1jb1zmc', 'blue', null, null, '--token-v95nzv0'),
+      1,
+    ]],
   ]),
   container2: createExtractedSlot('ho4zce0', [['1hznesf', 'bil4cl0'], ['1nca60l', 'bf72i63'], ['dz1dcy0', 'bej6r0o']]),
   text: createExtractedSlot('nmrp0v0', [['18q1j80', 'g21wjn0']]),

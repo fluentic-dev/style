@@ -1,11 +1,12 @@
 import type { BuilderCallsite, ItemSelector } from '../builder/data';
 import { CSS_CONFIG } from '../config/config/css';
 import { DEV_CONFIG } from '../config/config/dev';
-import type { ClassNameFormat, ScopeClassNameFormat, TransformClassNameFormat } from '../config/types';
+import type { ClassNameFormat, TransformClassNameFormat } from '../config/types';
 import { hashString } from '../utils/hash';
-import { getDebugClassName, getDebugScopeClassName, getDebugTransformClassName } from './debug/className';
+import { getDebugClassName, getDebugTransformClassName } from './debug/className';
 import { getDebugPropertyName } from './debug/property';
 import { getDebugAtRuleName, getDebugSelectorName } from './debug/selector';
+export { getScopeClassName } from './scope';
 import { getIdentifierSafeHash } from './utils/hash';
 import { getSelectorHash, getSelectorText } from './utils/selector';
 
@@ -78,13 +79,6 @@ export function getAtomicClassName(
 function getRuntimeClassNameHashLength(debugClassName: boolean) {
   if (debugClassName && DEV_CONFIG.isDev) return DEV_CONFIG.hashLength ?? CSS_CONFIG.hashLength ?? 3;
   return CSS_CONFIG.hashLength ?? 7;
-}
-
-export function getScopeClassName(
-  className: string,
-  scopeClassNameFormat: ScopeClassNameFormat | null,
-) {
-  return getDebugScopeClassName(scopeClassNameFormat, { className });
 }
 
 export function getClassNameDedupe(

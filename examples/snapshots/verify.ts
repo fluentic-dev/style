@@ -313,11 +313,145 @@ async function verify006() {
   return cssOk && compiledOk;
 }
 
+async function verify007() {
+  console.log('\nVerifying snapshot 007-token-theme-names (readable token and theme names)');
+
+  const id = '007-token-theme-names';
+  const css = await readSnapshot(id, 'extracted.css');
+  const compiledFile = await resolveCompiledSnapshot(id);
+  const compiled = await readSnapshot(id, compiledFile);
+
+  const cssChecks: Check[] = [
+    {
+      description: 'createTheme names strip generic theme prefixes',
+      pass: (s) => s.includes('.theme-light-') && s.includes('.theme-brand-'),
+    },
+    {
+      description: 'createToken names are readable',
+      pass: (s) => s.includes('--token-accent-') && s.includes('--token-anonymous-'),
+    },
+    {
+      description: 'createTokens nested object paths are readable',
+      pass: (s) =>
+        s.includes('--token-theme--background--page-') &&
+        s.includes('--token-theme--background--panel-') &&
+        s.includes('--token-theme--text--body-') &&
+        s.includes('--token-theme--text--muted-'),
+    },
+    {
+      description: 'createValues labels are readable',
+      pass: (s) =>
+        s.includes('--token-space--sm-') &&
+        s.includes('--token-space--lg-') &&
+        s.includes('--token-tone--Surface-') &&
+        s.includes('--token-tone--Text-'),
+    },
+    {
+      description: 'does not duplicate generic token or theme prefixes',
+      pass: (s) =>
+        !s.includes('--token-token-') &&
+        !s.includes('--token-tokens-') &&
+        !s.includes('.theme-theme-') &&
+        !s.includes('.theme-themes-'),
+    },
+  ];
+
+  const compiledChecks: Check[] = [
+    {
+      description: 'compiled output records extracted theme class names',
+      pass: (s) =>
+        s.includes('createExtractedTheme') &&
+        s.includes('theme-light-') &&
+        s.includes('theme-brand-'),
+    },
+    {
+      description: 'compiled extracted tokens keep readable name metadata',
+      pass: (s) =>
+        s.includes('accent') &&
+        s.includes('anonymous') &&
+        s.includes('theme--background--page') &&
+        s.includes('space--sm') &&
+        s.includes('tone--Surface'),
+    },
+  ];
+
+  const cssOk = check(id, 'extracted.css', css, cssChecks);
+  const compiledOk = check(id, compiledFile, compiled, compiledChecks);
+
+  return cssOk && compiledOk;
+}
+
+async function verify008() {
+  console.log('\nVerifying snapshot 008-extracted-runtime-contract (public extracted runtime API)');
+
+  const id = '008-extracted-runtime-contract';
+  const css = await readSnapshot(id, 'extracted.css');
+  const compiledFile = await resolveCompiledSnapshot(id);
+  const compiled = await readSnapshot(id, compiledFile);
+
+  const cssChecks: Check[] = [
+    {
+      description: 'extracts token, values, theme, style, and scope CSS',
+      pass: (s) =>
+        s.includes('background-color: var(--var-') &&
+        s.includes('padding: var(--var-') &&
+        s.includes('--token-space--md-') &&
+        s.includes('.theme-') &&
+        s.includes('box-shadow: 0 18px 44px rgba(37, 99, 235, 0.16)'),
+    },
+    {
+      description: 'extracts parent scoped hover selectors',
+      pass: (s) => s.includes(':where(.-') && s.includes(':hover') && s.includes('border-color: var(--var-'),
+    },
+    {
+      description: 'keeps token aliases as nested variable fallbacks',
+      pass: (s) =>
+        s.includes('--token-accentAlias-') &&
+        s.includes('var(--token-accent-') &&
+        !s.includes('[object Object]'),
+    },
+  ];
+
+  const compiledChecks: Check[] = [
+    {
+      description: 'uses extracted generated helpers',
+      pass: (s) =>
+        s.includes('createExtractedSlot') &&
+        s.includes('createExtractedScope') &&
+        s.includes('createExtractedTheme') &&
+        s.includes('createExtractedToken') &&
+        s.includes('withTokens'),
+    },
+    {
+      description: 'keeps public extracted runtime APIs in compiled output',
+      pass: (s) =>
+        s.includes('combineStyle') &&
+        s.includes('combineScope') &&
+        s.includes('bindScope') &&
+        s.includes('getClassName') &&
+        s.includes('getToken') &&
+        s.includes('mergeClassName') &&
+        s.includes('mergeStyle'),
+    },
+    {
+      description: 'removes runtime createTheme import after extraction',
+      pass: (s) => !s.includes('createTheme,'),
+    },
+  ];
+
+  const cssOk = check(id, 'extracted.css', css, cssChecks);
+  const compiledOk = check(id, compiledFile, compiled, compiledChecks);
+
+  return cssOk && compiledOk;
+}
+
 const ok = (await verify002()) &&
   (await verify003()) &&
   (await verify004()) &&
   (await verify005()) &&
-  (await verify006());
+  (await verify006()) &&
+  (await verify007()) &&
+  (await verify008());
 
 if (!ok) {
   console.error('\nVerification FAILED. Run "npm run generate" first if files are missing.');

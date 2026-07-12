@@ -1,6 +1,6 @@
 import { getAtomicClassName, getClassNameDedupe } from '../../../atomic/className';
 import { getTokenVar } from '../../../atomic/token';
-import { getCssVarRawFallback } from '../../../atomic/utils/css';
+import { getCssVarRawFallback } from '../../../atomic/utils/cssVar';
 import { shouldAppendCssPx } from '../../../atomic/value';
 import { CSS_CONFIG } from '../../../config/config/css';
 import { DEBUG_CONFIG } from '../../../config/config/debug';

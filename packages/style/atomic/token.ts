@@ -1,7 +1,7 @@
 import { CSS_CONFIG } from '../config/config/css';
 import type { TokenNameFormat, TokenNameInfo } from '../config/types';
 import { getStyleTokenId, getStyleTokenName, type StyleTokenData, type StyleTokenOverride } from '../style/token';
-import { getCssVar, getCssVarRawFallback } from './utils/css';
+import { getCssVar, getCssVarRawFallback } from './utils/cssVar';
 import { createNameFormatter } from './utils/format';
 import { getIdentifierSafeHash } from './utils/hash';
 

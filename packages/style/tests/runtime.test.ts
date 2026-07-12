@@ -25,10 +25,14 @@ import {
   createFontFace,
   createFontPaletteValues,
   createKeyframes,
+  createNamedTokens,
   createPositionTry,
   createProperty,
   createRscStylePayload,
   createScopeBuilder,
+  createStableTheme,
+  createStableToken,
+  createStableTokens,
   createStyleFn,
   createTheme,
   createThemeRule,
@@ -878,13 +882,13 @@ test('rsc jsx transform keeps props identity without style prop', () => {
 });
 
 test('direct raw style prop keeps token defaults theme-overridable', () => {
-  const token = createToken('blue', 'direct-theme-token');
+  const token = createStableToken('blue', 'direct-theme-token');
   const tokenStyles = {
     container: style.slot({
       color: token,
     }),
   };
-  const theme = createTheme([token('red')], 'direct-runtime-theme');
+  const theme = createStableTheme([token('red')], 'direct-runtime-theme');
   const result = resolveStyleProp([theme, tokenStyles.container]);
 
   includes(result.className, theme.className);
@@ -894,7 +898,7 @@ test('direct raw style prop keeps token defaults theme-overridable', () => {
 test('style prop warns for composition values in dev', () => {
   configureTestRuntime({ dev: true });
 
-  const token = createToken('blue', 'unsupported-css-token');
+  const token = createStableToken('blue', 'unsupported-css-token');
   const warnings: unknown[][] = [];
   const warn = console.warn;
   console.warn = (...args: unknown[]) => {
@@ -1116,8 +1120,8 @@ test('static combineStyle.for lets later token providers override carried values
 });
 
 test('static getToken resolves token values to css variable fallbacks', () => {
-  const base = createToken('blue', 'static-base');
-  const alias = createToken(base, 'static-alias');
+  const base = createStableToken('blue', 'static-base');
+  const alias = createStableToken(base, 'static-alias');
 
   equal(getToken('red'), 'red');
   equal(getToken(10), 10);
@@ -1161,7 +1165,7 @@ test('generated id counters are shared across duplicate module instances', async
 });
 
 test('createTokens supports nested object token groups', () => {
-  const tokens = createTokens({
+  const tokens = createStableTokens({
     color: {
       text: 'blue',
       accent: 'green',
@@ -1180,7 +1184,7 @@ test('createTokens supports nested object token groups', () => {
 });
 
 test('createTokens treats nested arrays as one token value', () => {
-  const tokens = createTokens({
+  const tokens = createStableTokens({
     shadow: [0, 8, 24],
   }, 'array-leaf');
   const override = tokens.shadow([0, 10, 30]);
@@ -1226,13 +1230,13 @@ test('dynamic token providers use last value for duplicate token ids', () => {
 });
 
 test('theme style prop contributes class and token declarations stay theme-overridable', () => {
-  const token = createToken('blue', 'theme-text');
+  const token = createStableToken('blue', 'theme-text');
   const tokenStyles = {
     container: style.slot({
       color: token,
     }),
   };
-  const theme = createTheme([token('red')], 'runtime-theme');
+  const theme = createStableTheme([token('red')], 'runtime-theme');
   const css = combineStyle(tokenStyles);
   const result = resolveStyleProp([css.container as any, theme]);
 
@@ -1246,13 +1250,13 @@ test('theme style prop contributes class and token declarations stay theme-overr
 });
 
 test('local token overrides beat theme class via inline variable', () => {
-  const token = createToken('blue', 'theme-local');
+  const token = createStableToken('blue', 'theme-local');
   const tokenStyles = {
     container: style.slot({
       color: token,
     }),
   };
-  const theme = createTheme([token('red')], 'runtime-theme-local');
+  const theme = createStableTheme([token('red')], 'runtime-theme-local');
   const css = combineStyle(tokenStyles, token('green'));
   const result = resolveStyleProp([theme, css.container as any]);
 
@@ -1266,9 +1270,9 @@ test('local token overrides beat theme class via inline variable', () => {
 });
 
 test('theme token aliases emit nested css variable fallbacks', () => {
-  const base = createToken('blue', 'theme-base');
-  const alias = createToken(base, 'theme-alias');
-  const theme = createTheme([alias(base)], 'runtime-theme-alias');
+  const base = createStableToken('blue', 'theme-base');
+  const alias = createStableToken(base, 'theme-alias');
+  const theme = createStableTheme([alias(base)], 'runtime-theme-alias');
   const rule = createThemeRule(theme);
 
   includes(rule, '--token-theme-alias-');
@@ -1359,6 +1363,35 @@ test('style prop resolver wires token-bound extracted style variables', () => {
 
     equal(result.className, 'bound-style-class');
     equal((result.style as Record<string, unknown>)['--bound-style-value'], 'red');
+  } finally {
+    setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
+  }
+});
+
+test('style prop resolver wires token-bound extracted style variables to named token refs', () => {
+  const token = createExtractedToken('bound-style-named-token', null);
+  const colors = createNamedTokens('runtime.bound.color', {
+    blue: {
+      600: '#2563eb',
+    },
+  });
+  const css = withTokens(
+    createExtractedStyle([
+      ['bound-style-named-dedupe', 'bound-style-named-class', [1, '--bound-style-named-value', token]],
+    ]),
+    [token(colors.blue[600])],
+  );
+
+  try {
+    setBuildMeta({ dev: false, extract: true, hoist: true, rsc: false, css: null });
+
+    const result = resolveStyleProp(css as any);
+
+    equal(result.className, 'bound-style-named-class');
+    includes(
+      String((result.style as Record<string, unknown>)['--bound-style-named-value']),
+      'var(--token-runtime-bound-color-blue-600-',
+    );
   } finally {
     setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
   }
@@ -1513,7 +1546,7 @@ test('extracted transform keeps combined token values dynamic across pooled styl
 });
 
 test('style value ref token deps resolve from direct token bindings', () => {
-  const enterTransform = createToken('translateY(8px)', 'enter-transform');
+  const enterTransform = createStableToken('translateY(8px)', 'enter-transform');
   const enter = createKeyframes({
     from: {
       transform: enterTransform,

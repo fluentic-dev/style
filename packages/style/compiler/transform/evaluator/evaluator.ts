@@ -13,6 +13,7 @@ import {
   createExtractedStyleMerge,
   getExtractedStyleItems,
 } from '../../../builder/extract';
+import { getChildStyleTokenName, getStyleTokenNameFromId, normalizeStyleTokenName } from '../../../builder/token/name';
 import { CSS_CONFIG } from '../../../config/config/css';
 import { CSS_EXTRA_CONFIG } from '../../../config/config/css_extra';
 import type { NamedAtRuleFormat, TokenNameFormat } from '../../../config/types';
@@ -20,12 +21,9 @@ import { createNamedToken, createNamedTokens } from '../../../dialect';
 import { transformKeyframes } from '../../../style/keyframes';
 import type { StyleFnMeta } from '../../../style/style';
 import {
-  getChildStyleTokenName,
   getStyleTokenId,
   getStyleTokenName,
-  getStyleTokenNameFromId,
   isStyleTokenData,
-  normalizeStyleTokenName,
   type StyleTokenData,
   type StyleTokenOverride,
   TOKEN_ID,
@@ -478,10 +476,10 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
       const value = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
       if (!value.ok) return value;
 
-      const debugId = evaluateOptionalDebugId(node.arguments[1] as BabelTypes.Node, scope);
-      if (!debugId.ok) return debugId;
+      const stableId = evaluateOptionalStableTokenId(node.arguments[1] as BabelTypes.Node, scope);
+      if (!stableId.ok) return stableId;
 
-      return evalOk(createCompiledToken(value.value, scope, node.loc?.start, node, debugId.value));
+      return evalOk(createCompiledToken(value.value, scope, node.loc?.start, node, stableId.value));
     }
 
     if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_KEYFRAMES) {
@@ -602,7 +600,7 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
       if (!url.ok) return evalFail(`fontSrc url must be statically analyzable: ${url.reason}`);
       if (typeof url.value !== 'string') return evalFail('fontSrc url must be a static string');
 
-      const format = evaluateOptionalDebugId(node.arguments[1] as BabelTypes.Node, scope);
+      const format = evaluateOptionalString(node.arguments[1] as BabelTypes.Node, scope);
       if (!format.ok) return evalFail(`fontSrc format must be statically analyzable: ${format.reason}`);
 
       return evalOk(fontSrc(url.value, format.value));
@@ -612,10 +610,10 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
       const value = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
       if (!value.ok) return value;
 
-      const debugId = evaluateOptionalDebugId(node.arguments[1] as BabelTypes.Node, scope);
-      if (!debugId.ok) return debugId;
+      const stableId = evaluateOptionalStableTokenId(node.arguments[1] as BabelTypes.Node, scope);
+      if (!stableId.ok) return stableId;
 
-      return evalOk(createCompiledTokens(value.value, scope, node.loc?.start, node, debugId.value));
+      return evalOk(createCompiledTokens(value.value, scope, node.loc?.start, node, stableId.value));
     }
 
     if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_CREATE_NAMED_TOKEN) {
@@ -658,19 +656,19 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
         (node.arguments[0] as BabelTypes.Identifier).name === 'Number';
 
       const valuesNode = hasNumberArg ? node.arguments[1] : node.arguments[0];
-      const debugNode = hasNumberArg ? node.arguments[2] : node.arguments[1];
+      const stableIdNode = hasNumberArg ? node.arguments[2] : node.arguments[1];
 
       const values = evaluateNode(valuesNode as BabelTypes.Node, scope);
       if (!values.ok) return values;
 
-      const debugId = evaluateOptionalDebugId(debugNode as BabelTypes.Node, scope);
-      if (!debugId.ok) return debugId;
+      const stableId = evaluateOptionalStableTokenId(stableIdNode as BabelTypes.Node, scope);
+      if (!stableId.ok) return stableId;
 
       if (!Array.isArray(values.value)) {
         return evalFail('createValues values must be an array');
       }
 
-      return evalOk(createCompiledValues(values.value, scope, node.loc?.start, node, debugId.value, hasNumberArg));
+      return evalOk(createCompiledValues(values.value, scope, node.loc?.start, node, stableId.value, hasNumberArg));
     }
   }
 
@@ -904,10 +902,10 @@ function createCompiledToken(
   scope: EvalScope,
   loc: { line: number; column: number; } | null | undefined,
   runtimeValue: BabelTypes.Expression,
-  debugId?: string,
+  stableId?: string,
   debugName?: string | null,
 ): StyleTokenData {
-  let tokenId = debugId;
+  let tokenId = stableId;
 
   if (!tokenId) {
     const hash = (scope.styleFilePath ?? scope.filePath) + '\n' +
@@ -916,9 +914,18 @@ function createCompiledToken(
     tokenId = hashString(hash);
   }
 
+  if (isStyleTokenData(value)) {
+    return withRuntimeValue(runtimeValue, {
+      [TOKEN_ID]: tokenId,
+      [TOKEN_NAME]: debugName === undefined ? getStyleTokenNameFromId(stableId) : normalizeStyleTokenName(debugName),
+      value: value.value,
+      ref: value,
+    });
+  }
+
   return withRuntimeValue(runtimeValue, {
     [TOKEN_ID]: tokenId,
-    [TOKEN_NAME]: debugName === undefined ? getStyleTokenNameFromId(debugId) : normalizeStyleTokenName(debugName),
+    [TOKEN_NAME]: debugName === undefined ? getStyleTokenNameFromId(stableId) : normalizeStyleTokenName(debugName),
     value,
     ref: null,
   });
@@ -929,10 +936,10 @@ function createCompiledTokens(
   scope: EvalScope,
   loc: { line: number; column: number; } | null | undefined,
   runtimeValue: BabelTypes.Expression,
-  debugId?: string,
+  stableId?: string,
 ) {
-  const tokenGroupId = debugId ?? createCompiledTokenGroupId(scope, loc);
-  const tokenGroupName = getStyleTokenNameFromId(debugId);
+  const tokenGroupId = stableId ?? createCompiledTokenGroupId(scope, loc);
+  const tokenGroupName = getStyleTokenNameFromId(stableId);
 
   if (Array.isArray(value)) {
     const result: Record<PropertyKey, unknown> = {};
@@ -945,7 +952,7 @@ function createCompiledTokens(
         scope,
         loc,
         runtimeValue,
-        getChildDebugId(tokenGroupId, String(i)),
+        getChildStableId(tokenGroupId, String(i)),
         getChildStyleTokenName(tokenGroupName, String(i)),
       );
     }
@@ -1000,12 +1007,12 @@ function assignCompiledTokenRecord(
   scope: EvalScope,
   loc: { line: number; column: number; } | null | undefined,
   runtimeValue: BabelTypes.Expression,
-  debugId?: string,
+  stableId?: string,
   debugName?: string | null,
 ) {
   for (const key of Object.keys(value)) {
     const item = value[key];
-    const itemDebugId = getChildDebugId(debugId, key);
+    const itemStableId = getChildStableId(stableId, key);
     const itemDebugName = getChildStyleTokenName(debugName, key);
 
     if (item && typeof item === 'object' && !Array.isArray(item) && !isStyleTokenData(item)) {
@@ -1019,7 +1026,7 @@ function assignCompiledTokenRecord(
         scope,
         loc,
         runtimeValue,
-        itemDebugId,
+        itemStableId,
         itemDebugName,
       );
     } else {
@@ -1028,7 +1035,7 @@ function assignCompiledTokenRecord(
         scope,
         loc,
         runtimeValue,
-        itemDebugId,
+        itemStableId,
         itemDebugName,
       );
     }
@@ -1040,11 +1047,11 @@ function createCompiledValues(
   scope: EvalScope,
   loc: { line: number; column: number; } | null | undefined,
   runtimeValue: BabelTypes.Expression,
-  debugId: string | undefined,
+  stableId: string | undefined,
   isNumber: boolean,
 ): CompiledTokenFactory {
   const tokens = new Map<unknown, StyleTokenData>();
-  const groupName = getStyleTokenNameFromId(debugId);
+  const groupName = getStyleTokenNameFromId(stableId);
 
   for (let i = 0, len = values.length; i < len; i++) {
     const value = values[i];
@@ -1056,7 +1063,7 @@ function createCompiledValues(
         scope,
         loc,
         runtimeValue,
-        getChildDebugId(debugId, hashString(String(value))),
+        getChildStableId(stableId, hashString(String(value))),
         getChildStyleTokenName(groupName, getValueDebugName(value)),
       ),
     );
@@ -1082,7 +1089,14 @@ function isCompiledTokenFactory(value: unknown): value is CompiledTokenFactory {
   return !!value && typeof value === 'object' && (value as CompiledTokenFactory)[COMPILED_TOKEN_FACTORY] === true;
 }
 
-function evaluateOptionalDebugId(
+function evaluateOptionalStableTokenId(
+  node: BabelTypes.Node | null | undefined,
+  scope: EvalScope,
+): EvalResult & { value?: string; } {
+  return evaluateOptionalString(node, scope);
+}
+
+function evaluateOptionalString(
   node: BabelTypes.Node | null | undefined,
   scope: EvalScope,
 ): EvalResult & { value?: string; } {
@@ -1126,11 +1140,11 @@ function evaluateOptionalStableId(
   }) as EvalResult & { value?: StableId; };
 }
 
-function getChildDebugId(
-  debugId: string | undefined,
+function getChildStableId(
+  stableId: string | undefined,
   child: string,
 ) {
-  return debugId ? debugId + '--' + child : undefined;
+  return stableId ? stableId + '--' + child : undefined;
 }
 
 function getValueDebugName(value: unknown) {

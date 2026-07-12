@@ -8,7 +8,7 @@ import {
   defaultTailwindColors,
   TailwindSelectors,
 } from '../presets/tailwind';
-import { classNameTransform, classNameValue, createClassNameFn, getStyleFnMeta } from '../style';
+import { classNameTransform, classNameValue, createClassNameFn, getStyleFnMeta, styleTransform } from '../style';
 import {
   assertCompileError,
   assertEnum,
@@ -425,6 +425,38 @@ test('dev debug transform traces selector style arguments to their own fields', 
   includes(result.code, `label: ["media", "style.media", "styles.ts"], fields: { "padding": [7, 5] }`);
   includes(result.code, `.hover({\n    backgroundColor: 'blue'\n  }, { $$debug: true, loc: [8, 6]`);
   includes(result.code, `label: ["hover", "style.hover", "styles.ts"], fields: { "backgroundColor": [9, 5] }`);
+});
+
+test('dev debug transform maps transformed style fields to source utility fields', () => {
+  const { style: tw } = createStyleFn({
+    selectors: TailwindSelectors,
+    transform: styleTransform({
+      transform(style: { justify?: 'center'; }) {
+        return style.justify === 'center'
+          ? { justifyContent: classNameValue('center', 'justify-center') }
+          : {};
+      },
+    }),
+  });
+  const result = injectStyleDebugData(
+    `
+import { tw } from './style';
+
+const button = tw({
+  justify: 'center',
+});
+`,
+    '/tmp/tailwind-debug.ts',
+    {
+      importSources: [{
+        source: './style',
+        name: 'tw',
+        styleFn: tw,
+      }],
+    },
+  );
+
+  includes(result.code, `fields: { "justify": [5, 3], "justifyContent": [5, 3] }`);
 });
 
 test('dev debug transform traces chain merge to style or value sites', () => {

@@ -34,10 +34,10 @@ export function compileThemeCall(
     throw path.buildCodeFrameError('createTheme first argument must be a static array of token overrides.');
   }
 
-  const debugIdArg = evaluateNode(path.node.arguments[1] as BabelTypes.Node, scope);
+  const stableIdArg = evaluateNode(path.node.arguments[1] as BabelTypes.Node, scope);
 
-  if (path.node.arguments[1] && !debugIdArg.ok) {
-    throw path.buildCodeFrameError(`createTheme debugId must be statically analyzable: ${debugIdArg.reason}`);
+  if (path.node.arguments[1] && !stableIdArg.ok) {
+    throw path.buildCodeFrameError(`createTheme stableId must be statically analyzable: ${stableIdArg.reason}`);
   }
 
   const tokens: StyleTokenOverride[] = [];
@@ -54,11 +54,11 @@ export function compileThemeCall(
 
   const loc = path.node.loc?.start;
 
-  const debugId = debugIdArg.ok && debugIdArg.value !== undefined
-    ? String(debugIdArg.value)
+  const stableId = stableIdArg.ok && stableIdArg.value !== undefined
+    ? String(stableIdArg.value)
     : getStableThemeId(state.fileId, loc ? loc.line + ':' + loc.column : 'createTheme');
 
-  const id = debugId;
+  const id = stableId;
 
   const themeNameFormat = opts.css?.themeNameFormat || CSS_CONFIG.themeNameFormat || null;
 

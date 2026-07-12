@@ -1,5 +1,6 @@
+import { getChildStyleTokenName } from '../builder/token/name';
 import type { StyleToken } from './token';
-import { createStyleToken, getChildStyleTokenName } from './token';
+import { createStyleToken } from './token';
 import type { InferValue, ValueBase } from './value';
 
 export type TokenTuple<T extends readonly ValueBase[]> = {
@@ -15,15 +16,13 @@ export type TokenRecord<T extends object> = {
 
 export function createTokens<const T extends readonly ValueBase[]>(
   values: T,
-  debugId?: string,
 ): TokenTuple<T>;
 export function createTokens<T extends object>(
   values: T,
-  debugId?: string,
 ): TokenRecord<T>;
 export function createTokens(
   values: readonly ValueBase[] | Record<PropertyKey, unknown>,
-  debugId?: string,
+  stableId?: string,
 ): any {
   const tokens: Record<PropertyKey, StyleToken> = {};
 
@@ -32,12 +31,12 @@ export function createTokens(
       const value = values[i];
       tokens[value] = createStyleToken(
         value,
-        getChildDebugId(debugId, String(i)),
-        getChildStyleTokenName(debugId, String(i)),
+        getChildStableId(stableId, String(i)),
+        getChildStyleTokenName(stableId, String(i)),
       );
     }
   } else {
-    assignTokenRecord(tokens, values as Record<PropertyKey, unknown>, debugId, debugId ?? null);
+    assignTokenRecord(tokens, values as Record<PropertyKey, unknown>, stableId, stableId ?? null);
   }
 
   return tokens;
@@ -46,7 +45,7 @@ export function createTokens(
 function assignTokenRecord(
   target: Record<PropertyKey, unknown>,
   values: Record<PropertyKey, unknown>,
-  debugId: string | undefined,
+  stableId: string | undefined,
   debugName: string | null,
 ) {
   for (let key in values) {
@@ -56,16 +55,16 @@ function assignTokenRecord(
     if (value && typeof value === 'object' && !Array.isArray(value)) {
       const child: Record<PropertyKey, unknown> = {};
       target[key] = child;
-      assignTokenRecord(child, value as Record<PropertyKey, unknown>, getChildDebugId(debugId, key), childName);
+      assignTokenRecord(child, value as Record<PropertyKey, unknown>, getChildStableId(stableId, key), childName);
     } else {
-      target[key] = createStyleToken(value, getChildDebugId(debugId, key), childName);
+      target[key] = createStyleToken(value, getChildStableId(stableId, key), childName);
     }
   }
 }
 
-function getChildDebugId(
-  debugId: string | undefined,
+function getChildStableId(
+  stableId: string | undefined,
   child: string,
 ) {
-  return debugId ? debugId + '--' + child : undefined;
+  return stableId ? stableId + '--' + child : undefined;
 }

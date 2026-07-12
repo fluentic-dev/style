@@ -1,4 +1,4 @@
-import { symbol } from '../utils/global';
+import { symbol } from '../utils/symbol';
 import type { CSSProperties, StyleObject, StyleValue } from './types';
 
 const CLASS_NAME_VALUE: unique symbol = symbol('transform.classNameValue');

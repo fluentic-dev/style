@@ -1,8 +1,6 @@
 import type {
   ClassNameFormat,
   ClassNameInfo,
-  ScopeClassNameFormat,
-  ScopeClassNameInfo,
   TransformClassNameFormat,
   TransformClassNameInfo,
 } from '../../../config/types';
@@ -12,18 +10,12 @@ export const CLASS_NAME_FORMAT = '[(atRule)-][(scopeSelector)-](property)[-(sele
 
 export const TRANSFORM_CLASS_NAME_FORMAT = '(className)--$hash';
 
-export const SCOPE_CLASS_NAME_FORMAT = '-(className)';
-
 export const formatClassName = createNameFormatter<ClassNameInfo>([
   'atRule',
   'scopeSelector',
   'property',
   'selector',
   'value',
-]);
-
-export const formatScopeClassName = createNameFormatter<ScopeClassNameInfo>([
-  'className',
 ]);
 
 export const formatTransformClassName = createNameFormatter<TransformClassNameInfo>([
@@ -44,11 +36,4 @@ export function getDebugTransformClassName(
   info: TransformClassNameInfo,
 ) {
   return formatTransformClassName(format || TRANSFORM_CLASS_NAME_FORMAT, hash, info);
-}
-
-export function getDebugScopeClassName(
-  format: ScopeClassNameFormat | null,
-  info: ScopeClassNameInfo,
-) {
-  return formatScopeClassName(format || SCOPE_CLASS_NAME_FORMAT, null, info);
 }

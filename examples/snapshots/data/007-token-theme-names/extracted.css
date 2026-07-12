@@ -1,0 +1,13 @@
+@layer reset, css, override;
+@layer css {
+.theme-light-i66w530{--token-theme--background--page-bdjkju2:#f8fafc;--token-theme--text--body-oh170e0:#0f172a}
+.theme-brand-eno7nq0{--token-theme--background--panel-tur8950:#eef2ff;--token-theme--text--muted-ctbal00:#475569}
+.fdbd6w0{box-shadow: var(--var-paagj10, var(--token-anonymous-b23vvnq, 0 18px 48px rgba(15, 23, 42, 0.14)))}
+.ogr3n30{color: var(--var-dvpw3k0, var(--token-theme--text--body-oh170e0, #111827))}
+.bat0zow{margin: var(--var-j97jm70, var(--token-space--sm-btx10n4, 12))}
+.ejv5v70{padding: var(--var-b0ouidu, var(--token-space--lg-e2nksp0, 24))}
+.d5g8aa0{border-color: var(--var-fslapi0, var(--token-accent-bmmt3w4, #2563eb))}
+.cmumn10{background-color: var(--var-bepsfze, var(--token-theme--background--page-bdjkju2, #ffffff))}
+.o61f760:hover{color: var(--var-byhryrv, var(--token-tone--Text-bnpp9c2, #111827))}
+.gn58000:hover{background-color: var(--var-bomxsyk, var(--token-tone--Surface-skmlya0, #ffffff))}
+}

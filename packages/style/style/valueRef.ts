@@ -1,4 +1,4 @@
-import { symbol } from '../utils/global';
+import { symbol } from '../utils/symbol';
 import type { StyleTokenData } from './token';
 
 export const AT_RULE_REF: unique symbol = symbol('atRule.ref');

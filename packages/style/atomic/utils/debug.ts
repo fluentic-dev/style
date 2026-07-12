@@ -1,4 +1,4 @@
-import { sanitizeCssIdentName } from './css';
+import { sanitizeCssIdentName } from './cssIdent';
 
 export function normalizeDebugKeywordValue(value: string) {
   const normalized = value.trim().toLowerCase();

@@ -1,7 +1,7 @@
 @layer reset, css, override;
 @layer css {
-.theme-15x3t4k-bdybgxr{--token-color--bg-c0wb4k0:#ffffff;--token-color--text-b9nf5kc:#17201b;--token-color--muted-hr8l6a0:#5f6f67;--token-color--accent-bhydlup:#0f766e;--token-color--accentText-be1epma:#ffffff;--token-shadow--card-c0d5yq0:0 18px 40px rgba(34, 42, 37, 0.08)}
-.theme-17quq42-hl8zs80{--token-color--bg-c0wb4k0:#101715;--token-color--text-b9nf5kc:#eef8f4;--token-color--muted-hr8l6a0:#a7bbb2;--token-color--accent-bhydlup:#5eead4;--token-color--accentText-be1epma:#06201c;--token-shadow--card-c0d5yq0:0 22px 48px rgba(0, 0, 0, 0.34)}
+.theme-bdybgxr{--token-color--bg-c0wb4k0:#ffffff;--token-color--text-b9nf5kc:#17201b;--token-color--muted-hr8l6a0:#5f6f67;--token-color--accent-bhydlup:#0f766e;--token-color--accentText-be1epma:#ffffff;--token-shadow--card-c0d5yq0:0 18px 40px rgba(34, 42, 37, 0.08)}
+.theme-hl8zs80{--token-color--bg-c0wb4k0:#101715;--token-color--text-b9nf5kc:#eef8f4;--token-color--muted-hr8l6a0:#a7bbb2;--token-color--accent-bhydlup:#5eead4;--token-color--accentText-be1epma:#06201c;--token-shadow--card-c0d5yq0:0 22px 48px rgba(0, 0, 0, 0.34)}
 .border--b3cpjgx{border: 1px solid}
 .radius--dzkss80{border-radius: var(--var-uo62oq0, var(--token-radius--card-svgtds0, 14))}
 .box-shadow--dcjjn80{box-shadow: var(--var-cw5jiv0, var(--token-shadow--card-c0d5yq0, 0 18px 40px rgba(34, 42, 37, 0.08)))}

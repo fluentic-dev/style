@@ -34,6 +34,7 @@ import {
   annotateThemeCall,
   annotateTokenDeclaration,
   getImportedName,
+  getObjectPropertyKey,
   isStyleChainCall,
 } from '../syntax';
 import type { BabelCore, BabelTypes, NodePath } from '../utils/babel';
@@ -552,12 +553,13 @@ function getDebugStyleArg(
 ) {
   const arg = getStyleObjectArg(path, state);
   if (!arg) return arg;
+  const meta = getStyleCallMeta(path, state);
 
   if (arg.type !== 'ObjectExpression') {
     return resolveDebugMergeObject(t, arg, path, state, sourcemapTrace) ?? arg;
   }
 
-  return flattenDebugObjectExpression(
+  const flattened = flattenDebugObjectExpression(
     t,
     arg,
     path,
@@ -565,6 +567,8 @@ function getDebugStyleArg(
     sourcemapTrace,
     new Set(),
   );
+
+  return appendTransformDebugFieldAliases(t, flattened, meta, state);
 }
 
 function getDebugCallLoc(
@@ -592,6 +596,14 @@ function getStyleObjectArg(
   const styleArgIndex = selectorArgIndex === null ? 0 : selectorArgIndex + 1;
 
   return path.node.arguments[styleArgIndex];
+}
+
+function getStyleCallMeta(
+  path: NodePath<BabelTypes.CallExpression>,
+  state: PluginState,
+) {
+  const rootName = getStyleChainRootName(path.node.callee, state.styleNames);
+  return rootName ? state.styleMetas.get(rootName) ?? null : null;
 }
 
 function isSelectorStyleCall(
@@ -834,6 +846,72 @@ function flattenDebugObjectExpression(
   }
 
   return t.objectExpression(properties);
+}
+
+function appendTransformDebugFieldAliases(
+  t: typeof BabelTypes,
+  node: BabelTypes.ObjectExpression,
+  meta: StyleFnMeta | null,
+  state: PluginState,
+) {
+  if (!meta || meta.mode !== 'StyleObject' || !meta.transform) return node;
+
+  const existing = new Set<string>();
+  for (const property of node.properties) {
+    if (property.type !== 'ObjectProperty' || property.computed) continue;
+    const key = getObjectPropertyKey(property);
+    if (key) existing.add(key);
+  }
+
+  const aliases: BabelTypes.ObjectProperty[] = [];
+
+  for (const property of node.properties) {
+    if (property.type !== 'ObjectProperty' || property.computed) continue;
+
+    const key = getObjectPropertyKey(property);
+    if (!key) continue;
+
+    const value = evaluateNode(property.value, getDebugEvalScope(state));
+    if (!value.ok) continue;
+
+    let transformed: Record<string, unknown>;
+    try {
+      transformed = meta.transform.transform({ [key]: value.value }) as Record<string, unknown>;
+    } catch {
+      continue;
+    }
+
+    for (const transformedKey of Object.keys(transformed)) {
+      if (existing.has(transformedKey)) continue;
+
+      existing.add(transformedKey);
+      aliases.push(createDebugFieldAlias(t, transformedKey, property));
+    }
+  }
+
+  if (!aliases.length) return node;
+
+  return t.objectExpression([
+    ...node.properties,
+    ...aliases,
+  ]);
+}
+
+function createDebugFieldAlias(
+  t: typeof BabelTypes,
+  key: string,
+  source: BabelTypes.ObjectProperty,
+) {
+  const alias = t.objectProperty(t.stringLiteral(key), t.nullLiteral()) as DebugTraceProperty;
+  const sourceTrace = source as DebugTraceProperty;
+
+  alias.loc = source.loc;
+  alias.__styleSourcemapStyleLoc = sourceTrace.__styleSourcemapStyleLoc;
+  alias.__styleSourcemapStyleSourceUrl = sourceTrace.__styleSourcemapStyleSourceUrl;
+  alias.__styleSourcemapValueLoc = sourceTrace.__styleSourcemapValueLoc;
+  alias.__styleSourcemapValueSourceUrl = sourceTrace.__styleSourcemapValueSourceUrl;
+
+  return alias;
 }
 
 function resolveDebugSpreadObject(

@@ -2,7 +2,8 @@ import { CSS_CONFIG } from '../config/config/css';
 import type { ThemeNameFormat, ThemeNameInfo, TokenNameFormat } from '../config/types';
 import type { StyleTokenOverride } from '../style/token';
 import { getTokenOverrideValue, getTokenVarName } from './token';
-import { escapeCssIdent, escapeCssValue } from './utils/css';
+import { escapeCssIdent } from './utils/cssIdent';
+import { escapeCssValue } from './utils/cssVar';
 import { createNameFormatter } from './utils/format';
 import { getIdentifierSafeHash } from './utils/hash';
 
@@ -18,7 +19,7 @@ export function createThemeClassName(
   return formatThemeName(
     themeNameFormat || THEME_NAME_FORMAT,
     getIdentifierSafeHash(id, CSS_CONFIG.hashLength),
-    { name },
+    { name: normalizeThemeName(name) },
   );
 }
 
@@ -47,4 +48,42 @@ function getThemeDeclaration(
     : escapeCssValue(String(token.value ?? ''));
 
   return name + ':' + value;
+}
+
+export function normalizeThemeName(value: string | null | undefined): string | null {
+  if (!value) return null;
+
+  value = value.trim();
+  if (!value) return null;
+  if (/^\d+$/.test(value)) return null;
+  if (isGeneratedNameHash(value)) return null;
+
+  const stableSuffix = value.match(/^(.+)-[a-z0-9]{7}$/);
+  if (stableSuffix?.[1] && isGeneratedNameHash(value.slice(-7))) {
+    return normalizeThemeName(stableSuffix[1]);
+  }
+
+  value = stripGenericThemePrefix(value);
+  if (!value) return null;
+
+  return value;
+}
+
+function stripGenericThemePrefix(value: string) {
+  const parts = value.split('--');
+
+  while (parts[0] === 'theme' || parts[0] === 'themes') {
+    parts.shift();
+  }
+
+  value = parts.join('--');
+
+  if (value.startsWith('theme-')) return value.slice('theme-'.length);
+  if (value.startsWith('themes-')) return value.slice('themes-'.length);
+
+  return value;
+}
+
+function isGeneratedNameHash(value: string) {
+  return /^[a-z0-9]{7}$/.test(value) && /\d/.test(value);
 }

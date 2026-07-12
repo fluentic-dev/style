@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { formatClassName } from '../atomic/debug/className';
 import { compareLayerPriority, type LayerPriority } from '../atomic/layer';
-import { escapeCssIdent } from '../atomic/utils/css';
+import { escapeCssIdent } from '../atomic/utils/cssIdent';
 import { normalizeDebugKeywordValue, normalizePropertyName, sanitizeDebugPropertyName } from '../atomic/utils/debug';
 import { CompilerRuntimeMode } from '../compiler';
 import webpackLoader from '../plugin/bundler/webpack/loader';
@@ -3194,6 +3194,7 @@ export const styles = {
   notEqual(textVar, bgVar);
   includes(css, '--token-' + textVar + ':white');
   includes(css, '--token-' + bgVar + ':var(--token-');
+  notIncludes(css, '[object Object]');
 });
 
 test('compiler extracts createTheme from named token proxy members', () => {

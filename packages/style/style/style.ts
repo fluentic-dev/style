@@ -6,7 +6,7 @@ import { createDefaultFnResult } from '../builder/style_fns';
 import type { typeAliases } from '../builder/types/alias';
 import type { StableIdInput } from '../css/utils';
 import { PrioritySelectors } from '../selector/presets';
-import { symbol } from '../utils/global';
+import { symbol } from '../utils/symbol';
 import { type } from '../utils/type';
 import type { Type } from '../utils/type';
 import { createStyleKeyframes } from './keyframes';

@@ -58,8 +58,9 @@ import nextLoader from '../plugin/nextjs/loader';
 import { nextRegistry } from '../plugin/nextjs/utils';
 import { createPluginCompiler, createTransformFilter, transformCssOutput } from '../plugin/utils';
 import { normalizeSidecarRoutePath } from '../plugin/utils/sidecar/utils';
-import { createCombinedStylePool } from '../runtime/core/cache/pool';
+import { createCombinedStylePool as createCombinedStylePoolBase } from '../runtime/core/cache/pool';
 import { resolveStyleProp } from '../runtime/core/cache/prop';
+import { runtimeTokenValueResolver } from '../runtime/core/cache/token';
 import { getCombinedStyleScopes } from '../runtime/core/combinedStyle';
 import { getClassName } from '../runtime/core/getClassName';
 import { getSheetRules } from '../runtime/core/getSheetRules';
@@ -76,6 +77,9 @@ import { createSelectorAssert, selector } from '../selector/selector';
 import { createDevSheet, createProdSheet } from '../sheet';
 import { getRuleCallsite } from '../sheet/sourcemap';
 import { createStyleFn, createTheme, createToken, createTokens, createValues } from '../style';
+import { createStyleToken, type StyleToken, type StyleTokenOverride } from '../style/token';
+import type { ValueBase } from '../style/value';
+import type { StableId } from '../utils/id';
 import { traceCallsite } from '../utils/trace';
 
 export {
@@ -106,6 +110,9 @@ export {
   createScopeBuilder,
   createSelectorAssert,
   createSlotBuilder,
+  createStableTheme,
+  createStableToken,
+  createStableTokens,
   createStyleBuilder,
   createStyleFn,
   createTheme,
@@ -156,6 +163,10 @@ export {
 };
 
 export type { BuilderData, DebugData, StyleData };
+
+function createCombinedStylePool(ttl?: number) {
+  return createCombinedStylePoolBase(runtimeTokenValueResolver, ttl);
+}
 
 export const tests: [name: string, fn: () => void | Promise<void>][] = [];
 export const testDir = fileURLToPath(new URL('.', import.meta.url));
@@ -236,6 +247,20 @@ type DebugTransformOptions = TestCompilerOptions & {
 type TestRuntimeOptions = ConfigureStyleRuntimeOptions & DevRuntimeOptions & {
   dev?: boolean;
 };
+
+function createStableToken<T>(value: T | StyleToken<T>, stableId: string) {
+  return createStyleToken(value, stableId);
+}
+
+const createStableTokens = createTokens as unknown as (
+  values: readonly ValueBase[] | Record<PropertyKey, unknown>,
+  stableId: string,
+) => any;
+
+const createStableTheme = createTheme as unknown as (
+  tokens: readonly StyleTokenOverride[],
+  stableId: StableId | string,
+) => ReturnType<typeof createTheme>;
 
 export const selectors = {
   hover: selector(':hover'),
