@@ -286,8 +286,9 @@ export default function HomePage() {
           <p className='home-kicker'>Component style composition for React</p>
           <h1>What if styling composed like React components do?</h1>
           <p className='home-lede'>
-            React gave us components, props, context, and composition. Styling has evolved in many directions, each
-            solving different problems. Fluentic explores one approach where styling follows the same component model.
+            Build your own styling language on top of a stable React styling model. Fluentic gives teams composable
+            style data, component-owned styling boundaries, and userland chains and transforms that still work with
+            runtime resolution and extraction.
           </p>
           <p className='home-tagline'>
             Most developers no longer struggle writing styles. The difficult part is confidently changing them months

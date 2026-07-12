@@ -1,6 +1,6 @@
 # Fluentic Style
 
-Component style composition for React.
+Build your own styling language on top of a stable React styling model.
 
 React styling has a lot of good answers already: CSS files, utility classes,
 CSS-in-JS, compiled CSS, design tokens, and component libraries. Fluentic
