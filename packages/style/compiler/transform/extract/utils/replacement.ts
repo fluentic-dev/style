@@ -8,7 +8,7 @@ import {
   ITEM_VALUE_TYPE_VARIABLE,
 } from '../../../../builder/data/const';
 import type { BuilderType, ExtractedItemValue } from '../../../../builder/data/state';
-import { getStyleTokenId, isStyleTokenData, type StyleTokenData } from '../../../../style/token';
+import { getStyleTokenId, getStyleTokenName, isStyleTokenData, type StyleTokenData } from '../../../../style/token';
 import type { AtRuleRefData } from '../../../../style/valueRef';
 import {
   FN_CREATE_EXTRACTED_SCOPE,
@@ -332,6 +332,7 @@ function buildExtractedTokenExpression(
       t.stringLiteral(getStyleTokenId(token)),
       literalExpression(t, token.value),
       token.ref ? buildExtractedTokenExpression(t, token.ref, state) : t.nullLiteral(),
+      getStyleTokenName(token) ? t.stringLiteral(getStyleTokenName(token)!) : t.nullLiteral(),
     ],
   );
 }

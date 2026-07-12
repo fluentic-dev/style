@@ -20,11 +20,16 @@ import { createNamedToken, createNamedTokens } from '../../../dialect';
 import { transformKeyframes } from '../../../style/keyframes';
 import type { StyleFnMeta } from '../../../style/style';
 import {
+  getChildStyleTokenName,
   getStyleTokenId,
+  getStyleTokenName,
+  getStyleTokenNameFromId,
   isStyleTokenData,
+  normalizeStyleTokenName,
   type StyleTokenData,
   type StyleTokenOverride,
   TOKEN_ID,
+  TOKEN_NAME,
   TOKEN_OVERRIDE,
 } from '../../../style/token';
 import type { StyleTransform } from '../../../style/transform';
@@ -879,6 +884,7 @@ function createCompiledTokenOverride(
     return withRuntimeValue(runtimeValue, {
       [TOKEN_ID]: getStyleTokenId(token),
       [TOKEN_OVERRIDE]: true,
+      [TOKEN_NAME]: getStyleTokenName(token),
       value: value.value,
       ref: value,
     });
@@ -887,6 +893,7 @@ function createCompiledTokenOverride(
   return withRuntimeValue(runtimeValue, {
     [TOKEN_ID]: getStyleTokenId(token),
     [TOKEN_OVERRIDE]: true,
+    [TOKEN_NAME]: getStyleTokenName(token),
     value,
     ref: null,
   });
@@ -898,6 +905,7 @@ function createCompiledToken(
   loc: { line: number; column: number; } | null | undefined,
   runtimeValue: BabelTypes.Expression,
   debugId?: string,
+  debugName?: string | null,
 ): StyleTokenData {
   let tokenId = debugId;
 
@@ -910,6 +918,7 @@ function createCompiledToken(
 
   return withRuntimeValue(runtimeValue, {
     [TOKEN_ID]: tokenId,
+    [TOKEN_NAME]: debugName === undefined ? getStyleTokenNameFromId(debugId) : normalizeStyleTokenName(debugName),
     value,
     ref: null,
   });
@@ -923,6 +932,7 @@ function createCompiledTokens(
   debugId?: string,
 ) {
   const tokenGroupId = debugId ?? createCompiledTokenGroupId(scope, loc);
+  const tokenGroupName = getStyleTokenNameFromId(debugId);
 
   if (Array.isArray(value)) {
     const result: Record<PropertyKey, unknown> = {};
@@ -936,6 +946,7 @@ function createCompiledTokens(
         loc,
         runtimeValue,
         getChildDebugId(tokenGroupId, String(i)),
+        getChildStyleTokenName(tokenGroupName, String(i)),
       );
     }
 
@@ -955,6 +966,7 @@ function createCompiledTokens(
     loc,
     runtimeValue,
     tokenGroupId,
+    tokenGroupName,
   );
 
   return result;
@@ -989,10 +1001,12 @@ function assignCompiledTokenRecord(
   loc: { line: number; column: number; } | null | undefined,
   runtimeValue: BabelTypes.Expression,
   debugId?: string,
+  debugName?: string | null,
 ) {
   for (const key of Object.keys(value)) {
     const item = value[key];
     const itemDebugId = getChildDebugId(debugId, key);
+    const itemDebugName = getChildStyleTokenName(debugName, key);
 
     if (item && typeof item === 'object' && !Array.isArray(item) && !isStyleTokenData(item)) {
       const child: Record<PropertyKey, unknown> = {};
@@ -1006,6 +1020,7 @@ function assignCompiledTokenRecord(
         loc,
         runtimeValue,
         itemDebugId,
+        itemDebugName,
       );
     } else {
       target[key] = createCompiledToken(
@@ -1014,6 +1029,7 @@ function assignCompiledTokenRecord(
         loc,
         runtimeValue,
         itemDebugId,
+        itemDebugName,
       );
     }
   }
@@ -1028,6 +1044,7 @@ function createCompiledValues(
   isNumber: boolean,
 ): CompiledTokenFactory {
   const tokens = new Map<unknown, StyleTokenData>();
+  const groupName = getStyleTokenNameFromId(debugId);
 
   for (let i = 0, len = values.length; i < len; i++) {
     const value = values[i];
@@ -1040,6 +1057,7 @@ function createCompiledValues(
         loc,
         runtimeValue,
         getChildDebugId(debugId, hashString(String(value))),
+        getChildStyleTokenName(groupName, getValueDebugName(value)),
       ),
     );
   }
@@ -1115,12 +1133,28 @@ function getChildDebugId(
   return debugId ? debugId + '--' + child : undefined;
 }
 
+function getValueDebugName(value: unknown) {
+  if (typeof value === 'number') return String(value);
+  if (typeof value !== 'string') return null;
+
+  const parts = value.split(/[;|]/);
+  const label = parts[1]?.trim();
+  if (label) return sanitizeTokenDebugName(label);
+
+  return sanitizeTokenDebugName(parts[0]?.trim() ?? '');
+}
+
+function sanitizeTokenDebugName(value: string) {
+  return value.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || null;
+}
+
 function withRuntimeValue<T extends StyleTokenData | StyleTokenOverride>(
   runtimeValue: BabelTypes.Expression,
   token: T,
 ): T {
   return Object.assign({}, token, {
     [TOKEN_ID]: token[TOKEN_ID],
+    [TOKEN_NAME]: token[TOKEN_NAME] ?? null,
     [COMPILED_RUNTIME_VALUE]: runtimeValue,
   });
 }

@@ -21,25 +21,35 @@ const lightTheme = createExtractedTheme('15x3t4k', 'theme-15x3t4k-bdybgxr');
 const darkTheme = createExtractedTheme('17quq42', 'theme-17quq42-hl8zs80');
 const styles = {
   card: createExtractedSlot('1813flw', [
-    ['mwx9540', 'bia9b4a', [1, '--var-bj92ohf', createExtractedToken('tokens-jde1gk0--color--bg', '#ffffff', null), 1]],
+    ['mwx9540', 'bbwzet1', [
+      1,
+      '--var-bj92ohf',
+      createExtractedToken('tokens-jde1gk0--color--bg', '#ffffff', null, 'color--bg'),
+      1,
+    ]],
     ['rykr7b0', 'b3cpjgx'],
-    ['109h4xq', 'xrpcm00', [
+    ['109h4xq', 'bjteo6h', [
       1,
       '--var-b02f5sx',
-      createExtractedToken('tokens-jde1gk0--color--accent', '#0f766e', null),
+      createExtractedToken('tokens-jde1gk0--color--accent', '#0f766e', null, 'color--accent'),
       1,
     ]],
-    ['1aeebut', 'dwqj3b0', [1, '--var-uo62oq0', createExtractedToken('tokens-jde1gk0--radius--card', 14, null), 1]],
-    ['1qi6vb6', 'bik45sb', [
+    ['1aeebut', 'dzkss80', [
+      1,
+      '--var-uo62oq0',
+      createExtractedToken('tokens-jde1gk0--radius--card', 14, null, 'radius--card'),
+      1,
+    ]],
+    ['1qi6vb6', 'dcjjn80', [
       1,
       '--var-cw5jiv0',
-      createExtractedToken('tokens-jde1gk0--shadow--card', '0 18px 40px rgba(34, 42, 37, 0.08)', null),
+      createExtractedToken('tokens-jde1gk0--shadow--card', '0 18px 40px rgba(34, 42, 37, 0.08)', null, 'shadow--card'),
       1,
     ]],
-    ['18q1j80', 'boivu1v', [
+    ['18q1j80', 'bugfk5o', [
       1,
       '--var-bww5idk',
-      createExtractedToken('tokens-jde1gk0--color--text', '#17201b', null),
+      createExtractedToken('tokens-jde1gk0--color--text', '#17201b', null, 'color--text'),
       1,
     ]],
     ['1nca60l', 'jgp0up0'],
@@ -48,10 +58,10 @@ const styles = {
     ['1ffb9qm', 'zll9qj0'],
   ]),
   eyebrow: createExtractedSlot('1yuulhs', [
-    ['18q1j80', 'igdb6z0', [
+    ['18q1j80', 'jwnm900', [
       1,
       '--var-iax9200',
-      createExtractedToken('tokens-jde1gk0--color--accent', '#0f766e', null),
+      createExtractedToken('tokens-jde1gk0--color--accent', '#0f766e', null, 'color--accent'),
       1,
     ]],
     ['1ut2mip', 'cwxf320'],
@@ -60,10 +70,10 @@ const styles = {
     ['nde9im0', 'bfgv0j6'],
   ]),
   title: createExtractedSlot('12jpkrm', [
-    ['18q1j80', 'o3hrpk0', [
+    ['18q1j80', 'bocjfhb', [
       1,
       '--var-s9eo8d0',
-      createExtractedToken('tokens-jde1gk0--color--text', '#17201b', null),
+      createExtractedToken('tokens-jde1gk0--color--text', '#17201b', null, 'color--text'),
       1,
     ]],
     ['1ut2mip', 'w6vmo30'],
@@ -72,10 +82,10 @@ const styles = {
     ['1r0p66z', 'fy69b50'],
   ]),
   body: createExtractedSlot('1o6sn49', [
-    ['18q1j80', 'bit9nmw', [
+    ['18q1j80', 'bjlxhh9', [
       1,
       '--var-qmj3wr0',
-      createExtractedToken('tokens-jde1gk0--color--muted', '#5f6f67', null),
+      createExtractedToken('tokens-jde1gk0--color--muted', '#5f6f67', null, 'color--muted'),
       1,
     ]],
     ['1ut2mip', 'bpi985b'],
@@ -83,17 +93,22 @@ const styles = {
     ['1r0p66z', 'fy69b50'],
   ]),
   action: createExtractedSlot('hkvtdd0', [
-    ['mwx9540', 'br81kq0', [
+    ['mwx9540', 'etskod0', [
       1,
       '--var-ve52860',
-      createExtractedToken('tokens-jde1gk0--color--accent', '#0f766e', null),
+      createExtractedToken('tokens-jde1gk0--color--accent', '#0f766e', null, 'color--accent'),
       1,
     ]],
-    ['1aeebut', 'sr6xq10', [1, '--var-b587sfx', createExtractedToken('tokens-jde1gk0--radius--pill', 999, null), 1]],
-    ['18q1j80', 'lfg2mn0', [
+    ['1aeebut', 'pz8qtg0', [
+      1,
+      '--var-b587sfx',
+      createExtractedToken('tokens-jde1gk0--radius--pill', 999, null, 'radius--pill'),
+      1,
+    ]],
+    ['18q1j80', 'x9hbbg0', [
       1,
       '--var-f7dii40',
-      createExtractedToken('tokens-jde1gk0--color--accentText', '#ffffff', null),
+      createExtractedToken('tokens-jde1gk0--color--accentText', '#ffffff', null, 'color--accentText'),
       1,
     ]],
     ['1ut2mip', 'baks490'],

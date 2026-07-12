@@ -87,10 +87,14 @@ test('createValues parses pipe and semicolon labels', () => {
   includes(text, '#111827');
   includes(small, '8');
   includes(medium, '12');
-  notIncludes(surface, 'Surface');
-  notIncludes(text, 'Text');
-  notIncludes(small, 'sm');
-  notIncludes(medium, 'md');
+  includes(surface, '--token-Surface-');
+  includes(text, '--token-Text-');
+  includes(small, '--token-sm-');
+  includes(medium, '--token-md-');
+  notIncludes(surface, '| Surface');
+  notIncludes(text, '; Text');
+  notIncludes(small, '| sm');
+  notIncludes(medium, '; md');
 });
 
 test('pool prepends inherited scopes before own scopes', () => {

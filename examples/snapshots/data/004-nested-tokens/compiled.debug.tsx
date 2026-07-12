@@ -21,35 +21,35 @@ const lightTheme = createExtractedTheme('15x3t4k', 'theme-15x3t4k-bdybgxr');
 const darkTheme = createExtractedTheme('17quq42', 'theme-17quq42-hl8zs80');
 const styles = {
   card: createExtractedSlot('1813flw', [
-    ['mwx9540', 'background-color--bia9b4a', [
+    ['mwx9540', 'background-color--bbwzet1', [
       1,
       '--var-bj92ohf',
-      createExtractedToken('tokens-jde1gk0--color--bg', '#ffffff', null),
+      createExtractedToken('tokens-jde1gk0--color--bg', '#ffffff', null, 'color--bg'),
       1,
     ]],
     ['rykr7b0', 'border--b3cpjgx'],
-    ['109h4xq', 'border-color--xrpcm00', [
+    ['109h4xq', 'border-color--bjteo6h', [
       1,
       '--var-b02f5sx',
-      createExtractedToken('tokens-jde1gk0--color--accent', '#0f766e', null),
+      createExtractedToken('tokens-jde1gk0--color--accent', '#0f766e', null, 'color--accent'),
       1,
     ]],
-    ['1aeebut', 'radius--dwqj3b0', [
+    ['1aeebut', 'radius--dzkss80', [
       1,
       '--var-uo62oq0',
-      createExtractedToken('tokens-jde1gk0--radius--card', 14, null),
+      createExtractedToken('tokens-jde1gk0--radius--card', 14, null, 'radius--card'),
       1,
     ]],
-    ['1qi6vb6', 'box-shadow--bik45sb', [
+    ['1qi6vb6', 'box-shadow--dcjjn80', [
       1,
       '--var-cw5jiv0',
-      createExtractedToken('tokens-jde1gk0--shadow--card', '0 18px 40px rgba(34, 42, 37, 0.08)', null),
+      createExtractedToken('tokens-jde1gk0--shadow--card', '0 18px 40px rgba(34, 42, 37, 0.08)', null, 'shadow--card'),
       1,
     ]],
-    ['18q1j80', 'color--boivu1v', [
+    ['18q1j80', 'color--bugfk5o', [
       1,
       '--var-bww5idk',
-      createExtractedToken('tokens-jde1gk0--color--text', '#17201b', null),
+      createExtractedToken('tokens-jde1gk0--color--text', '#17201b', null, 'color--text'),
       1,
     ]],
     ['1nca60l', 'display-grid--jgp0up0'],
@@ -58,10 +58,10 @@ const styles = {
     ['1ffb9qm', 'padding--zll9qj0'],
   ]),
   eyebrow: createExtractedSlot('1yuulhs', [
-    ['18q1j80', 'color--igdb6z0', [
+    ['18q1j80', 'color--jwnm900', [
       1,
       '--var-iax9200',
-      createExtractedToken('tokens-jde1gk0--color--accent', '#0f766e', null),
+      createExtractedToken('tokens-jde1gk0--color--accent', '#0f766e', null, 'color--accent'),
       1,
     ]],
     ['1ut2mip', 'font-size--cwxf320'],
@@ -70,10 +70,10 @@ const styles = {
     ['nde9im0', 'text-transform-uppercase--bfgv0j6'],
   ]),
   title: createExtractedSlot('12jpkrm', [
-    ['18q1j80', 'color--o3hrpk0', [
+    ['18q1j80', 'color--bocjfhb', [
       1,
       '--var-s9eo8d0',
-      createExtractedToken('tokens-jde1gk0--color--text', '#17201b', null),
+      createExtractedToken('tokens-jde1gk0--color--text', '#17201b', null, 'color--text'),
       1,
     ]],
     ['1ut2mip', 'font-size--w6vmo30'],
@@ -82,10 +82,10 @@ const styles = {
     ['1r0p66z', 'margin--fy69b50'],
   ]),
   body: createExtractedSlot('1o6sn49', [
-    ['18q1j80', 'color--bit9nmw', [
+    ['18q1j80', 'color--bjlxhh9', [
       1,
       '--var-qmj3wr0',
-      createExtractedToken('tokens-jde1gk0--color--muted', '#5f6f67', null),
+      createExtractedToken('tokens-jde1gk0--color--muted', '#5f6f67', null, 'color--muted'),
       1,
     ]],
     ['1ut2mip', 'font-size--bpi985b'],
@@ -93,22 +93,22 @@ const styles = {
     ['1r0p66z', 'margin--fy69b50'],
   ]),
   action: createExtractedSlot('hkvtdd0', [
-    ['mwx9540', 'background-color--br81kq0', [
+    ['mwx9540', 'background-color--etskod0', [
       1,
       '--var-ve52860',
-      createExtractedToken('tokens-jde1gk0--color--accent', '#0f766e', null),
+      createExtractedToken('tokens-jde1gk0--color--accent', '#0f766e', null, 'color--accent'),
       1,
     ]],
-    ['1aeebut', 'radius--sr6xq10', [
+    ['1aeebut', 'radius--pz8qtg0', [
       1,
       '--var-b587sfx',
-      createExtractedToken('tokens-jde1gk0--radius--pill', 999, null),
+      createExtractedToken('tokens-jde1gk0--radius--pill', 999, null, 'radius--pill'),
       1,
     ]],
-    ['18q1j80', 'color--lfg2mn0', [
+    ['18q1j80', 'color--x9hbbg0', [
       1,
       '--var-f7dii40',
-      createExtractedToken('tokens-jde1gk0--color--accentText', '#ffffff', null),
+      createExtractedToken('tokens-jde1gk0--color--accentText', '#ffffff', null, 'color--accentText'),
       1,
     ]],
     ['1ut2mip', 'font-size--baks490'],

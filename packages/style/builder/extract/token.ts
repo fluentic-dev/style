@@ -1,4 +1,4 @@
-import { type StyleToken, type StyleTokenData, TOKEN_ID, TOKEN_OVERRIDE } from '../../style/token';
+import { type StyleToken, type StyleTokenData, TOKEN_ID, TOKEN_NAME, TOKEN_OVERRIDE } from '../../style/token';
 
 export type ExtractedTokenInput = {
   id: string;
@@ -10,24 +10,28 @@ export function createExtractedToken(
   id: string,
   value: unknown,
   ref: StyleTokenData | null = null,
+  name: string | null = null,
 ): StyleToken<unknown> {
   const token = ((value: unknown | StyleTokenData) => {
     return isExtractedTokenRef(value)
       ? {
         [TOKEN_ID]: token[TOKEN_ID],
         [TOKEN_OVERRIDE]: true,
+        [TOKEN_NAME]: token[TOKEN_NAME] ?? null,
         value: value.value,
         ref: value,
       }
       : {
         [TOKEN_ID]: token[TOKEN_ID],
         [TOKEN_OVERRIDE]: true,
+        [TOKEN_NAME]: token[TOKEN_NAME] ?? null,
         value,
         ref: null,
       };
   }) as StyleToken<unknown>;
 
   token[TOKEN_ID] = id;
+  token[TOKEN_NAME] = name;
   token.value = ref ? ref.value : value;
   token.ref = ref;
 

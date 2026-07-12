@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { createCompiler, equal, injectStyleDebugData, test, testDir } from './setup';
+import { createCompiler, equal, includes, injectStyleDebugData, notIncludes, test, testDir } from './setup';
 
 const snapshotDir = join(testDir, 'snapshots');
 const updateSnapshots = process.env.UPDATE_STYLE_SNAPSHOTS === '1';
@@ -77,6 +77,45 @@ const comprehensiveSource = [
   ``,
 ].join('\n');
 
+const tokenNamesSource = [
+  `import { createToken, createTokens, createValues, style } from '@fluentic/style';`,
+  ``,
+  `const accent = createToken('#2563eb', 'accent');`,
+  `const anonymous = createToken('#f8fafc');`,
+  ``,
+  `const theme = createTokens({`,
+  `  background: {`,
+  `    page: '#ffffff',`,
+  `    panel: '#f8fafc',`,
+  `  },`,
+  `  text: {`,
+  `    body: '#111827',`,
+  `  },`,
+  `});`,
+  ``,
+  `const space = createValues(Number, [`,
+  `  '8 | sm',`,
+  `  '16 | lg',`,
+  `]);`,
+  `const tone = createValues([`,
+  `  '#ffffff | Surface',`,
+  `  '#111827; Text',`,
+  `]);`,
+  ``,
+  `export const card = style({`,
+  `  backgroundColor: theme.background.page,`,
+  `  borderColor: accent,`,
+  `  boxShadow: anonymous,`,
+  `  color: theme.text.body,`,
+  `  margin: space('8 | sm'),`,
+  `  padding: space('16 | lg'),`,
+  `}).hover({`,
+  `  backgroundColor: tone('#ffffff | Surface'),`,
+  `  color: tone('#111827; Text'),`,
+  `});`,
+  ``,
+].join('\n');
+
 test('snapshot: debug and extract transforms cover spread merge media theme', () => {
   const filePath = testDir + 'snapshot-comprehensive.tsx';
 
@@ -98,6 +137,34 @@ test('snapshot: debug and extract transforms cover spread merge media theme', ()
   assertSnapshot('debug-transform-comprehensive.debug.snap', debug);
   assertSnapshot('debug-transform-comprehensive.extract.snap', extract.code);
   assertSnapshot('debug-transform-comprehensive.extract-css.snap', extract.css.join('\n') + '\n');
+});
+
+test('snapshot: token names cover createToken createTokens createValues', () => {
+  const filePath = testDir + 'snapshot-token-names.tsx';
+  const extract = createCompiler({
+    css: {
+      debugClassName: true,
+      layer: true,
+    },
+  }).transform(tokenNamesSource, filePath);
+
+  if (!extract) throw new Error('expected extract transform result');
+
+  const css = extract.css.join('\n') + '\n';
+
+  includes(css, '--token-accent-');
+  includes(css, '--token-anonymous-');
+  includes(css, '--token-theme--background--page-');
+  includes(css, '--token-theme--text--body-');
+  includes(css, '--token-space--sm-');
+  includes(css, '--token-space--lg-');
+  includes(css, '--token-tone--Surface-');
+  includes(css, '--token-tone--Text-');
+  notIncludes(css, '--token-token-');
+  notIncludes(css, '--token-tokens-');
+
+  assertSnapshot('token-names.extract.snap', extract.code);
+  assertSnapshot('token-names.extract-css.snap', css);
 });
 
 function assertSnapshot(name: string, actual: string) {

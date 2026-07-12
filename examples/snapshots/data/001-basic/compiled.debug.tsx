@@ -43,10 +43,10 @@ const styles = {
     ['1phh07j', 'gap--bn5yexc', [1, '--var-lh6v6q0', density * 4, 1]],
     ['dz1dcy0', 'width-hover--bkx1zo2'],
     ['1tysl6a', 'gap-hover--p8rx110', [1, '--var-cap3zp0', density * 3, 1]],
-    ['d1c10h0', 'background-color-hover--bkqifxz', [
+    ['d1c10h0', 'background-color-hover--bevm3we', [
       1,
       '--var-cap3zp0',
-      createExtractedToken('token-1jb1zmc', 'blue', null),
+      createExtractedToken('token-1jb1zmc', 'blue', null, null),
       1,
     ]],
   ]),

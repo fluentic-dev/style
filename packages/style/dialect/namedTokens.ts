@@ -1,5 +1,5 @@
 import { sanitizeCssIdentName } from '../atomic/utils/css';
-import { type StyleToken, TOKEN_ID, TOKEN_OVERRIDE } from '../style/token';
+import { type StyleToken, TOKEN_ID, TOKEN_NAME, TOKEN_OVERRIDE } from '../style/token';
 import { createToken } from '../style/value';
 
 type ValueRecord = Record<PropertyKey, unknown>;
@@ -65,7 +65,13 @@ function createNamedTokenProxy(
       if (property === ROOT) return root;
       if (property === 'then') return undefined;
       if (property === Symbol.toStringTag) return 'NamedTokens';
-      if (property === TOKEN_ID || property === TOKEN_OVERRIDE || property === 'value' || property === 'ref') {
+      if (
+        property === TOKEN_ID ||
+        property === TOKEN_NAME ||
+        property === TOKEN_OVERRIDE ||
+        property === 'value' ||
+        property === 'ref'
+      ) {
         if (!path.length) return undefined;
         const token = getNamedTokenAtPath(root, path);
         return token[property as keyof typeof token];

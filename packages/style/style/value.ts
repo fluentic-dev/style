@@ -1,6 +1,6 @@
 import type { DebugData } from '../builder/data/debug';
 import { hashString } from '../utils/hash';
-import { createStyleToken, type StyleToken, type StyleTokenOverride } from './token';
+import { createStyleToken, getChildStyleTokenName, type StyleToken, type StyleTokenOverride } from './token';
 
 export type ValueBase = string | number;
 export type InferValue<T extends ValueBase> = T extends string ? string : T extends number ? number : ValueBase;
@@ -46,9 +46,10 @@ export function createValues(
   for (let value of values) {
     tokens.set(
       value,
-      createToken(
+      createStyleToken(
         parseValue(value, isNumber),
         getChildDebugId(debugId, hashString(String(value))),
+        getChildStyleTokenName(debugId ?? null, getValueDebugName(value)),
       ),
     );
   }
@@ -84,6 +85,20 @@ function getChildDebugId(
   child: string,
 ) {
   return debugId ? debugId + '--' + child : undefined;
+}
+
+function getValueDebugName(value: ValueBase) {
+  if (typeof value === 'number') return String(value);
+
+  const parts = String(value).split(/[;|]/);
+  const label = parts[1]?.trim();
+  if (label) return sanitizeDebugName(label);
+
+  return sanitizeDebugName(parts[0]?.trim() ?? '');
+}
+
+function sanitizeDebugName(value: string) {
+  return value.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-+|-+$/g, '') || null;
 }
 
 function parseValue(value: ValueBase, isNumber: boolean) {

@@ -1,33 +1,33 @@
 @layer reset, css, override;
 @layer css {
-.theme-15x3t4k-bdybgxr{--token-tokens-jde1gk0--color--bg-c0wb4k0:#ffffff;--token-tokens-jde1gk0--color--text-b9nf5kc:#17201b;--token-tokens-jde1gk0--color--muted-hr8l6a0:#5f6f67;--token-tokens-jde1gk0--color--accent-bhydlup:#0f766e;--token-tokens-jde1gk0--color--accentText-be1epma:#ffffff;--token-tokens-jde1gk0--shadow--card-c0d5yq0:0 18px 40px rgba(34, 42, 37, 0.08)}
-.theme-17quq42-hl8zs80{--token-tokens-jde1gk0--color--bg-c0wb4k0:#101715;--token-tokens-jde1gk0--color--text-b9nf5kc:#eef8f4;--token-tokens-jde1gk0--color--muted-hr8l6a0:#a7bbb2;--token-tokens-jde1gk0--color--accent-bhydlup:#5eead4;--token-tokens-jde1gk0--color--accentText-be1epma:#06201c;--token-tokens-jde1gk0--shadow--card-c0d5yq0:0 22px 48px rgba(0, 0, 0, 0.34)}
+.theme-15x3t4k-bdybgxr{--token-color--bg-c0wb4k0:#ffffff;--token-color--text-b9nf5kc:#17201b;--token-color--muted-hr8l6a0:#5f6f67;--token-color--accent-bhydlup:#0f766e;--token-color--accentText-be1epma:#ffffff;--token-shadow--card-c0d5yq0:0 18px 40px rgba(34, 42, 37, 0.08)}
+.theme-17quq42-hl8zs80{--token-color--bg-c0wb4k0:#101715;--token-color--text-b9nf5kc:#eef8f4;--token-color--muted-hr8l6a0:#a7bbb2;--token-color--accent-bhydlup:#5eead4;--token-color--accentText-be1epma:#06201c;--token-shadow--card-c0d5yq0:0 22px 48px rgba(0, 0, 0, 0.34)}
 .border--b3cpjgx{border: 1px solid}
-.radius--dwqj3b0{border-radius: var(--var-uo62oq0, var(--token-tokens-jde1gk0--radius--card-svgtds0, 14))}
-.box-shadow--bik45sb{box-shadow: var(--var-cw5jiv0, var(--token-tokens-jde1gk0--shadow--card-c0d5yq0, 0 18px 40px rgba(34, 42, 37, 0.08)))}
-.color--boivu1v{color: var(--var-bww5idk, var(--token-tokens-jde1gk0--color--text-b9nf5kc, #17201b))}
+.radius--dzkss80{border-radius: var(--var-uo62oq0, var(--token-radius--card-svgtds0, 14))}
+.box-shadow--dcjjn80{box-shadow: var(--var-cw5jiv0, var(--token-shadow--card-c0d5yq0, 0 18px 40px rgba(34, 42, 37, 0.08)))}
+.color--bugfk5o{color: var(--var-bww5idk, var(--token-color--text-b9nf5kc, #17201b))}
 .display-grid--jgp0up0{display: grid}
 .gap--uazf000{gap: 12px}
 .max-width--bbrhkou{max-width: 360px}
 .padding--zll9qj0{padding: 18px}
-.color--igdb6z0{color: var(--var-iax9200, var(--token-tokens-jde1gk0--color--accent-bhydlup, #0f766e))}
+.color--jwnm900{color: var(--var-iax9200, var(--token-color--accent-bhydlup, #0f766e))}
 .letter-spacing--tckx800{letter-spacing: 0.08px}
 .text-transform-uppercase--bfgv0j6{text-transform: uppercase}
-.color--o3hrpk0{color: var(--var-s9eo8d0, var(--token-tokens-jde1gk0--color--text-b9nf5kc, #17201b))}
+.color--bocjfhb{color: var(--var-s9eo8d0, var(--token-color--text-b9nf5kc, #17201b))}
 .margin--fy69b50{margin: 0px}
-.color--bit9nmw{color: var(--var-qmj3wr0, var(--token-tokens-jde1gk0--color--muted-hr8l6a0, #5f6f67))}
-.radius--sr6xq10{border-radius: var(--var-b587sfx, var(--token-tokens-jde1gk0--radius--pill-bf7bmed, 999))}
-.color--lfg2mn0{color: var(--var-f7dii40, var(--token-tokens-jde1gk0--color--accentText-be1epma, #ffffff))}
+.color--bjlxhh9{color: var(--var-qmj3wr0, var(--token-color--muted-hr8l6a0, #5f6f67))}
+.radius--pz8qtg0{border-radius: var(--var-b587sfx, var(--token-radius--pill-bf7bmed, 999))}
+.color--x9hbbg0{color: var(--var-f7dii40, var(--token-color--accentText-be1epma, #ffffff))}
 .padding--b8kk8ny{padding: 9px 14px}
 .width-fit-content--hjsx5a0{width: fit-content}
-.border-color--xrpcm00{border-color: var(--var-b02f5sx, var(--token-tokens-jde1gk0--color--accent-bhydlup, #0f766e))}
-.background-color--bia9b4a{background-color: var(--var-bj92ohf, var(--token-tokens-jde1gk0--color--bg-c0wb4k0, #ffffff))}
+.border-color--bjteo6h{border-color: var(--var-b02f5sx, var(--token-color--accent-bhydlup, #0f766e))}
+.background-color--bbwzet1{background-color: var(--var-bj92ohf, var(--token-color--bg-c0wb4k0, #ffffff))}
 .font-size--cwxf320{font-size: 12px}
 .font-800--kfbuc00{font-weight: 800}
 .font-size--w6vmo30{font-size: 28px}
 .line-height--xwgj4c0{line-height: 1.05}
 .font-size--bpi985b{font-size: 15px}
 .line-height--b155prj{line-height: 1.6}
-.background-color--br81kq0{background-color: var(--var-ve52860, var(--token-tokens-jde1gk0--color--accent-bhydlup, #0f766e))}
+.background-color--etskod0{background-color: var(--var-ve52860, var(--token-color--accent-bhydlup, #0f766e))}
 .font-size--baks490{font-size: 13px}
 }

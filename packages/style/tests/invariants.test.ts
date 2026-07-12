@@ -55,9 +55,9 @@ test('invariant: extracted theme and style modules share imported token ids', ()
   if (!stylesResult) throw new Error('expected styles compiler transform result');
 
   const css = stylesResult.css.join('\n');
-  const themeTextVar = css.match(/(--token-[^:;{]+--color--text[^:;{]*):#0f172a/)?.[1];
-  const themeSurfaceVar = css.match(/(--token-[^:;{]+--color--surface[^:;{]*):var\(--token-/)?.[1];
-  const themeSpaceVar = css.match(/(--token-[^:;{]+--space--panel[^:;{]*):32/)?.[1];
+  const themeTextVar = css.match(/(--token-color--text[^:;{]*):#0f172a/)?.[1];
+  const themeSurfaceVar = css.match(/(--token-color--surface[^:;{]*):var\(--token-/)?.[1];
+  const themeSpaceVar = css.match(/(--token-space--panel[^:;{]*):32/)?.[1];
   const styleTextVar = css.match(/color: var\(--var-[^,]+, var\((--token-[^,)]+)/)?.[1];
   const styleSurfaceVar = css.match(/background-color: var\(--var-[^,]+, var\((--token-[^,)]+)/)?.[1];
   const styleSpaceVar = css.match(/padding: var\(--var-[^,]+, var\((--token-[^,)]+)/)?.[1];

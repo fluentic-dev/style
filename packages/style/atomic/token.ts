@@ -1,6 +1,6 @@
 import { CSS_CONFIG } from '../config/config/css';
 import type { TokenNameFormat, TokenNameInfo } from '../config/types';
-import { getStyleTokenId, type StyleTokenData, type StyleTokenOverride } from '../style/token';
+import { getStyleTokenId, getStyleTokenName, type StyleTokenData, type StyleTokenOverride } from '../style/token';
 import { getCssVar, getCssVarRawFallback } from './utils/css';
 import { createNameFormatter } from './utils/format';
 import { getIdentifierSafeHash } from './utils/hash';
@@ -14,11 +14,12 @@ export function getTokenVarName(
   format: TokenNameFormat | null,
 ) {
   const id = getStyleTokenId(token);
+  const debugName = getStyleTokenName(token);
 
   const name = formatTokenName(
     format || TOKEN_NAME_FORMAT,
     getIdentifierSafeHash(id, CSS_CONFIG.hashLength),
-    { name: id },
+    { name: debugName },
   );
 
   return '--' + name;
