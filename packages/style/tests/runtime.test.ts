@@ -34,7 +34,6 @@ import {
   createStableToken,
   createStableTokens,
   createStyleFn,
-  createTheme,
   createThemeRule,
   createToken,
   createTokens,

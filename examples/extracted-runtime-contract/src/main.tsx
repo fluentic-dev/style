@@ -4,7 +4,6 @@ import 'virtual:fluentic-style';
 import {
   bindScope,
   type CombinedStyleFor,
-  combineScope,
   combineStyle,
   createTheme,
   createToken,
@@ -13,7 +12,6 @@ import {
   getClassName,
   getToken,
   style,
-  type StyleTheme,
 } from '@fluentic/style';
 import { enableStyleDevUtils } from '@fluentic/style/dev';
 import { mergeClassName, mergeStyle } from '@fluentic/style/entry/prod/runtime';
@@ -247,21 +245,13 @@ const combineCard = combineStyle.for(cardStyles);
 const combinePage = combineStyle.for(pageStyles);
 type CardStyle = CombinedStyleFor<typeof combineCard>;
 
-function ContractCard(props: { active: boolean; styles?: CardStyle; theme?: StyleTheme; }) {
-  const theme = combineScope(
-    lightTheme,
-    props.active && vividTheme,
-    props.active ? activeScope : quietScope,
-    props.theme,
-  );
+function ContractCard(props: { active: boolean; styles?: CardStyle; }) {
   const css = combineCard(
     props.styles,
-    bindScope(cardStyles.root, theme),
-    props.active && cardStyles.root({
-      backgroundColor: tone('#dbeafe | Active'),
-    }),
+    bindScope(cardStyles.root, props.active ? activeScope : quietScope),
   );
   const dynamicFrame = style({
+    backgroundColor: props.active ? tone('#dbeafe | Active') : tokens.color.surface,
     outlineColor: props.active ? accent : tokens.color.muted,
     outlineOffset: 3,
     outlineStyle: 'solid',
@@ -271,8 +261,8 @@ function ContractCard(props: { active: boolean; styles?: CardStyle; theme?: Styl
   const rootProps = getClassName([css.root, dynamicFrame], {
     className: mergeClassName(['contract-card', props.active && 'is-active']),
     style: mergeStyle([
-      { '--contract-accent': String(getToken(tokens.color.accent)) },
-      props.active && { '--contract-state': 'active' },
+      { '--contract-accent': String(getToken(tokens.color.accent)) } as React.CSSProperties,
+      props.active && ({ '--contract-state': 'active' } as React.CSSProperties),
     ]),
   });
 
@@ -324,7 +314,9 @@ function App() {
               </button>
             </div>
             <div css={style({ height: 14 })} />
-            <ContractCard active={active} styles={scoped} />
+            <div css={[lightTheme, active && vividTheme]}>
+              <ContractCard active={active} styles={scoped} />
+            </div>
           </section>
 
           <aside css={page.panel}>

@@ -29,7 +29,7 @@ export function setBuildConfig(config: BuildConfig) {
   RUNTIME_CONFIG.isHoist = config.hoist;
 
   if (config.css) {
-    const { debugClassName, ...css } = config.css;
+    const { debugClassName: _debugClassName, ...css } = config.css;
     Object.assign(CSS_CONFIG, css);
   }
 }

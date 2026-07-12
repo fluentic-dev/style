@@ -15,8 +15,8 @@ const theme = createTokens({
 }, 'theme-c3pmnw0');
 const space = createValues(Number, ['12 | sm', '24 | lg'], 'space-yla1bj0');
 const tone = createValues(['#ffffff | Surface', '#111827; Text'], 'tone-t4adr30');
-export const lightTheme = createExtractedTheme('theme-light', 'theme-light-i66w530');
-export const brandTheme = createExtractedTheme('themes--brand', 'theme-brand-eno7nq0');
+export const lightTheme = createExtractedTheme('1r16f2a', 'theme-b856vls');
+export const brandTheme = createExtractedTheme('1cpw4jw', 'theme-h8vdof0');
 const styles = {
   card: createExtractedStyle([['mwx9540', 'background-color--cmumn10', [
     1,

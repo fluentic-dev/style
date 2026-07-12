@@ -22,7 +22,6 @@ const linkedColors = createValues(
     'alert | amber',
     'focus | violet',
   ],
-  'linked-colors',
 );
 
 const linkedThemeCards = [

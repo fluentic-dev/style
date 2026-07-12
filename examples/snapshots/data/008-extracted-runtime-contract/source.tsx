@@ -1,7 +1,6 @@
 import {
   bindScope,
   type CombinedStyleFor,
-  combineScope,
   combineStyle,
   createTheme,
   createToken,
@@ -10,9 +9,9 @@ import {
   getClassName,
   getToken,
   style,
-  type StyleTheme,
 } from '@fluentic/style';
 import { mergeClassName, mergeStyle } from '@fluentic/style/entry/prod/runtime';
+import type { CSSProperties } from 'react';
 
 const accent = createToken('#2563eb');
 const accentAlias = createToken(accent);
@@ -103,16 +102,13 @@ const activeScope = style
 const combineCard = combineStyle.for(cardStyles);
 type CardStyle = CombinedStyleFor<typeof combineCard>;
 
-function ContractCard(props: { active?: boolean; styles?: CardStyle; theme?: StyleTheme; }) {
-  const theme = combineScope(lightTheme, vividTheme, activeScope, props.theme);
+function ContractCard(props: { active?: boolean; styles?: CardStyle; }) {
   const css = combineCard(
     props.styles,
-    bindScope(cardStyles.root, theme),
-    props.active && cardStyles.root({
-      backgroundColor: tone('#dbeafe | Active'),
-    }),
+    bindScope(cardStyles.root, activeScope),
   );
   const dynamicFrame = style({
+    backgroundColor: props.active ? tone('#dbeafe | Active') : tokens.color.surface,
     outlineColor: props.active ? accent : tokens.color.muted,
     outlineStyle: 'solid',
     outlineWidth: props.active ? 2 : 1,
@@ -121,8 +117,8 @@ function ContractCard(props: { active?: boolean; styles?: CardStyle; theme?: Sty
   const rootProps = getClassName([css.root, dynamicFrame], {
     className: mergeClassName(['contract-card', props.active && 'is-active']),
     style: mergeStyle([
-      { '--contract-accent': String(getToken(tokens.color.accent)) },
-      props.active && { '--contract-state': 'active' },
+      { '--contract-accent': String(getToken(tokens.color.accent)) } as CSSProperties,
+      props.active && ({ '--contract-state': 'active' } as CSSProperties),
     ]),
   });
 
@@ -139,7 +135,9 @@ export default function ExtractedRuntimeContract() {
 
   return (
     <main>
-      <ContractCard styles={scoped} active />
+      <div css={[lightTheme, vividTheme]}>
+        <ContractCard styles={scoped} active />
+      </div>
       <output>{String(getToken(tokens.color.muted))}</output>
     </main>
   );

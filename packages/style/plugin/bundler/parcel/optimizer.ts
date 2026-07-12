@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer';
 import { EXTRACTED_CSS_MARKER, transformCssOutput } from '../../utils';
 import { replaceCssMarker } from '../../utils/cssMarker';
 import { ensureParcelSidecarStarted, getParcelExtractedCss, getParcelState, Optimizer } from './shared';

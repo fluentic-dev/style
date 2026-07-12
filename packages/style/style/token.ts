@@ -1,11 +1,5 @@
 import type { DebugData } from '../builder/data/debug';
-import {
-  getStyleTokenId,
-  getStyleTokenName,
-  getStyleTokenVarName,
-  isStyleTokenData,
-  isStyleTokenOverrideData,
-} from '../builder/token/data';
+import { getStyleTokenId, getStyleTokenName, isStyleTokenData } from '../builder/token/data';
 import { getStyleTokenNameFromId, normalizeStyleTokenName } from '../builder/token/name';
 import { globalData } from '../utils/global';
 import { symbol } from '../utils/symbol';

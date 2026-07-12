@@ -1,6 +1,6 @@
 import { combineStyle, createTheme, createToken, createTokens, createValues, style } from '@fluentic/style';
 
-const accent = createToken('#2563eb', 'accent');
+const accent = createToken('#2563eb');
 const anonymous = createToken('0 18px 48px rgba(15, 23, 42, 0.14)');
 
 const theme = createTokens({
@@ -27,12 +27,12 @@ const tone = createValues([
 export const lightTheme = createTheme([
   theme.background.page('#f8fafc'),
   theme.text.body('#0f172a'),
-], 'theme-light');
+]);
 
 export const brandTheme = createTheme([
   theme.background.panel('#eef2ff'),
   theme.text.muted('#475569'),
-], 'themes--brand');
+]);
 
 const styles = {
   card: style({

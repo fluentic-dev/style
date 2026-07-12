@@ -2,14 +2,12 @@
 import {
   bindScope,
   type CombinedStyleFor,
-  combineScope,
   combineStyle,
   createToken,
   createTokens,
   createValues,
   getClassName,
   getToken,
-  type StyleTheme,
 } from '@fluentic/style';
 import {
   createExtractedScope,
@@ -20,8 +18,10 @@ import {
   withTokens,
 } from '@fluentic/style/entry/prod/extract';
 import { mergeClassName, mergeStyle } from '@fluentic/style/entry/prod/runtime';
+import type { CSSProperties } from 'react';
 const _fluenticToken = createExtractedToken('12zw6g0', null);
 const _fluenticToken2 = createExtractedToken('1czhvf0', null);
+const _fluenticToken3 = createExtractedToken('1mz3ke0', null);
 const accent = createToken('#2563eb', 'accent-1o50vcc');
 const accentAlias = createToken(accent, 'accentAlias-b1cdp40');
 const tokens = createTokens({
@@ -36,19 +36,21 @@ const tokens = createTokens({
     pill: 999,
   },
 }, 'tokens-joj22s0');
-const _fluenticStyle = createExtractedStyle([['w0ni080', 'bhjx1sg', [1, '--var-vreqfj0', _fluenticToken, 1]], [
-  'xoa3yu0',
-  'bqsvnad',
-], ['19hl1pj', 'jvs87g0', [1, '--var-f09vld0', _fluenticToken2, 1]]]);
 const space = createValues(Number, ['10 | sm', '18 | md'], 'space-1avrxwk');
 const tone = createValues(['#eff6ff | Soft', '#dbeafe | Active'], 'tone-6xm3z60');
-const lightTheme = createExtractedTheme('r5maal0', 'theme-tof6p90');
-const vividTheme = createExtractedTheme('4toaxt0', 'theme-by5mfzn');
+const _fluenticStyle = createExtractedStyle([
+  ['mwx9540', 'esjff10', [1, '--var-bn71p76', _fluenticToken, 1]],
+  ['w0ni080', 'gbcy9e0', [1, '--var-lyv3m30', _fluenticToken2, 1]],
+  ['xoa3yu0', 'bqsvnad'],
+  ['19hl1pj', 'bwnih5l', [1, '--var-bbshncd', _fluenticToken3, 1]],
+]);
+const lightTheme = createExtractedTheme('w8bclg0', 'theme-fy1rs00');
+const vividTheme = createExtractedTheme('13l4svn', 'theme-bkk1rza');
 const cardStyles = {
-  root: createExtractedSlot('19pigzf', [
-    ['mwx9540', 'fzx0c90', [
+  root: createExtractedSlot('stlvoq0', [
+    ['mwx9540', 'l8v48z0', [
       1,
-      '--var-u7016b0',
+      '--var-bsqc2qs',
       createExtractedToken(
         'tokens-joj22s0--color--surface',
         '#ffffff',
@@ -59,9 +61,9 @@ const cardStyles = {
       1,
     ]],
     ['rykr7b0', 'b3cpjgx'],
-    ['109h4xq', 'bui5b8d', [
+    ['109h4xq', 'jap97m0', [
       1,
-      '--var-i9z5gd0',
+      '--var-ifwf8m0',
       createExtractedToken(
         'tokens-joj22s0--color--accent',
         '#2563eb',
@@ -71,15 +73,15 @@ const cardStyles = {
       ),
       1,
     ]],
-    ['1aeebut', 'hy0rrn0', [
+    ['1aeebut', 'zacg300', [
       1,
-      '--var-b6gq4v1',
+      '--var-i9z5gd0',
       createExtractedToken('tokens-joj22s0--radius--panel', 18, null, 'radius--panel', '--token-radius--panel-be5nmme'),
       1,
     ]],
-    ['18q1j80', 'btv6i4h', [
+    ['18q1j80', 'jjgp2c0', [
       1,
-      '--var-wmnena0',
+      '--var-b6gq4v1',
       createExtractedToken(
         'tokens-joj22s0--color--text',
         '#172033',
@@ -90,29 +92,29 @@ const cardStyles = {
       1,
     ]],
     ['1nca60l', 'jgp0up0'],
-    ['1phh07j', 'b3nre13', [
+    ['1phh07j', 'bcel19l', [
       1,
-      '--var-bkkqp80',
+      '--var-bpy8cqn',
       createExtractedToken('space-1avrxwk--gsyhks0', 10, null, 'space--sm', '--token-space--sm-betrnld'),
       1,
     ]],
-    ['1ffb9qm', 'b81090p', [
+    ['1ffb9qm', 'ba4ezr5', [
       1,
-      '--var-nr0cnd0',
+      '--var-bkkqp80',
       createExtractedToken('space-1avrxwk--bjhstt0', 18, null, 'space--md', '--token-space--md-tlp1ht0'),
       1,
     ]],
-    ['d1c10h0', 'bbimfhr', [
+    ['d1c10h0', 'bgpno04', [
       1,
-      '--var-bftb5iz',
+      '--var-icr9j60',
       createExtractedToken('tone-6xm3z60--1dqozn0', '#eff6ff', null, 'tone--Soft', '--token-tone--Soft-nhhpaz0'),
       1,
     ]],
   ]),
-  title: createExtractedSlot('17ubvh5', [
-    ['18q1j80', 'b58xz2m', [
+  title: createExtractedSlot('j9kqsg0', [
+    ['18q1j80', 'bxjolyp', [
       1,
-      '--var-b82qjwe',
+      '--var-jin2qd0',
       createExtractedToken(
         'tokens-joj22s0--color--text',
         '#172033',
@@ -126,10 +128,10 @@ const cardStyles = {
     ['1pkhne0', 'kfbuc00'],
     ['1r0p66z', 'fy69b50'],
   ]),
-  badge: createExtractedSlot('7p9b740', [
-    ['mwx9540', 'bkxzgvi', [
+  badge: createExtractedSlot('12xwdn5', [
+    ['mwx9540', 'b13bcuo', [
       1,
-      '--var-bkggln0',
+      '--var-bqqqcrg',
       createExtractedToken(
         'tokens-joj22s0--color--accent',
         '#2563eb',
@@ -139,9 +141,9 @@ const cardStyles = {
       ),
       1,
     ]],
-    ['1aeebut', 'bc2df5r', [
+    ['1aeebut', 'bmwkcok', [
       1,
-      '--var-b2sn26q',
+      '--var-bkggln0',
       createExtractedToken('tokens-joj22s0--radius--pill', 999, null, 'radius--pill', '--token-radius--pill-iefqc30'),
       1,
     ]],
@@ -152,14 +154,14 @@ const cardStyles = {
     ['1hznesf', 'hjsx5a0'],
   ]),
 };
-const activeScope = createExtractedScope([[4, '19pigzf', '1qi6vb6', 'jvi87p0'], [4, '7p9b740', 'mwx9540', 'cbhig30', [
+const activeScope = createExtractedScope([[4, 'stlvoq0', '1qi6vb6', 'jvi87p0'], [4, '12xwdn5', 'mwx9540', 'xt60zf0', [
   1,
-  '--var-gpi4cr0',
+  '--var-bb918k0',
   createExtractedToken('accent-1o50vcc', '#2563eb', null, 'accent', '--token-accent-b8ztlsd'),
   1,
-]], [4, '19pigzf', 'eoxpgd0', 'bbthf2i', [
+]], [4, 'stlvoq0', 'eoxpgd0', 'bpzewei', [
   1,
-  '--var-b4n6vpa',
+  '--var-bg25r5r',
   createExtractedToken(
     'accentAlias-b1cdp40',
     '#2563eb',
@@ -168,9 +170,9 @@ const activeScope = createExtractedScope([[4, '19pigzf', '1qi6vb6', 'jvi87p0'], 
     '--token-accentAlias-bttzc66',
   ),
   1,
-], 1], [4, '17ubvh5', 'yxz9kz0', 'bhna0yz', [
+], 1], [4, 'j9kqsg0', 'yxz9kz0', 'bxe9apj', [
   1,
-  '--var-buaj12r',
+  '--var-bow9xyk',
   createExtractedToken(
     'tokens-joj22s0--color--accent',
     '#2563eb',
@@ -185,29 +187,22 @@ type CardStyle = CombinedStyleFor<typeof combineCard>;
 function ContractCard(props: {
   active?: boolean;
   styles?: CardStyle;
-  theme?: StyleTheme;
 }) {
-  const theme = combineScope(lightTheme, vividTheme, activeScope, props.theme);
-  const css = combineCard(
-    props.styles,
-    bindScope(cardStyles.root, theme),
-    props.active && cardStyles.root({
-      backgroundColor: tone('#dbeafe | Active'),
-    }),
-  );
+  const css = combineCard(props.styles, bindScope(cardStyles.root, activeScope));
   const dynamicFrame = withTokens(_fluenticStyle, [
-    _fluenticToken(props.active ? accent : tokens.color.muted),
-    _fluenticToken2(props.active ? 2 : 1),
+    _fluenticToken(props.active ? tone('#dbeafe | Active') : tokens.color.surface),
+    _fluenticToken2(props.active ? accent : tokens.color.muted),
+    _fluenticToken3(props.active ? 2 : 1),
   ]);
   const rootProps = getClassName([css.root, dynamicFrame], {
     className: mergeClassName(['contract-card', props.active && 'is-active']),
     style: mergeStyle([
       {
         '--contract-accent': String(getToken(tokens.color.accent)),
-      },
+      } as CSSProperties,
       props.active && {
         '--contract-state': 'active',
-      },
+      } as CSSProperties,
     ]),
   });
   return (
@@ -221,7 +216,9 @@ export default function ExtractedRuntimeContract() {
   const scoped = combineCard(bindScope(cardStyles.root, activeScope));
   return (
     <main>
-      <ContractCard styles={scoped} active />
+      <div css={[lightTheme, vividTheme]}>
+        <ContractCard styles={scoped} active />
+      </div>
       <output>{String(getToken(tokens.color.muted))}</output>
     </main>
   );
