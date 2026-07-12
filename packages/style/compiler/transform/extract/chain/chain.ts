@@ -51,7 +51,7 @@ import {
 } from '../../../../style/transform';
 import { isAtRuleRef } from '../../../../style/valueRef';
 import { hashString } from '../../../../utils/hash';
-import { CompilerRuntimeMode } from '../../../compiler';
+import { CompilerRuntimeMode } from '../../../compiler/constants';
 import type { CompilerOptions } from '../../../compiler/types';
 import { DEFAULT_CONFIG } from '../../../utils/constants';
 import {

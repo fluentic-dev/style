@@ -16,6 +16,7 @@ import {
   getStyleRuntimeImportPath,
 } from '../utils/imports';
 import { createCompilerCache } from './cache';
+import { CompilerRuntimeMode } from './constants';
 import type {
   CompilerInvalidateFileInfo,
   CompilerOptions,
@@ -25,13 +26,6 @@ import type {
   TransformExtractArgs,
   TransformExtractResult,
 } from './types';
-
-export enum CompilerRuntimeMode {
-  Dev = 'dev',
-  Prod = 'prod',
-  RscDev = 'rsc-dev',
-  RscProd = 'rsc-prod',
-}
 
 export type CompilerArgs = {
   projectDir: string;

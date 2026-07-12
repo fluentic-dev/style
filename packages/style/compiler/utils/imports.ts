@@ -1,4 +1,4 @@
-import type { CompilerRuntimeMode } from '../compiler/compiler';
+import type { CompilerRuntimeMode } from '../compiler/constants';
 import {
   STYLE_EXTRACT_RUNTIME_IMPORT_PATH,
   STYLE_IMPORT_PATH,
