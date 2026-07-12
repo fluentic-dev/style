@@ -29,6 +29,21 @@ system. The same code still needs to produce CSS, work at runtime, move static
 rules into production CSS when the compiler can prove them, and compose with
 component slots and scopes.
 
+## Customization Lives In Userland
+
+Many libraries avoid extension points because every built-in feature becomes a
+long-term maintenance promise. If the core library owns every use case, each new
+idea can become another thing to support forever.
+
+Fluentic tries to keep that promise smaller and stronger. The core should keep
+style data, chains, transforms, slots, scopes, runtime resolution, and extraction
+working together. Project-specific vocabulary can live in userland as custom
+fields, custom chain methods, class-name transforms, or separate builders.
+
+That means Fluentic does not need to adopt every possible feature for a team to
+use it. As long as the core model stays stable, userland chains and transforms
+can keep working with it.
+
 Fluentic puts that customization in the style builder.
 
 ```txt
