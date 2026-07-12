@@ -51,6 +51,7 @@ import {
 } from '../../../../style/transform';
 import { isAtRuleRef } from '../../../../style/valueRef';
 import { hashString } from '../../../../utils/hash';
+import { CompilerRuntimeMode } from '../../../compiler';
 import type { CompilerOptions } from '../../../compiler/types';
 import { DEFAULT_CONFIG } from '../../../utils/constants';
 import {
@@ -91,7 +92,6 @@ type CssConfig = {
 };
 
 type ExtractCssOptions = NonNullable<CompilerOptions['css']> & {
-  localClassName?: boolean;
   debugClassName?: boolean;
   scopeTargetPrefix?: string;
 };
@@ -326,10 +326,11 @@ export function compileChain(
   nodeLoc: { line: number; column: number; } | null | undefined,
   scope: EvalScope,
   opts: CompilerOptions,
+  runtimeMode: CompilerRuntimeMode | null,
   meta: StyleFnMeta,
   styleNames: Set<string> = new Set(),
 ): CompiledChainData | null {
-  const css = getCssConfig(opts);
+  const css = getCssConfig(opts, runtimeMode);
 
   if (meta.mode === 'ClassName') {
     if (chain.kind !== 'style') return null;
@@ -357,16 +358,18 @@ export function compileChain(
 
 function getCssConfig(
   opts: CompilerOptions,
+  runtimeMode: CompilerRuntimeMode | null,
 ): CssConfig {
   const css = opts.css as ExtractCssOptions | undefined;
+  const isDevRuntimeMode = runtimeMode === CompilerRuntimeMode.Dev || runtimeMode === CompilerRuntimeMode.RscDev;
 
   return {
     classNameFormat: css?.classNameFormat ?? DEFAULT_CONFIG.classNameFormat ?? null,
     transformClassNameFormat: css?.transformClassNameFormat ?? DEFAULT_CONFIG.transformClassNameFormat ?? null,
     hashLength: css?.hashLength ?? DEFAULT_CONFIG.hashLength ?? 7,
     tokenNameFormat: css?.tokenNameFormat ?? DEFAULT_CONFIG.tokenNameFormat ?? null,
-    localClassName: css?.localClassName ?? DEFAULT_CONFIG.localClassName,
-    debugClassName: css?.debugClassName ?? DEFAULT_CONFIG.debugClassName,
+    localClassName: isDevRuntimeMode,
+    debugClassName: css?.debugClassName ?? isDevRuntimeMode,
     scopeTargetPrefix: css?.scopeTargetPrefix ?? '',
   };
 }

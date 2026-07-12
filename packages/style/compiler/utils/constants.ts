@@ -1,6 +1,4 @@
 import { CSS_CONFIG_DEFAULT } from '../../config/config/css';
-import { DEFAULT_DEBUG_CONFIG } from '../../config/config/debug';
-import { DEV_CONFIG_DEFAULT } from '../../config/config/dev';
 
 const pkg = '@fluentic/style';
 
@@ -15,8 +13,6 @@ export const STYLE_RSC_EXTRACT_RUNTIME_IMPORT_PATH = pkg + '/entry/rsc-prod/runt
 
 export const DEFAULT_CONFIG = {
   ...CSS_CONFIG_DEFAULT,
-  localClassName: DEV_CONFIG_DEFAULT.isLocalClassNameEnabled,
-  debugClassName: DEFAULT_DEBUG_CONFIG.isDebugClassNameEnabled,
 };
 
 export const IMPORT_PATHS = [

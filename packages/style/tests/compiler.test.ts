@@ -566,7 +566,7 @@ test('compiler sourcemap toStyle traces merged rules to the merge call', () => {
     cacheDir: testDir + '.test-cache',
     runtimeMode: null,
     options: {
-      css: { layer: false, debugClassName: true, localClassName: true },
+      css: { layer: false, debugClassName: true },
       dev: { sourcemapMode: 'style' },
     },
   });
@@ -623,7 +623,7 @@ test('compiler sourcemap toStyle traces scope merge rules to the merge call', ()
     cacheDir: testDir + '.test-cache',
     runtimeMode: null,
     options: {
-      css: { layer: false, debugClassName: true, localClassName: true },
+      css: { layer: false, debugClassName: true },
       dev: { sourcemapMode: 'style' },
     },
   });
@@ -668,7 +668,7 @@ test('compiler sourcemap toStyle traces scope slot override merge to the merge c
     cacheDir: testDir + '.test-cache',
     runtimeMode: null,
     options: {
-      css: { layer: false, debugClassName: true, localClassName: true },
+      css: { layer: false, debugClassName: true },
       dev: { sourcemapMode: 'style' },
     },
   });
@@ -713,7 +713,7 @@ test('compiler sourcemap toStyle traces slot override chain merge to the merge c
     cacheDir: testDir + '.test-cache',
     runtimeMode: null,
     options: {
-      css: { layer: false, debugClassName: true, localClassName: true },
+      css: { layer: false, debugClassName: true },
       dev: { sourcemapMode: 'style' },
     },
   });
@@ -759,7 +759,7 @@ test('compiler sourcemap toStyle traces slot base merge to the merge call', () =
     cacheDir: testDir + '.test-cache',
     runtimeMode: null,
     options: {
-      css: { layer: false, debugClassName: true, localClassName: true },
+      css: { layer: false, debugClassName: true },
       dev: { sourcemapMode: 'style' },
     },
   });
@@ -803,7 +803,7 @@ test('compiler sourcemap toValue traces merged rules to original fields', () => 
     cacheDir: testDir + '.test-cache',
     runtimeMode: null,
     options: {
-      css: { layer: false, debugClassName: true, localClassName: true },
+      css: { layer: false, debugClassName: true },
       dev: { sourcemapMode: 'value' },
     },
   });
@@ -1908,7 +1908,6 @@ test('compiler honors configured token variable prefix', () => {
     layer: false,
     css: {
       debugClassName: true,
-      localClassName: true,
       tokenNameFormat: 'custom-token[-(name)]-$hash',
     },
   });
@@ -1938,7 +1937,7 @@ const styles = {
 test('compiler uses property-local variables for token values', () => {
   const compiler = createCompiler({
     layer: false,
-    css: { debugClassName: true, localClassName: true },
+    css: { debugClassName: true },
   });
   const filePath = '/tmp/compiler-token-local-variable.ts';
   const result = compiler.transform(
@@ -1968,7 +1967,7 @@ const styles = {
 test('compiler extracts static siblings when a style object has a dynamic value', () => {
   const compiler = createCompiler({
     layer: false,
-    css: { debugClassName: true, localClassName: true },
+    css: { debugClassName: true },
   });
   const result = compiler.transform(
     `
@@ -2002,7 +2001,7 @@ const rule = style({
 test('compiler hoists inline dynamic extracted style with token binding', () => {
   const compiler = createCompiler({
     layer: false,
-    css: { debugClassName: true, localClassName: true },
+    css: { debugClassName: true },
   });
   const result = compiler.transform(
     `
@@ -2034,7 +2033,7 @@ export function Card({ color }) {
 test('compiler preserves merged extracted runtime values when hoisting after top-level deps', () => {
   const compiler = createCompiler({
     layer: false,
-    css: { debugClassName: true, localClassName: true },
+    css: { debugClassName: true },
   });
   const result = compiler.transform(
     `
@@ -2077,7 +2076,7 @@ export function Card({ color }) {
 test('compiler hoists inline dynamic extracted slot with token binding', () => {
   const compiler = createCompiler({
     layer: false,
-    css: { debugClassName: true, localClassName: true },
+    css: { debugClassName: true },
   });
   const result = compiler.transform(
     `
@@ -2108,7 +2107,7 @@ export function useSlot(color) {
 test('compiler hoists scope token providers and dynamic scope values with token bindings', () => {
   const compiler = createCompiler({
     layer: false,
-    css: { debugClassName: true, localClassName: true },
+    css: { debugClassName: true },
   });
   const result = compiler.transform(
     `
@@ -2151,7 +2150,7 @@ test('compiler can disable extracted style hoisting', () => {
   const compiler = createCompiler({
     hoist: false,
     layer: false,
-    css: { debugClassName: true, localClassName: true },
+    css: { debugClassName: true },
   });
   const result = compiler.transform(
     `
@@ -2955,10 +2954,9 @@ export function Card(props) {
   includes(result.css.join('\n'), 'padding: 16px');
 });
 
-test('compiler dedupes identical extracted style declarations', () => {
+test('compiler dedupes identical extracted style declarations in production mode', () => {
   const compiler = createCompiler({
     layer: false,
-    css: { localClassName: true },
   });
   const result = compiler.transform(
     `
@@ -2976,8 +2974,38 @@ const two = style({ color: 'purple' });
     .map((rule) => rule.match(/^\.(.+?)\{/)?.[1])
     .filter((className) => typeof className === 'string');
 
+  equal(classNames.length, 1);
+  equal(classNames[0]?.length, 7);
+});
+
+test('compiler keeps extracted style declarations callsite-local in dev mode', () => {
+  const compiler = createPluginCompiler({
+    dev: true,
+    projectDir: testDir,
+    cacheDir: testDir + '.test-cache',
+    runtimeMode: CompilerRuntimeMode.Dev,
+    options: {
+      css: { layer: false },
+    },
+  });
+  const result = compiler.compiler.compileExtract({
+    code: `
+import { style } from '@fluentic/style';
+
+const one = style({ color: 'purple' });
+const two = style({ color: 'purple' });
+`,
+    filePath: '/tmp/compiler-dev-local-classname.ts',
+    sourcemap: null,
+  });
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const classNames = getCssClassNames(compiler.compiler.getExtractedCss().split('\n').filter(Boolean));
+
   equal(classNames.length, 2);
   notEqual(classNames[0], classNames[1]);
+  includes(classNames[0] ?? '', 'color-purple');
 });
 
 test('compiler sorts extracted css by layer priority', () => {

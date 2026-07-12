@@ -25,7 +25,19 @@ import {
 import type { CompilerOptions } from '../compiler';
 import { configureStyleRuntime, type ConfigureStyleRuntimeOptions } from '../config';
 import { CSS_CONFIG, CSS_CONFIG_DEFAULT } from '../config/config/css';
-import { DEV_CONFIG, DEV_CONFIG_DEFAULT, type DevRuntimeOptions, setDevRuntimeOptions } from '../config/config/dev';
+import {
+  DEBUG_CONFIG,
+  DEFAULT_DEBUG_CONFIG,
+  setDebugClassNameDefault,
+  setDebugClassNameEnabled,
+} from '../config/config/debug';
+import {
+  DEV_CONFIG,
+  DEV_CONFIG_DEFAULT,
+  type DevRuntimeOptions,
+  setDevRuntimeOptions,
+  setStyleDevMode,
+} from '../config/config/dev';
 import { RUNTIME_CONFIG, RUNTIME_CONFIG_DEFAULT } from '../config/config/runtime';
 import {
   createCounterStyle,
@@ -166,7 +178,6 @@ type TestCompilerCssOptions =
     debugClassName?: boolean;
     debugElementClassName?: boolean;
     debugElementClassNamePrefix?: string;
-    localClassName?: boolean;
     scopeTargetPrefix?: string;
     themeNamePrefix?: string;
   }
@@ -183,11 +194,15 @@ function setBuildMeta(config: TestBuildMeta | null) {
 
   RUNTIME_CONFIG.isPlugin = Boolean(config);
   DEV_CONFIG.isDev = config?.dev ?? false;
+  DEV_CONFIG.isLocalClassNameEnabled = DEV_CONFIG.isDev;
   DEV_CONFIG.isCheckSelectorEnabled = DEV_CONFIG.isDev && config?.checkSelector !== 'force';
   DEV_CONFIG.isElementClassNameEnabled = css?.debugElementClassName ?? DEV_CONFIG.isElementClassNameEnabled;
+  setDebugClassNameDefault(DEV_CONFIG.isDev);
 
   if (config?.css) {
-    Object.assign(CSS_CONFIG, config.css);
+    const { debugClassName, ...cssConfig } = config.css;
+    Object.assign(CSS_CONFIG, cssConfig);
+    if (typeof debugClassName === 'boolean') setDebugClassNameEnabled(debugClassName);
   }
 
   RUNTIME_CONFIG.isExtracted = config?.extract ?? false;
@@ -263,13 +278,14 @@ export function configureTestRuntime(options: TestRuntimeOptions = {}) {
   const { dev, priorityMode, sourcemapMode, elementClassName, checkSelector, hashLength, ...runtimeOptions } = options;
 
   resetTestConfig(CSS_CONFIG, CSS_CONFIG_DEFAULT);
+  resetTestConfig(DEBUG_CONFIG, DEFAULT_DEBUG_CONFIG);
   resetTestConfig(DEV_CONFIG, DEV_CONFIG_DEFAULT);
   resetTestConfig(RUNTIME_CONFIG, RUNTIME_CONFIG_DEFAULT);
   setDevRuntimeOptions(null);
   configureStyleRuntime(runtimeOptions);
 
   setDevRuntimeOptions({ priorityMode, sourcemapMode, elementClassName, checkSelector, hashLength });
-  if (typeof dev === 'boolean') DEV_CONFIG.isDev = dev;
+  setStyleDevMode(dev ?? false);
 }
 
 function resetTestConfig<T extends object>(target: T, defaults: T) {

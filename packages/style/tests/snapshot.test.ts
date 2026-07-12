@@ -89,7 +89,6 @@ test('snapshot: debug and extract transforms cover spread merge media theme', ()
   const extract = createCompiler({
     css: {
       debugClassName: true,
-      localClassName: true,
       layer: true,
     },
   }).transform(comprehensiveSource, filePath);

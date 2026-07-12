@@ -32,6 +32,7 @@ import { exposeStyle } from '../../../style/utils';
 import { type AtRuleRef, createAtRuleRef } from '../../../style/valueRef';
 import { hashString } from '../../../utils/hash';
 import type { StableId } from '../../../utils/id';
+import type { CompilerRuntimeMode } from '../../compiler';
 import {
   FN_CREATE_COUNTER_STYLE,
   FN_CREATE_EXTRACTED_SCOPE,
@@ -107,6 +108,7 @@ export type EvalScope = {
   bindingNodes?: Map<string, BabelTypes.Node>;
   styleTransform?: StyleTransform | null;
   sourcemapTrace?: 'style' | 'value';
+  runtimeMode?: CompilerRuntimeMode | null;
 };
 
 export function evaluateNode(

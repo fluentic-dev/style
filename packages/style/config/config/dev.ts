@@ -3,6 +3,7 @@ import { normalizeHashLength } from '../../utils/hash';
 import { unsetAll } from '../../utils/object';
 import type { BuildDevConfig } from '../build';
 import type { SourcemapLocationMode, StylePriorityMode } from '../types';
+import { setDebugClassNameDefault } from './debug';
 import { RUNTIME_CONFIG } from './runtime';
 
 export type DevConfig = {
@@ -89,6 +90,11 @@ export function setBuildDevConfig(config: BuildDevConfig) {
   rebuildDevConfig();
 }
 
+export function setStyleDevMode(isDev: boolean) {
+  IS_DEV.isDev = isDev;
+  rebuildDevConfig();
+}
+
 export function setDevUtilsRuntimeOptions(options: DevRuntimeOptions | null) {
   setOptions(configUtils, options, null);
   rebuildDevConfig();
@@ -111,6 +117,8 @@ function rebuildDevConfig() {
   );
 
   DEV_CONFIG.isDev = IS_DEV.isDev;
+  DEV_CONFIG.isLocalClassNameEnabled = DEV_CONFIG.isDev;
+  setDebugClassNameDefault(DEV_CONFIG.isDev);
 
   RUNTIME_CONFIG.changes += 1;
 }

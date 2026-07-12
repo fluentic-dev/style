@@ -1,11 +1,14 @@
 import { globalData } from '../utils/global';
 import type { ReplaceProps } from '../utils/type';
 import { CSS_CONFIG, type CssConfig } from './config/css';
+import { setDebugClassNameDefault, setDebugClassNameEnabled } from './config/debug';
 import type { DevRuntimeOptions } from './config/dev';
 import { RUNTIME_CONFIG } from './config/runtime';
 import type { CheckSelectorMode } from './types';
 
-export type BuildCssConfig = Partial<CssConfig>;
+export type BuildCssConfig = Partial<CssConfig> & {
+  debugClassName?: boolean;
+};
 
 export type BuildDevConfig = ReplaceProps<DevRuntimeOptions, {
   checkSelector?: CheckSelectorMode;
@@ -27,6 +30,13 @@ export function setBuildConfig(config: BuildConfig) {
   RUNTIME_CONFIG.isHoist = config.hoist;
 
   if (config.css) {
-    Object.assign(CSS_CONFIG, config.css);
+    const { debugClassName, ...css } = config.css;
+    Object.assign(CSS_CONFIG, css);
+
+    if (typeof debugClassName === 'boolean') {
+      setDebugClassNameEnabled(debugClassName);
+    } else {
+      setDebugClassNameDefault(false);
+    }
   }
 }

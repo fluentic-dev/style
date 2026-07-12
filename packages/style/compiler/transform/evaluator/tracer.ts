@@ -312,7 +312,16 @@ function evaluateResolvedNode(
         const meta = scope.styleMetas?.get(chain.rootName);
         if (!meta) return evalFail('Cannot resolve imported style function');
 
-        const result = compileChain(chain, fileId, node.loc?.start, scope, options, meta, styleNames);
+        const result = compileChain(
+          chain,
+          fileId,
+          node.loc?.start,
+          scope,
+          options,
+          scope.runtimeMode ?? null,
+          meta,
+          styleNames,
+        );
         if (!result) return evalFail('Cannot compile imported style chain');
 
         const traceResult = options.dev?.sourcemapMode === 'value'
@@ -329,6 +338,7 @@ function evaluateResolvedNode(
                 sourcemapMode: 'value',
               },
             },
+            scope.runtimeMode ?? null,
             meta,
             styleNames,
           ) ?? result;

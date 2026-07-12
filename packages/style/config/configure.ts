@@ -1,9 +1,12 @@
 import { BUILD_CONFIG } from './build';
 import { CSS_CONFIG, type CssConfig } from './config/css';
+import { setDebugClassNameEnabled } from './config/debug';
 import { RUNTIME_CONFIG } from './config/runtime';
 import { getCacheTTL } from './utils';
 
-export type RuntimeCssOptions = Partial<CssConfig>;
+export type RuntimeCssOptions = Partial<CssConfig> & {
+  debugClassName?: boolean;
+};
 
 export type ConfigureStyleRuntimeOptions = {
   css?: RuntimeCssOptions;
@@ -13,7 +16,12 @@ export type ConfigureStyleRuntimeOptions = {
 export function configureStyleRuntime(options: ConfigureStyleRuntimeOptions = {}) {
   if (options.css) {
     checkBuildConfig('css');
-    Object.assign(CSS_CONFIG, options.css);
+    const { debugClassName, ...css } = options.css;
+    Object.assign(CSS_CONFIG, css);
+
+    if (typeof debugClassName === 'boolean') {
+      setDebugClassNameEnabled(debugClassName);
+    }
   }
 
   if (options.cacheTTL !== undefined) {

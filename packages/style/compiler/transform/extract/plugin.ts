@@ -202,7 +202,7 @@ export function createExtractPlugin(args: PluginArgs) {
 
           let result: ReturnType<typeof compileChain>;
           try {
-            result = compileChain(chain, state.fileId, loc, scope, options, meta, state.styleNames);
+            result = compileChain(chain, state.fileId, loc, scope, options, state.runtimeMode, meta, state.styleNames);
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             const node = getSelectorCompileErrorNode(error);

@@ -44,5 +44,6 @@ export function getEvalScope(state: ExtractPluginState): EvalScope {
     styleNames: state.styleNames,
     styleMetas: state.styleMetas,
     bindingNodes: state.bindingNodes,
+    runtimeMode: state.runtimeMode,
   };
 }

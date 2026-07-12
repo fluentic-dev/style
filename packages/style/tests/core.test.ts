@@ -1009,6 +1009,8 @@ test('scope chains accept mixed style function items', () => {
 });
 
 test('named tokens use stable ids for theme overrides', () => {
+  configureTestRuntime({ dev: true });
+
   const first = createNamedTokens('test.named.color', {
     accent: '#2563eb',
   });
@@ -1029,6 +1031,8 @@ test('named tokens use stable ids for theme overrides', () => {
   includes(result.className ?? '', 'color');
   includes(rule, '--token-test-named-color-accent-');
   includes(rule, ':#60a5fa');
+
+  configureTestRuntime({ dev: false });
 });
 
 test('dev debug transform traces imported selector constants', () => {
@@ -1229,9 +1233,8 @@ test('runtime dev defaults enable local class name hashing', () => {
   notEqual(getRuntimeClassName(first), getRuntimeClassName(second));
 });
 
-test('runtime local class name can be disabled in dev', () => {
-  configureTestRuntime({ dev: true });
-  DEV_CONFIG.isLocalClassNameEnabled = false;
+test('runtime production defaults use global class name hashing', () => {
+  configureTestRuntime({ dev: false });
 
   const first = createDebugStyle({ color: 'purple' }, {
     $$debug: true,
@@ -1245,8 +1248,6 @@ test('runtime local class name can be disabled in dev', () => {
     label: ['two', 'two', 'two.ts'],
     sourceUrl: '/src/two.ts',
   });
-
-  configureTestRuntime({ dev: false });
 
   equal(getRuntimeClassName(first), getRuntimeClassName(second));
 });
