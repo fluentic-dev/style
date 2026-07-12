@@ -10,9 +10,9 @@ import {
 } from '@fluentic/style/entry/prod/extract';
 import bg from './bg.png';
 import { ContainerWidth, Fonts, IconAlpha } from './constants';
-const _fluenticToken2 = createExtractedToken('tqsn1c0', null);
-const _fluenticToken = createExtractedToken('u0s8qb0', null);
 const _fluenticStyle = createExtractedStyle([['1ffb9qm', 'jhzi820'], ['69nyj00', 'bp0cx55']]);
+const _fluenticToken = createExtractedToken('u0s8qb0', null);
+const _fluenticToken2 = createExtractedToken('tqsn1c0', null);
 const compact = !!(window as any)['compact'];
 const density = compact ? 8 : 12;
 const dynamicStyle = createExtractedStyle([['1phh07j', 'bm8z8e7', [1, '--var-iafi210', density, 1]], [

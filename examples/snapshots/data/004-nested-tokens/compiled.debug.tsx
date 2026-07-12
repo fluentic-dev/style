@@ -21,100 +21,100 @@ const lightTheme = createExtractedTheme('15x3t4k', 'theme-15x3t4k-bdybgxr');
 const darkTheme = createExtractedTheme('17quq42', 'theme-17quq42-hl8zs80');
 const styles = {
   card: createExtractedSlot('1813flw', [
-    ['mwx9540', 'background-color-x4o5xe0', [
+    ['mwx9540', 'background-color--bia9b4a', [
       1,
       '--var-bj92ohf',
       createExtractedToken('tokens-jde1gk0--color--bg', '#ffffff', null),
       1,
     ]],
-    ['rykr7b0', 'border-bln4xk0'],
-    ['109h4xq', 'border-color-o6j3xc0', [
+    ['rykr7b0', 'border--b3cpjgx'],
+    ['109h4xq', 'border-color--xrpcm00', [
       1,
       '--var-b02f5sx',
       createExtractedToken('tokens-jde1gk0--color--accent', '#0f766e', null),
       1,
     ]],
-    ['1aeebut', 'radius-ab3hgw0', [
+    ['1aeebut', 'radius--dwqj3b0', [
       1,
       '--var-uo62oq0',
       createExtractedToken('tokens-jde1gk0--radius--card', 14, null),
       1,
     ]],
-    ['1qi6vb6', 'box-shadow-gqygcd0', [
+    ['1qi6vb6', 'box-shadow--bik45sb', [
       1,
       '--var-cw5jiv0',
       createExtractedToken('tokens-jde1gk0--shadow--card', '0 18px 40px rgba(34, 42, 37, 0.08)', null),
       1,
     ]],
-    ['18q1j80', 'color-eohwby0', [
+    ['18q1j80', 'color--boivu1v', [
       1,
       '--var-bww5idk',
       createExtractedToken('tokens-jde1gk0--color--text', '#17201b', null),
       1,
     ]],
-    ['1nca60l', 'display-grid-zrfo410'],
-    ['1phh07j', 'gap-ndnqyp0'],
-    ['14q2jir', 'max-width-butuml2'],
-    ['1ffb9qm', 'padding-t6ebay0'],
+    ['1nca60l', 'display-grid--jgp0up0'],
+    ['1phh07j', 'gap--uazf000'],
+    ['14q2jir', 'max-width--bbrhkou'],
+    ['1ffb9qm', 'padding--zll9qj0'],
   ]),
   eyebrow: createExtractedSlot('1yuulhs', [
-    ['18q1j80', 'color-bgvto2a', [
+    ['18q1j80', 'color--igdb6z0', [
       1,
       '--var-iax9200',
       createExtractedToken('tokens-jde1gk0--color--accent', '#0f766e', null),
       1,
     ]],
-    ['1ut2mip', 'font-size-bo354be'],
-    ['1pkhne0', 'font-800-v8puet0'],
-    ['iah4wu0', 'letter-spacing-dvqlwq0'],
-    ['nde9im0', 'text-transform-uppercase-hgombt0'],
+    ['1ut2mip', 'font-size--cwxf320'],
+    ['1pkhne0', 'font-800--kfbuc00'],
+    ['iah4wu0', 'letter-spacing--tckx800'],
+    ['nde9im0', 'text-transform-uppercase--bfgv0j6'],
   ]),
   title: createExtractedSlot('12jpkrm', [
-    ['18q1j80', 'color-dzqgy60', [
+    ['18q1j80', 'color--o3hrpk0', [
       1,
       '--var-s9eo8d0',
       createExtractedToken('tokens-jde1gk0--color--text', '#17201b', null),
       1,
     ]],
-    ['1ut2mip', 'font-size-ba36czr'],
-    ['1pkhne0', 'font-800-hm6p090'],
-    ['670umo0', 'line-height-hhnglg0'],
-    ['1r0p66z', 'margin-baup26c'],
+    ['1ut2mip', 'font-size--w6vmo30'],
+    ['1pkhne0', 'font-800--kfbuc00'],
+    ['670umo0', 'line-height--xwgj4c0'],
+    ['1r0p66z', 'margin--fy69b50'],
   ]),
   body: createExtractedSlot('1o6sn49', [
-    ['18q1j80', 'color-cvx8b80', [
+    ['18q1j80', 'color--bit9nmw', [
       1,
       '--var-qmj3wr0',
       createExtractedToken('tokens-jde1gk0--color--muted', '#5f6f67', null),
       1,
     ]],
-    ['1ut2mip', 'font-size-b6045ee'],
-    ['670umo0', 'line-height-bj0oknn'],
-    ['1r0p66z', 'margin-bsw6qq0'],
+    ['1ut2mip', 'font-size--bpi985b'],
+    ['670umo0', 'line-height--b155prj'],
+    ['1r0p66z', 'margin--fy69b50'],
   ]),
   action: createExtractedSlot('hkvtdd0', [
-    ['mwx9540', 'background-color-bvjtu0j', [
+    ['mwx9540', 'background-color--br81kq0', [
       1,
       '--var-ve52860',
       createExtractedToken('tokens-jde1gk0--color--accent', '#0f766e', null),
       1,
     ]],
-    ['1aeebut', 'radius-bf7orp5', [
+    ['1aeebut', 'radius--sr6xq10', [
       1,
       '--var-b587sfx',
       createExtractedToken('tokens-jde1gk0--radius--pill', 999, null),
       1,
     ]],
-    ['18q1j80', 'color-bn8ksb6', [
+    ['18q1j80', 'color--lfg2mn0', [
       1,
       '--var-f7dii40',
       createExtractedToken('tokens-jde1gk0--color--accentText', '#ffffff', null),
       1,
     ]],
-    ['1ut2mip', 'font-size-bb5t2dr'],
-    ['1pkhne0', 'font-800-bxni3kx'],
-    ['1ffb9qm', 'padding-bif5qe4'],
-    ['1hznesf', 'width-fit-content-bw784wl'],
+    ['1ut2mip', 'font-size--baks490'],
+    ['1pkhne0', 'font-800--kfbuc00'],
+    ['1ffb9qm', 'padding--b8kk8ny'],
+    ['1hznesf', 'width-fit-content--hjsx5a0'],
   ]),
 };
 function Preview(props: {

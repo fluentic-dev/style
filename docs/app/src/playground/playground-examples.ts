@@ -13,7 +13,7 @@ export type PlaygroundExample = {
   files: PlaygroundFile[];
 };
 
-type PlaygroundDefaultCssOptions = Omit<CompilerCssOptions, 'debugClassName' | 'localClassName'> & {
+type PlaygroundDefaultCssOptions = Omit<CompilerCssOptions, 'debugClassName'> & {
   layers: string[];
   layerNamespace: string;
   classNamePrefix: string;
@@ -21,7 +21,6 @@ type PlaygroundDefaultCssOptions = Omit<CompilerCssOptions, 'debugClassName' | '
   elementMarkerPrefix: string;
   themeNamePrefix: string;
   tokenVarPrefix: string;
-  localClassName: boolean;
   debugClassName: boolean;
   debugPropertyLength: number;
   debugValueLength: number;
@@ -49,7 +48,6 @@ export const compilerConfig: PlaygroundDefaultCompilerConfig = {
     elementMarkerPrefix: '@',
     themeNamePrefix: 'theme-',
     tokenVarPrefix: 'token-',
-    localClassName: true,
     debugClassName: true,
     debugPropertyLength: 24,
     debugValueLength: 8,

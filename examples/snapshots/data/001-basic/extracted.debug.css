@@ -1,34 +1,34 @@
 @layer reset, css, override;
 @layer css {
-.gap-i7zidj0{gap: var(--var-iafi210)}
-.padding-nnpbz40{padding: var(--var-ba7b46t)}
-.gap-badsgnp{gap: var(--var-lh6v6q0)}
-.width-buon3mh{width: 20px}
-.display-none-bhqaive{display: none}
-.color-red-bb9v15p{color: red}
-.opacity-b7c68l1{opacity: 0.5}
-.padding-bjwfq6q{padding: 4px}
-.color-be29slu{color: var(--var-jg49df0)}
-.font-family-times-bh6sooa{font-family: Times}
-.background-color-coral-b5gfi79{background-color: coral}
-.background-image-bgpbm97{background-image: var(--var-npc2ze0)}
-.background-color-white-b302ar4{background-color: white}
-.color-pink-vz3qz90{color: pink}
-.border-pink-mby7f50{border: pink}
-.background-color-pink-bxqz2c8{background-color: pink}
-@media (max-width: 600px){.max-600px-width-b393o3d{width: 16px}}
-@media (max-width: 600px){.max-600px-color-green-bin7rdb{color: green}}
-@media (max-width: 600px){.max-600px-opacity-e19pu10{opacity: 0.3}}
-.hover-width-g3m8co0:where(.-hover-width-g3m8co0:hover),:where(.-hover-width-g3m8co0:hover) .hover-width-g3m8co0{width: 20px}
-.hover-color-blue-fyds800:where(.-hover-color-blue-fyds800:hover),:where(.-hover-color-blue-fyds800:hover) .hover-color-blue-fyds800{color: blue}
-.hover-opacity-jvsghe0:where(.-hover-opacity-jvsghe0:hover),:where(.-hover-opacity-jvsghe0:hover) .hover-opacity-jvsghe0{opacity: 0.8}
-.width-hover-b2h7o2d:hover{width: 20px}
-.gap-hover-bhikf0l:hover{gap: var(--var-cap3zp0)}
-.width-hover-tcygwp0:hover{width: 22px}
-.padding-hover-bh5secb:hover{padding: 8px}
-.border-color-hover-bioffha:hover{border-color: var(--var-bjwbpju)}
-.background-color-hover-bhw6uzz:hover{background-color: var(--var-cap3zp0, var(--token-token-1jb1zmc-v95nzv0, blue))}
-.hover-outline-color-active-yellow-beaqvf8:where(.-hover-outline-color-active-yellow-beaqvf8:hover):active,:where(.-hover-outline-color-active-yellow-beaqvf8:hover) .hover-outline-color-active-yellow-beaqvf8:active{outline-color: yellow}
-.width-bg3jsj8{width: 18px}
-.display-flex-bk1kjox{display: flex}
+.gap--bm8z8e7{gap: var(--var-iafi210)}
+.padding--l9tsy00{padding: var(--var-ba7b46t)}
+.gap--bn5yexc{gap: var(--var-lh6v6q0)}
+.width--bil4cl0{width: 20px}
+.display-none--bf72i63{display: none}
+.color-red--g21wjn0{color: red}
+.opacity--es7atr0{opacity: 0.5}
+.padding--jhzi820{padding: 4px}
+.color--b7lpaos{color: var(--var-jg49df0)}
+.font-family-times--bnqkewy{font-family: Times}
+.background-color-coral--by40xi9{background-color: coral}
+.background-image--ba8jwi2{background-image: var(--var-npc2ze0)}
+.background-color-white--h44xih0{background-color: white}
+.color-pink--b3wpxqo{color: pink}
+.border-pink--mw8s4v0{border: pink}
+.background-color-pink--ru9zs00{background-color: pink}
+@media (max-width: 600px){.max-600px-width--bx8q7lo{width: 16px}}
+@media (max-width: 600px){.max-600px-color-green--of0pcl0{color: green}}
+@media (max-width: 600px){.max-600px-opacity--bvggra7{opacity: 0.3}}
+.hover-width--ifukx00:where(.-hover-width--ifukx00:hover),:where(.-hover-width--ifukx00:hover) .hover-width--ifukx00{width: 20px}
+.hover-color-blue--h11nhl0:where(.-hover-color-blue--h11nhl0:hover),:where(.-hover-color-blue--h11nhl0:hover) .hover-color-blue--h11nhl0{color: blue}
+.hover-opacity--b29wp7d:where(.-hover-opacity--b29wp7d:hover),:where(.-hover-opacity--b29wp7d:hover) .hover-opacity--b29wp7d{opacity: 0.8}
+.width-hover--bkx1zo2:hover{width: 20px}
+.gap-hover--p8rx110:hover{gap: var(--var-cap3zp0)}
+.width-hover--bej6r0o:hover{width: 22px}
+.padding-hover--bp0cx55:hover{padding: 8px}
+.border-color-hover--bh7gltt:hover{border-color: var(--var-bjwbpju)}
+.background-color-hover--bkqifxz:hover{background-color: var(--var-cap3zp0, var(--token-token-1jb1zmc-v95nzv0, blue))}
+.hover-outline-color-active-yellow--bvnz9oa:where(.-hover-outline-color-active-yellow--bvnz9oa:hover):active,:where(.-hover-outline-color-active-yellow--bvnz9oa:hover) .hover-outline-color-active-yellow--bvnz9oa:active{outline-color: yellow}
+.width--bcn0isx{width: 18px}
+.display-flex--gyv9el0{display: flex}
 }

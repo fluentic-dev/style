@@ -37,7 +37,6 @@ type CssOptionsState = {
   elementMarkerPrefix: string;
   themeNamePrefix: string;
   tokenVarPrefix: string;
-  localClassName: boolean;
   debugClassName: boolean;
   debugPropertyLength: number;
   debugValueLength: number;
@@ -1138,7 +1137,6 @@ function getDebugCssOptions(options: CssOptionsState): Partial<CssOptionsState> 
     ...options,
     debugClassName: true,
     elementClassNameFormat: getElementClassNameFormat(options.elementMarkerPrefix),
-    localClassName: true,
   };
 }
 

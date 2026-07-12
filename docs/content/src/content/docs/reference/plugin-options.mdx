@@ -30,7 +30,6 @@ stylePlugin({
     themeNameFormat: 'theme-(name)-$hash',
     tokenNameFormat: 'token-(name)-$hash',
     varNameFormat: 'var-$hash',
-    localClassName: true,
     debugClassName: true,
   },
   dev: {
@@ -139,12 +138,16 @@ function. See
 | `themeNameFormat` | Format generated theme class names. |
 | `tokenNameFormat` | Format generated token CSS variable names. |
 | `varNameFormat` | Format generated local dynamic value variable names. |
-| `localClassName` | Include callsite-local hashing in development class names. |
-| `debugClassName` | Include readable property/value parts in development class names. |
+| `debugClassName` | Include readable property/value parts in class names. Defaults to `true` in development and `false` in production builds. |
 
 Most apps only change `layer`, `layers`, `layerNamespace`, or naming formats.
 Leave the rest at defaults unless you are aligning Fluentic with existing CSS
 infrastructure.
+
+Callsite-local class names are automatic in development and disabled for
+production builds. Production class names always include a stable hash, but the
+hash does not include the callsite, so equivalent extracted rules dedupe across
+files.
 
 ### Class Name Formats
 

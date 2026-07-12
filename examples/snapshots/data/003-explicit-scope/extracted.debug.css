@@ -1,11 +1,11 @@
 @layer reset, css, override;
 @layer css {
-.display-grid-by2ykic{display: grid}
-.gap-bx12o76{gap: 12px}
-.padding-a4jdta0{padding: 16px}
-.color-black-ghfc8x0{color: black}
-.padding-bsj9kul{padding: 8px}
-.font-700-bm30w4b{font-weight: 700}
-.color-purple-b9l8roz{color: purple}
-.color-teal-bjishx8{color: teal}
+.display-grid--jgp0up0{display: grid}
+.gap--uazf000{gap: 12px}
+.padding--d9sf8l0{padding: 16px}
+.color-black--brq72zr{color: black}
+.padding--cjx4pq0{padding: 8px}
+.font-700--bs1kyyx{font-weight: 700}
+.color-purple--ex2wz20{color: purple}
+.color-teal--bog7gqi{color: teal}
 }

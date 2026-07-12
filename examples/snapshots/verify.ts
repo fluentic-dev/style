@@ -271,18 +271,18 @@ async function verify006() {
     {
       description: 'top-level inline Tailwind branches are compiled to token var strings',
       pass: (s) =>
-        /topLevelFeatured \? "var\(--token-snapshot-tailwind-color-blue-600-/.test(s) &&
-        /: "var\(--token-snapshot-tailwind-color-emerald-600-/.test(s) &&
-        /topLevelFeatured \? "var\(--token-snapshot-tailwind-color-accent-/.test(s) &&
-        /: "var\(--token-snapshot-tailwind-color-border-/.test(s),
+        /topLevelFeatured\s*\?\s*['"]var\(--token-snapshot-tailwind-color-blue-600-/.test(s) &&
+        /:\s*['"]var\(--token-snapshot-tailwind-color-emerald-600-/.test(s) &&
+        /topLevelFeatured\s*\?\s*['"]var\(--token-snapshot-tailwind-color-accent-/.test(s) &&
+        /:\s*['"]var\(--token-snapshot-tailwind-color-border-/.test(s),
     },
     {
       description: 'component-local inline Tailwind branches keep hoisted token binding with compiled values',
       pass: (s) =>
-        /withTokens\(_fluenticStyle\d*, \[[\s\S]*_fluenticToken3\(featured \? "var\(--token-snapshot-tailwind-color-accentSoft-/
+        /withTokens\(_fluenticStyle\d*, \[[\s\S]*_fluenticToken3\(\s*featured\s*\?\s*['"]var\(--token-snapshot-tailwind-color-accentSoft-/
           .test(s) &&
-        /_fluenticToken4\(featured \? "var\(--token-snapshot-tailwind-color-accent-/.test(s) &&
-        /_fluenticToken5\(featured \? "var\(--token-snapshot-tailwind-color-panelRaised-/.test(s),
+        /_fluenticToken4\(\s*featured\s*\?\s*['"]var\(--token-snapshot-tailwind-color-accent-/.test(s) &&
+        /_fluenticToken5\(\s*featured\s*\?\s*['"]var\(--token-snapshot-tailwind-color-panelRaised-/.test(s),
     },
     {
       description: 'dynamic named token values use the regular extracted token path',

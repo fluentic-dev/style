@@ -2,20 +2,20 @@
 import { bindScope, type CombinedStyleFor, combineStyle, type StyleTheme } from '@fluentic/style';
 import { createExtractedScope, createExtractedSlot, createExtractedStyle } from '@fluentic/style/entry/prod/extract';
 const parentStyles = {
-  shell: createExtractedStyle([['1nca60l', 'display-grid-by2ykic'], ['1phh07j', 'gap-bx12o76'], [
+  shell: createExtractedStyle([['1nca60l', 'display-grid--jgp0up0'], ['1phh07j', 'gap--uazf000'], [
     '1ffb9qm',
-    'padding-a4jdta0',
+    'padding--d9sf8l0',
   ]]),
 };
 const childStyles = {
-  root: createExtractedSlot('wu3w6r0', [['18q1j80', 'color-black-ghfc8x0'], ['1ffb9qm', 'padding-bsj9kul']]),
-  label: createExtractedSlot('djebz00', [['1pkhne0', 'font-700-bm30w4b']]),
+  root: createExtractedSlot('wu3w6r0', [['18q1j80', 'color-black--brq72zr'], ['1ffb9qm', 'padding--cjx4pq0']]),
+  label: createExtractedSlot('djebz00', [['1pkhne0', 'font-700--bs1kyyx']]),
 };
-const childTheme = createExtractedScope([[4, 'wu3w6r0', '18q1j80', 'color-purple-b9l8roz'], [
+const childTheme = createExtractedScope([[4, 'wu3w6r0', '18q1j80', 'color-purple--ex2wz20'], [
   4,
   'djebz00',
   '18q1j80',
-  'color-teal-bjishx8',
+  'color-teal--bog7gqi',
 ]]);
 const combineChildStyle = combineStyle.for(childStyles);
 type ChildStyle = CombinedStyleFor<typeof combineChildStyle>;

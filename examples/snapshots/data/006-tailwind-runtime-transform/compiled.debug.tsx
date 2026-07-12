@@ -3,35 +3,35 @@ import { createExtractedStyle, createExtractedToken, withTokens } from '@fluenti
 import { Colors } from './style';
 const _fluenticToken = createExtractedToken('14c7omo', null);
 const _fluenticToken2 = createExtractedToken('14m7abn', null);
-const _fluenticStyle = createExtractedStyle([['18q1j80', 'color-bhvjcp4', [1, '--var-o2cnu50', _fluenticToken, 1]], [
+const _fluenticStyle = createExtractedStyle([['18q1j80', 'color--lm9gi00', [1, '--var-o2cnu50', _fluenticToken, 1]], [
   'mwx9540',
-  'background-color-white-bovvp2a',
-], ['1omoamz', 'border-color-hover-fu6etd0', [1, '--var-cns3eo0', _fluenticToken2, 1]]]);
-const _fluenticStyle2 = createExtractedStyle([['1nca60l', 'display-grid-byw9cz2'], ['1phh07j', 'gap-dnpg8g0']]);
+  'background-color-white--h44xih0',
+], ['1omoamz', 'border-color-hover--bfptscc', [1, '--var-cns3eo0', _fluenticToken2, 1]]]);
+const _fluenticStyle2 = createExtractedStyle([['1nca60l', 'display-grid--jgp0up0'], ['1phh07j', 'gap--j550dy0']]);
 const _fluenticToken3 = createExtractedToken('14w6w0m', null);
 const _fluenticToken4 = createExtractedToken('1566hpl', null);
 const _fluenticToken5 = createExtractedToken('15g63ek', null);
 const _fluenticToken6 = createExtractedToken('15q5p3j', null);
 const _fluenticStyle3 = createExtractedStyle([
-  ['1nca60l', 'display-flex-rak8gp0'],
-  ['1a6hjt3', 'flex-column-v22jid0'],
-  ['1phh07j', 'gap-lss4fn0'],
-  ['mwx9540', 'background-color-bdpz68b', [1, '--var-g9wr0z0', _fluenticToken3, 1]],
-  ['rykr7b0', 'border-by4aau8'],
-  ['109h4xq', 'border-color-bag4qwo', [1, '--var-n5tknl0', _fluenticToken4, 1]],
-  ['6hmhi80', 'min-height-m7wol50'],
-  ['1ffb9qm', 'padding-ba2nkh0'],
-  ['d1c10h0', 'background-color-hover-c72eqh0', [1, '--var-qh45190', _fluenticToken5, 1]],
-  ['1omoamz', 'border-color-hover-cijv2f0', [1, '--var-bl6zn73', _fluenticToken6, 1]],
+  ['1nca60l', 'display-flex--fruelm0'],
+  ['1a6hjt3', 'flex-column--oez5rp0'],
+  ['1phh07j', 'gap--j550dy0'],
+  ['mwx9540', 'background-color--m1p2pp0', [1, '--var-g9wr0z0', _fluenticToken3, 1]],
+  ['rykr7b0', 'border--b3cpjgx'],
+  ['109h4xq', 'border-color--g0t7pm0', [1, '--var-n5tknl0', _fluenticToken4, 1]],
+  ['6hmhi80', 'min-height--bc7gmho'],
+  ['1ffb9qm', 'padding--yy6azw0'],
+  ['d1c10h0', 'background-color-hover--c4ao1t0', [1, '--var-qh45190', _fluenticToken5, 1]],
+  ['1omoamz', 'border-color-hover--d64fkt0', [1, '--var-bl6zn73', _fluenticToken6, 1]],
 ]);
 const _fluenticToken7 = createExtractedToken('1605asi', null);
-const _fluenticStyle4 = createExtractedStyle([['1nca60l', 'display-block-b7y018m'], ['1hznesf', 'width-b5u8lpv'], [
+const _fluenticStyle4 = createExtractedStyle([['1nca60l', 'display-block--irneu20'], ['1hznesf', 'width--m72p5c0'], [
   '2521q20',
-  'height-bqr6ok0',
-], ['mwx9540', 'background-color-b4wq19y', [1, '--var-rvckzo0', _fluenticToken7, 1]]]);
+  'height--bpm7y8x',
+], ['mwx9540', 'background-color--btdi9x7', [1, '--var-rvckzo0', _fluenticToken7, 1]]]);
 const topLevelFeatured = !!(window as any).snapshotFeatured;
 export const topLevelDynamic = createExtractedStyle([
-  ['mwx9540', 'background-color-c41zqz0', [
+  ['mwx9540', 'background-color--b0bjfj4', [
     1,
     '--var-gcu4580',
     topLevelFeatured
@@ -39,8 +39,8 @@ export const topLevelDynamic = createExtractedStyle([
       : 'var(--token-snapshot-tailwind-color-emerald-600-bkbhka4, #059669)',
     1,
   ]],
-  ['rykr7b0', 'border-bvffmo1'],
-  ['109h4xq', 'border-color-bswox76', [
+  ['rykr7b0', 'border--b3cpjgx'],
+  ['109h4xq', 'border-color--fve7pl0', [
     1,
     '--var-i7awe00',
     topLevelFeatured
@@ -48,7 +48,7 @@ export const topLevelDynamic = createExtractedStyle([
       : 'var(--token-snapshot-tailwind-color-border-bai0r5n, #d8e5e0)',
     1,
   ]],
-  ['1ffb9qm', 'padding-jus0s20'],
+  ['1ffb9qm', 'padding--o7dkd70'],
 ]);
 const plans = [['Starter', Colors.blue[600]], ['Scale', Colors.emerald[600]]] as const;
 export function TailwindRuntimeTransform({

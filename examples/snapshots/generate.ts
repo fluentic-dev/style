@@ -109,20 +109,20 @@ async function runForId(itemId: string) {
   const importSources = await getSnapshotImportSources(snapshotDir);
 
   let compilerOptions: CompilerOptions = {
-    css: { ...cssOptions, layer: true, debugClassName: false, localClassName: false },
+    css: { ...cssOptions, layer: true, debugClassName: false },
   };
   let debugCompilerOptions: CompilerOptions = {
-    css: { ...cssOptions, layer: true, debugClassName: true, localClassName: true },
+    css: { ...cssOptions, layer: true, debugClassName: true },
   };
 
   if (importSources) {
     compilerOptions = {
-      css: { ...cssOptions, layer: true, debugClassName: false, localClassName: false },
+      css: { ...cssOptions, layer: true, debugClassName: false },
       importSources,
     };
     debugCompilerOptions = {
       ...compilerOptions,
-      css: { ...cssOptions, debugClassName: true, localClassName: true },
+      css: { ...cssOptions, debugClassName: true },
     };
   }
 
