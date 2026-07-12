@@ -27,11 +27,15 @@
     "@example/snapshots": "0.0.0",
     "@example/static-values": "0.0.0",
     "@example/theme": "0.0.0",
-    "@fluentic/style": "0.1.0-beta.0"
+    "@fluentic/style": "0.1.0-beta.0",
+    "@example/tailwind": "0.0.0",
+    "@example/tailwind-classname": "0.0.0"
   },
   "changesets": [
+    "classname-tailwind-compiler",
     "first-public-beta-release-notes",
-    "typed-selector-asserts",
-    "classname-tailwind-compiler"
+    "global-prod-classnames",
+    "sync-beta-release-metadata",
+    "typed-selector-asserts"
   ]
 }
