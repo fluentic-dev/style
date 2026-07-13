@@ -30,7 +30,7 @@
   display: grid;
   font-family: var(--pg-ui-font);
   grid-template-rows: 48px 1fr;
-  height: 100vh;
+  height: 100dvh;
   letter-spacing: 0;
   overflow: hidden;
 }
@@ -102,10 +102,11 @@
 }
 
 .pg-topbar-divider {
+  align-self: center;
   background: var(--pg-border);
   flex: 0 0 auto;
-  height: 18px;
-  margin: 0 4px;
+  height: 24px;
+  margin: 0 0.5rem;
   width: 1px;
 }
 
@@ -124,6 +125,10 @@
 
 .pg-docs-link:hover {
   color: var(--pg-ink);
+}
+
+.pg-mobile-overlay-actions {
+  display: none;
 }
 
 /* Examples area — pushed right */
@@ -1426,17 +1431,30 @@
 /* ─── Responsive ──────────────────────────────────────────────────────────── */
 
 @media (max-width: 1180px) {
+  .pg-app {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .playground-page {
+    overflow: auto;
+  }
+
   .pg-workspace {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: auto auto;
+    overflow: visible;
   }
 
   .pg-editor-pane {
-    height: 760px;
+    border-top: 1px solid var(--pg-border);
+    height: min(760px, 82dvh);
   }
 
   .pg-preview-pane {
-    height: 520px;
+    height: min(520px, 72dvh);
+    order: -1;
   }
 
   .pg-workspace-resizer {
@@ -1445,21 +1463,234 @@
 }
 
 @media (max-width: 720px) {
+  .pg-app {
+    height: 100dvh;
+    grid-template-rows: auto 1fr;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .playground-page {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .pg-workspace {
+    grid-template-rows: minmax(0, 1fr);
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .pg-topbar {
+    align-items: stretch;
+    min-height: 52px;
+  }
+
+  .pg-brand {
+    padding: 0 0.5rem 0 0.58rem;
+  }
+
+  .pg-brand-title {
+    display: none;
+  }
+
+  .pg-docs-link {
+    padding: 0 0.62rem;
+  }
+
+  .pg-mobile-overlay-actions {
+    align-items: center;
+    display: inline-flex;
+    flex: 0 0 auto;
+    gap: 0.35rem;
+    padding: 0 0.35rem;
+  }
+
+  .pg-mobile-overlay-actions button {
+    appearance: none;
+    background: #ffffff;
+    border: 1px solid var(--pg-border);
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(17, 24, 39, 0.04);
+    color: var(--pg-ink);
+    cursor: pointer;
+    font: inherit;
+    font-size: 0.76rem;
+    font-weight: 720;
+    min-height: 34px;
+    padding: 0 0.58rem;
+    white-space: nowrap;
+  }
+
+  .pg-mobile-overlay-actions button:active {
+    background: var(--pg-accent-soft);
+    border-color: #c4b5fd;
+    color: var(--pg-accent-strong);
+  }
+
+  .pg-examples-area {
+    min-width: 0;
+    padding: 0 0.58rem 0 0.35rem;
+  }
+
+  .pg-example-select-btn {
+    max-width: 100%;
+    min-height: 36px;
+    padding-inline: 0.58rem;
+  }
+
+  .pg-examples-dropdown-menu {
+    max-height: min(68dvh, 420px);
+    min-width: min(86vw, 320px);
+    right: 0.45rem;
+  }
+
   .pg-editor-pane {
-    grid-template-rows: auto 36px 400px 7px 300px;
-    height: auto;
+    border-top: 0;
+    grid-template-rows: auto auto minmax(0, 1fr) 0 minmax(230px, 42dvh);
+    height: 100%;
+    min-height: 0;
   }
 
   .pg-editor-pane.is-dock-collapsed {
-    grid-template-rows: auto 36px 400px 0 50px;
+    grid-template-rows: auto auto minmax(0, 1fr) 0 50px;
   }
 
   .pg-preview-pane {
-    height: 460px;
+    bottom: 0;
+    box-shadow: 0 -16px 48px rgba(15, 23, 42, 0.18);
+    display: none;
+    grid-template-rows: 46px minmax(0, 1fr);
+    height: 100dvh;
+    left: 0;
+    min-height: 0;
+    position: fixed;
+    right: 0;
+    top: 0;
+    z-index: 300;
+  }
+
+  .pg-preview-pane.is-mobile-overlay-open {
+    display: grid;
+  }
+
+  .pg-preview-pane.is-mobile-overlay-open .pg-pane-collapse-btn {
+    display: inline-flex;
+  }
+
+  .pg-preview-pane.is-mobile-overlay-open .pg-side-chevron.is-right {
+    margin-right: 0;
+    transform: rotate(135deg);
+  }
+
+  .pg-pane-head,
+  .pg-file-tabs {
+    min-height: 46px;
+  }
+
+  .pg-file-tabs button,
+  .pg-pane-tabs button {
+    min-height: 46px;
+  }
+
+  .pg-editor-status {
+    align-items: start;
+    gap: 0.4rem;
+    min-height: 42px;
+    padding-block: 0.45rem;
+  }
+
+  .pg-editor-status>span:first-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pg-trace-chip {
+    max-width: 56vw;
+  }
+
+  .pg-trace-chip-loc {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .pg-dock-resizer {
+    display: block;
+    height: 0;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  .pg-pane-collapse-btn {
+    display: none;
+  }
+
+  .pg-dock-tabs {
+    height: 44px;
+    min-height: 44px;
+    padding-right: 0.3rem;
+  }
+
+  .pg-dock-tabs>button:not(.pg-collapse-btn) {
+    height: 44px;
+    min-height: 44px;
+    padding: 0 0.68rem;
+  }
+
+  .pg-collapse-btn {
+    height: 32px;
+    margin-right: 0.18rem;
+    width: 32px;
+  }
+
+  .pg-trace-overlay,
+  .pg-errors-overlay {
+    padding: 0.6rem;
+  }
+
+  .pg-trace-overlay button {
+    gap: 0.44rem;
+    padding: 0.64rem;
+  }
+
+  .pg-trace-meta {
+    align-items: start;
+    display: grid;
+    gap: 0.34rem;
+  }
+
+  .pg-trace-file {
+    max-width: 100%;
+  }
+
+  .pg-trace-css,
+  .pg-trace-html {
+    overflow-x: auto;
+    text-overflow: clip;
+    white-space: nowrap;
   }
 
   .pg-config-grid {
     grid-template-columns: 1fr;
+    padding: 0.72rem 0.72rem 1rem;
+  }
+
+  .pg-config-switch,
+  .pg-config-field {
+    align-items: stretch;
+    gap: 0.58rem;
+    grid-template-columns: 1fr;
+    padding: 0.72rem;
+  }
+
+  .pg-config-field input[type='text'],
+  .pg-config-field input[type='number'],
+  .pg-config-segment {
+    inline-size: 100%;
+    min-width: 0;
   }
 
   .pg-example-select-kicker {
@@ -1467,6 +1698,69 @@
   }
 
   .pg-example-select-label {
-    max-width: 9rem;
+    max-width: min(42vw, 11rem);
+  }
+
+  .pg-monaco-shell .monaco-editor {
+    touch-action: pan-x pan-y;
+  }
+
+  .pg-app.is-mobile-demo .pg-monaco-shell {
+    border-bottom: 1px solid var(--pg-border);
+  }
+}
+
+@media (max-width: 430px) {
+  .pg-docs-link {
+    font-size: 0;
+    padding-inline: 0.42rem;
+  }
+
+  .pg-docs-link::before {
+    content: '←';
+    font-size: 0.9rem;
+  }
+
+  .pg-topbar-divider {
+    margin-inline: 0.5rem;
+  }
+
+  .pg-examples-area {
+    padding-right: 0.38rem;
+  }
+
+  .pg-brand {
+    padding-left: 0.38rem;
+  }
+
+  .pg-example-select-label {
+    max-width: min(24vw, 5.8rem);
+  }
+
+  .pg-preview-pane {
+    height: 100dvh;
+    min-height: 0;
+  }
+
+  .pg-editor-pane {
+    grid-template-rows: auto auto minmax(0, 1fr) 0 minmax(230px, 42dvh);
+  }
+
+  .pg-editor-pane.is-dock-collapsed {
+    grid-template-rows: auto auto minmax(0, 1fr) 0 50px;
+  }
+
+  .pg-trace-chip {
+    max-width: 48vw;
+  }
+
+  .pg-mobile-overlay-actions {
+    gap: 0.25rem;
+    padding-inline: 0.25rem;
+  }
+
+  .pg-mobile-overlay-actions button {
+    font-size: 0.72rem;
+    padding-inline: 0.46rem;
   }
 }

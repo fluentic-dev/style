@@ -63,6 +63,7 @@ const FONT_FAMILY = '"JetBrains Mono", "SFMono-Regular", Consolas, "Liberation M
 const CODE_OUTPUT_IDS = new Set<OutputPanel>(['buildJs', 'buildCss', 'runtimeCss']);
 const basePath = process.env.NEXT_PUBLIC_DOCS_BASE ?? '';
 const BASE_URL = `${basePath}/`;
+const MOBILE_DEMO_QUERY = '(max-width: 760px), (hover: none) and (pointer: coarse)';
 
 const outputTabs: Array<{ id: OutputPanel; label: string; }> = [
   { id: 'buildJs', label: 'JS Output' },
@@ -136,6 +137,8 @@ export default function PlaygroundApp() {
   const [sourceFocus, setSourceFocus] = useState<{ file: string; line: number; column: number; } | null>(null);
   const [isEditorReady, setEditorReady] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [isMobileDemoMode, setMobileDemoMode] = useState(false);
+  const [isMobilePreviewOpen, setMobilePreviewOpen] = useState(false);
 
   // DOM refs
   const workspaceRef = useRef<HTMLDivElement>(null);
@@ -156,6 +159,7 @@ export default function PlaygroundApp() {
   const runtimeWorker = useRef<Worker | null>(null);
   const runId = useRef(0);
   const priorityModeRef = useRef(priorityMode);
+  const mobileDemoModeRef = useRef(isMobileDemoMode);
 
   const activeCode = useMemo(
     () => files.find((f) => f.name === activeFile)?.code ?? '',
@@ -175,6 +179,30 @@ export default function PlaygroundApp() {
     priorityModeRef.current = priorityMode;
   }, [priorityMode]);
 
+  useEffect(() => {
+    mobileDemoModeRef.current = isMobileDemoMode;
+  }, [isMobileDemoMode]);
+
+  useEffect(() => {
+    const updateMode = () => {
+      const ua = window.navigator.userAgent.toLowerCase();
+      setMobileDemoMode(
+        ua.includes('android') ||
+          window.matchMedia(MOBILE_DEMO_QUERY).matches,
+      );
+    };
+
+    const media = window.matchMedia(MOBILE_DEMO_QUERY);
+    updateMode();
+    media.addEventListener('change', updateMode);
+    window.addEventListener('resize', updateMode);
+
+    return () => {
+      media.removeEventListener('change', updateMode);
+      window.removeEventListener('resize', updateMode);
+    };
+  }, []);
+
   function switchExample(id: string) {
     const example = examples.find((e) => e.id === id);
     if (!example) return;
@@ -191,6 +219,11 @@ export default function PlaygroundApp() {
     setActiveTraceKey('');
     setSourceFocus(null);
     sourceDecorRef.current?.clear();
+  }
+
+  function openMobilePreview(tab: PreviewTab) {
+    setPreviewTab(tab);
+    setMobilePreviewOpen(true);
   }
 
   const runRuntime = useCallback(
@@ -479,6 +512,8 @@ export default function PlaygroundApp() {
         occurrencesHighlight: 'off',
         padding: { bottom: 18, top: 18 },
         quickSuggestions: true,
+        readOnly: mobileDemoModeRef.current,
+        readOnlyMessage: { value: '' },
         renderLineHighlight: 'line',
         scrollBeyondLastLine: false,
         selectionHighlight: false,
@@ -595,9 +630,17 @@ export default function PlaygroundApp() {
       monaco.editor.createModel(activeCode, getLanguage(activeFile), activeUri);
     if (editor.getModel() !== activeModel) {
       editor.setModel(activeModel);
-      editor.focus();
     }
   }, [activeCode, activeFile, files, isEditorReady]);
+
+  useEffect(() => {
+    editorRef.current?.updateOptions({
+      domReadOnly: isMobileDemoMode,
+      readOnly: isMobileDemoMode,
+      quickSuggestions: !isMobileDemoMode,
+      suggestOnTriggerCharacters: !isMobileDemoMode,
+    });
+  }, [isMobileDemoMode]);
 
   useEffect(() => {
     const monaco = monacoRef.current;
@@ -637,8 +680,10 @@ export default function PlaygroundApp() {
       const monaco = monacoRef.current;
       if (!editor || !monaco) return;
       editor.revealLineInCenter(sourceFocus.line, monaco.editor.ScrollType.Smooth);
-      editor.setPosition({ column: sourceFocus.column, lineNumber: sourceFocus.line });
-      editor.focus();
+      if (!mobileDemoModeRef.current) {
+        editor.setPosition({ column: sourceFocus.column, lineNumber: sourceFocus.line });
+        editor.focus();
+      }
       sourceDecorRef.current?.set([{
         range: new monaco.Range(sourceFocus.line, 1, sourceFocus.line, 1),
         options: {
@@ -659,7 +704,7 @@ export default function PlaygroundApp() {
   const activeJumpLabel = activeTraceKey.startsWith('marker:') ? 'Marker' : 'Trace';
 
   return (
-    <div className='pg-app'>
+    <div className={`pg-app${isMobileDemoMode ? ' is-mobile-demo' : ''}`}>
       {/* ── Top bar ─────────────────────────────────────────── */}
       <header className='pg-topbar'>
         <span className='pg-brand'>
@@ -668,6 +713,15 @@ export default function PlaygroundApp() {
         </span>
         <div className='pg-topbar-divider' />
         <a className='pg-docs-link' href={`${BASE_URL}docs/`}>← Docs</a>
+
+        <div className='pg-mobile-overlay-actions' aria-label='Preview tools'>
+          <button type='button' onClick={() => openMobilePreview('preview')}>
+            Preview
+          </button>
+          <button type='button' onClick={() => openMobilePreview('config')}>
+            Config
+          </button>
+        </div>
 
         {/* Examples */}
         <div className='pg-examples-area' ref={dropdownRef}>
@@ -878,8 +932,13 @@ export default function PlaygroundApp() {
         />
 
         {/* ── Right: preview pane ─────────────────────────────── */}
-        <section className={`pg-preview-pane${isPreviewCollapsed ? ' is-collapsed' : ''}`} aria-label='Preview'>
-          {isPreviewCollapsed
+        <section
+          className={`pg-preview-pane${isPreviewCollapsed && !isMobileDemoMode ? ' is-collapsed' : ''}${
+            isMobilePreviewOpen ? ' is-mobile-overlay-open' : ''
+          }`}
+          aria-label='Preview'
+        >
+          {isPreviewCollapsed && !isMobileDemoMode
             ? (
               <button
                 type='button'
@@ -892,7 +951,7 @@ export default function PlaygroundApp() {
               </button>
             )
             : null}
-          {!isPreviewCollapsed && (
+          {(!isPreviewCollapsed || isMobileDemoMode) && (
             <>
               <div className='pg-pane-head'>
                 <div className='pg-pane-tabs'>
@@ -922,8 +981,14 @@ export default function PlaygroundApp() {
                   <button
                     type='button'
                     className='pg-pane-collapse-btn'
-                    aria-label='Hide preview panel'
-                    onClick={() => setPreviewCollapsed(true)}
+                    aria-label={isMobileDemoMode ? 'Close preview overlay' : 'Hide preview panel'}
+                    onClick={() => {
+                      if (isMobileDemoMode) {
+                        setMobilePreviewOpen(false);
+                        return;
+                      }
+                      setPreviewCollapsed(true);
+                    }}
                   >
                     <span className='pg-side-chevron is-right' aria-hidden='true' />
                   </button>
