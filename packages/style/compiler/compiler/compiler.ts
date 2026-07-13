@@ -11,6 +11,7 @@ import {
 import { clearResolverCache } from '../utils/file_resolver';
 import {
   getStyleExtractRuntimeImportPath,
+  getStyleRuntimeAdapterImportPath,
   getStyleRuntimeCssImportPath,
   getStyleRuntimeDevRscImportPath,
   getStyleRuntimeImportPath,
@@ -157,6 +158,8 @@ function rewriteCompilerRuntimeImports(code: string, runtimeMode: CompilerRuntim
 
 function getCompilerRuntimeImportSource(source: string, runtimeMode: CompilerRuntimeMode) {
   if (source === STYLE_IMPORT_PATH) return getStyleRuntimeImportPath(runtimeMode);
+  const adapterImportPath = getStyleRuntimeAdapterImportPath(source, runtimeMode);
+  if (adapterImportPath) return adapterImportPath;
   if (source === STYLE_CSS_IMPORT_PATH) return getStyleRuntimeCssImportPath(runtimeMode);
   if (source === STYLE_EXTRACT_RUNTIME_IMPORT_PATH) return getStyleExtractRuntimeImportPath(runtimeMode);
   if (runtimeMode === CompilerRuntimeMode.RscDev && source === STYLE_DEV_RSC_IMPORT_PATH) {

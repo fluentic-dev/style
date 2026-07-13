@@ -1,5 +1,6 @@
 import type { CompilerInternal, TransformExtractArgs, TransformExtractResult } from '../../compiler';
 import type { CompilerCssCollector } from '../../extract';
+import { createCssPropPlugin } from '../cssProp';
 import { babelTransform } from '../utils/babel';
 import { createExtractPlugin, type ExtractTracer } from './plugin';
 
@@ -31,7 +32,7 @@ export function transformExtract(
     code: args.code,
     filePath: args.filePath,
     sourcemap: args.sourcemap,
-    plugins: [plugin],
+    plugins: [createCssPropPlugin({ options: internal.options }), plugin],
     errorLabel: '[style] compiler error',
   });
 

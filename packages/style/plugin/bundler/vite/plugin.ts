@@ -1,17 +1,12 @@
 import type { Plugin } from 'vite';
-import {
-  invalidateFiles,
-  PLUGIN_NAME,
-  type PluginCssOptions,
-  type PluginOptions,
-  transformCssOutput,
-} from '../../utils';
+import { invalidateFiles, PLUGIN_NAME, type PluginOptions, transformCssOutput } from '../../utils';
 import { hasCssMarker, replaceCssMarker } from '../../utils/cssMarker';
 import { formatError } from '../../utils/misc';
 import { getVirtualModuleId, RESOLVED_RUNTIME_MODULE_ID } from '../../utils/virtual';
 import { createVitePluginState } from './state';
 
-export type { PluginCssOptions, PluginOptions };
+export { CssPropPresets, CssPropReact, CssPropSolid } from '../../utils';
+export type { CompilerCssPropOptions, PluginCssOptions, PluginOptions } from '../../utils';
 
 type CssAsset = {
   source: string;

@@ -1,3 +1,4 @@
+export * from './cssProp';
 export * from './debug';
 export * from './evaluator';
 export * from './extract';

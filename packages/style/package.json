@@ -113,6 +113,14 @@
       "import": "./dist/entry/dev/jsx-dev-runtime.js",
       "default": "./dist/entry/dev/jsx-dev-runtime.js"
     },
+    "./adapter/solid": {
+      "types": "./adapter/solid.ts",
+      "import": "./dist/adapter/solid.js"
+    },
+    "./adapter/react": {
+      "types": "./adapter/react.ts",
+      "import": "./dist/adapter/react.js"
+    },
     "./config": {
       "types": "./config/index.ts",
       "import": "./dist/config/index.js"
@@ -203,17 +211,49 @@
       "types": "./entry/dev/css.ts",
       "import": "./dist/entry/dev/css.js"
     },
+    "./entry/dev/adapter/solid": {
+      "types": "./entry/dev/adapter/solid.ts",
+      "import": "./dist/entry/dev/adapter/solid.js"
+    },
+    "./entry/dev/adapter/react": {
+      "types": "./entry/dev/adapter/react.ts",
+      "import": "./dist/entry/dev/adapter/react.js"
+    },
     "./entry/prod/css": {
       "types": "./entry/prod/css.ts",
       "import": "./dist/entry/prod/css.js"
+    },
+    "./entry/prod/adapter/solid": {
+      "types": "./entry/prod/adapter/solid.ts",
+      "import": "./dist/entry/prod/adapter/solid.js"
+    },
+    "./entry/prod/adapter/react": {
+      "types": "./entry/prod/adapter/react.ts",
+      "import": "./dist/entry/prod/adapter/react.js"
     },
     "./entry/rsc-dev/css": {
       "types": "./entry/rsc_dev/css.ts",
       "import": "./dist/entry/rsc-dev/css.js"
     },
+    "./entry/rsc-dev/adapter/solid": {
+      "types": "./entry/rsc_dev/adapter/solid.ts",
+      "import": "./dist/entry/rsc-dev/adapter/solid.js"
+    },
+    "./entry/rsc-dev/adapter/react": {
+      "types": "./entry/rsc_dev/adapter/react.ts",
+      "import": "./dist/entry/rsc-dev/adapter/react.js"
+    },
     "./entry/rsc-prod/css": {
       "types": "./entry/rsc_prod/css.ts",
       "import": "./dist/entry/rsc-prod/css.js"
+    },
+    "./entry/rsc-prod/adapter/solid": {
+      "types": "./entry/rsc_prod/adapter/solid.ts",
+      "import": "./dist/entry/rsc-prod/adapter/solid.js"
+    },
+    "./entry/rsc-prod/adapter/react": {
+      "types": "./entry/rsc_prod/adapter/react.ts",
+      "import": "./dist/entry/rsc-prod/adapter/react.js"
     },
     "./entry/prod/runtime": {
       "types": "./entry/prod/runtime.ts",

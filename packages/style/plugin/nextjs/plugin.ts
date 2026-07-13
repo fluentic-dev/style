@@ -53,6 +53,9 @@ import {
   resolveNextCompilerOptions,
 } from './utils';
 
+export { CssPropPresets, CssPropReact, CssPropSolid } from '../utils';
+export type { CompilerCssPropOptions } from '../utils';
+
 export default plugin;
 
 const TURBOPACK_TRANSFORM_EXTENSIONS: readonly string[] = ['*.ts', '*.tsx', '*.js', '*.jsx'];

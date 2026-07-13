@@ -1,4 +1,5 @@
 import type { CompilerInternal, TransformDebugArgs, TransformDebugResult } from '../../compiler';
+import { createCssPropPlugin } from '../cssProp';
 import type { ExtractTracer } from '../extract/plugin';
 import { babelTransform } from '../utils/babel';
 import { createDebugPlugin } from './plugin';
@@ -34,7 +35,7 @@ export function transformDebug(
     code: args.code,
     filePath: args.filePath,
     sourcemap: args.sourcemap,
-    plugins: [plugin],
+    plugins: [plugin, createCssPropPlugin({ options })],
     retainLines: true,
   });
 

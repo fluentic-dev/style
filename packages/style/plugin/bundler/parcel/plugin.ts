@@ -1,3 +1,5 @@
+export { CssPropPresets, CssPropReact, CssPropSolid } from '../../utils';
+export type { CompilerCssPropOptions, PluginOptions } from '../../utils';
 export { default as optimizer } from './optimizer';
 export { default as resolver } from './resolver';
 export { default as runtime } from './runtime';

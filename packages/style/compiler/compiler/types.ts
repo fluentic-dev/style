@@ -2,6 +2,7 @@ import type { CssConfig } from '../../config/config/css';
 import type { DevRuntimeOptions } from '../../config/config/dev';
 import type { CheckSelectorMode } from '../../config/types';
 import type { ReplaceProps } from '../../utils/type';
+import type { CompilerCssPropOptions } from '../cssProp';
 import type { CssExtractRule } from '../extract';
 import type { BabelTransformSourceMap } from '../transform/utils/babel';
 import type { ImportSource } from '../utils/import_source';
@@ -20,6 +21,7 @@ export type DevSourcemapMode = 'sourceUrl' | 'sourceContent' | 'sidecarServer';
 export type CompilerOptions = {
   hoist?: boolean;
   css?: CompilerCssOptions;
+  cssProp?: false | CompilerCssPropOptions;
   dev?: CompilerDevOptions;
 
   importSources?: ImportSource[];

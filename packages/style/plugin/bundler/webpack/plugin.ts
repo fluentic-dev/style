@@ -35,7 +35,8 @@ import {
   webpackRegistry,
 } from './utils';
 
-export type { PluginOptions };
+export { CssPropPresets, CssPropReact, CssPropSolid } from '../../utils';
+export type { CompilerCssPropOptions, PluginOptions } from '../../utils';
 
 const WEBPACK_RUNTIME_FILE = 'webpack-runtime.js';
 

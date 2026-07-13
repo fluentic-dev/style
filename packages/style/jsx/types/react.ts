@@ -1,6 +1,6 @@
-import type { RuntimeStyleAttributes } from '../runtime/types';
+import type { RuntimeStyleAttributes } from '../../runtime/types';
 
-export interface RuntimeAttributes extends RuntimeStyleAttributes {}
+interface RuntimeAttributes extends RuntimeStyleAttributes {}
 
 declare module 'react' {
   interface HTMLAttributes<T> extends RuntimeAttributes {}

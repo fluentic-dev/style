@@ -5,7 +5,7 @@ import { formatClassName } from '../atomic/debug/className';
 import { compareLayerPriority, type LayerPriority } from '../atomic/layer';
 import { escapeCssIdent } from '../atomic/utils/cssIdent';
 import { normalizeDebugKeywordValue, normalizePropertyName, sanitizeDebugPropertyName } from '../atomic/utils/debug';
-import { CompilerRuntimeMode } from '../compiler';
+import { CompilerRuntimeMode, CssPropPresets } from '../compiler';
 import webpackLoader from '../plugin/bundler/webpack/loader';
 import { webpackRegistry } from '../plugin/bundler/webpack/utils';
 import { writeCacheFile } from '../plugin/utils/cache';
@@ -483,12 +483,11 @@ export const button = style({ color: 'black' })
   if (!result) throw new Error('expected compiler transform result');
 
   notIncludes(result.code, '.merge(');
-  includes(result.code, 'createExtractedStyleMerge');
 
-  const mergeCall = result.code.slice(result.code.indexOf('= createExtractedStyleMerge'));
-  const localBaseIndex = mergeCall.indexOf('color-black');
-  const sharedIndex = mergeCall.indexOf('shared');
-  const localHoverIndex = mergeCall.indexOf('color-hover-red');
+  const buttonCode = result.code.slice(result.code.indexOf('export const button'));
+  const localBaseIndex = buttonCode.indexOf('color-black');
+  const sharedIndex = buttonCode.indexOf('color-blue');
+  const localHoverIndex = buttonCode.indexOf('color-hover-red');
 
   if (
     localBaseIndex === -1 ||
@@ -861,6 +860,124 @@ const button = style.slot({ color: 'black' })
   includes(css, 'border-color: gray');
   includes(css, ':hover');
   includes(css, 'color: blue');
+});
+
+test('compiler keeps local style merge when slot chain continues after merge', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { combineStyle, style } from '@fluentic/style';
+
+const interaction = style({
+  outline: '3px solid #facc15',
+  outlineOffset: 3,
+}).hover({
+  transform: 'translateY(-2px)',
+});
+
+const styles = {
+  button: style.slot({
+    color: '#ffffff',
+  }).merge(interaction).focusVisible({
+    outlineColor: '#5eead4',
+  }),
+};
+
+const theme = style.scope([
+  styles.button({
+    backgroundColor: '#be123c',
+  }).merge(interaction).focusVisible({
+    outlineColor: '#fda4af',
+  }),
+]);
+
+const css = combineStyle(styles);
+export const view = <button css={css.button} />;
+`,
+    '/tmp/compiler-slot-continued-merge.tsx',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(css, 'outline: 3px solid #facc15');
+  includes(css, 'outline-offset: 3px');
+  includes(css, 'transform: translateY(-2px)');
+  includes(css, 'outline-color: #5eead4');
+  includes(result.code, 'createExtractedSlot');
+  includes(result.code, 'outline--');
+  includes(result.code, 'outline-offset--');
+  notIncludes(result.code, '.merge(');
+});
+
+test('compiler preserves local style merge order when slot chain continues', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const interaction = style({ color: 'black' })
+  .hover({ color: 'blue' });
+
+const button = style.slot({ color: 'white' })
+  .merge(interaction)
+  .hover({ color: 'red' });
+`,
+    '/tmp/compiler-slot-continued-merge-order.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const code = result.code.slice(result.code.indexOf('const button'));
+
+  includes(code, 'createExtractedSlot');
+  before(code, 'color-white--', 'color-black--');
+  before(code, 'color-black--', 'color-hover-blue--');
+  before(code, 'color-hover-blue--', 'color-hover-red--');
+  notIncludes(result.code, '.merge(');
+});
+
+test('compiler extracts continued local style merges without debug class metadata', () => {
+  const compiler = createCompiler({
+    layer: false,
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const interaction = style({
+  outline: '3px solid #facc15',
+  outlineOffset: 3,
+}).hover({
+  transform: 'translateY(-2px)',
+});
+
+const button = style.slot({
+  color: '#ffffff',
+}).merge(interaction).focusVisible({
+  outlineColor: '#5eead4',
+});
+`,
+    '/tmp/compiler-slot-continued-merge-no-debug.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(result.code, 'createExtractedSlot');
+  includes(css, 'outline: 3px solid #facc15');
+  includes(css, 'outline-offset: 3px');
+  includes(css, 'transform: translateY(-2px)');
+  includes(css, 'outline-color: #5eead4');
+  notIncludes(result.code, '.merge(');
 });
 
 test('compiler extracts static merge helper with direct multi-styleFn chains', () => {
@@ -2701,6 +2818,85 @@ test('plugin compiler rewrites root runtime imports but preserves plugin jsx run
   includes(result.code, '@fluentic/style/plugin/jsx/jsx-runtime');
   notIncludes(result.code, 'from "@fluentic/style"');
   notIncludes(result.code, '@fluentic/style/entry/dev/jsx-runtime');
+});
+
+test('compiler lowers intrinsic jsx css prop through solid adapter preset', () => {
+  const compiler = createCompiler({
+    cssProp: CssPropPresets.Solid,
+    layer: false,
+  });
+
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const styles = { root: style({ color: 'red' }) };
+const view = <div {...props} class="base" style={styleObj} css={styles.root} data-id="x" />;
+const component = <Button css={styles.root} />;
+`,
+    '/tmp/compiler-jsx-css-prop-solid.tsx',
+  );
+
+  if (!result) throw new Error('expected transform result');
+
+  includes(result.code, 'mergeJsxProps');
+  includes(result.code, '@fluentic/style/adapter/solid');
+  includes(result.code, '_fluenticMergeJsxProps([props,');
+  includes(result.code, 'class: "base"');
+  includes(result.code, 'style: styleObj');
+  includes(result.code, 'css: styles.root');
+  includes(result.code, '<Button css={styles.root} />');
+  includes(result.css.join('\n'), 'color: red');
+});
+
+test('plugin compiler rewrites jsx css prop adapter imports through runtime mode', () => {
+  const compiler = createPluginCompiler({
+    dev: true,
+    projectDir: testDir,
+    cacheDir: testDir + '.test-cache',
+    options: {
+      cssProp: CssPropPresets.Solid,
+    },
+    runtimeMode: CompilerRuntimeMode.Dev,
+  });
+
+  const result = compiler.transform(
+    `
+import { style } from "@fluentic/style";
+
+const styles = { root: style({ color: "red" }) };
+export const value = <div css={styles.root} />;
+`,
+    '/project/src/App.tsx',
+  );
+
+  if (!result) throw new Error('expected transform result');
+
+  includes(result.code, '@fluentic/style/entry/dev/adapter/solid');
+  notIncludes(result.code, '@fluentic/style/adapter/solid');
+});
+
+test('compiler lowers intrinsic jsx css prop through react adapter preset', () => {
+  const compiler = createCompiler({
+    cssProp: CssPropPresets.React,
+    layer: false,
+  });
+
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const styles = { root: style({ color: 'red' }) };
+const view = <div className="base" css={styles.root} />;
+`,
+    '/tmp/compiler-jsx-css-prop-react.tsx',
+  );
+
+  if (!result) throw new Error('expected transform result');
+
+  includes(result.code, '@fluentic/style/adapter/react');
+  includes(result.code, 'className: "base"');
+  includes(result.code, 'css: styles.root');
 });
 
 test('plugin compiler rewrites rsc dev helper imports through runtime mode', () => {

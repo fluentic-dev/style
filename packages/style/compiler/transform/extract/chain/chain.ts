@@ -1724,7 +1724,7 @@ function compileMergeArg(
   const localChain = getLocalStyleChainArg(styleArgNode, scope, styleNames);
   const localMeta = localChain ? scope.styleMetas?.get(localChain.rootName) : null;
 
-  if ((styleCallsite || options.dev?.sourcemapMode === 'value') && localChain?.kind === 'style' && localMeta) {
+  if (localChain?.kind === 'style' && localMeta) {
     return compileStyleChainInto(
       localChain,
       localMeta.selectors,
