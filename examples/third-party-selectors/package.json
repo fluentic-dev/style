@@ -1,0 +1,24 @@
+{
+  "name": "@example/third-party-selectors",
+  "private": true,
+  "version": "0.0.1-beta.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
+  },
+  "dependencies": {
+    "@fluentic/style": "workspace:*",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
+    "react-select": "^5.10.2"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "6.0.3",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.16"
+  }
+}
