@@ -3,11 +3,15 @@ import {
   BUILDER_CALLSITE,
   BUILDER_SCOPE,
   BUILDER_SCOPE_ID,
+  BUILDER_SELECTOR,
   BUILDER_SLOT_ID,
   BUILDER_STATE,
   BUILDER_TYPE,
   BUILDER_TYPE_SCOPE,
   BUILDER_TYPE_SCOPE_TARGET,
+  BUILDER_TYPE_SELECTOR,
+  BUILDER_TYPE_SELECTOR_OVERRIDE,
+  BUILDER_TYPE_SHEET,
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
@@ -18,17 +22,31 @@ import type {
   BuilderData,
   ScopeData,
   ScopeTargetData,
+  SelectorData,
+  SelectorOverrideData,
+  SheetData,
   SlotData,
   SlotOverrideData,
   StyleData,
   ThemeData,
 } from './data';
+import type { ItemSelector } from './state';
 
 export function createStyleData<Style>(
   callsite: BuilderCallsite | null,
 ): StyleData<Style> {
   return {
     [BUILDER_TYPE]: BUILDER_TYPE_STYLE,
+    [BUILDER_STATE]: { items: [], lookup: {} },
+    [BUILDER_CALLSITE]: callsite,
+  };
+}
+
+export function createSheetData<Style>(
+  callsite: BuilderCallsite | null,
+): SheetData<Style> {
+  return {
+    [BUILDER_TYPE]: BUILDER_TYPE_SHEET,
     [BUILDER_STATE]: { items: [], lookup: {} },
     [BUILDER_CALLSITE]: callsite,
   };
@@ -55,6 +73,30 @@ export function createSlotOverrideData<Style>(
     [BUILDER_STATE]: { items: [], lookup: {} },
     [BUILDER_CALLSITE]: callsite,
     [BUILDER_SLOT_ID]: slotId,
+  };
+}
+
+export function createSelectorOverrideData<Style>(
+  callsite: BuilderCallsite | null,
+  selectors: readonly ItemSelector[],
+): SelectorOverrideData<Style> {
+  return {
+    [BUILDER_TYPE]: BUILDER_TYPE_SELECTOR_OVERRIDE,
+    [BUILDER_STATE]: { items: [], lookup: {} },
+    [BUILDER_CALLSITE]: callsite,
+    [BUILDER_SELECTOR]: selectors,
+  };
+}
+
+export function createSelectorData<Style>(
+  callsite: BuilderCallsite | null,
+  selectors: readonly ItemSelector[],
+): SelectorData<Style> {
+  return {
+    [BUILDER_TYPE]: BUILDER_TYPE_SELECTOR,
+    [BUILDER_STATE]: { items: [], lookup: {} },
+    [BUILDER_CALLSITE]: callsite,
+    [BUILDER_SELECTOR]: selectors,
   };
 }
 

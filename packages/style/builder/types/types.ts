@@ -1,13 +1,29 @@
 import type { Selector } from '../../selector';
 import type { StyleObject } from '../../style/types';
-import type { ScopeData, SlotData, SlotOverrideData, StyleData } from '../data';
-import type { ScopeSelectorFns, ScopeSelfFn, SlotOverrideSelectorFns, SlotSelectorFns, StyleSelectorFns } from './fns';
+import type {
+  DebugData,
+  ScopeData,
+  SelectorData,
+  SelectorOverrideData,
+  SlotData,
+  SlotOverrideData,
+  StyleData,
+} from '../data';
+import type {
+  ScopeSelectorFns,
+  ScopeSelfFn,
+  SelectorOverrideSelectorFns,
+  SlotOverrideSelectorFns,
+  SlotSelectorFns,
+  StyleSelectorFns,
+} from './fns';
 
 export type { ScopeSelfFn };
 
 export type MergeRuleStyleData<Style = unknown> = StyleData<Style> | StyleData<Style>[];
 
 export type AtRuleStyleData<Style = unknown> = StyleObject<Style> | StyleData<Style>;
+export type SelectorOverrideStyleData<Style = unknown> = StyleObject<Style> | StyleData<Style>;
 
 export type SelectorsRecord = Record<string, Selector>;
 
@@ -26,6 +42,10 @@ export type SlotBuilderFns<Style, Selectors> =
 
 export type SlotOverrideBuilderFns<Style, Selectors> =
   & SlotOverrideSelectorFns<Style, Selectors>
+  & {};
+
+export type SelectorOverrideBuilderFns<Style, Selectors> =
+  & SelectorOverrideSelectorFns<Style, Selectors>
   & {};
 
 export type ScopeFns<Selectors> =
@@ -49,3 +69,13 @@ export type ScopeBuilder<Selectors> =
   & ScopeData
   & ScopeFns<Selectors>
   & {};
+
+export type SelectorBuilder<Style, Selectors> =
+  & SelectorData<Style>
+  & ((style?: SelectorOverrideStyleData<Style>, debug?: DebugData) => SelectorOverrideBuilder<Style, Selectors>)
+  & SelectorOverrideBuilderFns<Style, Selectors>;
+
+export type SelectorOverrideBuilder<Style, Selectors> =
+  & SelectorOverrideData<Style>
+  & ((style?: SelectorOverrideStyleData<Style>) => SelectorOverrideBuilder<Style, Selectors>)
+  & SelectorOverrideBuilderFns<Style, Selectors>;

@@ -6,6 +6,7 @@ export const BUILDER_CALLSITE: unique symbol = symbol('builder.callsite');
 export const BUILDER_SLOT_ID: unique symbol = symbol('builder.slotId');
 export const BUILDER_SCOPE_ID: unique symbol = symbol('builder.scopeId');
 export const BUILDER_SCOPE: unique symbol = symbol('builder.scope');
+export const BUILDER_SELECTOR: unique symbol = symbol('builder.selector');
 
 export const BUILDER_TYPE_STYLE = 1;
 export const BUILDER_TYPE_SLOT = 2;
@@ -13,6 +14,9 @@ export const BUILDER_TYPE_SLOT_OVERRIDE = 3;
 export const BUILDER_TYPE_SCOPE = 4;
 export const BUILDER_TYPE_SCOPE_TARGET = 5;
 export const BUILDER_TYPE_THEME = 6;
+export const BUILDER_TYPE_SELECTOR = 7;
+export const BUILDER_TYPE_SELECTOR_OVERRIDE = 8;
+export const BUILDER_TYPE_SHEET = 9;
 
 export const ITEM_RUNTIME_DEV = -1;
 export const ITEM_RUNTIME_DEV_PLUGIN = -2;
@@ -23,3 +27,5 @@ export const ITEM_VALUE_TYPE_VARIABLE = 1;
 export const ITEM_VALUE_TYPE_STYLE_DATA = 2;
 export const ITEM_VALUE_NUMBER_PX = 1;
 export const ITEM_VALUE_TYPE_AT_RULE_REF = 3;
+
+export const SHEET_SELECTOR_ANCHOR = '\0sheet';

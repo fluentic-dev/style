@@ -6,6 +6,7 @@ import {
   BUILDER_STATE,
   BUILDER_TYPE,
   BUILDER_TYPE_SCOPE_TARGET,
+  type BUILDER_TYPE_SHEET,
   type BUILDER_TYPE_SLOT,
   type BUILDER_TYPE_SLOT_OVERRIDE,
   type BUILDER_TYPE_STYLE,
@@ -20,6 +21,7 @@ type ExtractedTuple = [
 
 type ExtractedItemType =
   | typeof BUILDER_TYPE_STYLE
+  | typeof BUILDER_TYPE_SHEET
   | typeof BUILDER_TYPE_SLOT
   | typeof BUILDER_TYPE_SLOT_OVERRIDE;
 

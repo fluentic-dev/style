@@ -4,7 +4,7 @@ import type { BabelTypes } from '../../utils/babel';
 
 export type { CssExtractItem, CssExtractRule };
 
-export type CompiledChainType = 'style' | 'slot' | 'scope';
+export type CompiledChainType = 'style' | 'sheet' | 'slot' | 'scope';
 
 export type CompiledCssItem = CssExtractItem & {
   valueNode?: BabelTypes.Expression;

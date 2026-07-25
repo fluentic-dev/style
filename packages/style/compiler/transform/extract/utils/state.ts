@@ -18,6 +18,7 @@ export type ExtractPluginState = {
   styleFilePath: string;
   sourcemapTrace: 'style' | 'value';
   styleNames: Set<string>;
+  sheetNames: Set<string>;
   styleMetas: Map<string, StyleFnMeta>;
   bindings: EvalModuleBindings;
   bindingNodes: Map<string, BabelTypes.Node>;
@@ -42,6 +43,7 @@ export function getEvalScope(state: ExtractPluginState): EvalScope {
     styleFilePath: state.styleFilePath,
     sourcemapTrace: state.sourcemapTrace,
     styleNames: state.styleNames,
+    sheetNames: state.sheetNames,
     styleMetas: state.styleMetas,
     bindingNodes: state.bindingNodes,
     runtimeMode: state.runtimeMode,

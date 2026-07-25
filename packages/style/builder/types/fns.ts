@@ -1,7 +1,7 @@
 import type { Selector } from '../../selector';
 import type { StyleObject } from '../../style/types';
 import type { ScopeItems } from '../data/merge/scope';
-import type { scopeRule, slotOverrideRule, slotRule, styleRule } from './alias';
+import type { scopeRule, selectorOverrideRule, slotOverrideRule, slotRule, styleRule } from './alias';
 import type { AtRuleStyleData, MergeRuleStyleData } from './types';
 
 /* style */
@@ -173,6 +173,14 @@ export type SlotOverrideSelectorFns<Style, Selectors> = {
     Selectors[P],
     Style,
     ReturnType<typeof slotOverrideRule<Style, Selectors>>
+  >;
+};
+
+export type SelectorOverrideSelectorFns<Style, Selectors> = {
+  [P in keyof Selectors]: GetStyleFn<
+    Selectors[P],
+    Style,
+    ReturnType<typeof selectorOverrideRule<Style, Selectors>>
   >;
 };
 

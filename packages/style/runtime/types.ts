@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { ScopeData, ScopeTargetData, SlotData, StyleData, ThemeData } from '../builder/data';
+import type { ScopeData, ScopeTargetData, SheetData, SlotData, StyleData, ThemeData } from '../builder/data';
 import type { StyleTokenData, StyleTokenOverride } from '../style';
 import type { ResolvedStyleItem } from './core/cache/item';
 
@@ -16,13 +16,13 @@ export type StyleItems = (StyleItem | Falsy)[];
 
 export type RuntimeStyleItem = ResolvedStyleItem | ThemeData;
 
-export type RuntimeStylePropItem = RuntimeStyleItem | StyleData | SlotData;
+export type RuntimeStylePropItem = RuntimeStyleItem | StyleData | SheetData | SlotData;
 
 export type StyleProp = RecursiveProp<RuntimeStylePropItem>;
 
 export type StyleTokenInput<T> = T | StyleTokenData<T>;
 
-export type StyleTheme = RecursiveProp<ScopeData>;
+export type StyleTheme = RecursiveProp<ScopeData | SheetData>;
 
 export type TokenTheme = ThemeData;
 

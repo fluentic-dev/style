@@ -1,6 +1,8 @@
 import type { StyleObject } from '../style/types';
 import {
+  BUILDER_SELECTOR,
   BUILDER_SLOT_ID,
+  BUILDER_TYPE_SELECTOR_OVERRIDE,
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
@@ -8,12 +10,16 @@ import {
   type BuilderData,
   type BuilderType,
   type CreateData,
+  createSelectorOverrideData,
+  createSheetData,
   createSlotData,
   createSlotOverrideData,
   createStyleData,
   type DebugData,
   type ItemSelector,
   mergeBuilderData,
+  type SelectorOverrideData,
+  type SheetData,
   type SlotData,
   type SlotOverrideData,
   type StyleData,
@@ -37,6 +43,15 @@ export const mergeStyleData = createMerge(
   BUILDER_TYPE_STYLE,
 );
 
+const mergeSheetCreate: CreateData<SheetData> = (callsite) => {
+  return createSheetData(callsite);
+};
+
+export const mergeSheetData = createMerge(
+  mergeSheetCreate,
+  BUILDER_TYPE_STYLE,
+);
+
 const mergeSlotCreate: CreateData<SlotData> = (callsite, data) => {
   return createSlotData(callsite, data[BUILDER_SLOT_ID]);
 };
@@ -53,6 +68,15 @@ const mergeSlotOverrideCreate: CreateData<SlotOverrideData> = (callsite, data) =
 export const mergeSlotOverrideData = createMerge(
   mergeSlotOverrideCreate,
   BUILDER_TYPE_SLOT_OVERRIDE,
+);
+
+const mergeSelectorOverrideCreate: CreateData<SelectorOverrideData> = (callsite, data) => {
+  return createSelectorOverrideData(callsite, data[BUILDER_SELECTOR]);
+};
+
+export const mergeSelectorOverrideData = createMerge(
+  mergeSelectorOverrideCreate,
+  BUILDER_TYPE_SELECTOR_OVERRIDE,
 );
 
 function createMerge<Data extends BuilderData>(

@@ -17,6 +17,7 @@ import {
   FN_STYLE_PLAIN,
   FN_STYLE_RAW,
   FN_STYLE_SCOPE,
+  FN_STYLE_SELECTOR,
   IMPORT_PATHS,
 } from '../../utils/constants';
 import { createImportSourceMatcher, type ImportSourceMatcher } from '../../utils/import_source';
@@ -585,6 +586,11 @@ function getStyleObjectArg(
   state: PluginState,
 ) {
   const methodName = getSelectorMethodName(path.node.callee);
+
+  if (methodName === FN_STYLE_SELECTOR) {
+    return path.node.arguments[1];
+  }
+
   const rootName = getStyleChainRootName(path.node.callee, state.styleNames);
   const selector = methodName && rootName
     ? state.styleMetas.get(rootName)?.selectors[methodName]

@@ -1,4 +1,6 @@
-import type { ScopeTargetData } from '../../../builder/data/data';
+import { BUILDER_STATE } from '../../../builder/data/const';
+import type { ScopeData, ScopeTargetData, SheetData } from '../../../builder/data/data';
+import { isScopeData, isSheetData } from '../../../builder/data/is';
 import { getExtractedTokenBoundData, isExtractedTokenBoundData } from '../../../builder/extract/withTokens';
 import { RUNTIME_CONFIG } from '../../../config/config/runtime';
 import type { Falsy, StyleItem } from '../../types';
@@ -10,6 +12,8 @@ import { mergeTokenOverrides, mergeTokenValues, type StyleTokenValues, type Toke
 export type CombinedStyleArg<T extends object> =
   | Falsy
   | StyleItem
+  | ScopeData
+  | SheetData
   | CombinedStyle<T>
   | readonly CombinedStyleArg<T>[];
 
@@ -94,9 +98,8 @@ function collectStyleArg<T extends object>(
   if (RUNTIME_CONFIG.isHoist && isExtractedTokenBoundData(arg)) {
     const bound = getExtractedTokenBoundData(arg);
 
-    result.tokens = mergeTokenOverrides(result.tokens, bound.tokens, resolver);
-
     collectStyleArg(styles, bound.data as CombinedStyleArg<T>, result, resolver);
+    result.tokens = mergeTokenOverrides(result.tokens, bound.tokens, resolver);
     return;
   }
 
@@ -117,5 +120,31 @@ function collectStyleArg<T extends object>(
     return;
   }
 
+  if (isSheetData(arg)) {
+    collectTokenOverrides(arg, result, resolver);
+    return;
+  }
+
+  if (isScopeData(arg)) {
+    collectTokenOverrides(arg, result, resolver);
+    return;
+  }
+
   result.items.push(arg as StyleItem);
+}
+
+function collectTokenOverrides(
+  data: SheetData | ScopeData,
+  result: NormalizedStyleItems,
+  resolver: TokenValueResolver,
+) {
+  const items = data[BUILDER_STATE]?.items ?? [];
+
+  for (let i = 0, len = items.length; i < len; i++) {
+    const item = items[i];
+
+    if (resolver.is(item)) {
+      result.tokens = mergeTokenOverrides(result.tokens, [item], resolver);
+    }
+  }
 }

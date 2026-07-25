@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { getScopeClassName } from '../atomic/className';
-import { createScopeBuilder, createSlotBuilder, createStyleBuilder } from '../builder';
+import { createScopeBuilder, createSelectorBuilder, createSlotBuilder, createStyleBuilder } from '../builder';
 import {
   BUILDER_SLOT_ID,
   BUILDER_STATE,
@@ -46,6 +46,8 @@ import {
   createKeyframes,
   createPositionTry,
   createProperty,
+  createSheet,
+  createStyleTarget,
   fontSrc,
 } from '../css';
 import { traceDevSourcemaps } from '../dev/trace';
@@ -109,12 +111,15 @@ export {
   createRscStylePayload,
   createScopeBuilder,
   createSelectorAssert,
+  createSelectorBuilder,
+  createSheet,
   createSlotBuilder,
   createStableTheme,
   createStableToken,
   createStableTokens,
   createStyleBuilder,
   createStyleFn,
+  createStyleTarget,
   createTheme,
   createThemeRule,
   createToken,
@@ -271,14 +276,16 @@ type SelectorTable = typeof selectors;
 type StyleApi = ReturnType<typeof createStyleBuilder<Record<string, unknown>, SelectorTable>>;
 type SlotApi = ReturnType<typeof createSlotBuilder<Record<string, unknown>, SelectorTable>>;
 type ScopeApi = ReturnType<typeof createScopeBuilder<SelectorTable>>;
+type SelectorApi = ReturnType<typeof createSelectorBuilder<Record<string, unknown>, SelectorTable>>;
 
 export const style = createStyleBuilder<Record<string, unknown>, SelectorTable>(
   selectors,
   null,
-) as (StyleApi & { slot: SlotApi; scope: ScopeApi; });
+) as (StyleApi & { slot: SlotApi; scope: ScopeApi; selector: SelectorApi; });
 
 style.slot = createSlotBuilder<Record<string, unknown>, typeof selectors>(selectors, null);
 style.scope = createScopeBuilder<typeof selectors>(selectors);
+style.selector = createSelectorBuilder<Record<string, unknown>, typeof selectors>(selectors, null);
 
 export const styles = {
   container: style.slot({

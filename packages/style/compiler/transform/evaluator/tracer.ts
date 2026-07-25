@@ -2,8 +2,8 @@ import * as crypto from 'node:crypto';
 import * as fs from 'node:fs';
 import { BUILDER_TYPE_SCOPE } from '../../../builder/data';
 import { TRACE_STYLE, TRACE_VALUE } from '../../../builder/data/debug';
-import { createExtractedScope, createExtractedStyle } from '../../../builder/extract';
-import type { ExtractedStyleTuple } from '../../../builder/extract';
+import { createExtractedScope, createExtractedSheet, createExtractedStyle } from '../../../builder/extract';
+import type { ExtractedSheetTuple, ExtractedStyleTuple } from '../../../builder/extract';
 import type { CompilerInternal } from '../../compiler';
 import type { CompilerOptions } from '../../compiler/types';
 import { resolveFile } from '../../utils/file_resolver';
@@ -19,6 +19,7 @@ import {
 import type { BabelCore, BabelTypes } from '../utils/babel';
 import { babelTransformOptions } from '../utils/babel';
 import { getProjectFileId } from '../utils/path';
+import { annotateAtRuleDeclaration, annotateTokenDeclaration } from '../syntax/static_ids';
 import type { CompiledStyleObject, CompiledStyleObjectLocations, EvalScope } from './evaluator';
 import { COMPILED_STYLE_OBJECT_LOCATIONS, evalFail, evalOk, evaluateEnumDeclaration, evaluateNode } from './evaluator';
 import type { EvalModuleBindings, EvalResult, EvalSlotRef, ImportMap, ResolveImportFn } from './types';
@@ -167,6 +168,8 @@ function parseAndExtractModule(
   const styleMetas = new Map();
   const fileId = getProjectFileId(projectDir, filePath);
   const importSourceMatcher = createImportSourceMatcher(options.importSources ?? null);
+  const staticIdState = { fileId, imports, styleNames };
+  const t = babel.types;
 
   for (const stmt of ast.program.body) {
     if (stmt.type === 'ImportDeclaration') {
@@ -194,6 +197,7 @@ function parseAndExtractModule(
     }
 
     if (stmt.type === 'VariableDeclaration') {
+      annotateVariableDeclaration(stmt, staticIdState, t);
       collectVariableBindings(rawBindings, stmt);
       continue;
     }
@@ -226,6 +230,7 @@ function parseAndExtractModule(
       }
 
       if (stmt.declaration?.type === 'VariableDeclaration') {
+        annotateVariableDeclaration(stmt.declaration, staticIdState, t);
         collectVariableBindings(rawBindings, stmt.declaration);
         continue;
       }
@@ -280,6 +285,17 @@ function parseAndExtractModule(
   });
 
   return bindings;
+}
+
+function annotateVariableDeclaration(
+  declaration: BabelTypes.VariableDeclaration,
+  state: Parameters<typeof annotateTokenDeclaration>[1],
+  t: typeof BabelTypes,
+) {
+  for (const decl of declaration.declarations) {
+    annotateTokenDeclaration(decl, state, t);
+    annotateAtRuleDeclaration(decl, state, t);
+  }
 }
 
 function collectVariableBindings(
@@ -448,6 +464,18 @@ function createExtractedChainValue(
     defineCompiledStyleLocations(style, traceResult);
 
     return style;
+  }
+
+  if (result.type === 'sheet') {
+    const sheet = createExtractedSheet(
+      result.items
+        .filter(Array.isArray)
+        .map((item) => toExtractedStyleTuple(item as CompiledCssItem) as ExtractedSheetTuple),
+    );
+
+    defineCompiledStyleLocations(sheet, traceResult);
+
+    return sheet;
   }
 
   if (result.type === 'scope') {

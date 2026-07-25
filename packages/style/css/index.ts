@@ -6,3 +6,5 @@ export * from './fontPaletteValues';
 export * from './keyframes';
 export * from './positionTry';
 export * from './property';
+export * from './sheet';
+export * from './styleTarget';

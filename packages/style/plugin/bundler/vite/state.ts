@@ -42,7 +42,7 @@ export function createVitePluginState(options: PluginOptions) {
 
     async getConfig(config: UserConfig, env: ConfigEnv) {
       const dev = env.command === 'serve';
-      const buildConfig = getPluginBuildConfig(options);
+      const buildConfig = getPluginBuildConfig(options, dev);
       const buildDevConfig = getPluginBuildDevConfig(options);
       const sidecarUrl = await getSidecarUrl(dev, getViteRoot(config));
 
@@ -62,7 +62,7 @@ export function createVitePluginState(options: PluginOptions) {
 
     loadRuntimeModule() {
       const current = this.getState();
-      const buildConfig = getPluginBuildConfig(options);
+      const buildConfig = getPluginBuildConfig(options, current.dev);
       const buildDevConfig = getPluginBuildDevConfig(options);
       const configSource = createStyleEntryGlobalSource(
         buildConfig,

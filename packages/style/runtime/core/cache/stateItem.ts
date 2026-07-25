@@ -1,6 +1,7 @@
-import { getTokenVar, getTokenVarName } from '../../../atomic/token';
+import { getTokenOverrideValue, getTokenVar, getTokenVarName } from '../../../atomic/token';
 import {
   BUILDER_TYPE_SCOPE,
+  BUILDER_TYPE_SHEET,
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
@@ -20,6 +21,7 @@ export function getStateItemDedupe(item: StateItem) {
     if (typeof item[0] === 'number') {
       switch (item[0]) {
         case BUILDER_TYPE_STYLE:
+        case BUILDER_TYPE_SHEET:
           return item[1];
         case BUILDER_TYPE_SLOT:
         case BUILDER_TYPE_SLOT_OVERRIDE:
@@ -43,6 +45,7 @@ export function getStateItemClassName(item: StateItem) {
     if (typeof item[0] === 'number') {
       switch (item[0]) {
         case BUILDER_TYPE_STYLE:
+        case BUILDER_TYPE_SHEET:
           return item[2];
         case BUILDER_TYPE_SLOT:
         case BUILDER_TYPE_SLOT_OVERRIDE:
@@ -65,6 +68,17 @@ export function getStateItemVariableValue(
   item: StateItem,
   tokens: StyleTokenValues | null,
 ): [string, unknown] | null {
+  if (isStyleTokenOverrideData(item)) {
+    const id = getStyleTokenId(item);
+
+    return [
+      getTokenVarName(item, CSS_CONFIG.tokenNameFormat ?? null),
+      tokens && hasOwn(tokens.lookup, id)
+        ? tokens.lookup[id]
+        : getTokenOverrideValue(item, CSS_CONFIG.tokenNameFormat ?? null),
+    ];
+  }
+
   const value = getStateItemValue(item);
 
   if (Array.isArray(value) && value[0] === ITEM_VALUE_TYPE_VARIABLE) {
@@ -163,6 +177,7 @@ function getStateItemValue(item: StateItem) {
     if (typeof item[0] === 'number') {
       switch (item[0]) {
         case BUILDER_TYPE_STYLE:
+        case BUILDER_TYPE_SHEET:
           return item[3];
         case BUILDER_TYPE_SLOT:
         case BUILDER_TYPE_SLOT_OVERRIDE:

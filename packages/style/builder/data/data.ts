@@ -4,17 +4,21 @@ import type {
   BUILDER_CALLSITE,
   BUILDER_SCOPE,
   BUILDER_SCOPE_ID,
+  BUILDER_SELECTOR,
   BUILDER_SLOT_ID,
   BUILDER_STATE,
   BUILDER_TYPE,
   BUILDER_TYPE_SCOPE,
   BUILDER_TYPE_SCOPE_TARGET,
+  BUILDER_TYPE_SELECTOR,
+  BUILDER_TYPE_SELECTOR_OVERRIDE,
+  BUILDER_TYPE_SHEET,
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
   BUILDER_TYPE_THEME,
 } from './const';
-import type { BuilderState } from './state';
+import type { BuilderState, ItemSelector } from './state';
 
 export type BuilderCallsite = TraceCallsite;
 
@@ -28,6 +32,9 @@ export type AnyBuilderData<Style = unknown> =
   | StyleData<Style>
   | SlotData<Style>
   | SlotOverrideData<Style>
+  | SelectorData<Style>
+  | SelectorOverrideData<Style>
+  | SheetData<Style>
   | ScopeData
   | ScopeTargetData
   | ThemeData;
@@ -43,6 +50,18 @@ export type SlotData<Style = unknown> =
 export type SlotOverrideData<Style = unknown> =
   & BuilderData<Style, typeof BUILDER_TYPE_SLOT_OVERRIDE>
   & { [BUILDER_SLOT_ID]: string; };
+
+export type SelectorData<Style = unknown> =
+  & BuilderData<Style, typeof BUILDER_TYPE_SELECTOR>
+  & { [BUILDER_SELECTOR]: readonly ItemSelector[]; };
+
+export type SelectorOverrideData<Style = unknown> =
+  & BuilderData<Style, typeof BUILDER_TYPE_SELECTOR_OVERRIDE>
+  & { [BUILDER_SELECTOR]: readonly ItemSelector[]; };
+
+export type SheetData<Style = unknown> =
+  & BuilderData<Style, typeof BUILDER_TYPE_SHEET>
+  & {};
 
 export type ScopeData =
   & BuilderData<unknown, typeof BUILDER_TYPE_SCOPE>

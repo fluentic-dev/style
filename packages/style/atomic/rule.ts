@@ -4,7 +4,7 @@ import { LayerMediaPriorities, type LayerPriority, LayerSelectorPriorities } fro
 import { getCssPropertyName, getPropertyPriority } from './property';
 import { getScopeClassName } from './scope';
 import { escapeCssIdent } from './utils/cssIdent';
-import { getSelectorPriority, getSelectorText } from './utils/selector';
+import { getSelectorPriority, getSelectorText, hasSheetSelectorAnchor } from './utils/selector';
 import { getCssPropertyValue } from './value';
 
 export function buildAtomicRule(
@@ -20,7 +20,9 @@ export function buildAtomicRule(
   const cssValue = getCssPropertyValue(property, value);
   const escapedClass = escapeCssIdent(className);
 
-  const classSelector = '.' + escapedClass;
+  const classSelector = hasSheetSelectorAnchor(selector)
+    ? `:where(.${escapedClass})`
+    : '.' + escapedClass;
   const itemSelector = selector ? getSelectorText(selector) : '';
 
   let selectorStr = classSelector + itemSelector;

@@ -12,6 +12,7 @@ import { type AtRuleRef, isAtRuleRef } from '../../../style/valueRef';
 import {
   BUILDER_SLOT_ID,
   BUILDER_STATE,
+  BUILDER_TYPE_SELECTOR_OVERRIDE,
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
@@ -93,6 +94,12 @@ export function mergeBuilderData<Data extends BuilderData>(
         });
       }
 
+      if (selector) {
+        item = Object.assign({}, item, {
+          selector: item.selector ? combineSelectors(selector, item.selector) : selector,
+        });
+      }
+
       // Re-type to SLOT/SLOT_OVERRIDE when this StyleData is used inside a slot context.
       // Without this, style.slot(...).media('...', style({...})) would keep the inner
       // items as BUILDER_TYPE_STYLE and they would not be resolved when the slot is used.
@@ -100,6 +107,8 @@ export function mergeBuilderData<Data extends BuilderData>(
         item = Object.assign({}, item, { type: BUILDER_TYPE_SLOT, slotId });
       } else if (type === BUILDER_TYPE_SLOT_OVERRIDE && slotId !== null) {
         item = Object.assign({}, item, { type: BUILDER_TYPE_SLOT_OVERRIDE, slotId });
+      } else if (type === BUILDER_TYPE_SELECTOR_OVERRIDE) {
+        item = Object.assign({}, item, { type: BUILDER_TYPE_STYLE });
       }
 
       const itemDebug = getMergedStyleDebug(debug, item);
@@ -172,7 +181,7 @@ export function mergeBuilderData<Data extends BuilderData>(
         callsite: itemCallsite,
       };
 
-      if (type === BUILDER_TYPE_STYLE) {
+      if (type === BUILDER_TYPE_STYLE || type === BUILDER_TYPE_SELECTOR_OVERRIDE) {
         items.push({ ...itemData, type: BUILDER_TYPE_STYLE });
         continue;
       }
@@ -251,6 +260,26 @@ export function mergeBuilderData<Data extends BuilderData>(
   }
 
   return data;
+}
+
+function combineSelectors(
+  parent: ItemSelector,
+  child: ItemSelector,
+): ItemSelector {
+  const parentText = getSelectorText(parent);
+  const childText = getSelectorText(child);
+  const priority = Math.max(getSelectorPriority(parent), getSelectorPriority(child));
+  const selector = parentText + childText;
+
+  return priority > 0 ? [selector, priority] : selector;
+}
+
+function getSelectorText(selector: ItemSelector) {
+  return Array.isArray(selector) ? selector[0] : selector;
+}
+
+function getSelectorPriority(selector: ItemSelector) {
+  return Array.isArray(selector) ? selector[1] : 0;
 }
 
 function getMergedStyleDebug(

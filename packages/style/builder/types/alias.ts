@@ -1,11 +1,20 @@
 import type { AtRuleRef, PlainStyleObject, StyleKeyframesObject, StyleObject, StyleValueTuple } from '../../style';
 import type { Collapse } from '../../utils/type';
-import type { BUILDER_SLOT_ID } from '../data';
+import type { BUILDER_SELECTOR, BUILDER_SLOT_ID } from '../data';
+import type { ManualSelectorInput } from '../selector_override';
 import type { ScopeSelfFn, SlotSelfFn, StyleSelfFn } from './fns';
-import type { MergeRuleStyleData } from './types';
-import type { ScopeBuilder, SlotBuilder, SlotOverrideBuilder, StyleBuilder } from './types';
+import type { MergeRuleStyleData, SelectorOverrideStyleData } from './types';
+import type {
+  ScopeBuilder,
+  SelectorBuilder,
+  SelectorOverrideBuilder,
+  SlotBuilder,
+  SlotOverrideBuilder,
+  StyleBuilder,
+} from './types';
 
 type _ = typeof BUILDER_SLOT_ID;
+type __ = typeof BUILDER_SELECTOR;
 
 export function styleRule<Style, Selectors>() {
   type StyleRule<Style> = StyleBuilder<Style, Selectors> & Collapse;
@@ -22,6 +31,11 @@ export function slotOverrideRule<Style, Selectors>() {
   return {} as SlotOverrideRule<Style>;
 }
 
+export function selectorOverrideRule<Style, Selectors>() {
+  type SelectorOverrideRule<Style> = SelectorOverrideBuilder<Style, Selectors> & Collapse;
+  return {} as SelectorOverrideRule<Style>;
+}
+
 export function scopeRule<Selectors>() {
   type ScopeRule = ScopeBuilder<Selectors> & Collapse;
   return {} as ScopeRule;
@@ -33,6 +47,7 @@ export function typeAliases<Style, Selectors>() {
   type StyleRule<Style> = ReturnType<typeof styleRule<Style, Selectors>>;
   type SlotRule<Style> = ReturnType<typeof slotRule<Style, Selectors>>;
   type SlotOverrideRule<Style> = ReturnType<typeof slotOverrideRule<Style, Selectors>>;
+  type SelectorOverrideRule<Style> = ReturnType<typeof selectorOverrideRule<Style, Selectors>>;
   type ScopeRule = ReturnType<typeof scopeRule<Selectors>>;
 
   type StyleFn<Style> = StyleSelfFn<Style, Selectors> & {
@@ -44,6 +59,7 @@ export function typeAliases<Style, Selectors>() {
     plain: PlainFn<Style>;
     keyframes: KeyframesFn<Style>;
     merge: MergeFn;
+    selector: SelectorFn<Style>;
   };
 
   type ValueFn = <const T>(value: T, weight: number) => StyleValueTuple<T>;
@@ -56,6 +72,11 @@ export function typeAliases<Style, Selectors>() {
 
   type MergeFn = <Target>(target: Target, ...styles: MergeRuleStyleData[]) => Target;
 
+  type SelectorFn<Style> = {
+    (selector: ManualSelectorInput): SelectorBuilder<Style, Selectors>;
+    (selector: ManualSelectorInput, style: SelectorOverrideStyleData<Style>): SelectorOverrideBuilder<Style, Selectors>;
+  };
+
   type SlotFn<Style> = SlotSelfFn<Style, Selectors>;
 
   type ScopeFn =
@@ -66,6 +87,7 @@ export function typeAliases<Style, Selectors>() {
     StyleRule: StyleRule<Style>;
     SlotRule: SlotRule<Style>;
     SlotOverrideRule: SlotOverrideRule<Style>;
+    SelectorOverrideRule: SelectorOverrideRule<Style>;
     ScopeRule: ScopeRule;
     //
     StyleFn: StyleFn<Style>;
@@ -77,6 +99,7 @@ export function typeAliases<Style, Selectors>() {
     PlainFn: PlainFn<Style>;
     KeyframesFn: KeyframesFn<Style>;
     MergeFn: MergeFn;
+    SelectorFn: SelectorFn<Style>;
   };
 
   return {} as Types<Style>;

@@ -7,7 +7,7 @@ declare const FLUENTIC_STYLE_BUILD_CONFIG: string;
 const buildConfig = readEntryJsonDefine<BuildConfig>(
   'FLUENTIC_STYLE_BUILD_CONFIG',
   () => FLUENTIC_STYLE_BUILD_CONFIG,
-  { hoist: true, css: {} } satisfies BuildConfig,
+  { hoist: false, css: {} } satisfies BuildConfig,
 );
 
 setBuildConfig(buildConfig);

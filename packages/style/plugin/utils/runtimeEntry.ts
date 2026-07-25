@@ -10,11 +10,11 @@ export function getStyleRuntimeMode(dev: boolean, rsc = false): CompilerRuntimeM
   return dev ? CompilerRuntimeMode.Dev : CompilerRuntimeMode.Prod;
 }
 
-export function getPluginBuildConfig(options: PluginOptions): BuildConfig {
+export function getPluginBuildConfig(options: PluginOptions, dev = false): BuildConfig {
   const css: CompilerCssOptions = hasBuildConfig(options.css) ? options.css! : {};
 
   return {
-    hoist: options.hoist !== false,
+    hoist: !dev && options.hoist !== false,
     css,
   };
 }

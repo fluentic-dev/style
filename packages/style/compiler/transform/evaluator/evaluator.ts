@@ -8,6 +8,7 @@ import { buildPropertyCss, formatPropertyName, type PropertyObject } from '../..
 import { TRACE_STYLE, TRACE_VALUE } from '../../../builder/data/debug';
 import {
   createExtractedScope,
+  createExtractedSheet,
   createExtractedSlot,
   createExtractedStyle,
   createExtractedStyleMerge,
@@ -39,6 +40,7 @@ import type { CompilerRuntimeMode } from '../../compiler';
 import {
   FN_CREATE_COUNTER_STYLE,
   FN_CREATE_EXTRACTED_SCOPE,
+  FN_CREATE_EXTRACTED_SHEET,
   FN_CREATE_EXTRACTED_SLOT,
   FN_CREATE_EXTRACTED_STYLE,
   FN_CREATE_EXTRACTED_STYLE_MERGE,
@@ -107,6 +109,7 @@ export type EvalScope = {
   filePath: string;
   styleFilePath?: string;
   styleNames?: Set<string>;
+  sheetNames?: Set<string>;
   styleMetas?: Map<string, StyleFnMeta>;
   bindingNodes?: Map<string, BabelTypes.Node>;
   styleTransform?: StyleTransform | null;
@@ -431,6 +434,14 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
       if (!Array.isArray(items.value)) return evalFail('createExtractedStyle items must be an array');
 
       return evalOk(createExtractedStyle(items.value as Parameters<typeof createExtractedStyle>[0]));
+    }
+
+    if (imp && imp.source === IMPORT_EXTRACT && imp.name === FN_CREATE_EXTRACTED_SHEET) {
+      const items = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+      if (!items.ok) return items;
+      if (!Array.isArray(items.value)) return evalFail('createExtractedSheet items must be an array');
+
+      return evalOk(createExtractedSheet(items.value as Parameters<typeof createExtractedSheet>[0]));
     }
 
     if (imp && imp.source === IMPORT_EXTRACT && imp.name === FN_GET_EXTRACTED_STYLE_ITEMS) {

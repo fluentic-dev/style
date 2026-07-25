@@ -2,10 +2,14 @@ import type { StyleValue } from '../../style/types';
 import {
   BUILDER_SCOPE,
   BUILDER_SCOPE_ID,
+  BUILDER_SELECTOR,
   BUILDER_SLOT_ID,
   BUILDER_TYPE,
   BUILDER_TYPE_SCOPE,
   BUILDER_TYPE_SCOPE_TARGET,
+  BUILDER_TYPE_SELECTOR,
+  BUILDER_TYPE_SELECTOR_OVERRIDE,
+  BUILDER_TYPE_SHEET,
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
@@ -15,6 +19,9 @@ import {
   type BuilderData,
   type ScopeData,
   type ScopeTargetData,
+  type SelectorData,
+  type SelectorOverrideData,
+  type SheetData,
   type SlotData,
   type SlotOverrideData,
   type StyleData,
@@ -33,6 +40,10 @@ export function getScopeTargetScope(data: ScopeTargetData) {
   return data[BUILDER_SCOPE];
 }
 
+export function getSelectorSelectors(data: SelectorData | SelectorOverrideData) {
+  return data[BUILDER_SELECTOR];
+}
+
 export function isStyleValue<T>(value: unknown): value is StyleValue<T> {
   return Array.isArray(value);
 }
@@ -47,6 +58,18 @@ export function isSlotData<Style>(value: unknown): value is SlotData<Style> {
 
 export function isSlotOverrideData<Style>(value: unknown): value is SlotOverrideData<Style> {
   return getBuilderType(value) === BUILDER_TYPE_SLOT_OVERRIDE;
+}
+
+export function isSelectorData<Style>(value: unknown): value is SelectorData<Style> {
+  return getBuilderType(value) === BUILDER_TYPE_SELECTOR;
+}
+
+export function isSelectorOverrideData<Style>(value: unknown): value is SelectorOverrideData<Style> {
+  return getBuilderType(value) === BUILDER_TYPE_SELECTOR_OVERRIDE;
+}
+
+export function isSheetData<Style>(value: unknown): value is SheetData<Style> {
+  return getBuilderType(value) === BUILDER_TYPE_SHEET;
 }
 
 export function isScopeData(value: unknown): value is ScopeData {

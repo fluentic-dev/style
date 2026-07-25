@@ -34,6 +34,7 @@ import type {
   RuntimeSlotOverrideItem,
   RuntimeStyleItem,
 } from '../../../../builder/data/state';
+import { normalizeManualSelectors } from '../../../../builder/selector_override';
 import type { ClassNameFormat, TokenNameFormat, TransformClassNameFormat } from '../../../../config/types';
 import type { Selector } from '../../../../selector/types';
 import type { StyleFnMeta } from '../../../../style/style';
@@ -327,10 +328,16 @@ export function compileChain(
   scope: EvalScope,
   opts: CompilerOptions,
   runtimeMode: CompilerRuntimeMode | null,
-  meta: StyleFnMeta,
+  meta: StyleFnMeta | null,
   styleNames: Set<string> = new Set(),
 ): CompiledChainData | null {
   const css = getCssConfig(opts, runtimeMode);
+
+  if (chain.kind === 'sheet') {
+    return compileSheetChain(chain, fileId, scope, css, opts);
+  }
+
+  if (!meta) return null;
 
   if (meta.mode === 'ClassName') {
     if (chain.kind !== 'style') return null;
@@ -354,6 +361,306 @@ export function compileChain(
   }
 
   return null;
+}
+
+function compileSheetChain(
+  chain: NonNullable<StyleChainParseResult>,
+  fileId: string,
+  scope: EvalScope,
+  cssConfig: CssConfig,
+  options: CompilerOptions,
+): CompiledChainData | null {
+  if (chain.methods.length > 0 || chain.baseArgs.length > 1) return null;
+
+  const items: CompiledItem[] = [];
+  const rules: CssExtractRule[] = [];
+  const sheetItems = chain.baseArgs[0];
+
+  if (sheetItems && !compileSheetItemsArg(sheetItems, fileId, scope, cssConfig, options, items, rules)) {
+    return null;
+  }
+
+  return { type: 'sheet', items, rules };
+}
+
+function compileSheetItemsArg(
+  node: BabelTypes.Node,
+  fileId: string,
+  scope: EvalScope,
+  cssConfig: CssConfig,
+  options: CompilerOptions,
+  items: CompiledItem[],
+  rules: CssExtractRule[],
+): boolean {
+  if (node.type === 'ArrayExpression') {
+    for (const element of node.elements) {
+      if (!element) continue;
+      if (element.type === 'SpreadElement') return false;
+      if (!compileSheetItemsArg(element, fileId, scope, cssConfig, options, items, rules)) return false;
+    }
+
+    return true;
+  }
+
+  const tokenOverride = evaluateNode(node, scope);
+  if (tokenOverride.ok && isStyleTokenOverrideData(tokenOverride.value)) {
+    addCompiledTokenItem(
+      getStyleTokenId(tokenOverride.value),
+      tokenOverride.value,
+      getCompiledRuntimeValue(tokenOverride.value) ?? node as BabelTypes.Expression,
+      items,
+    );
+    return true;
+  }
+
+  if (tokenOverride.ok && Array.isArray(tokenOverride.value)) {
+    for (let i = 0, len = tokenOverride.value.length; i < len; i++) {
+      const item = tokenOverride.value[i];
+      if (!item) continue;
+      if (!isStyleTokenOverrideData(item)) return false;
+
+      addCompiledTokenItem(
+        getStyleTokenId(item),
+        item,
+        getCompiledRuntimeValue(item) ?? null,
+        items,
+      );
+    }
+
+    return true;
+  }
+
+  const styleNames = scope.styleNames ?? new Set();
+  const sheetNames = scope.sheetNames ?? new Set();
+  const selectorChain = node.type === 'CallExpression'
+    ? extractStyleChain(node, styleNames, sheetNames) ??
+      getLocalSelectorTargetChain(node, scope, styleNames, sheetNames)
+    : getLocalStyleChainArg(node, scope, styleNames, sheetNames);
+  const selectorMeta = selectorChain ? scope.styleMetas?.get(selectorChain.rootName) : null;
+
+  if (selectorChain?.kind !== 'selector' || !selectorMeta || selectorMeta.mode !== 'StyleObject') {
+    return false;
+  }
+
+  return compileSelectorOverrideChain(
+    selectorChain,
+    selectorMeta.selectors,
+    fileId,
+    scope,
+    cssConfig,
+    selectorMeta.transform,
+    scope.styleNames ?? new Set(),
+    options,
+    items,
+    rules,
+  );
+}
+
+function compileSelectorOverrideChain(
+  chain: NonNullable<StyleChainParseResult>,
+  selectors: SelectorsMap,
+  fileId: string,
+  scope: EvalScope,
+  cssConfig: CssConfig,
+  transform: StyleTransform | null,
+  styleNames: Set<string>,
+  options: CompilerOptions,
+  items: CompiledItem[],
+  rules: CssExtractRule[],
+): boolean {
+  if (chain.baseArgs.length === 0 || chain.baseArgs.length > 2) return false;
+
+  const selectorArg = evaluateNode(chain.baseArgs[0], scope);
+  if (!selectorArg.ok) return false;
+
+  const manualSelectors = normalizeManualSelectors(
+    Array.isArray(selectorArg.value)
+      ? selectorArg.value.map(String)
+      : String(selectorArg.value ?? ''),
+  );
+
+  for (let i = 0, len = manualSelectors.length; i < len; i++) {
+    if (
+      !compileSelectorOverrideInto(
+        chain,
+        selectors,
+        fileId,
+        scope,
+        cssConfig,
+        transform,
+        styleNames,
+        options,
+        items,
+        rules,
+        manualSelectors[i],
+      )
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function compileSelectorOverrideInto(
+  chain: NonNullable<StyleChainParseResult>,
+  selectors: SelectorsMap,
+  fileId: string,
+  scope: EvalScope,
+  cssConfig: CssConfig,
+  transform: StyleTransform | null,
+  styleNames: Set<string>,
+  options: CompilerOptions,
+  items: CompiledItem[],
+  rules: CssExtractRule[],
+  selectorPrefix: ItemSelector,
+): boolean {
+  if (chain.baseArgs[1]) {
+    if (
+      !compileSelectorStyleArg(
+        chain.baseArgs[1],
+        fileId,
+        scope,
+        cssConfig,
+        transform,
+        items,
+        rules,
+        styleNames,
+        options,
+        selectorPrefix,
+      )
+    ) {
+      return false;
+    }
+  }
+
+  let i = 0;
+  while (i < chain.methods.length) {
+    const method = chain.methods[i];
+    if (
+      !compileChainMethod(
+        method,
+        selectors,
+        null,
+        fileId,
+        scope,
+        BUILDER_TYPE_STYLE,
+        cssConfig,
+        items,
+        rules,
+        transform,
+        null,
+        styleNames,
+        options,
+        null,
+        selectorPrefix,
+      )
+    ) {
+      return false;
+    }
+    i++;
+  }
+
+  return true;
+}
+
+function compileSelectorStyleArg(
+  styleArgNode: BabelTypes.Node,
+  fileId: string,
+  scope: EvalScope,
+  cssConfig: CssConfig,
+  transform: StyleTransform | null,
+  items: CompiledItem[],
+  rules: CssExtractRule[],
+  styleNames: Set<string>,
+  options: CompilerOptions,
+  selectorPrefix: ItemSelector,
+): boolean {
+  const localChain = getLocalStyleChainArg(styleArgNode, scope, styleNames);
+  const localMeta = localChain ? scope.styleMetas?.get(localChain.rootName) : null;
+
+  if (localChain?.kind === 'style' && localMeta) {
+    return compileStyleChainInto(
+      localChain,
+      localMeta.selectors,
+      fileId,
+      scope,
+      cssConfig,
+      localMeta.transform,
+      BUILDER_TYPE_STYLE,
+      null,
+      null,
+      items,
+      rules,
+      styleNames,
+      options,
+      null,
+      selectorPrefix,
+    );
+  }
+
+  if (styleArgNode.type === 'CallExpression') {
+    const nestedChain = extractStyleChain(styleArgNode, styleNames);
+    const nestedMeta = nestedChain ? scope.styleMetas?.get(nestedChain.rootName) : null;
+
+    if (nestedChain?.kind === 'style' && nestedMeta) {
+      return compileStyleChainInto(
+        nestedChain,
+        nestedMeta.selectors,
+        fileId,
+        scope,
+        cssConfig,
+        nestedMeta.transform,
+        BUILDER_TYPE_STYLE,
+        null,
+        null,
+        items,
+        rules,
+        styleNames,
+        options,
+        null,
+        selectorPrefix,
+      );
+    }
+  }
+
+  const styleArg = evaluateNode(styleArgNode, scope);
+  if (!styleArg.ok) {
+    throwIfRequiredStaticStyleValue(styleArg);
+    return false;
+  }
+
+  if (isStyleData(styleArg.value)) {
+    return addStyleDataItems(
+      styleArg.value,
+      selectorPrefix,
+      null,
+      null,
+      fileId,
+      BUILDER_TYPE_STYLE,
+      null,
+      items,
+      rules,
+      cssConfig,
+      null,
+    );
+  }
+
+  const styleObj = applyTransform(styleArg.value as Record<string, unknown>, transform, cssConfig);
+
+  return addStyleItems(
+    styleObj,
+    selectorPrefix,
+    null,
+    null,
+    fileId,
+    BUILDER_TYPE_STYLE,
+    null,
+    items,
+    rules,
+    cssConfig,
+    null,
+  );
 }
 
 function getCssConfig(
@@ -762,6 +1069,7 @@ function compileStyleChainInto(
   styleNames: Set<string>,
   options: CompilerOptions,
   callsiteOverride: TraceCallsiteOverride = null,
+  selectorPrefix: ItemSelector | null = null,
 ): boolean {
   if (chain.baseArgs.length > 0) {
     const styleArg = evaluateNode(chain.baseArgs[0], scope);
@@ -773,7 +1081,7 @@ function compileStyleChainInto(
     if (
       !addStyleItems(
         styleObj,
-        null,
+        selectorPrefix,
         null,
         atRules,
         fileId,
@@ -808,6 +1116,7 @@ function compileStyleChainInto(
       styleNames,
       options,
       callsiteOverride,
+      selectorPrefix,
     );
     if (!result) return false;
     i++;
@@ -941,6 +1250,7 @@ function compileScopeMethod(
   transform: StyleTransform | null,
   options: CompilerOptions,
   callsiteOverride: TraceCallsiteOverride = null,
+  _selectorPrefix: ItemSelector | null = null,
 ): boolean {
   const selector = selectors[method.name];
   if (!selector) return false;
@@ -1595,6 +1905,7 @@ function compileChainMethod(
   styleNames: Set<string>,
   options: CompilerOptions,
   callsiteOverride: TraceCallsiteOverride = null,
+  selectorPrefix: ItemSelector | null = null,
 ): boolean {
   if (method.name === STATIC_MERGE_METHOD) {
     const mergeCallsite = callsiteOverride ?? getMergeStyleCallsite(method.nameNode, scope, options);
@@ -1612,6 +1923,7 @@ function compileChainMethod(
       styleNames,
       options,
       mergeCallsite,
+      selectorPrefix,
     );
   }
 
@@ -1637,6 +1949,7 @@ function compileChainMethod(
       styleNames,
       options,
       mergeCallsite,
+      selectorPrefix,
     );
   }
 
@@ -1657,6 +1970,7 @@ function compileChainMethod(
       selectors,
       styleNames,
       options,
+      selectorPrefix,
     );
   }
 
@@ -1675,12 +1989,14 @@ function compileChainMethod(
       transform,
       atRules,
       options,
+      selectorPrefix,
     );
   }
 
   const itemSelector: ItemSelector = selector.priority !== null
     ? [selectorStr, selector.priority]
     : selectorStr;
+  const compiledSelector = selectorPrefix ? combineSelectors(selectorPrefix, itemSelector) : itemSelector;
 
   const styleArg = evaluateNode(method.args[0], scope);
   if (!styleArg.ok) {
@@ -1691,7 +2007,7 @@ function compileChainMethod(
 
   return addStyleItems(
     styleObj,
-    itemSelector,
+    compiledSelector,
     null,
     atRules,
     fileId,
@@ -1718,6 +2034,7 @@ function compileMergeArg(
   styleNames: Set<string>,
   options: CompilerOptions,
   callsiteOverride: TraceCallsiteOverride = null,
+  selectorPrefix: ItemSelector | null = null,
 ): boolean {
   if (!styleArgNode) return false;
   const styleCallsite = callsiteOverride ?? getMergeStyleCallsite(mergeNode, scope, options);
@@ -1740,6 +2057,7 @@ function compileMergeArg(
       styleNames,
       options,
       styleCallsite,
+      selectorPrefix,
     );
   }
 
@@ -1763,6 +2081,7 @@ function compileMergeArg(
         styleNames,
         options,
         styleCallsite,
+        selectorPrefix,
       );
     }
   }
@@ -1777,7 +2096,7 @@ function compileMergeArg(
     return addStyleDataSpreadItems(
       styleArg.value,
       styleArgNode,
-      null,
+      selectorPrefix,
       null,
       atRules,
       fileId,
@@ -1792,7 +2111,7 @@ function compileMergeArg(
 
   return addStyleDataItems(
     styleArg.value,
-    null,
+    selectorPrefix,
     null,
     atRules,
     fileId,
@@ -1809,13 +2128,114 @@ function getLocalStyleChainArg(
   node: BabelTypes.Node,
   scope: EvalScope,
   styleNames: Set<string>,
+  sheetNames: Set<string> = new Set(),
 ) {
   if (node.type !== 'Identifier') return null;
 
   const init = scope.bindingNodes?.get(node.name);
   if (!init) return null;
 
-  return extractStyleChain(init, styleNames);
+  return extractStyleChain(init, styleNames, sheetNames);
+}
+
+function getLocalSelectorTargetChain(
+  node: BabelTypes.CallExpression,
+  scope: EvalScope,
+  styleNames: Set<string>,
+  sheetNames: Set<string>,
+): StyleChainParseResult {
+  const callee = node.callee;
+
+  if (callee.type === 'Identifier') {
+    const target = getLocalStyleChainArg(callee, scope, styleNames, sheetNames);
+    if (!isBareSelectorTargetChain(target)) return null;
+
+    return {
+      ...target,
+      baseArgs: [...target.baseArgs, ...(node.arguments as BabelTypes.Node[])],
+    };
+  }
+
+  if (callee.type !== 'MemberExpression' || callee.computed) return null;
+
+  const memberTarget = getLocalMemberStyleChainArg(callee, scope, styleNames, sheetNames);
+  if (isBareSelectorTargetChain(memberTarget)) {
+    return {
+      ...memberTarget,
+      baseArgs: [...memberTarget.baseArgs, ...(node.arguments as BabelTypes.Node[])],
+    };
+  }
+
+  const methodName = callee.property.type === 'Identifier'
+    ? callee.property.name
+    : callee.property.type === 'StringLiteral'
+    ? callee.property.value
+    : null;
+
+  if (!methodName) return null;
+
+  const object = callee.object;
+  const target = object.type === 'Identifier'
+    ? getLocalStyleChainArg(object, scope, styleNames, sheetNames)
+    : object.type === 'MemberExpression'
+    ? getLocalMemberStyleChainArg(object, scope, styleNames, sheetNames)
+    : object.type === 'CallExpression'
+    ? getLocalSelectorTargetChain(object, scope, styleNames, sheetNames)
+    : null;
+
+  if (target?.kind !== 'selector') return null;
+
+  return {
+    ...target,
+    methods: [
+      ...target.methods,
+      { name: methodName, args: node.arguments as BabelTypes.Node[], nameNode: callee.property },
+    ],
+  };
+}
+
+function getLocalMemberStyleChainArg(
+  node: BabelTypes.MemberExpression,
+  scope: EvalScope,
+  styleNames: Set<string>,
+  sheetNames: Set<string>,
+) {
+  if (node.computed || node.object.type !== 'Identifier') return null;
+
+  const propertyName = node.property.type === 'Identifier'
+    ? node.property.name
+    : node.property.type === 'StringLiteral'
+    ? node.property.value
+    : null;
+
+  if (!propertyName) return null;
+
+  const objectInit = scope.bindingNodes?.get(node.object.name);
+  if (objectInit?.type !== 'ObjectExpression') return null;
+
+  for (let i = 0, len = objectInit.properties.length; i < len; i++) {
+    const property = objectInit.properties[i];
+    if (property.type !== 'ObjectProperty') continue;
+
+    const key = property.key;
+    const keyName = key.type === 'Identifier'
+      ? key.name
+      : key.type === 'StringLiteral'
+      ? key.value
+      : null;
+
+    if (keyName !== propertyName) continue;
+
+    return extractStyleChain(property.value as BabelTypes.Node, styleNames, sheetNames);
+  }
+
+  return null;
+}
+
+function isBareSelectorTargetChain(
+  chain: StyleChainParseResult,
+): chain is NonNullable<StyleChainParseResult> {
+  return chain?.kind === 'selector' && chain.baseArgs.length === 1 && chain.methods.length === 0;
 }
 
 function getLocalBindingNode(
@@ -1878,6 +2298,7 @@ function compileAtRuleMethod(
   selectors: SelectorsMap,
   styleNames: Set<string>,
   options: CompilerOptions,
+  selectorPrefix: ItemSelector | null = null,
 ): boolean {
   const isMedia = selectorStr.startsWith(SELECTOR_MEDIA) || selectorStr.startsWith(SELECTOR_CONTAINER);
   const hasArg = selectorStr.includes(SELECTOR_ARGS);
@@ -1932,6 +2353,8 @@ function compileAtRuleMethod(
         cssRules,
         styleNames,
         options,
+        null,
+        selectorPrefix,
       );
     }
     // Could not parse as chain — try to evaluate as static object
@@ -1942,7 +2365,7 @@ function compileAtRuleMethod(
     }
     return addStyleItems(
       applyTransform(evaled.value as Record<string, unknown>, transform, cssConfig),
-      null,
+      selectorPrefix,
       null,
       nextAtRules,
       fileId,
@@ -1962,7 +2385,7 @@ function compileAtRuleMethod(
 
   return addStyleItems(
     applyTransform(styleResult.value as Record<string, unknown>, transform, cssConfig),
-    null,
+    selectorPrefix,
     null,
     nextAtRules,
     fileId,
@@ -1987,6 +2410,7 @@ function compileArgMethod(
   transform: StyleTransform | null,
   atRules: ItemSelector[] | null,
   options: CompilerOptions,
+  selectorPrefix: ItemSelector | null = null,
 ): boolean {
   const selectorStr = selector.selector.trim();
   validateSelectorDefinition(options.dev?.checkSelector, `style.${method.name}`, selector, method.nameNode);
@@ -2021,8 +2445,9 @@ function compileArgMethod(
     const compiledSelector: ItemSelector = selector.priority !== null
       ? [selectorText, selector.priority]
       : selectorText;
+    const itemSelector = selectorPrefix ? combineSelectors(selectorPrefix, compiledSelector) : compiledSelector;
 
-    if (!addStyleItems(styleObj, compiledSelector, null, atRules, fileId, type, slotId, items, cssRules, cssConfig)) {
+    if (!addStyleItems(styleObj, itemSelector, null, atRules, fileId, type, slotId, items, cssRules, cssConfig)) {
       return false;
     }
 
@@ -2485,7 +2910,9 @@ function addRuntimeStyleItem(
     value = value[0];
   }
 
-  const itemSelector = selector ?? sourceItem.selector;
+  const itemSelector = selector && sourceItem.selector
+    ? combineSelectors(selector, sourceItem.selector)
+    : selector ?? sourceItem.selector;
   const itemAtRules = mergeAtRules(atRules, sourceItem.atRule);
   const variable = sourceItem.variable;
   const runtimeValue = variable?.[0] === ITEM_VALUE_TYPE_VARIABLE
@@ -2575,6 +3002,26 @@ function addRuntimeStyleItem(
       }
       : undefined,
   });
+}
+
+function combineSelectors(
+  parent: ItemSelector,
+  child: ItemSelector,
+): ItemSelector {
+  const parentText = getItemSelectorText(parent);
+  const childText = getItemSelectorText(child);
+  const priority = Math.max(getItemSelectorPriority(parent), getItemSelectorPriority(child));
+  const selector = parentText + childText;
+
+  return priority > 0 ? [selector, priority] : selector;
+}
+
+function getItemSelectorText(selector: ItemSelector) {
+  return Array.isArray(selector) ? selector[0] : selector;
+}
+
+function getItemSelectorPriority(selector: ItemSelector) {
+  return Array.isArray(selector) ? selector[1] : 0;
 }
 
 function getRuntimeStyleItemSourceTrace(

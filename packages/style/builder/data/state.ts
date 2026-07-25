@@ -3,6 +3,9 @@ import type { AtRuleRefData } from '../../style/valueRef';
 import type { UniqueSymbol } from '../../utils/type';
 import type {
   BUILDER_TYPE_SCOPE,
+  BUILDER_TYPE_SELECTOR,
+  BUILDER_TYPE_SELECTOR_OVERRIDE,
+  BUILDER_TYPE_SHEET,
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
@@ -24,6 +27,9 @@ export type BuilderType =
   | typeof BUILDER_TYPE_SLOT
   | typeof BUILDER_TYPE_SLOT_OVERRIDE
   | typeof BUILDER_TYPE_SCOPE
+  | typeof BUILDER_TYPE_SELECTOR
+  | typeof BUILDER_TYPE_SELECTOR_OVERRIDE
+  | typeof BUILDER_TYPE_SHEET
   | typeof BUILDER_TYPE_THEME;
 
 export type ExtractedItemValueMode = typeof ITEM_VALUE_NUMBER_PX;
@@ -47,6 +53,11 @@ export type ExtracteItemData = [
 
 export type ExtractedStyleItem = ExtracteItemData | [
   type: typeof BUILDER_TYPE_STYLE,
+  ...ExtracteItemData,
+];
+
+export type ExtractedSheetItem = ExtracteItemData | [
+  type: typeof BUILDER_TYPE_SHEET,
   ...ExtracteItemData,
 ];
 
@@ -109,6 +120,7 @@ export type RuntimeScopeItem = RuntimeItemData & {
 
 export type ExtractedItem =
   | ExtractedStyleItem
+  | ExtractedSheetItem
   | ExtractedSlotItem
   | ExtractedSlotOverrideItem
   | ExtractedScopeItem;

@@ -1,9 +1,10 @@
-import type { AnyBuilderData, SlotData } from '../../builder/data';
-import { isSlotData } from '../../builder/data';
+import type { AnyBuilderData, SelectorData, SlotData } from '../../builder/data';
+import { isSelectorData, isSlotData } from '../../builder/data';
 import { isStyleTokenData, type StyleTokenData } from '../token';
 
 type ExposedStyleItem<T> = T extends StyleTokenData ? T
   : T extends SlotData ? T
+  : T extends SelectorData ? T
   : T extends AnyBuilderData ? never
   : T extends readonly unknown[] ? never
   : T extends object ? ExposedStyle<T>
@@ -34,7 +35,7 @@ function exposeStyleObject(source: object) {
 }
 
 function exposeStyleValue(value: unknown): unknown {
-  if (isStyleTokenData(value) || isSlotData(value)) return value;
+  if (isStyleTokenData(value) || isSlotData(value) || isSelectorData(value)) return value;
 
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
 

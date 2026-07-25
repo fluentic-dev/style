@@ -1,5 +1,5 @@
 import type { StyleTokenOverride } from '../../style/token';
-import type { ScopeData, ScopeTargetData, SlotData, SlotOverrideData, StyleData } from '../data';
+import type { ScopeData, ScopeTargetData, SheetData, SlotData, SlotOverrideData, StyleData } from '../data';
 import { copyExtractedData } from './utils';
 
 export type ExtractedTokenBoundData<T = ExtractedTokenBoundValue> = {
@@ -9,6 +9,7 @@ export type ExtractedTokenBoundData<T = ExtractedTokenBoundValue> = {
 
 export type ExtractedTokenBoundValue =
   | StyleData
+  | SheetData
   | SlotData
   | SlotOverrideData
   | ScopeData

@@ -35,6 +35,7 @@ export const FN_STYLE_RAW = 'raw';
 export const FN_STYLE_PLAIN = 'plain';
 export const FN_STYLE_KEYFRAMES = 'keyframes';
 export const FN_STYLE_MERGE = 'merge';
+export const FN_STYLE_SELECTOR = 'selector';
 
 export const FN_CREATE_TOKEN = 'createToken';
 export const FN_CREATE_TOKENS = 'createTokens';
@@ -57,8 +58,10 @@ export const FN_CREATE_POSITION_TRY = 'createPositionTry';
 export const FN_CREATE_COUNTER_STYLE = 'createCounterStyle';
 export const FN_CREATE_PROPERTY = 'createProperty';
 export const FN_FONT_SRC = 'fontSrc';
+export const FN_CREATE_SHEET = 'createSheet';
 
 export const FN_CREATE_EXTRACTED_STYLE = 'createExtractedStyle';
+export const FN_CREATE_EXTRACTED_SHEET = 'createExtractedSheet';
 export const FN_CREATE_EXTRACTED_SLOT = 'createExtractedSlot';
 export const FN_CREATE_EXTRACTED_SCOPE = 'createExtractedScope';
 export const FN_CREATE_EXTRACTED_TOKEN = 'createExtractedToken';

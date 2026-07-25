@@ -1,4 +1,10 @@
-import { createScopeBuilder, createSlotBuilder, createStyleBuilder, type SelectorsRecord } from '../builder';
+import {
+  createScopeBuilder,
+  createSelectorBuilder,
+  createSlotBuilder,
+  createStyleBuilder,
+  type SelectorsRecord,
+} from '../builder';
 import type { ClassNameFn } from '../builder/classname';
 import { isStyleData } from '../builder/data';
 import { mergeStyleData } from '../builder/style_data';
@@ -51,6 +57,7 @@ export function createStyleFn<
   const fnStyle = createStyleBuilder<Style, Selectors>(selectors, transform);
   const fnSlot = createSlotBuilder<Style, Selectors>(selectors, transform);
   const fnScope = createScopeBuilder<Selectors>(selectors);
+  const fnSelector = createSelectorBuilder<Style, Selectors>(selectors, transform);
 
   const fnValue: Types['ValueFn'] = (value, weight) => {
     return [weight, value];
@@ -80,6 +87,7 @@ export function createStyleFn<
   style.plain = fnPlain;
   style.keyframes = fnKeyframes;
   style.merge = fnMerge;
+  style.selector = fnSelector as Types['SelectorFn'];
 
   const meta: StyleFnMeta = {
     mode: 'StyleObject',

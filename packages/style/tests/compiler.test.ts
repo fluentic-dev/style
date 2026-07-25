@@ -1877,6 +1877,240 @@ const rule = style({ margin: 0 }).media('(max-width: 700px)', style({
   includes(css, ':hover');
 });
 
+test('compiler extracts createSheet selected style chains under the attached class', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+export const sheet = createSheet([
+  style.selector('.third-party-label', { color: 'red' }),
+  style.selector('.third-party-button').hover({ color: 'blue' }),
+  style.selector('.third-party-panel').media('(max-width: 700px)', { display: 'none' }),
+  style.selector('&:has(.third-party-button)', { color: 'green' }),
+]);
+`,
+    '/tmp/compiler-create-sheet.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(css, ' .third-party-label{color: red}');
+  includes(css, ' .third-party-button:hover{color: blue}');
+  includes(css, '@media (max-width: 700px)');
+  includes(css, ' .third-party-panel{display: none}');
+  includes(css, ':has(.third-party-button){color: green}');
+});
+
+test('compiler extracts createSheet selector arrays under the attached class', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+const contract = style.selector('.third-party-contract');
+
+export const sheet = createSheet([
+  contract,
+  style.selector(['.third-party-label', '.third-party-copy'], { color: 'red' }),
+]);
+`,
+    '/tmp/compiler-create-sheet-selector-array.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(css, ' .third-party-label{color: red}');
+  includes(css, ' .third-party-copy{color: red}');
+});
+
+test('compiler extracts createSheet named selector target calls under the attached class', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+const control = style.selector('.third-party-control');
+const arrow = style.selector('.third-party-arrow');
+
+export const sheet = createSheet([
+  control({ color: 'red' }),
+  arrow.hover({ color: 'blue' }),
+]);
+`,
+    '/tmp/compiler-create-sheet-named-selector-targets.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(css, ' .third-party-control{color: red}');
+  includes(css, ' .third-party-arrow:hover{color: blue}');
+});
+
+test('compiler extracts createSheet selector target object members', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+const selectors = {
+  control: style.selector('.third-party-control'),
+  arrow: style.selector('.third-party-arrow'),
+};
+
+export const sheet = createSheet([
+  selectors.control({ color: 'red' }),
+  selectors.arrow.hover({ color: 'blue' }),
+]);
+`,
+    '/tmp/compiler-create-sheet-selector-object-members.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(result.code, 'createExtractedSheet');
+  includes(css, ' .third-party-control{color: red}');
+  includes(css, ' .third-party-arrow:hover{color: blue}');
+});
+
+test('compiler extracts createSheet token overrides as an extracted sheet', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { createToken, style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+const color = createToken('blue');
+
+export const sheet = createSheet([
+  color('red'),
+  style.selector('.third-party-label', { color }),
+]);
+`,
+    '/tmp/compiler-create-sheet-token-overrides.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  includes(result.code, 'createExtractedSheet');
+  includes(result.code, 'createExtractedToken');
+  includes(result.code, ')("red")');
+  includes(result.css.join('\n'), ' .third-party-label{color:');
+});
+
+test('compiler keeps imported token identity for createSheet overrides of colocated styles', () => {
+  const root = mkdtempSync(path.join(testDir, 'tmp-sheet-token-'));
+  const stylesFile = path.join(root, 'Select.style.ts');
+  const themesFile = path.join(root, 'themes.ts');
+
+  writeFileSync(
+    stylesFile,
+    `
+import { createTokens, style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+export const selectTokens = createTokens({
+  accent: '#2563eb',
+});
+
+export const selectSheet = createSheet([
+  style.selector('&?.fluentic-select__control', {
+    borderColor: selectTokens.accent,
+  }),
+]);
+`,
+    'utf8',
+  );
+
+  writeFileSync(
+    themesFile,
+    `
+import { createSheet } from '@fluentic/style/css';
+import { selectTokens } from './Select.style';
+
+export const roseSheet = createSheet([
+  selectTokens.accent('#c0265a'),
+]);
+`,
+    'utf8',
+  );
+
+  const compiler = createCompiler({ layer: false });
+  const stylesResult = compiler.transform(readFileSync(stylesFile, 'utf8'), stylesFile);
+  const themesResult = compiler.transform(readFileSync(themesFile, 'utf8'), themesFile);
+
+  if (!stylesResult) throw new Error('expected styles compiler transform result');
+  if (!themesResult) throw new Error('expected themes compiler transform result');
+
+  const styleTokenVar = stylesResult.css.join('\n').match(/var\((--token-selectTokens--accent-[^,)]+)/)?.[1];
+  const themeTokenVar = themesResult.code.match(/(--token-selectTokens--accent-[^"`]+)/)?.[1];
+
+  if (!styleTokenVar) {
+    throw new Error(`expected selector CSS to use the named select token in ${stylesResult.css.join('\n')}`);
+  }
+
+  if (!themeTokenVar) {
+    throw new Error(`expected sheet override to use the named select token in ${themesResult.code}`);
+  }
+
+  equal(themeTokenVar, styleTokenVar);
+});
+
+test('compiler remounts reusable style fragments in createSheet and keeps the fragment usable directly', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: { debugClassName: true },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+const hoverTone = style().hover({ color: 'blue' });
+
+export const direct = hoverTone;
+export const sheet = createSheet([
+  style.selector('.third-party-button', hoverTone),
+]);
+`,
+    '/tmp/compiler-create-sheet-reused-fragment.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(css, ':hover{color: blue}');
+  includes(css, ' .third-party-button:hover{color: blue}');
+});
+
 test('compiler extracts token values as css variables', () => {
   const compiler = createCompiler({
     layer: false,
@@ -2014,8 +2248,9 @@ const scope = style.scope([
 
   includes(result.code, 'createExtractedScope');
   includes(result.code, 'const scope = createExtractedScope');
-  includes(result.code, "token('green')");
-  notIncludes(result.code, "token('red')");
+  includes(result.code, 'createExtractedToken');
+  includes(result.code, ')("green")');
+  notIncludes(result.code, '("red")');
   notIncludes(result.code, 'withTokens');
   notIncludes(result.code, "createExtractedScope([token('red')");
 });

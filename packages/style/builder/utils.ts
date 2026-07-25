@@ -5,6 +5,7 @@ import { type DebugData, getDebugCallsite } from './data/debug';
 export const FnPrefixStyle = 'style.';
 export const FnPrefixSlot = 'slot.';
 export const FnPrefixScope = 'scope.';
+export const FnPrefixSelector = 'selector.';
 
 export function runtimeCallsite() {
   return traceCallsite();

@@ -5,10 +5,12 @@ import type { CompilerCssCollector } from '../../extract/collector';
 import {
   FN_CREATE_EXTRACTED_THEME,
   FN_CREATE_EXTRACTED_TOKEN,
+  FN_CREATE_SHEET,
   FN_STYLE_PLAIN,
   FN_STYLE_RAW,
   FN_WITH_TOKENS,
   IMPORT_EXTRACT,
+  STYLE_CSS_IMPORT_PATH,
 } from '../../utils/constants';
 import { createImportSourceMatcher } from '../../utils/import_source';
 import { normalizePath } from '../../utils/path';
@@ -57,6 +59,7 @@ export function createExtractPlugin(args: PluginArgs) {
     return {
       pre(this) {
         this.styleNames = new Set();
+        this.sheetNames = new Set();
         this.styleMetas = new Map();
         this.bindings = new Map();
         this.bindingNodes = new Map();
@@ -103,6 +106,10 @@ export function createExtractPlugin(args: PluginArgs) {
             if (meta) {
               state.styleNames.add(spec.local.name);
               state.styleMetas.set(spec.local.name, meta);
+            }
+
+            if (sourceName === STYLE_CSS_IMPORT_PATH && imported === FN_CREATE_SHEET) {
+              state.sheetNames.add(spec.local.name);
             }
           });
         },
@@ -180,9 +187,9 @@ export function createExtractPlugin(args: PluginArgs) {
             return;
           }
 
-          if (!state.styleNames.size) return;
+          if (!state.styleNames.size && !state.sheetNames.size) return;
 
-          const chain = extractStyleChain(path.node, state.styleNames);
+          const chain = extractStyleChain(path.node, state.styleNames, state.sheetNames);
           if (!chain) return;
 
           if (
@@ -198,11 +205,20 @@ export function createExtractPlugin(args: PluginArgs) {
           const scope = getEvalScope(state);
           const loc = path.node.loc?.start;
           const meta = state.styleMetas.get(chain.rootName);
-          if (!meta) return;
+          if (chain.kind !== 'sheet' && !meta) return;
 
           let result: ReturnType<typeof compileChain>;
           try {
-            result = compileChain(chain, state.fileId, loc, scope, options, state.runtimeMode, meta, state.styleNames);
+            result = compileChain(
+              chain,
+              state.fileId,
+              loc,
+              scope,
+              options,
+              state.runtimeMode,
+              meta ?? null,
+              state.styleNames,
+            );
           } catch (error) {
             const message = error instanceof Error ? error.message : String(error);
             const node = getSelectorCompileErrorNode(error);

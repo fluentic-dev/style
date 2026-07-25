@@ -25,7 +25,9 @@ import {
   createDebugStyle,
   createNamedTokens,
   createSelectorAssert,
+  createSheet,
   createStyleFn,
+  createStyleTarget,
   createTheme,
   createThemeRule,
   createToken,
@@ -425,6 +427,25 @@ test('dev debug transform traces selector style arguments to their own fields', 
   includes(result.code, `label: ["media", "style.media", "styles.ts"], fields: { "padding": [7, 5] }`);
   includes(result.code, `.hover({\n    backgroundColor: 'blue'\n  }, { $$debug: true, loc: [8, 6]`);
   includes(result.code, `label: ["hover", "style.hover", "styles.ts"], fields: { "backgroundColor": [9, 5] }`);
+});
+
+test('dev debug transform traces selector override style arguments to their own fields', () => {
+  const result = injectStyleDebugData(
+    `
+import { style } from '@fluentic/style';
+
+const sheetItem = style.selector('.third-party-label', {
+  color: 'red',
+});
+`,
+    '/src/selector-sheet.ts',
+    {},
+    undefined,
+  );
+
+  includes(result.code, `.selector('.third-party-label', {`);
+  includes(result.code, `label: ["selector", "style.selector", "selector-sheet.ts"]`);
+  includes(result.code, `"color": [5, 3]`);
 });
 
 test('dev debug transform maps transformed style fields to source utility fields', () => {
@@ -1244,6 +1265,226 @@ test('runtime selector checks stay on in dev unless plugin selector checking is 
   configureTestRuntime({ dev: false });
 });
 
+test('createSheet anchors plain selectors under an attached generated class', () => {
+  const sheet = createSheet([
+    style.selector('.third-party-label', { color: 'red' }),
+  ]);
+
+  const result = getClassName(sheet);
+  const css = getSheetRules(sheet).map((rule) => rule.css).join('\n');
+
+  const className = result.className;
+  if (!className) throw new Error('expected sheet class name');
+
+  includes(css, `:where(.${className}) .third-party-label{color: red}`);
+});
+
+test('createSheet supports selector arrays and bare selector targets', () => {
+  const sheet = createSheet([
+    style.selector('.third-party-contract'),
+    style.selector(['.third-party-label', '.third-party-copy'], { color: 'red' }),
+  ]);
+
+  const result = getClassName(sheet);
+  const css = getSheetRules(sheet).map((rule) => rule.css).join('\n');
+
+  if (!result.className) throw new Error('expected sheet class name');
+
+  includes(css, ' .third-party-label{color: red}');
+  includes(css, ' .third-party-copy{color: red}');
+});
+
+test('createSheet composes selected targets with self-relative style chains', () => {
+  const cssStyle = createStyleFn({
+    selectors: {
+      hover: selector(':hover'),
+      media: selector('@media $$', 'media'),
+    },
+  }).style;
+  const sheet = createSheet([
+    style.selector('.third-party-button')({ color: 'red' }).hover({ color: 'blue' }),
+    cssStyle.selector('.third-party-panel').media('(max-width: 700px)', { display: 'none' }),
+  ]);
+
+  const result = getClassName(sheet);
+  const css = getSheetRules(sheet).map((rule) => rule.css).join('\n');
+
+  const className = result.className;
+  if (!className) throw new Error('expected sheet class name');
+
+  includes(css, ' .third-party-button:hover{color: blue}');
+  includes(css, '@media (max-width: 700px)');
+  includes(css, ' .third-party-panel{display: none}');
+});
+
+test('createSheet supports leading ampersand as the attached class anchor', () => {
+  const sheet = createSheet([
+    style.selector('&:has(.third-party-button)', { color: 'green' }),
+  ]);
+
+  const result = getClassName(sheet);
+  const css = getSheetRules(sheet).map((rule) => rule.css).join('\n');
+
+  const className = result.className;
+  if (!className) throw new Error('expected sheet class name');
+
+  includes(css, `:where(.${className}):has(.third-party-button){color: green}`);
+});
+
+test('createSheet supports optional ampersand selectors as self or descendant anchors', () => {
+  const sheet = createSheet([
+    style.selector('&?.third-party-menu', { color: 'red' }),
+  ]);
+
+  const result = getClassName(sheet);
+  const css = getSheetRules(sheet).map((rule) => rule.css).join('\n');
+
+  const [selfClassName, descendantClassName] = result.className?.split(' ') ?? [];
+  if (!selfClassName || !descendantClassName) throw new Error('expected sheet class names');
+
+  includes(css, `:where(.${selfClassName}).third-party-menu{color: red}`);
+  includes(css, `:where(.${descendantClassName}) .third-party-menu{color: red}`);
+});
+
+test('createSheet supports ampersand-only selector anchors', () => {
+  const sheet = createSheet([
+    style.selector('&', { color: 'red' }),
+    style.selector('&?', { backgroundColor: 'blue' }),
+  ]);
+
+  const result = getClassName(sheet);
+  const css = getSheetRules(sheet).map((rule) => rule.css).join('\n');
+
+  const [colorClassName, backgroundClassName] = result.className?.split(' ') ?? [];
+  if (!colorClassName || !backgroundClassName) throw new Error('expected sheet class names');
+
+  includes(css, `:where(.${colorClassName}){color: red}`);
+  includes(css, `:where(.${backgroundClassName}){background-color: blue}`);
+});
+
+test('createSheet accepts local token overrides and combineStyle can override them', () => {
+  const color = createToken('blue');
+  const sheet = createSheet([
+    color('red'),
+    style.selector('.third-party-label', { color }),
+  ]);
+  const direct = getClassName(sheet);
+  const directVarName = Object.keys(direct.style ?? {}).find((key) => key.startsWith('--token-'));
+
+  if (!directVarName) throw new Error('expected local sheet token variable');
+  equal((direct.style as Record<string, unknown>)[directVarName], 'red');
+
+  const css = combineStyle({ sheet }, color('green'));
+  const combined = getClassName(css.sheet as any);
+  const combinedVarName = Object.keys(combined.style ?? {}).find((key) => key.startsWith('--token-'));
+
+  if (!combinedVarName) throw new Error('expected combined sheet token variable');
+  equal((combined.style as Record<string, unknown>)[combinedVarName], 'green');
+});
+
+test('createSheet can be used as a token-only local theme sheet', () => {
+  const color = createToken('blue');
+  const sheet = createSheet([
+    color('red'),
+  ]);
+  const result = getClassName(sheet);
+  const varName = Object.keys(result.style ?? {}).find((key) => key.startsWith('--token-'));
+
+  equal(result.className, undefined);
+  if (!varName) throw new Error('expected token-only sheet variable');
+  equal((result.style as Record<string, unknown>)[varName], 'red');
+});
+
+test('createStyleTarget applies class names and inline token styles to a target', () => {
+  const color = createToken('blue');
+  const sheet = createSheet([
+    color('red'),
+    style.selector('&', { color }),
+  ]);
+  const target = createFakeStyleTarget();
+  const styleTarget = createStyleTarget();
+
+  target.style.setProperty('--existing', 'old');
+  styleTarget.apply(target, sheet);
+
+  equal(target.classList.size > 0, true);
+  equal(target.style.getPropertyValue('--existing'), 'old');
+  equal([...target.style.values.values()].includes('red'), true);
+
+  styleTarget.destroy();
+
+  equal(target.classList.size, 0);
+  equal(target.style.getPropertyValue('--existing'), 'old');
+  equal([...target.style.values.values()].includes('red'), false);
+});
+
+test('createStyleTarget applies selector sheet classes to a target', () => {
+  const sheet = createSheet([
+    style.selector('.third-party-menu', { color: 'red' }),
+  ]);
+  const target = createFakeStyleTarget();
+  const styleTarget = createStyleTarget();
+
+  styleTarget.apply(target, sheet);
+
+  equal(target.classList.size > 0, true);
+});
+
+test('createStyleTarget diffs repeated apply calls and disabled state', () => {
+  const color = createToken('blue');
+  const redSheet = createSheet([
+    color('red'),
+    style.selector('&', { color }),
+  ]);
+  const greenSheet = createSheet([
+    color('green'),
+    style.selector('&', { color }),
+  ]);
+  const target = createFakeStyleTarget();
+  const styleTarget = createStyleTarget();
+
+  styleTarget.apply(target, redSheet);
+  const firstClassName = target.className;
+  const firstSetCount = target.style.setCount;
+
+  styleTarget.apply(target, redSheet);
+
+  equal(target.className, firstClassName);
+  equal(target.style.setCount, firstSetCount);
+
+  styleTarget.apply(target, greenSheet);
+
+  equal(target.className, firstClassName);
+  equal([...target.style.values.values()].includes('green'), true);
+
+  styleTarget.apply(target, greenSheet, { enabled: false });
+
+  equal(target.classList.size, 0);
+  equal(target.style.values.size, 0);
+});
+
+test('createSheet rejects selector lists and upward ampersand selectors', () => {
+  assertCreateSheetError(
+    () => createSheet([style.selector('.one, .two', { color: 'red' })]),
+    'selector must not contain ","',
+  );
+
+  assertCreateSheetError(
+    () => createSheet([style.selector('.parent &', { color: 'red' })]),
+    'selector can only use "&" at the beginning',
+  );
+
+  assertCreateSheetError(
+    () => createSheet([style.selector('& .child', { color: 'red' })]),
+    'selector cannot have whitespace after "&"',
+  );
+
+  assertCreateSheetError(
+    () => createSheet([style.selector('&? .child', { color: 'red' })]),
+    'selector cannot have whitespace after "&"',
+  );
+});
+
 test('runtime dev defaults enable local class name hashing', () => {
   configureTestRuntime({ dev: true });
 
@@ -1780,3 +2021,62 @@ test('scope keeps same-property overrides for different slots', () => {
   equal(cardClasses.includes(labelBackground.className), false);
   equal(labelClasses.includes(cardBackground.className), false);
 });
+
+function assertCreateSheetError(
+  fn: () => unknown,
+  message: string,
+) {
+  let error: unknown = null;
+
+  try {
+    fn();
+  } catch (err: unknown) {
+    error = err;
+  }
+
+  if (!(error instanceof Error)) {
+    throw new Error('expected createSheet to throw');
+  }
+
+  includes(error.message, message);
+}
+
+function createFakeStyleTarget() {
+  const classes = new Set<string>();
+  const style = {
+    values: new Map<string, string>(),
+    setCount: 0,
+    setProperty(name: string, value: string) {
+      this.setCount++;
+      this.values.set(name, value);
+    },
+    getPropertyValue(name: string) {
+      return this.values.get(name) ?? '';
+    },
+    removeProperty(name: string) {
+      this.values.delete(name);
+    },
+  };
+
+  return {
+    classList: {
+      get size() {
+        return classes.size;
+      },
+      add(...classNames: string[]) {
+        classNames.forEach((className) => classes.add(className));
+      },
+      remove(...classNames: string[]) {
+        classNames.forEach((className) => classes.delete(className));
+      },
+    },
+    get className() {
+      return [...classes].sort().join(' ');
+    },
+    style,
+  } as unknown as Element & {
+    classList: { size: number; };
+    className: string;
+    style: typeof style;
+  };
+}

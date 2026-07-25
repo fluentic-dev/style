@@ -1,4 +1,4 @@
-import { FN_STYLE_MERGE, FN_STYLE_SCOPE, FN_STYLE_SLOT } from '../../../utils/constants';
+import { FN_STYLE_MERGE, FN_STYLE_SCOPE, FN_STYLE_SELECTOR, FN_STYLE_SLOT } from '../../../utils/constants';
 import type { BabelTypes } from '../../utils/babel';
 
 export const STATIC_MERGE_METHOD = '$$style.merge';
@@ -10,7 +10,7 @@ export type StyleChainMethod = {
 };
 
 export type StyleChainParseResult = {
-  kind: 'style' | 'slot' | 'scope';
+  kind: 'style' | 'slot' | 'scope' | 'sheet' | 'selector';
   rootName: string;
   baseArgs: BabelTypes.Node[];
   methods: StyleChainMethod[];
@@ -25,6 +25,7 @@ export type StyleSlotRef = {
 export function extractStyleChain(
   node: BabelTypes.Node,
   styleNames: Set<string>,
+  sheetNames: Set<string> = new Set(),
 ): StyleChainParseResult {
   if (node.type !== 'CallExpression') return null;
 
@@ -32,6 +33,10 @@ export function extractStyleChain(
 
   if (callee.type === 'Identifier' && styleNames.has(callee.name)) {
     return { kind: 'style', rootName: callee.name, baseArgs: node.arguments as BabelTypes.Node[], methods: [] };
+  }
+
+  if (callee.type === 'Identifier' && sheetNames.has(callee.name)) {
+    return { kind: 'sheet', rootName: callee.name, baseArgs: node.arguments as BabelTypes.Node[], methods: [] };
   }
 
   if (callee.type === 'MemberExpression' && !callee.computed) {
@@ -50,12 +55,15 @@ export function extractStyleChain(
       if (prop === FN_STYLE_SCOPE) {
         return { kind: 'scope', rootName: obj.name, baseArgs: node.arguments as BabelTypes.Node[], methods: [] };
       }
+      if (prop === FN_STYLE_SELECTOR) {
+        return { kind: 'selector', rootName: obj.name, baseArgs: node.arguments as BabelTypes.Node[], methods: [] };
+      }
       if (prop !== FN_STYLE_MERGE) return null;
 
       const target = node.arguments[0] as BabelTypes.Node | undefined;
       if (!target) return null;
 
-      const targetChain = extractStyleChain(target, styleNames);
+      const targetChain = extractStyleChain(target, styleNames, sheetNames);
       if (!targetChain) return null;
 
       return {
@@ -71,7 +79,7 @@ export function extractStyleChain(
     }
 
     if (obj.type === 'CallExpression') {
-      const inner = extractStyleChain(obj, styleNames);
+      const inner = extractStyleChain(obj, styleNames, sheetNames);
       if (!inner) return null;
 
       return {

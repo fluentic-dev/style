@@ -2,6 +2,7 @@ import type { ThemeData } from '../../../builder/data/data';
 import {
   isScopeData,
   isScopeTargetData,
+  isSheetData,
   isSlotData,
   isSlotOverrideData,
   isStyleData,
@@ -200,8 +201,8 @@ function normalizeStylePropItem(
 
     const tokens = mergeTokenOverrides(null, bound.tokens, runtimeTokenValueResolver);
 
-    if (isStyleData(bound.data) || isSlotData(bound.data)) {
-      return createResolvedStyleItem(bound.data, [], tokens);
+    if (isStyleData(bound.data) || isSheetData(bound.data) || isSlotData(bound.data)) {
+      return createResolvedStyleItem(bound.data, [], tokens, runtimeTokenValueResolver);
     }
 
     return normalizeStylePropItem(bound.data, false);
@@ -211,8 +212,8 @@ function normalizeStylePropItem(
     return item;
   }
 
-  if (isStyleData(item) || isSlotData(item)) {
-    return getDirectStyleItem(item);
+  if (isStyleData(item) || isSheetData(item) || isSlotData(item)) {
+    return getDirectStyleItem(item, runtimeTokenValueResolver);
   }
 
   return null;
@@ -238,6 +239,7 @@ function getStylePropCacheKey(
     isResolvedStyleItem(item) ||
     isThemeData(item) ||
     isStyleData(item) ||
+    isSheetData(item) ||
     isSlotData(item)
   ) {
     return item;

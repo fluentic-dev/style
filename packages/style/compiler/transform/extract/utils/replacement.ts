@@ -1,6 +1,7 @@
 import { getTokenVarName } from '../../../../atomic/token';
 import {
   BUILDER_TYPE_SCOPE,
+  BUILDER_TYPE_SHEET,
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
@@ -9,11 +10,18 @@ import {
   ITEM_VALUE_TYPE_VARIABLE,
 } from '../../../../builder/data/const';
 import type { BuilderType, ExtractedItemValue } from '../../../../builder/data/state';
-import { getStyleTokenId, getStyleTokenName, isStyleTokenData, type StyleTokenData } from '../../../../style/token';
+import {
+  getStyleTokenId,
+  getStyleTokenName,
+  isStyleTokenData,
+  type StyleTokenData,
+  type StyleTokenOverride,
+} from '../../../../style/token';
 import type { AtRuleRefData } from '../../../../style/valueRef';
 import { DEFAULT_CONFIG } from '../../../utils/constants';
 import {
   FN_CREATE_EXTRACTED_SCOPE,
+  FN_CREATE_EXTRACTED_SHEET,
   FN_CREATE_EXTRACTED_SLOT,
   FN_CREATE_EXTRACTED_STYLE,
   FN_CREATE_EXTRACTED_STYLE_MERGE,
@@ -49,6 +57,15 @@ export function buildReplacement(
       hasSpread
         ? buildStyleMergeArgs(t, chain, state, options)
         : [buildItemsArray(t, chain, BUILDER_TYPE_STYLE, state, options)],
+    );
+  }
+
+  if (chain.type === 'sheet') {
+    state.usedHelpers.add(FN_CREATE_EXTRACTED_SHEET);
+
+    return t.callExpression(
+      t.identifier(FN_CREATE_EXTRACTED_SHEET),
+      [buildItemsArray(t, chain, BUILDER_TYPE_SHEET, state, options)],
     );
   }
 
@@ -128,7 +145,7 @@ function buildItemsArray(
       if (options.getTokenOverride) {
         options.getTokenOverride(item);
       } else {
-        itemExpressions.push(t.cloneNode(item.valueNode));
+        itemExpressions.push(buildExtractedTokenOverrideExpression(t, item.value, state));
       }
       return;
     }
@@ -337,6 +354,34 @@ function buildExtractedTokenExpression(
       token.ref ? buildExtractedTokenExpression(t, token.ref, state) : t.nullLiteral(),
       getStyleTokenName(token) ? t.stringLiteral(getStyleTokenName(token)!) : t.nullLiteral(),
       t.stringLiteral(getTokenVarName(token, tokenNameFormat)),
+    ],
+  );
+}
+
+function buildExtractedTokenOverrideExpression(
+  t: typeof BabelTypes,
+  token: StyleTokenOverride,
+  state: ExtractPluginState,
+): BabelTypes.Expression {
+  state.usedHelpers.add(FN_CREATE_EXTRACTED_TOKEN);
+  const tokenNameFormat = state.options.css?.tokenNameFormat ?? DEFAULT_CONFIG.tokenNameFormat ?? null;
+  const extractedToken = t.callExpression(
+    t.identifier(FN_CREATE_EXTRACTED_TOKEN),
+    [
+      t.stringLiteral(getStyleTokenId(token)),
+      t.nullLiteral(),
+      t.nullLiteral(),
+      getStyleTokenName(token) ? t.stringLiteral(getStyleTokenName(token)!) : t.nullLiteral(),
+      t.stringLiteral(getTokenVarName(token, tokenNameFormat)),
+    ],
+  );
+
+  return t.callExpression(
+    extractedToken,
+    [
+      token.ref
+        ? buildExtractedTokenExpression(t, token.ref, state)
+        : literalExpression(t, token.value),
     ],
   );
 }

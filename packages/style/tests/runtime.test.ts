@@ -30,6 +30,7 @@ import {
   createProperty,
   createRscStylePayload,
   createScopeBuilder,
+  createSheet,
   createStableTheme,
   createStableToken,
   createStableTokens,
@@ -172,7 +173,7 @@ test('style prop resolver accepts direct raw style and slot data', () => {
   equal(result, cached);
 });
 
-test('exposeStyle keeps tokens and slots from nested style objects', () => {
+test('exposeStyle keeps tokens, slots, and selectors from nested style objects', () => {
   const tokens = createTokens({
     color: 'red',
     nested: {
@@ -184,6 +185,7 @@ test('exposeStyle keeps tokens and slots from nested style objects', () => {
     container: style.slot({
       color: tokens.color,
     }),
+    selector: style.selector('.third-party-control'),
     internal: style({
       color: 'blue',
     }),
@@ -191,6 +193,7 @@ test('exposeStyle keeps tokens and slots from nested style objects', () => {
       label: style.slot({
         color: tokens.color,
       }),
+      selector: style.selector('.third-party-label'),
       internal: style({
         color: 'green',
       }),
@@ -207,10 +210,66 @@ test('exposeStyle keeps tokens and slots from nested style objects', () => {
   equal(exposed.tokens.color, tokens.color);
   equal(exposed.tokens.nested.gap, tokens.nested.gap);
   equal(exposed.container, directStyles.container);
+  equal(exposed.selector, directStyles.selector);
   equal(exposed.nested.label, directStyles.nested.label);
+  equal(exposed.nested.selector, directStyles.nested.selector);
   equal('internal' in exposed, false);
   equal('internal' in exposed.nested, false);
   equal('empty' in exposed.nested, false);
+});
+
+test('static combineStyle preserves selector target fields', () => {
+  const selectors = {
+    control: style.selector('.third-party-control'),
+  };
+  const css = combineStyle(selectors);
+  const sheet = createSheet([
+    css.control({
+      color: 'red',
+    }),
+  ]);
+  const result = getClassName(sheet);
+
+  equal(css.control, selectors.control);
+  if (!result.className) throw new Error('expected sheet class name');
+  includes(
+    getSheetRules(sheet).map((rule) => rule.css).join('\n'),
+    `:where(.${result.className}) .third-party-control{color: red}`,
+  );
+});
+
+test('static combineStyle accepts token-only sheet args', () => {
+  const color = createToken('blue');
+  const tokenSheet = createSheet([
+    color('green'),
+  ]);
+  const css = combineStyle({
+    label: style({
+      color,
+    }),
+  }, tokenSheet);
+  const result = getClassName(css.label as any);
+  const varName = Object.keys(result.style ?? {}).find((key) => key.startsWith('--token-'));
+
+  if (!varName) throw new Error('expected combined token sheet variable');
+  equal((result.style as Record<string, unknown>)[varName], 'green');
+});
+
+test('static combineStyle accepts scope theme token args', () => {
+  const color = createToken('blue');
+  const scopeTheme = style.scope([
+    color('green'),
+  ]);
+  const css = combineStyle({
+    label: style({
+      color,
+    }),
+  }, scopeTheme);
+  const result = getClassName(css.label as any);
+  const varName = Object.keys(result.style ?? {}).find((key) => key.startsWith('--token-'));
+
+  if (!varName) throw new Error('expected combined scope theme token variable');
+  equal((result.style as Record<string, unknown>)[varName], 'green');
 });
 
 test('static merge helper uses selector spread primitive at runtime', () => {
@@ -1118,6 +1177,61 @@ test('static combineStyle.for lets later token providers override carried values
   equal((result.style as Record<string, unknown>)[varName], 'green');
 });
 
+test('static combineStyle.with applies carried token providers to a single style', () => {
+  const token = createToken('blue');
+  const item = style({
+    color: token,
+  });
+  const combine = combineStyle.with(token('red'));
+  const first = combine(item);
+  const second = combine(item);
+  const result = resolveStyleProp(first);
+
+  equal(first, second);
+
+  if (!result.style) throw new Error('expected token variable style');
+
+  const varName = Object.keys(result.style).find((key) => key.startsWith('--token-'));
+
+  if (!varName) throw new Error('expected token variable name');
+
+  equal((result.style as Record<string, unknown>)[varName], 'red');
+});
+
+test('static combineStyle.with applies carried style items to a single style', () => {
+  const base = style({
+    color: 'red',
+  });
+  const override = style({
+    fontSize: 12,
+  });
+  const css = combineStyle.with(override)(base);
+  const result = resolveStyleProp(css);
+
+  equal(result.className.split(' ').length, 2);
+});
+
+test('static combineStyle.multi applies args to each array item independently', () => {
+  const token = createToken('blue');
+  const color = style({
+    color: token,
+  });
+  const background = style({
+    backgroundColor: token,
+  });
+  const [colorCss, backgroundCss] = combineStyle.multi([color, background], token('green'));
+  const colorResult = resolveStyleProp(colorCss);
+  const backgroundResult = resolveStyleProp(backgroundCss);
+
+  const colorVarName = Object.keys(colorResult.style ?? {}).find((key) => key.startsWith('--token-'));
+  const backgroundVarName = Object.keys(backgroundResult.style ?? {}).find((key) => key.startsWith('--token-'));
+
+  if (!colorVarName || !backgroundVarName) throw new Error('expected token variable styles');
+
+  equal(colorResult.style?.[colorVarName as never], 'green');
+  equal(backgroundResult.style?.[backgroundVarName as never], 'green');
+});
+
 test('static getToken resolves token values to css variable fallbacks', () => {
   const base = createStableToken('blue', 'static-base');
   const alias = createStableToken(base, 'static-alias');
@@ -1568,6 +1682,61 @@ test('style value ref token deps resolve from direct token bindings', () => {
     const varName = Object.keys(result.style ?? {}).find((key) => key.startsWith('--token-enter-transform-'));
     if (!varName) throw new Error('expected enter transform token variable');
     equal(result.style?.[varName as never], 'translateY(24px)');
+  } finally {
+    setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
+  }
+});
+
+test('style prop resolver wires token-bound sheet values', () => {
+  const token = createStableToken('blue', 'bound-sheet-token');
+  const sheet = createSheet([
+    style.selector('.third-party-label', {
+      color: token,
+    }),
+  ]);
+
+  try {
+    setBuildMeta({ dev: false, extract: true, hoist: true, rsc: false, css: null });
+
+    const result = resolveStyleProp(withTokens(sheet, [
+      token('red'),
+    ] as never));
+    const varName = Object.keys(result.style ?? {}).find((key) => key.startsWith('--token-bound-sheet-token-'));
+
+    if (!varName) throw new Error('expected bound sheet token variable');
+    equal(result.style?.[varName as never], 'red');
+  } finally {
+    setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
+  }
+});
+
+test('combineStyle accepts token-bound sheet args', () => {
+  const token = createStableToken('blue', 'bound-combined-sheet-token');
+  const styles = {
+    label: style({
+      color: token,
+    }),
+  };
+  const sheet = createSheet([
+    token('red'),
+  ]);
+
+  try {
+    setBuildMeta({ dev: false, extract: true, hoist: true, rsc: false, css: null });
+
+    const css = combineStyle(
+      styles,
+      withTokens(sheet, [
+        token('green'),
+      ] as never),
+    );
+    const result = resolveStyleProp(css.label as any);
+    const varName = Object.keys(result.style ?? {}).find((key) =>
+      key.startsWith('--token-bound-combined-sheet-token-')
+    );
+
+    if (!varName) throw new Error('expected combined bound sheet token variable');
+    equal(result.style?.[varName as never], 'green');
   } finally {
     setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
   }

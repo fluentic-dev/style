@@ -1,6 +1,7 @@
 import {
   BUILDER_STATE,
   BUILDER_TYPE,
+  BUILDER_TYPE_SHEET,
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
@@ -229,7 +230,7 @@ function resolveExtractedStylePropUncached(
     style = appendExtractedData(classNames, style, item, null, collectedItems, ignoreTokenStyle);
   }
 
-  if (!classNames.length) return null;
+  if (!classNames.length && !style) return null;
 
   return {
     className: classNames.join(' '),
@@ -270,10 +271,12 @@ function appendExtractedData(
     return style;
   }
 
-  if (type !== BUILDER_TYPE_STYLE && type !== BUILDER_TYPE_SLOT) return style;
+  if (type !== BUILDER_TYPE_STYLE && type !== BUILDER_TYPE_SHEET && type !== BUILDER_TYPE_SLOT) return style;
 
   const items = (data as { [BUILDER_STATE]?: { items?: StateItem[]; }; })[BUILDER_STATE]?.items;
   if (!items) return style;
+
+  tokens = mergeTokenValuesFromItems(tokens, items);
 
   for (let i = 0, len = items.length; i < len; i++) {
     collectedItems?.push(items[i]);
@@ -281,6 +284,35 @@ function appendExtractedData(
   }
 
   return style;
+}
+
+function mergeTokenValuesFromItems(
+  tokens: TokenValues,
+  items: readonly StateItem[],
+): TokenValues {
+  let next = tokens;
+
+  for (let i = 0, len = items.length; i < len; i++) {
+    const item = items[i];
+    if (!isStyleTokenOverrideData(item)) continue;
+
+    next = mergeTokenValues(next, createTokenValues([item]));
+  }
+
+  return next;
+}
+
+function mergeTokenValues(
+  base: TokenValues,
+  next: TokenValues,
+): TokenValues {
+  if (!next) return base;
+  if (!base) return next;
+
+  return {
+    ...base,
+    ...next,
+  };
 }
 
 function resolveExtractedStateItemTokens(
@@ -324,7 +356,7 @@ function addStateItem(
   const dedupe = getStateItemDedupe(item);
   const className = getStateItemClassName(item);
 
-  if (!dedupe || !className) return style;
+  if (!dedupe || !className) return addStateItemStyle(style, item, tokens);
 
   if (dedupeRun[dedupe] === runId) {
     classNames[dedupeIndex[dedupe]] = className;
@@ -341,6 +373,17 @@ function addStateItemStyle(
   item: StateItem,
   tokens: TokenValues,
 ) {
+  if (isStyleTokenOverrideData(item)) {
+    const id = getStyleTokenId(item);
+    const value = tokens && tokens[id] !== undefined
+      ? tokens[id]
+      : item.ref
+      ? getTokenVar(item.ref)
+      : item.value;
+
+    return setStyleValue(style, getTokenVarName(item), value);
+  }
+
   const value = getStateItemValue(item);
 
   if (Array.isArray(value)) {
@@ -372,7 +415,7 @@ function addStateItemStyle(
 function getStateItemDedupe(item: StateItem) {
   if (Array.isArray(item)) {
     return typeof item[0] === 'number'
-      ? item[0] === BUILDER_TYPE_STYLE ? item[1] : item[2]
+      ? item[0] === BUILDER_TYPE_STYLE || item[0] === BUILDER_TYPE_SHEET ? item[1] : item[2]
       : item[0];
   }
 
@@ -382,7 +425,7 @@ function getStateItemDedupe(item: StateItem) {
 function getStateItemClassName(item: StateItem) {
   if (Array.isArray(item)) {
     return typeof item[0] === 'number'
-      ? item[0] === BUILDER_TYPE_STYLE ? item[2] : item[3]
+      ? item[0] === BUILDER_TYPE_STYLE || item[0] === BUILDER_TYPE_SHEET ? item[2] : item[3]
       : item[1];
   }
 
@@ -393,7 +436,7 @@ function getStateItemValue(item: StateItem) {
   if (!Array.isArray(item)) return undefined;
 
   if (typeof item[0] !== 'number') return item[2];
-  if (item[0] === BUILDER_TYPE_STYLE) return item[3];
+  if (item[0] === BUILDER_TYPE_STYLE || item[0] === BUILDER_TYPE_SHEET) return item[3];
   if (item[0] === BUILDER_TYPE_SLOT || item[0] === BUILDER_TYPE_SLOT_OVERRIDE) return item[4];
 
   return undefined;

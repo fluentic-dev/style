@@ -1,14 +1,14 @@
-import type { ScopeTargetData } from '../../builder/data';
-import type { SlotData, StyleData } from '../../builder/data';
+import type { ScopeTargetData, SelectorData, SheetData, SlotData, StyleData } from '../../builder/data';
 import { globalData } from '../../utils/global';
 import { hasOwn } from '../../utils/object';
 import type { ResolvedStyleItem } from './cache/item';
-import type { StyleTokenValues } from './cache/tokenValues';
+import type { StyleTokenValues, TokenValueResolver } from './cache/tokenValues';
 
 export type CombinedStyleMeta<Styles = unknown> = {
   styles: Styles;
   scopes: readonly ScopeTargetData[];
   tokens: StyleTokenValues | null;
+  resolver: TokenValueResolver;
 };
 
 export type CombinedStyle<Styles = unknown> = InferData<Styles>;
@@ -64,6 +64,10 @@ export function getCombinedStyleTokens(style: CombinedStyle) {
   return getTarget(style).tokens;
 }
 
+export function getCombinedStyleResolver(style: CombinedStyle) {
+  return getTarget(style).resolver;
+}
+
 const handlers: ProxyHandler<object> = {
   get(proxy, prop) {
     const target = getTarget(proxy);
@@ -92,8 +96,9 @@ function getTarget(value: object): CombinedStyleTarget {
   return target;
 }
 
-type InferValue<Value> = Value extends StyleData | SlotData ? ResolvedStyleItem<Value>
-  : Value extends object ? CombinedStyle<any>
+type InferValue<Value> = Value extends StyleData | SheetData | SlotData ? ResolvedStyleItem<Value>
+  : Value extends SelectorData ? Value
+  : Value extends object ? CombinedStyle<Value>
   : Value;
 
 type InferData<Styles> = unknown extends Styles ? {}

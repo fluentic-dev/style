@@ -3,11 +3,14 @@ import type { StyleObject } from '../style/types';
 import { traceMarker } from '../utils/trace';
 import {
   BUILDER_CALLSITE,
+  BUILDER_SELECTOR,
   BUILDER_SLOT_ID,
   BUILDER_STATE,
   type BuilderCallsite,
   createScopeData,
   createScopeTargetData,
+  createSelectorData,
+  createSelectorOverrideData,
   createSlotData,
   createSlotOverrideData,
   createStyleData,
@@ -15,15 +18,27 @@ import {
   getDebugCallsiteId,
   getTraceCallsiteId,
   isDebugData,
+  isStyleData,
   type ScopeData,
+  type SelectorData,
+  type SelectorOverrideData,
   type SlotData,
+  type StyleData,
 } from './data';
 import { mergeScopeData, type ScopeItems } from './data/merge/scope';
-import { mergeSlotData, mergeSlotOverrideData, mergeStyleData } from './style_data';
+import { type ManualSelectorInput, normalizeManualSelectors } from './selector_override';
+import { mergeSelectorOverrideData, mergeSlotData, mergeSlotOverrideData, mergeStyleData } from './style_data';
 import { createDefaultFnResult, createScopeFns, createStyleFns } from './style_fns';
-import type { ScopeBuilder, SelectorsRecord, SlotBuilder, StyleBuilder } from './types';
+import type {
+  ScopeBuilder,
+  SelectorBuilder,
+  SelectorOverrideBuilder,
+  SelectorsRecord,
+  SlotBuilder,
+  StyleBuilder,
+} from './types';
 import type { ScopeSelfFn, SlotSelfFn, StyleSelfFn } from './types/fns';
-import { FnPrefixScope, FnPrefixSlot, FnPrefixStyle, resolveCallsite, transformStyle } from './utils';
+import { FnPrefixScope, FnPrefixSelector, FnPrefixSlot, FnPrefixStyle, resolveCallsite, transformStyle } from './utils';
 
 export function createStyleBuilder<Style, Selectors extends SelectorsRecord>(
   selectors: Selectors,
@@ -131,6 +146,53 @@ export function createSlotBuilder<Style, Selectors extends SelectorsRecord>(
   return fn as unknown as SlotFn<Style>;
 }
 
+export function createSelectorBuilder<Style, Selectors extends SelectorsRecord>(
+  selectors: Selectors,
+  transform: StyleTransform<Style> | null,
+) {
+  type SelectorFn = {
+    (selector: ManualSelectorInput): SelectorBuilder<Style, Selectors>;
+    (
+      selector: ManualSelectorInput,
+      style: StyleObject<Style> | StyleData<Style>,
+    ): SelectorOverrideBuilder<Style, Selectors>;
+  };
+
+  const fns = createStyleFns(
+    mergeSelectorOverrideData,
+    selectors,
+    FnPrefixSelector,
+    transform,
+    null,
+  );
+
+  const fn = (
+    selector: ManualSelectorInput,
+    style?: StyleObject<Style> | StyleData<Style>,
+    debug?: DebugData,
+  ) => {
+    if (isDebugData(style) && debug === undefined) {
+      debug = style;
+      style = undefined;
+    }
+
+    const callsite = resolveCallsite(debug);
+    const manualSelectors = normalizeManualSelectors(selector);
+    const target = createCallableSelector(
+      createSelectorData(callsite, manualSelectors),
+      fns,
+      transform,
+    );
+
+    if (style === undefined) return target;
+    return target(style, debug);
+  };
+
+  traceMarker(fn, 'style.selector');
+
+  return fn as unknown as SelectorFn;
+}
+
 export function createScopeBuilder<Selectors extends SelectorsRecord>(
   selectors: Selectors,
 ) {
@@ -167,6 +229,68 @@ export function createScopeBuilder<Selectors extends SelectorsRecord>(
   traceMarker(fn, 'scope');
 
   return fn as unknown as ScopeFn;
+}
+
+function createCallableSelectorOverride<Style, Selectors extends SelectorsRecord>(
+  data: SelectorOverrideData<Style>,
+  fns: Record<string, Function>,
+  transform: StyleTransform<Style> | null,
+): SelectorOverrideBuilder<Style, Selectors> {
+  const callable = ((style?: StyleObject<Style> | StyleData<Style>, debug?: DebugData) => {
+    if (isDebugData(style) && debug === undefined) {
+      debug = style;
+      style = undefined;
+    }
+
+    const callsite = resolveCallsite(debug);
+
+    const overrideData = mergeSelectorOverrideData(
+      createSelectorOverrideData(callsite, data[BUILDER_SELECTOR]),
+      callsite,
+      style ? isStyleData(style) ? style : transformStyle(style, transform) : null,
+      debug ?? null,
+      null,
+      null,
+    );
+
+    return createCallableSelectorOverride(overrideData, fns, transform);
+  }) as unknown as SelectorOverrideBuilder<Style, Selectors>;
+
+  traceMarker(callable, 'selector.override');
+  Object.setPrototypeOf(callable, fns);
+  Object.assign(callable, data);
+  return callable;
+}
+
+function createCallableSelector<Style, Selectors extends SelectorsRecord>(
+  data: SelectorData<Style>,
+  overrideFns: Record<string, Function>,
+  transform: StyleTransform<Style> | null,
+): SelectorBuilder<Style, Selectors> {
+  const callable = ((style?: StyleObject<Style> | StyleData<Style>, debug?: DebugData) => {
+    if (isDebugData(style) && debug === undefined) {
+      debug = style;
+      style = undefined;
+    }
+
+    const callsite = resolveCallsite(debug);
+
+    const overrideData = mergeSelectorOverrideData(
+      createSelectorOverrideData(callsite, data[BUILDER_SELECTOR]),
+      callsite,
+      style ? isStyleData(style) ? style : transformStyle(style, transform) : null,
+      debug ?? null,
+      null,
+      null,
+    );
+
+    return createCallableSelectorOverride(overrideData, overrideFns, transform);
+  }) as unknown as SelectorBuilder<Style, Selectors>;
+
+  traceMarker(callable, 'selector');
+  Object.setPrototypeOf(callable, overrideFns);
+  Object.assign(callable, data);
+  return callable;
 }
 
 function createCallableSlot<Style>(

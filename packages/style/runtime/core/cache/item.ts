@@ -1,10 +1,12 @@
 import { getScopeClassName } from '../../../atomic/scope';
 import { BUILDER_STATE, BUILDER_TYPE_SCOPE, BUILDER_TYPE_SLOT } from '../../../builder/data/const';
-import type { ScopeTargetData, SlotData, StyleData } from '../../../builder/data/data';
+import type { ScopeTargetData, SheetData, SlotData, StyleData } from '../../../builder/data/data';
 import {
   getScopeTargetScope,
   getScopeTargetSlotId,
   getSlotId,
+  isSelectorData,
+  isSheetData,
   isSlotData,
   isStyleData,
 } from '../../../builder/data/is';
@@ -16,6 +18,7 @@ import {
   type CombinedStyle,
   type CombinedStyleFieldGetter,
   createCombinedStyle,
+  getCombinedStyleResolver,
   getCombinedStyleScopes,
   getCombinedStyleStyles,
   getCombinedStyleTokens,
@@ -27,7 +30,14 @@ import {
   markResolvedStyleItem,
   setResolvedStyleItemTokenValues,
 } from './resolvedItem';
-import type { StyleTokenValues } from './tokenValues';
+import {
+  addTokenOverride,
+  createMutableTokenValues,
+  finishTokenValues,
+  mergeTokenValues,
+  type StyleTokenValues,
+  type TokenValueResolver,
+} from './tokenValues';
 
 export type ResolvedStyleItem<Data = unknown> = {
   data: Data;
@@ -36,18 +46,23 @@ export type ResolvedStyleItem<Data = unknown> = {
 
 const directStyleItemCache = globalData(
   'runtime.directStyleItemCache',
-  () => new WeakMap<StyleData | SlotData, ResolvedStyleItem>(),
+  () => new WeakMap<StyleData | SheetData | SlotData, ResolvedStyleItem>(),
 );
 
 export function isResolvedStyleItem<T>(value: unknown): value is ResolvedStyleItem<T> {
   return isResolvedStyleItemMarked(value);
 }
 
-export function createResolvedStyleItem<Data extends StyleData | SlotData>(
+export function createResolvedStyleItem<Data extends StyleData | SheetData | SlotData>(
   data: Data,
   scopes: readonly ScopeTargetData[],
   tokens: StyleTokenValues | null = null,
+  resolver?: TokenValueResolver,
 ): ResolvedStyleItem<Data> {
+  if (resolver) {
+    tokens = mergeTokenValues(getDataTokenValues(data, resolver), tokens);
+  }
+
   return createStyleItem({
     data,
     items: resolveItems(data, scopes),
@@ -64,7 +79,11 @@ export function createResolvedStyleItemFromItems<Data>(
   }, tokens);
 }
 
-export function getDirectStyleItem(item: StyleData | SlotData) {
+export function getDirectStyleItem(item: StyleData | SheetData | SlotData, resolver?: TokenValueResolver) {
+  if (resolver) {
+    return createResolvedStyleItem(item, [], null, resolver);
+  }
+
   let cached = directStyleItemCache.get(item);
 
   if (!cached) {
@@ -84,12 +103,14 @@ export function getStyleTokenValues(value: CombinedStyle | ResolvedStyleItem) {
 export function createCombinedStyleFacade<T extends object>(
   styles: T,
   scopes: readonly ScopeTargetData[],
+  resolver: TokenValueResolver,
 ): CombinedStyle<T> {
   return createCombinedStyle(
     {
       styles,
       scopes,
       tokens: null,
+      resolver,
     },
     getStyleField,
   );
@@ -104,6 +125,7 @@ export function createCombinedStyleTokenWrapper<T extends object>(
       styles: getCombinedStyleStyles(style),
       scopes: getCombinedStyleScopes(style),
       tokens,
+      resolver: getCombinedStyleResolver(style),
     },
     getTokenField(style),
   );
@@ -112,12 +134,16 @@ export function createCombinedStyleTokenWrapper<T extends object>(
 const getStyleField: CombinedStyleFieldGetter = (meta, prop) => {
   const value = (meta.styles as any)?.[prop] ?? null;
 
-  if (isStyleData(value) || isSlotData(value)) {
-    return createResolvedStyleItem(value, meta.scopes);
+  if (isStyleData(value) || isSheetData(value) || isSlotData(value)) {
+    return createResolvedStyleItem(value, meta.scopes, null, meta.resolver);
+  }
+
+  if (isSelectorData(value)) {
+    return value;
   }
 
   if (value && typeof value === 'object') {
-    return createCombinedStyleFacade(value, meta.scopes);
+    return createCombinedStyleFacade(value, meta.scopes, meta.resolver);
   }
 
   return value;
@@ -128,10 +154,12 @@ function getTokenField(base: CombinedStyle): CombinedStyleFieldGetter {
     const value = (base as any)?.[prop] ?? null;
 
     if (isResolvedStyleItem(value)) {
+      const tokens = mergeTokenValues(getStyleTokenValues(value), meta.tokens);
+
       return createStyleItem({
         data: value.data,
         items: value.items,
-      }, meta.tokens);
+      }, tokens);
     }
 
     if (isCombinedStyle(value)) {
@@ -152,7 +180,7 @@ function createStyleItem<Data>(
 }
 
 function resolveItems(
-  data: StyleData | SlotData,
+  data: StyleData | SheetData | SlotData,
   scopes: readonly ScopeTargetData[],
 ) {
   const items: StateItem[] = [];
@@ -169,14 +197,17 @@ function resolveItems(
       continue;
     }
 
-    if (isStyleTokenOverrideData(item)) continue;
+    if (isStyleTokenOverrideData(item)) {
+      items.push(item);
+      continue;
+    }
 
     if (slotId && item.type !== BUILDER_TYPE_SLOT) continue;
 
     items.push(item);
   }
 
-  if (!slotId) return items;
+  if (!slotId || isSheetData(data)) return items;
 
   for (let i = 0, len = scopes.length; i < len; i++) {
     const boundScope = scopes[i];
@@ -218,6 +249,20 @@ function resolveItems(
   }
 
   return items;
+}
+
+function getDataTokenValues(
+  data: StyleData | SheetData | SlotData,
+  resolver: TokenValueResolver,
+) {
+  const stateItems = data[BUILDER_STATE]?.items ?? [];
+  const values = createMutableTokenValues(null);
+
+  for (let i = 0, len = stateItems.length; i < len; i++) {
+    addTokenOverride(values, stateItems[i], resolver);
+  }
+
+  return finishTokenValues(null, values);
 }
 
 function getScopeParentItem(className: string): StateItem {

@@ -53,7 +53,7 @@ export function createStylePropResult(
     }
   }
 
-  if (!classNames.length) return emptyStylePropResult;
+  if (!classNames.length && !style) return emptyStylePropResult;
 
   return {
     className: classNames.join(' '),
@@ -70,7 +70,7 @@ function addItem(
   const dedupe = getStateItemDedupe(item);
   const className = getStateItemClassName(item);
 
-  if (!dedupe || !className) return style;
+  if (!dedupe || !className) return addItemStyle(style, item, tokens);
 
   if (dedupeRun[dedupe] === runId) {
     classNames[dedupeIndex[dedupe]] = className;
