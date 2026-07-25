@@ -519,7 +519,7 @@ export default function HomePage() {
             <span>Pick an authoring style</span>
           </div>
           <div className='home-code-tabs'>
-            {previewTabs.map(([id, label], index) => (
+            {previewTabs.map(([id], index) => (
               <input
                 defaultChecked={index === 0}
                 id={`home-code-tab-${id}`}
