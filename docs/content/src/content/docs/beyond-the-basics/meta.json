@@ -3,6 +3,7 @@
   "pages": [
     "runtime-and-dynamic-styles",
     "interop-with-non-fluentic-apis",
+    "styling-third-party-components",
     "using-css-at-rules",
     "priority-and-rule-order",
     "tracing-styles-in-real-apps",

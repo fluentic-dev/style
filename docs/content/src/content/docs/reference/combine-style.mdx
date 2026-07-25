@@ -27,7 +27,49 @@ inputs:
 </button>
 ```
 
-Use `combineStyle.for(styles)` to create a reusable combiner.
+## Variants
+
+Use `combineStyle.for(styles)` when the style object is stable and the incoming
+themes or overrides change at render time:
+
+```ts
+const combine = combineStyle.for(styles);
+
+const css = combine(props.theme, props.compact && compactScope);
+```
+
+Use `combineStyle.with(...)` when the incoming themes or overrides are stable
+for this render and you want to resolve individual style values without creating
+an inline wrapper object:
+
+```ts
+const combine = combineStyle.with(
+  props.theme,
+  props.compact && compactSheet,
+);
+
+const root = combine(rootSheet);
+const menu = combine(menuSheet);
+```
+
+`combineStyle.with(...)` also accepts a normal style object:
+
+```ts
+const css = combineStyle.with(props.theme)(styles);
+```
+
+Use `combineStyle.multi([...], ...)` for a short inline batch of independent
+style values:
+
+```ts
+const [root, menu] = combineStyle.multi(
+  [rootSheet, menuSheet],
+  props.theme,
+);
+```
+
+`multi(...)` is array-only. It resolves each item independently and keeps the
+array itself out of the cache key.
 
 For how `combineStyle(...)` and the `css` prop walk and cache style graphs, see
 [Runtime Resolution And Cache](../design/runtime-resolution-and-cache).

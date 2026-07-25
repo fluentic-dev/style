@@ -1,0 +1,250 @@
+---
+title: Styling Third-Party Components
+description: Use selector sheets when a component library owns fixed internal class names.
+---
+
+Use normal `css` props, slots, and scopes when you own the element tree.
+
+Use selector sheets when a third-party component owns the internal markup and
+you only have stable class names to target.
+
+```tsx
+import { combineStyle, createTokens, style, type StyleTheme } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+const selectTokens = createTokens({
+  accent: '#2563eb',
+  panel: '#eff6ff',
+  text: '#1e3a8a',
+});
+
+const selectors = {
+  control: style.selector('&?.react-select__control'),
+  value: style.selector('&?.react-select__single-value'),
+  menu: style.selector('&?.react-select__menu'),
+  option: style.selector('&?.react-select__option'),
+};
+
+const selectSheet = createSheet([
+  selectors.control({
+    border: '1px solid',
+    borderColor: selectTokens.accent,
+    borderRadius: 10,
+    backgroundColor: selectTokens.panel,
+  }),
+  selectors.value({
+    color: selectTokens.text,
+    fontWeight: 650,
+  }),
+]);
+
+const compactSheet = createSheet([
+  selectors.control({
+    minHeight: 36,
+    borderRadius: 6,
+  }),
+  selectors.value({
+    fontSize: 13,
+  }),
+]);
+```
+
+`style.selector(...)` creates a named selector target. Calling that target with a
+style object creates a selector override, similar to calling a slot target with
+a slot override.
+
+`createSheet([...])` bundles selector overrides and token overrides into a
+style value that must be attached somewhere:
+
+```tsx
+export function Select(props: {
+  compact?: boolean;
+  theme?: StyleTheme;
+}) {
+  const css = combineStyle.with(
+    props.theme,
+    props.compact && compactSheet,
+  )(selectSheet);
+
+  return (
+    <div css={css}>
+      <ThirdPartySelect classNamePrefix="react-select" />
+    </div>
+  );
+}
+```
+
+The sheet is not global CSS. Fluentic gives the sheet a generated class name and
+emits rules under that class. The rules only apply after you attach the sheet to
+an element.
+
+## Selector Syntax
+
+Selectors are manual CSS selectors, but each selector must be one selector.
+Avoid comma-separated selector lists:
+
+```ts
+// Do this.
+const field = style.selector([
+  '.react-select__control',
+  '.react-select__input-container',
+]);
+
+// Not this.
+const field = style.selector('.react-select__control, .react-select__input-container');
+```
+
+If you need to refer to the attached class itself, use `&` at the beginning.
+Do not put whitespace after `&`; omit `&` for descendant selectors:
+
+```ts
+const root = style.selector('&');
+const directControl = style.selector('&.react-select__control');
+const childControl = style.selector('.react-select__control');
+```
+
+Do not place `&` later in the selector. Keeping `&` at the beginning prevents a
+selector from reaching upward outside the element where the sheet is attached.
+
+Use `&?` when the same selector should work whether the generated sheet class is
+attached directly to the third-party element or to an ancestor such as a wrapper,
+portal target, or `document.body`:
+
+```ts
+const control = style.selector('&?.react-select__control');
+```
+
+That emits both forms under the generated sheet class:
+
+```css
+:where(.sheetClass).react-select__control { ... }
+:where(.sheetClass) .react-select__control { ... }
+```
+
+Selector targets accept the same style object shape as the style function that
+created them:
+
+```ts
+selectors.control({
+  borderColor: selectTokens.accent,
+}).hover({
+  borderColor: selectTokens.text,
+});
+```
+
+For a different style syntax, create another selector target from that style
+function and compose the resulting sheets or style props.
+
+## Local Tokens
+
+A sheet can also carry token overrides. This is useful for local component
+themes without creating an app-wide `createTheme(...)` value.
+
+```ts
+const blueSheet = createSheet([
+  selectTokens.accent('#2563eb'),
+  selectTokens.panel('#eff6ff'),
+  selectTokens.text('#1e3a8a'),
+]);
+
+const roseSheet = createSheet([
+  selectTokens.accent('#c0265a'),
+  selectTokens.panel('#fce7ef'),
+  selectTokens.text('#8f1238'),
+]);
+```
+
+Pass those sheets through `combineStyle(...)` or `combineStyle.with(...)` at the
+component boundary:
+
+```tsx
+const themed = combineStyle.with(
+  props.theme,
+  props.compact && compactSheet,
+);
+
+return <div css={themed(selectSheet)} />;
+```
+
+The selector rules and token values stay in the same Fluentic resolution path as
+ordinary styles. Runtime mode, extraction, debug data, and sourcemaps continue
+to work through the generated atomic rules.
+
+## Portal Targets
+
+Some libraries render dropdowns, popovers, or menus into a portal outside your
+component. Attach the menu sheet to the portal target, not the wrapper:
+
+```tsx
+import { createStyleTarget } from '@fluentic/style/css';
+import { useEffect, useRef, useState } from 'react';
+
+const menuSheet = createSheet([
+  selectors.menu({
+    border: '1px solid',
+    borderColor: selectTokens.accent,
+    backgroundColor: '#fff',
+  }),
+  selectors.option({
+    color: selectTokens.text,
+    fontSize: 14,
+  }),
+]);
+
+function useStyleTarget() {
+  const [target] = useState(() => createStyleTarget());
+  const destroyTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (destroyTimer.current !== null) {
+      window.clearTimeout(destroyTimer.current);
+      destroyTimer.current = null;
+    }
+
+    return () => {
+      destroyTimer.current = window.setTimeout(() => {
+        target.destroy();
+        destroyTimer.current = null;
+      });
+    };
+  }, [target]);
+
+  return target;
+}
+```
+
+Call `apply(...)` during render. The target tracks its previous class names and
+inline token styles, so repeated calls with the same result are cheap.
+
+```tsx
+export function Select(props: {
+  compact?: boolean;
+  portalTarget: HTMLElement | null;
+  theme?: StyleTheme;
+}) {
+  const target = useStyleTarget();
+  const portalCss = combineStyle.with(
+    props.theme,
+    props.compact && compactMenuSheet,
+  )(menuSheet);
+
+  target.apply(props.portalTarget, portalCss, {
+    enabled: !!props.portalTarget,
+  });
+
+  return <ThirdPartySelect menuPortalTarget={props.portalTarget} />;
+}
+```
+
+Use a distinct portal target when different instances need different selector
+sheets. If two instances attach different sheets to `document.body`, both sets
+of selector rules can match the same third-party class names.
+
+## When To Use This
+
+Use selector sheets for fixed third-party class names, class name prefixes, and
+portal content where you need Fluentic tokens, extraction, and debugging.
+
+If the third-party API lets you pass `className` and `style` directly to the
+element you want, prefer the smaller `getClassName(...)` bridge described in
+[Interop With Non-Fluentic APIs](./interop-with-non-fluentic-apis).
