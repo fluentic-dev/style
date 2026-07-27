@@ -22,16 +22,18 @@ export type SelectProps = {
 export const Select = (props: SelectProps) => {
   const styleTarget = useStyleTarget();
   const portalTarget = usePortalTarget();
-  const rootCss = combineStyle.with(
+  const rootCss = combineStyle(
+    selectSheet,
     props.theme,
     props.compact && selectCompactSheet,
     selectMenuSheet,
     props.compact && selectCompactMenuSheet,
-  )(selectSheet);
-  const bodyCss = combineStyle.with(
+  );
+  const bodyCss = combineStyle(
+    selectMenuSheet,
     props.theme,
     props.compact && selectCompactMenuSheet,
-  )(selectMenuSheet);
+  );
 
   styleTarget.apply(portalTarget, bodyCss, {
     enabled: props.portal,
