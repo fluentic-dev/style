@@ -16,11 +16,18 @@ type InferStyleCombinerStyles<T extends object | StyleCombiner<any>> = T extends
   : never;
 
 type SingleStyleItem = StyleData | SheetData | SlotData;
+type DirectStyleItem =
+  | SingleStyleItem
+  | false
+  | null
+  | undefined
+  | readonly DirectStyleItem[];
 
-type CombineStyleFn = <T extends object>(
-  styles: T,
-  ...args: CombinedStyleArg<T>[]
-) => CombinedStyle<T>;
+type CombineStyleFn = {
+  (style: SingleStyleItem, ...args: CombinedStyleArg<any>[]): StyleProp;
+  (styles: readonly DirectStyleItem[], ...args: CombinedStyleArg<any>[]): StyleProp;
+  <T extends object>(styles: T, ...args: CombinedStyleArg<T>[]): CombinedStyle<T>;
+};
 
 type StyleWithCombiner = {
   (style: SingleStyleItem): StyleProp;
@@ -47,6 +54,17 @@ const combineStyleBase = <T extends object>(
   styles: T,
   ...args: CombinedStyleArg<T>[]
 ): CombinedStyle<T> => getCombinedStyle(styles, args);
+
+const combineStyleResolve = ((
+  styles: object,
+  ...args: CombinedStyleArg<any>[]
+) => {
+  if (Array.isArray(styles)) return combineStyleArray(styles, collectStyleWithArgs(args));
+
+  return isSingleStyleItem(styles)
+    ? combineStyleSingle(styles, collectStyleWithArgs(args))
+    : combineStyleBase(styles, ...args);
+}) as CombineStyleFn;
 
 const combineStyleFor = <T extends object>(styles: T): StyleCombiner<T> => {
   return (...args: CombinedStyleArg<T>[]) => combineStyleBase(styles, ...args);
@@ -86,6 +104,42 @@ function combineStyleSingle(
   }
 
   return styles;
+}
+
+function combineStyleArray(
+  styles: readonly DirectStyleItem[],
+  args: StyleWithArgs,
+): StyleProp {
+  const result: StyleProp[] = [];
+
+  collectDirectStyles(styles, result, args);
+
+  for (let i = 0, len = args.styles.length; i < len; i++) {
+    result.push(combineStyleSingleItem(args.styles[i], args.combineArgs));
+  }
+
+  return result;
+}
+
+function collectDirectStyles(
+  styles: readonly DirectStyleItem[],
+  result: StyleProp[],
+  args: StyleWithArgs,
+) {
+  for (let i = 0, len = styles.length; i < len; i++) {
+    const style = styles[i];
+
+    if (!style) continue;
+
+    if (Array.isArray(style)) {
+      collectDirectStyles(style, result, args);
+      continue;
+    }
+
+    if (isSingleStyleItem(style)) {
+      result.push(combineStyleSingleItem(style, args.combineArgs));
+    }
+  }
 }
 
 function combineStyleSingleItem(
@@ -148,7 +202,7 @@ function collectArgs(
   }
 }
 
-export const combineStyle = Object.assign(combineStyleBase, {
+export const combineStyle = Object.assign(combineStyleResolve, {
   for: combineStyleFor,
   with: combineStyleWith,
   multi: combineStyleMulti,

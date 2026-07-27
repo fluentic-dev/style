@@ -15,6 +15,7 @@ export type CssConfig = {
   layerNamespace?: string;
   hashLength?: number;
   classNameFormat?: ClassNameFormat;
+  sheetClassNameFormat?: ClassNameFormat;
   transformClassNameFormat?: TransformClassNameFormat;
   scopeClassNameFormat?: ScopeClassNameFormat;
   elementClassNameFormat?: ElementClassNameFormat;

@@ -3,12 +3,12 @@ import { CSS_CONFIG } from '../config/config/css';
 import { DEV_CONFIG } from '../config/config/dev';
 import type { ClassNameFormat, TransformClassNameFormat } from '../config/types';
 import { hashString } from '../utils/hash';
-import { getDebugClassName, getDebugTransformClassName } from './debug/className';
+import { getDebugClassName, getDebugSheetClassName, getDebugTransformClassName } from './debug/className';
 import { getDebugPropertyName } from './debug/property';
 import { getDebugAtRuleName, getDebugSelectorName } from './debug/selector';
 export { getScopeClassName } from './scope';
 import { getIdentifierSafeHash } from './utils/hash';
-import { getSelectorHash, getSelectorText } from './utils/selector';
+import { getSelectorHash, getSelectorText, hasSheetSelectorAnchor } from './utils/selector';
 
 export function getAtomicClassName(
   property: string,
@@ -23,6 +23,7 @@ export function getAtomicClassName(
   classNameFormat: ClassNameFormat | null,
   transformClassName: string | null,
   transformClassNameFormat: TransformClassNameFormat | null,
+  sheetClassNameFormat: ClassNameFormat | null = null,
   hashLength: number | null = null,
 ) {
   let hash = property;
@@ -51,8 +52,9 @@ export function getAtomicClassName(
 
   const propertyName = getDebugPropertyName(property, value);
 
-  const className = getDebugClassName(
-    classNameFormat,
+  const isSheetClassName = hasSheetSelectorAnchor(selector);
+  const className = (isSheetClassName ? getDebugSheetClassName : getDebugClassName)(
+    isSheetClassName ? sheetClassNameFormat : classNameFormat,
     hash,
     {
       atRule: atRule

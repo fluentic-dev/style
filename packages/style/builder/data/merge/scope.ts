@@ -121,6 +121,7 @@ export function mergeScopeData(
           CSS_CONFIG.classNameFormat ?? null,
           scopeItem.transformClassName ?? null,
           CSS_CONFIG.transformClassNameFormat ?? null,
+          CSS_CONFIG.sheetClassNameFormat ?? null,
         );
 
         scopeItem.dedupe = dedupe;
@@ -211,6 +212,7 @@ export function mergeScopeData(
         CSS_CONFIG.classNameFormat ?? null,
         scopeItem.transformClassName ?? null,
         CSS_CONFIG.transformClassNameFormat ?? null,
+        CSS_CONFIG.sheetClassNameFormat ?? null,
       );
 
       scopeItem.dedupe = dedupe;

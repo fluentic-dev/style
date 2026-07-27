@@ -74,6 +74,7 @@ import { getRscDevInitialStyleSelector, parseRscStylePayload } from '../runtime/
 import { clearRscStyleStore, getRscStyleCss } from '../runtime/rsc/styleStore';
 import { createThemeRule, getGlobalSheet, setGlobalSheet } from '../runtime/sheet';
 import { bindScope, type CombinedStyleFor, combineStyle, getToken } from '../runtime/style';
+import type { StyleProp } from '../runtime/types';
 import { assertEnumSelector } from '../selector/assert';
 import { createSelectorAssert, selector } from '../selector/selector';
 import { createDevSheet, createProdSheet } from '../sheet';
@@ -300,8 +301,10 @@ function assertCombineStyleTypes() {
   const combine = combineStyle.for(styles);
   const stylesInput: CombinedStyleFor<typeof styles> = combineStyle(styles);
   const combineInput: CombinedStyleFor<typeof combine> = combine();
+  const directSheetInput: StyleProp = combineStyle(createSheet());
 
   combine(stylesInput, combineInput);
+  resolveStyleProp(directSheetInput);
 }
 
 void assertCombineStyleTypes;

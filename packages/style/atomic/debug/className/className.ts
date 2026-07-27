@@ -8,6 +8,8 @@ import { createNameFormatter } from '../../utils/format';
 
 export const CLASS_NAME_FORMAT = '[(atRule)-][(scopeSelector)-](property)[-(selector)][-(value)]--$hash';
 
+export const SHEET_CLASS_NAME_FORMAT = 'sheet-(property)[-(value)]--$hash';
+
 export const TRANSFORM_CLASS_NAME_FORMAT = '(className)--$hash';
 
 export const formatClassName = createNameFormatter<ClassNameInfo>([
@@ -28,6 +30,14 @@ export function getDebugClassName(
   info: ClassNameInfo,
 ) {
   return formatClassName(format || CLASS_NAME_FORMAT, hash, info);
+}
+
+export function getDebugSheetClassName(
+  format: ClassNameFormat | null,
+  hash: string,
+  info: ClassNameInfo,
+) {
+  return formatClassName(format || SHEET_CLASS_NAME_FORMAT, hash, info);
 }
 
 export function getDebugTransformClassName(

@@ -1908,6 +1908,33 @@ export const sheet = createSheet([
   includes(css, ':has(.third-party-button){color: green}');
 });
 
+test('compiler applies sheetClassNameFormat to extracted selector sheets', () => {
+  const compiler = createCompiler({
+    layer: false,
+    css: {
+      debugClassName: true,
+      sheetClassNameFormat: 'sheet-[(selector)-](property)[-(value)]--$hash',
+    },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+export const sheet = createSheet([
+  style.selector('.third-party-label', { color: 'red' }),
+]);
+`,
+    '/tmp/compiler-create-sheet-format.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(css, ':where(.sheet-third-party-label-color-red--');
+});
+
 test('compiler extracts createSheet selector arrays under the attached class', () => {
   const compiler = createCompiler({
     layer: false,

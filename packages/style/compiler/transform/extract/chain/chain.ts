@@ -84,6 +84,7 @@ type SelectorsMap = Record<string, Selector>;
 
 type CssConfig = {
   classNameFormat: ClassNameFormat | null;
+  sheetClassNameFormat: ClassNameFormat | null;
   transformClassNameFormat: TransformClassNameFormat | null;
   hashLength: number;
   tokenNameFormat: TokenNameFormat | null;
@@ -672,6 +673,7 @@ function getCssConfig(
 
   return {
     classNameFormat: css?.classNameFormat ?? DEFAULT_CONFIG.classNameFormat ?? null,
+    sheetClassNameFormat: css?.sheetClassNameFormat ?? DEFAULT_CONFIG.sheetClassNameFormat ?? null,
     transformClassNameFormat: css?.transformClassNameFormat ?? DEFAULT_CONFIG.transformClassNameFormat ?? null,
     hashLength: css?.hashLength ?? DEFAULT_CONFIG.hashLength ?? 7,
     tokenNameFormat: css?.tokenNameFormat ?? DEFAULT_CONFIG.tokenNameFormat ?? null,
@@ -2710,6 +2712,7 @@ function addRuntimeScopeItem(
     cssConfig.classNameFormat,
     sourceItem.transformClassName ?? null,
     cssConfig.transformClassNameFormat,
+    cssConfig.sheetClassNameFormat,
     cssConfig.hashLength,
   );
 
@@ -2951,6 +2954,7 @@ function addRuntimeStyleItem(
     cssConfig.classNameFormat,
     sourceItem.transformClassName ?? null,
     cssConfig.transformClassNameFormat,
+    cssConfig.sheetClassNameFormat,
     cssConfig.hashLength,
   );
 
@@ -3182,6 +3186,7 @@ function addStyleItems(
       cssConfig.classNameFormat,
       transformClassName,
       cssConfig.transformClassNameFormat,
+      cssConfig.sheetClassNameFormat,
       cssConfig.hashLength,
     );
 

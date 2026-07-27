@@ -1382,6 +1382,64 @@ test('createSheet accepts local token overrides and combineStyle can override th
   equal((combined.style as Record<string, unknown>)[combinedVarName], 'green');
 });
 
+test('combineStyle accepts sheets directly and dedupes later sheet declarations', () => {
+  configureTestRuntime();
+
+  const base = createSheet([
+    style.selector('.third-party-label', {
+      color: 'red',
+      backgroundColor: 'white',
+    }),
+  ]);
+  const override = createSheet([
+    style.selector('.third-party-label', {
+      color: 'blue',
+    }),
+  ]);
+
+  const css = combineStyle(base, override);
+  const result = getClassName(css);
+  const rules = getSheetRules(css).map((rule) => rule.css).join('\n');
+
+  notIncludes(result.className ?? '', 'red');
+  includes(rules, 'color: blue');
+  includes(rules, 'background-color: white');
+  notIncludes(rules, 'color: red');
+});
+
+test('sheet debug class names use sheet format by default and support selector opt-in', () => {
+  try {
+    configureTestRuntime({
+      dev: true,
+      css: {
+        debugClassName: true,
+      },
+    });
+
+    const sheet = createSheet([
+      style.selector('.third-party-label', { color: 'red' }),
+    ]);
+
+    includes(getClassName(sheet).className ?? '', 'sheet-color-red--');
+
+    configureTestRuntime({
+      dev: true,
+      css: {
+        debugClassName: true,
+        sheetClassNameFormat: 'sheet-[(selector)-](property)[-(value)]--$hash',
+      },
+    });
+
+    const selectorSheet = createSheet([
+      style.selector('.third-party-label', { color: 'red' }),
+    ]);
+
+    includes(getClassName(selectorSheet).className ?? '', 'sheet-third-party-label-color-red--');
+  } finally {
+    configureTestRuntime();
+  }
+});
+
 test('createSheet can be used as a token-only local theme sheet', () => {
   const color = createToken('blue');
   const sheet = createSheet([

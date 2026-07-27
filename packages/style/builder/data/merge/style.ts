@@ -245,6 +245,7 @@ export function mergeBuilderData<Data extends BuilderData>(
       CSS_CONFIG.classNameFormat ?? null,
       runtimeItem.transformClassName ?? null,
       CSS_CONFIG.transformClassNameFormat ?? null,
+      CSS_CONFIG.sheetClassNameFormat ?? null,
     );
 
     runtimeItem.dedupe = dedupe;
