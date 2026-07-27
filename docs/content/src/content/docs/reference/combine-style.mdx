@@ -27,7 +27,30 @@ inputs:
 </button>
 ```
 
+When the first argument is one attachable style value, such as a style, slot, or
+selector sheet, `combineStyle(...)` returns a `StyleProp` directly:
+
+```ts
+const css = combineStyle(selectSheet, props.theme, props.compact && compactSheet);
+```
+
+Use that result anywhere a `css` prop is accepted:
+
+```tsx
+<div css={css} />
+```
+
+Arrays of attachable values are also resolved into one `StyleProp`, with later
+items winning by the same atomic dedupe rules:
+
+```ts
+const css = combineStyle([selectSheet, menuSheet], props.theme);
+```
+
 ## Variants
+
+For a single resolution step, prefer plain `combineStyle(...)`. The variants are
+only conveniences for reuse-heavy shapes.
 
 Use `combineStyle.for(styles)` when the style object is stable and the incoming
 themes or overrides change at render time:
@@ -38,9 +61,9 @@ const combine = combineStyle.for(styles);
 const css = combine(props.theme, props.compact && compactScope);
 ```
 
-Use `combineStyle.with(...)` when the incoming themes or overrides are stable
-for this render and you want to resolve individual style values without creating
-an inline wrapper object:
+Use `combineStyle.with(...)` when the incoming themes or overrides are already
+known and you need to apply that same set to multiple independent style values or
+style objects:
 
 ```ts
 const combine = combineStyle.with(
@@ -52,14 +75,16 @@ const root = combine(rootSheet);
 const menu = combine(menuSheet);
 ```
 
-`combineStyle.with(...)` also accepts a normal style object:
+For a single style object, this is equivalent to passing the object as the first
+argument to `combineStyle(...)`:
 
 ```ts
 const css = combineStyle.with(props.theme)(styles);
+const same = combineStyle(styles, props.theme);
 ```
 
-Use `combineStyle.multi([...], ...)` for a short inline batch of independent
-style values:
+Use `combineStyle.multi([...], ...)` when you have a short inline batch of
+independent style values and do not need named fields:
 
 ```ts
 const [root, menu] = combineStyle.multi(

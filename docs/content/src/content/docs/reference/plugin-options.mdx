@@ -132,6 +132,7 @@ function. See
 | `layers` | Configure layer order. Use `$layer` where Fluentic priority layers should be inserted. |
 | `layerNamespace` | Prefix generated priority layer names. |
 | `classNameFormat` | Format atomic class names. Supports strings or functions. |
+| `sheetClassNameFormat` | Format selector sheet class names when `debugClassName` is enabled. |
 | `hashLength` | Set generated `$hash` length. Defaults to `7`. |
 | `scopeClassNameFormat` | Format scope target class names. |
 | `elementClassNameFormat` | Format development element marker class names. |
@@ -152,12 +153,15 @@ files.
 ### Class Name Formats
 
 `classNameFormat` controls atomic class names when `debugClassName` is enabled.
+Selector sheet classes use `sheetClassNameFormat`, which defaults to
+`sheet-(property)[-(value)]--$hash`.
 
 ```ts
 stylePlugin({
   css: {
     debugClassName: true,
     classNameFormat: '[(atRule)-][(scopeSelector)-](property)[-(selector)][-(value)]-$hash',
+    sheetClassNameFormat: 'sheet-[(selector)-](property)[-(value)]--$hash',
   },
 });
 ```
@@ -172,6 +176,10 @@ For a rule like `style({ display: 'flex' }).hover(...)`, the formatter can use:
 | `(selector)` | The selector segment, such as `hover` or `focus-visible`. |
 | `(scopeSelector)` | The parent scope selector segment when a scoped rule is generated. |
 | `(atRule)` | The at-rule segment, such as a media or container marker. |
+
+`sheetClassNameFormat` supports the same placeholders. It omits `(selector)` by
+default because third-party selectors can be long, but you can include it when
+debugging selector sheets.
 
 Format strings support optional groups:
 
@@ -201,6 +209,7 @@ placeholder sets:
 | Option | Placeholders |
 | --- | --- |
 | `scopeClassNameFormat` | `(className)` and `$hash` |
+| `sheetClassNameFormat` | `(property)`, `(value)`, `(selector)`, `(scopeSelector)`, `(atRule)`, and `$hash` |
 | `elementClassNameFormat` | `(name)` and `$hash` |
 | `themeNameFormat` | `(name)` and `$hash` |
 | `tokenNameFormat` | `(name)` and `$hash` |

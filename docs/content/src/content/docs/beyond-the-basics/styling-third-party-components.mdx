@@ -3,13 +3,33 @@ title: Styling Third-Party Components
 description: Use selector sheets when a component library owns fixed internal class names.
 ---
 
-Use normal `css` props, slots, and scopes when you own the element tree.
+Most Fluentic styles start from a simple assumption: your component owns the
+markup. You put `css={styles.root}` on the root, `css={styles.label}` on the
+label, and scopes or slots can follow the elements that you render.
 
-Use selector sheets when a third-party component owns the internal markup and
-you only have stable class names to target.
+A third-party component breaks that assumption. It may render the real input,
+button, menu item, or dropdown for you. Sometimes it gives you a `className` for
+the outer component, but the pieces you actually need to style live behind fixed
+library class names such as `.react-select__control` or `.ant-select-selector`.
+Sometimes the menu is rendered in a portal under `document.body`, outside the
+wrapper where your component styles normally live.
 
-```tsx
-import { combineStyle, createTokens, style, type StyleTheme } from '@fluentic/style';
+Selector sheets are the escape hatch for that situation. They let you write
+manual selectors for the third-party class names while keeping the rules inside
+Fluentic's normal style world: generated class names, token overrides,
+extraction, debug data, and sourcemaps still work. The result is not global CSS.
+A sheet only applies when you attach the generated sheet class to an element or
+target.
+
+## A Wrapper That Owns The Boundary
+
+Imagine a small wrapper around React Select. React Select owns the inner DOM, but
+your wrapper owns the boundary where styles enter the component.
+
+First define the tokens and the selector contract near the wrapper styles:
+
+```ts
+import { createTokens, style } from '@fluentic/style';
 import { createSheet } from '@fluentic/style/css';
 
 const selectTokens = createTokens({
@@ -24,7 +44,14 @@ const selectors = {
   menu: style.selector('&?.react-select__menu'),
   option: style.selector('&?.react-select__option'),
 };
+```
 
+The selectors are manual because the third-party library owns those class names.
+The selector targets are still Fluentic values. Calling one with a style object
+creates a selector override, similar in spirit to calling a slot with a slot
+override.
+
+```ts
 const selectSheet = createSheet([
   selectors.control({
     border: '1px solid',
@@ -49,96 +76,77 @@ const compactSheet = createSheet([
 ]);
 ```
 
-`style.selector(...)` creates a named selector target. Calling that target with a
-style object creates a selector override, similar to calling a slot target with
-a slot override.
-
-`createSheet([...])` bundles selector overrides and token overrides into a
-style value that must be attached somewhere:
+Then attach the sheet to the wrapper and let React Select render inside it:
 
 ```tsx
+import { combineStyle, type StyleTheme } from '@fluentic/style';
+
 export function Select(props: {
   compact?: boolean;
   theme?: StyleTheme;
 }) {
-  const css = combineStyle.with(
+  const css = combineStyle(
+    selectSheet,
     props.theme,
     props.compact && compactSheet,
-  )(selectSheet);
+  );
 
   return (
     <div css={css}>
-      <ThirdPartySelect classNamePrefix="react-select" />
+      <ReactSelect classNamePrefix="react-select" unstyled />
     </div>
   );
 }
 ```
 
-The sheet is not global CSS. Fluentic gives the sheet a generated class name and
-emits rules under that class. The rules only apply after you attach the sheet to
-an element.
+The wrapper receives Fluentic's generated sheet class. The emitted CSS is scoped
+under that class, so the third-party selectors do not start affecting the rest of
+the page.
 
-## Selector Syntax
+## Why `&?` Exists
 
-Selectors are manual CSS selectors, but each selector must be one selector.
-Avoid comma-separated selector lists:
+A normal descendant selector such as `.react-select__control` works when the
+sheet class is attached to a wrapper and the third-party element is inside it. A
+leading `&` works when the generated sheet class is attached to the exact
+third-party element you are selecting.
 
-```ts
-// Do this.
-const field = style.selector([
-  '.react-select__control',
-  '.react-select__input-container',
-]);
-
-// Not this.
-const field = style.selector('.react-select__control, .react-select__input-container');
-```
-
-If you need to refer to the attached class itself, use `&` at the beginning.
-Do not put whitespace after `&`; omit `&` for descendant selectors:
-
-```ts
-const root = style.selector('&');
-const directControl = style.selector('&.react-select__control');
-const childControl = style.selector('.react-select__control');
-```
-
-Do not place `&` later in the selector. Keeping `&` at the beginning prevents a
-selector from reaching upward outside the element where the sheet is attached.
-
-Use `&?` when the same selector should work whether the generated sheet class is
-attached directly to the third-party element or to an ancestor such as a wrapper,
-portal target, or `document.body`:
+Portal and wrapper APIs often make you choose between those two shapes. `&?`
+means "match either one":
 
 ```ts
 const control = style.selector('&?.react-select__control');
 ```
 
-That emits both forms under the generated sheet class:
+That selector can match both of these cases:
 
 ```css
 :where(.sheetClass).react-select__control { ... }
 :where(.sheetClass) .react-select__control { ... }
 ```
 
-Selector targets accept the same style object shape as the style function that
-created them:
+This keeps a selector contract reusable when the same class may appear on the
+attached element in one library mode and below the attached element in another.
+
+There are still guardrails. A selector is one selector at a time; do not use a
+comma-separated selector list. Use an array instead:
 
 ```ts
-selectors.control({
-  borderColor: selectTokens.accent,
-}).hover({
-  borderColor: selectTokens.text,
-});
+const field = style.selector([
+  '.react-select__control',
+  '.react-select__input-container',
+]);
 ```
 
-For a different style syntax, create another selector target from that style
-function and compose the resulting sheets or style props.
+If you use `&`, keep it at the beginning and do not add whitespace after it.
+That rule prevents selector sheets from reaching upward outside the element or
+target where you chose to attach them.
 
-## Local Tokens
+## Local Themes Without App Themes
 
-A sheet can also carry token overrides. This is useful for local component
-themes without creating an app-wide `createTheme(...)` value.
+A third-party wrapper often wants local component themes: blue select, rose
+select, compact select, warning select. You do not need an app-wide
+`createTheme(...)` just to do that. A sheet can carry token overrides beside
+selector styles.
 
 ```ts
 const blueSheet = createSheet([
@@ -154,31 +162,40 @@ const roseSheet = createSheet([
 ]);
 ```
 
-Pass those sheets through `combineStyle(...)` or `combineStyle.with(...)` at the
-component boundary:
+Pass the chosen token sheet into `combineStyle(...)` with the component sheets:
 
 ```tsx
-const themed = combineStyle.with(
+const css = combineStyle(
+  selectSheet,
   props.theme,
   props.compact && compactSheet,
 );
-
-return <div css={themed(selectSheet)} />;
 ```
 
-The selector rules and token values stay in the same Fluentic resolution path as
-ordinary styles. Runtime mode, extraction, debug data, and sourcemaps continue
-to work through the generated atomic rules.
+The selector rules read the same tokens as ordinary Fluentic styles. In dev they
+resolve through runtime styles; in extracted builds they become atomic CSS with
+the same token identity. That is the useful part of the escape hatch: the
+selector is manual, but the values are still structured.
 
-## Portal Targets
+## Portal Menus
 
-Some libraries render dropdowns, popovers, or menus into a portal outside your
-component. Attach the menu sheet to the portal target, not the wrapper:
+Dropdowns and popovers are the second common problem. Your wrapper may receive
+the control, but the menu is mounted elsewhere:
 
-```tsx
-import { createStyleTarget } from '@fluentic/style/css';
-import { useEffect, useRef, useState } from 'react';
+```txt
+<div class="your-wrapper sheetClass">
+  <div class="react-select__control">...</div>
+</div>
 
+<body>
+  <div class="react-select__menu">...</div>
+</body>
+```
+
+The wrapper sheet cannot reach that menu unless you intentionally attach a sheet
+to the portal target too.
+
+```ts
 const menuSheet = createSheet([
   selectors.menu({
     border: '1px solid',
@@ -190,6 +207,14 @@ const menuSheet = createSheet([
     fontSize: 14,
   }),
 ]);
+```
+
+`createStyleTarget()` is the low-level helper for attaching a resolved style prop
+to any element that is not rendered by your JSX tree.
+
+```tsx
+import { createStyleTarget } from '@fluentic/style/css';
+import { useEffect, useRef, useState } from 'react';
 
 function useStyleTarget() {
   const [target] = useState(() => createStyleTarget());
@@ -213,38 +238,85 @@ function useStyleTarget() {
 }
 ```
 
-Call `apply(...)` during render. The target tracks its previous class names and
-inline token styles, so repeated calls with the same result are cheap.
+The cleanup is delayed so React Strict Mode does not remove the target class
+between the intentional development remount.
+
+In the component, resolve both the wrapper sheet and the menu sheet in one pass.
+Attach the wrapper result to your wrapper and apply the menu result to the portal
+target.
 
 ```tsx
+import { combineStyle, type StyleTheme } from '@fluentic/style';
+
 export function Select(props: {
   compact?: boolean;
   portalTarget: HTMLElement | null;
   theme?: StyleTheme;
 }) {
   const target = useStyleTarget();
-  const portalCss = combineStyle.with(
+  const rootCss = combineStyle(
+    [selectSheet, menuSheet],
+    props.theme,
+    props.compact && compactSheet,
+    props.compact && compactMenuSheet,
+  );
+  const menuCss = combineStyle(
+    menuSheet,
     props.theme,
     props.compact && compactMenuSheet,
-  )(menuSheet);
+  );
 
-  target.apply(props.portalTarget, portalCss, {
+  target.apply(props.portalTarget, menuCss, {
     enabled: !!props.portalTarget,
   });
 
-  return <ThirdPartySelect menuPortalTarget={props.portalTarget} />;
+  return (
+    <div css={rootCss}>
+      <ReactSelect menuPortalTarget={props.portalTarget} unstyled />
+    </div>
+  );
 }
 ```
 
-Use a distinct portal target when different instances need different selector
-sheets. If two instances attach different sheets to `document.body`, both sets
-of selector rules can match the same third-party class names.
+Including `menuSheet` in `rootCss` keeps the non-portal case working, where the
+menu is rendered below the wrapper. Applying `menuCss` to the portal target
+covers the portal case. If different select instances need different menu
+themes, give each instance its own portal target; attaching conflicting selector
+sheets to `document.body` means both sheets can match the same third-party class
+names.
 
-## When To Use This
+## Debug Class Names
 
-Use selector sheets for fixed third-party class names, class name prefixes, and
-portal content where you need Fluentic tokens, extraction, and debugging.
+Selector sheets stay atomic. A sheet with two selector properties produces two
+generated classes, and a later sheet that sets the same selector property
+replaces the earlier class for that resolved style prop.
 
-If the third-party API lets you pass `className` and `style` directly to the
-element you want, prefer the smaller `getClassName(...)` bridge described in
-[Interop With Non-Fluentic APIs](./interop-with-non-fluentic-apis).
+In debug mode, sheet selector classes use a shorter default format than ordinary
+atomic classes:
+
+```css
+:where(.sheet-color-red--abc) .react-select__single-value { color: red }
+```
+
+The selector is intentionally omitted by default because third-party selectors
+can be long. If you want it while debugging, configure `sheetClassNameFormat`:
+
+```ts
+configureStyleRuntime({
+  css: {
+    debugClassName: true,
+    sheetClassNameFormat: 'sheet-[(selector)-](property)[-(value)]--$hash',
+  },
+});
+```
+
+## When This Is The Right Tool
+
+Use selector sheets when the important styling hooks are fixed third-party class
+names, class name prefixes, or portal nodes that sit outside your wrapper.
+
+If the library lets you pass `className` or `style` directly to the exact element
+you want to style, use the smaller bridge from
+[Interop With Non-Fluentic APIs](./interop-with-non-fluentic-apis). Selector
+sheets are for the moment when you need manual selectors, but you still want
+Fluentic's tokens, extraction, debugging, and explicit attachment model.
