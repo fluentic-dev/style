@@ -16,10 +16,10 @@ import {
   computeSlotId,
   extractStyleChain,
 } from '../extract/chain';
+import { annotateAtRuleDeclaration, annotateTokenDeclaration } from '../syntax/static_ids';
 import type { BabelCore, BabelTypes } from '../utils/babel';
 import { babelTransformOptions } from '../utils/babel';
 import { getProjectFileId } from '../utils/path';
-import { annotateAtRuleDeclaration, annotateTokenDeclaration } from '../syntax/static_ids';
 import type { CompiledStyleObject, CompiledStyleObjectLocations, EvalScope } from './evaluator';
 import { COMPILED_STYLE_OBJECT_LOCATIONS, evalFail, evalOk, evaluateEnumDeclaration, evaluateNode } from './evaluator';
 import type { EvalModuleBindings, EvalResult, EvalSlotRef, ImportMap, ResolveImportFn } from './types';
