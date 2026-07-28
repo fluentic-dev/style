@@ -114,7 +114,7 @@ test('static combineStyle rejects carried instances from another styles object',
     combine(other as any);
   } catch (error) {
     didThrow = error instanceof TypeError &&
-      /same styles object/.test(error.message);
+      /styles mismatch/.test(error.message);
   }
 
   equal(didThrow, true);
@@ -1518,6 +1518,52 @@ test('createStyleTarget diffs repeated apply calls and disabled state', () => {
   styleTarget.apply(target, greenSheet, { enabled: false });
 
   equal(target.classList.size, 0);
+  equal(target.style.values.size, 0);
+});
+
+test('createStyleTarget keeps shared target classes until every owner releases them', () => {
+  const sheet = createSheet([
+    style.selector('&', { color: 'red' }),
+  ]);
+  const target = createFakeStyleTarget();
+  const first = createStyleTarget();
+  const second = createStyleTarget();
+
+  first.apply(target, sheet);
+  second.apply(target, sheet);
+
+  equal(target.classList.size, 1);
+
+  first.destroy();
+
+  equal(target.classList.size, 1);
+
+  second.destroy();
+
+  equal(target.classList.size, 0);
+});
+
+test('createStyleTarget restores shared target style values by owner order', () => {
+  const color = createToken('blue');
+  const redSheet = createSheet([color('red')]);
+  const greenSheet = createSheet([color('green')]);
+  const target = createFakeStyleTarget();
+  const first = createStyleTarget();
+  const second = createStyleTarget();
+
+  first.apply(target, redSheet);
+  second.apply(target, greenSheet);
+
+  equal([...target.style.values.values()].includes('green'), true);
+
+  first.destroy();
+
+  equal([...target.style.values.values()].includes('green'), true);
+  equal([...target.style.values.values()].includes('red'), false);
+
+  second.destroy();
+
+  equal([...target.style.values.values()].includes('green'), false);
   equal(target.style.values.size, 0);
 });
 

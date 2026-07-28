@@ -1,4 +1,3 @@
-import { getScopeClassName } from '../../../atomic/scope';
 import { BUILDER_STATE, BUILDER_TYPE_SCOPE, BUILDER_TYPE_SLOT } from '../../../builder/data/const';
 import type { ScopeTargetData, SheetData, SlotData, StyleData } from '../../../builder/data/data';
 import {
@@ -18,7 +17,6 @@ import {
   type CombinedStyle,
   type CombinedStyleFieldGetter,
   createCombinedStyle,
-  getCombinedStyleResolver,
   getCombinedStyleScopes,
   getCombinedStyleStyles,
   getCombinedStyleTokens,
@@ -30,14 +28,7 @@ import {
   markResolvedStyleItem,
   setResolvedStyleItemTokenValues,
 } from './resolvedItem';
-import {
-  addTokenOverride,
-  createMutableTokenValues,
-  finishTokenValues,
-  mergeTokenValues,
-  type StyleTokenValues,
-  type TokenValueResolver,
-} from './tokenValues';
+import { mergeTokenValues, type StyleTokenValues } from './tokenValues';
 
 export type ResolvedStyleItem<Data = unknown> = {
   data: Data;
@@ -57,12 +48,7 @@ export function createResolvedStyleItem<Data extends StyleData | SheetData | Slo
   data: Data,
   scopes: readonly ScopeTargetData[],
   tokens: StyleTokenValues | null = null,
-  resolver?: TokenValueResolver,
 ): ResolvedStyleItem<Data> {
-  if (resolver) {
-    tokens = mergeTokenValues(getDataTokenValues(data, resolver), tokens);
-  }
-
   return createStyleItem({
     data,
     items: resolveItems(data, scopes),
@@ -79,11 +65,7 @@ export function createResolvedStyleItemFromItems<Data>(
   }, tokens);
 }
 
-export function getDirectStyleItem(item: StyleData | SheetData | SlotData, resolver?: TokenValueResolver) {
-  if (resolver) {
-    return createResolvedStyleItem(item, [], null, resolver);
-  }
-
+export function getDirectStyleItem(item: StyleData | SheetData | SlotData) {
   let cached = directStyleItemCache.get(item);
 
   if (!cached) {
@@ -103,14 +85,12 @@ export function getStyleTokenValues(value: CombinedStyle | ResolvedStyleItem) {
 export function createCombinedStyleFacade<T extends object>(
   styles: T,
   scopes: readonly ScopeTargetData[],
-  resolver: TokenValueResolver,
 ): CombinedStyle<T> {
   return createCombinedStyle(
     {
       styles,
       scopes,
       tokens: null,
-      resolver,
     },
     getStyleField,
   );
@@ -125,7 +105,6 @@ export function createCombinedStyleTokenWrapper<T extends object>(
       styles: getCombinedStyleStyles(style),
       scopes: getCombinedStyleScopes(style),
       tokens,
-      resolver: getCombinedStyleResolver(style),
     },
     getTokenField(style),
   );
@@ -135,7 +114,7 @@ const getStyleField: CombinedStyleFieldGetter = (meta, prop) => {
   const value = (meta.styles as any)?.[prop] ?? null;
 
   if (isStyleData(value) || isSheetData(value) || isSlotData(value)) {
-    return createResolvedStyleItem(value, meta.scopes, null, meta.resolver);
+    return createResolvedStyleItem(value, meta.scopes);
   }
 
   if (isSelectorData(value)) {
@@ -143,7 +122,7 @@ const getStyleField: CombinedStyleFieldGetter = (meta, prop) => {
   }
 
   if (value && typeof value === 'object') {
-    return createCombinedStyleFacade(value, meta.scopes, meta.resolver);
+    return createCombinedStyleFacade(value, meta.scopes);
   }
 
   return value;
@@ -251,24 +230,19 @@ function resolveItems(
   return items;
 }
 
-function getDataTokenValues(
-  data: StyleData | SheetData | SlotData,
-  resolver: TokenValueResolver,
-) {
-  const stateItems = data[BUILDER_STATE]?.items ?? [];
-  const values = createMutableTokenValues(null);
-
-  for (let i = 0, len = stateItems.length; i < len; i++) {
-    addTokenOverride(values, stateItems[i], resolver);
-  }
-
-  return finishTokenValues(null, values);
-}
-
 function getScopeParentItem(className: string): StateItem {
-  const parentClassName = getScopeClassName(className, CSS_CONFIG.scopeClassNameFormat || null);
+  const parentClassName = formatScopeClassName(className);
 
   return [parentClassName, parentClassName];
+}
+
+function formatScopeClassName(className: string) {
+  const format = CSS_CONFIG.scopeClassNameFormat;
+
+  if (!format) return '-' + className;
+  if (typeof format === 'function') return format({ className });
+
+  return format.replace(/\[|\]/g, '').replace(/\(className\)/g, className);
 }
 
 function isExtractedScopeParentMarker(value: unknown) {

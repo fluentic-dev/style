@@ -106,7 +106,7 @@ function collectStyleArg<T extends object>(
   if (isCombinedStyle<T>(arg)) {
     if (getCombinedStyleStyles(arg) !== styles) {
       throw new TypeError(
-        '[fluentic-style] combineStyle can only carry a combined style created from the same styles object.',
+        '[fluentic-style] combineStyle styles mismatch.',
       );
     }
 

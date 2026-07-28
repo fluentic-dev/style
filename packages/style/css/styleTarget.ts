@@ -16,7 +16,20 @@ type TargetState = {
   signature: string;
 };
 
+type SharedTargetState = {
+  classNames: Map<string, number>;
+  styleNames: Map<string, SharedStyleState>;
+};
+
+type SharedStyleState = {
+  initialValue: string;
+  owners: Map<object, string>;
+};
+
+const sharedTargets = new WeakMap<Element, SharedTargetState>();
+
 export function createStyleTarget(): StyleTarget {
+  const owner = {};
   const targets = new Map<Element, TargetState>();
 
   return {
@@ -24,7 +37,7 @@ export function createStyleTarget(): StyleTarget {
       if (!target) return;
 
       if (options?.enabled === false) {
-        clearTarget(targets, target);
+        clearTarget(targets, owner, target);
         return;
       }
 
@@ -42,9 +55,8 @@ export function createStyleTarget(): StyleTarget {
         signature: '',
       };
 
-      removeOldClasses(target, state.classNames, classNames);
-      addNewClasses(target, state.classNames, classNames);
-      applyStyles(target as HTMLElement, state.styleValues, styleEntries);
+      updateClasses(target, state.classNames, classNames);
+      updateStyles(target as HTMLElement, owner, state.styleValues, styleEntries);
 
       state.classNames = classNames;
       state.signature = signature;
@@ -52,7 +64,7 @@ export function createStyleTarget(): StyleTarget {
     },
 
     destroy() {
-      targets.forEach((_, target) => clearTarget(targets, target));
+      targets.forEach((_, target) => clearTarget(targets, owner, target));
     },
   };
 }
@@ -71,28 +83,46 @@ function createSignature(
   return signature;
 }
 
-function removeOldClasses(
+function updateClasses(
   target: Element,
   previous: Set<string>,
   next: Set<string>,
 ) {
   previous.forEach((className) => {
-    if (!next.has(className)) target.classList.remove(className);
+    if (!next.has(className)) removeClassName(target, className);
   });
-}
 
-function addNewClasses(
-  target: Element,
-  previous: Set<string>,
-  next: Set<string>,
-) {
   next.forEach((className) => {
-    if (!previous.has(className)) target.classList.add(className);
+    if (!previous.has(className)) addClassName(target, className);
   });
 }
 
-function applyStyles(
+function addClassName(target: Element, className: string) {
+  const state = getSharedTargetState(target);
+  const count = state.classNames.get(className) ?? 0;
+
+  if (count === 0) target.classList.add(className);
+
+  state.classNames.set(className, count + 1);
+}
+
+function removeClassName(target: Element, className: string) {
+  const state = getSharedTargetState(target);
+  const count = state.classNames.get(className) ?? 0;
+
+  if (count <= 1) {
+    state.classNames.delete(className);
+    target.classList.remove(className);
+    deleteSharedStateIfEmpty(target, state);
+    return;
+  }
+
+  state.classNames.set(className, count - 1);
+}
+
+function updateStyles(
   target: HTMLElement,
+  owner: object,
   previousValues: Map<string, string>,
   nextEntries: [string, unknown][],
 ) {
@@ -100,36 +130,115 @@ function applyStyles(
 
   for (let i = 0, len = nextEntries.length; i < len; i++) {
     const [name, value] = nextEntries[i];
+    const nextValue = String(value);
     nextNames.add(name);
 
-    if (!previousValues.has(name)) {
-      previousValues.set(name, target.style.getPropertyValue(name));
+    if (previousValues.get(name) !== nextValue) {
+      setStyleValue(target, owner, name, nextValue);
+      previousValues.set(name, nextValue);
     }
-
-    target.style.setProperty(name, String(value));
   }
 
-  previousValues.forEach((previousValue, name) => {
+  previousValues.forEach((_, name) => {
     if (nextNames.has(name)) return;
 
-    restoreStyleValue(target, name, previousValue);
+    removeStyleValue(target, owner, name);
     previousValues.delete(name);
   });
 }
 
 function clearTarget(
   targets: Map<Element, TargetState>,
+  owner: object,
   target: Element,
 ) {
   const state = targets.get(target);
   if (!state) return;
 
-  state.classNames.forEach((className) => target.classList.remove(className));
-  state.styleValues.forEach((previousValue, name) => {
-    restoreStyleValue(target as HTMLElement, name, previousValue);
+  state.classNames.forEach((className) => removeClassName(target, className));
+  state.styleValues.forEach((_, name) => {
+    removeStyleValue(target as HTMLElement, owner, name);
   });
 
   targets.delete(target);
+}
+
+function setStyleValue(
+  target: HTMLElement,
+  owner: object,
+  name: string,
+  value: string,
+) {
+  const targetState = getSharedTargetState(target);
+  let styleState = targetState.styleNames.get(name);
+
+  if (!styleState) {
+    styleState = {
+      initialValue: target.style.getPropertyValue(name),
+      owners: new Map(),
+    };
+    targetState.styleNames.set(name, styleState);
+  }
+
+  styleState.owners.delete(owner);
+  styleState.owners.set(owner, value);
+  target.style.setProperty(name, value);
+}
+
+function removeStyleValue(
+  target: HTMLElement,
+  owner: object,
+  name: string,
+) {
+  const targetState = getSharedTargetState(target);
+  const styleState = targetState.styleNames.get(name);
+  if (!styleState) return;
+
+  styleState.owners.delete(owner);
+
+  const currentValue = getLastStyleValue(styleState);
+
+  if (currentValue !== null) {
+    target.style.setProperty(name, currentValue);
+    return;
+  }
+
+  targetState.styleNames.delete(name);
+  restoreStyleValue(target, name, styleState.initialValue);
+  deleteSharedStateIfEmpty(target, targetState);
+}
+
+function getLastStyleValue(styleState: SharedStyleState) {
+  let value: string | null = null;
+
+  styleState.owners.forEach((ownerValue) => {
+    value = ownerValue;
+  });
+
+  return value;
+}
+
+function getSharedTargetState(target: Element) {
+  let state = sharedTargets.get(target);
+
+  if (!state) {
+    state = {
+      classNames: new Map(),
+      styleNames: new Map(),
+    };
+    sharedTargets.set(target, state);
+  }
+
+  return state;
+}
+
+function deleteSharedStateIfEmpty(
+  target: Element,
+  state: SharedTargetState,
+) {
+  if (!state.classNames.size && !state.styleNames.size) {
+    sharedTargets.delete(target);
+  }
 }
 
 function restoreStyleValue(

@@ -16,13 +16,12 @@ import { isStyleTokenOverrideData } from '../../../style/token';
 import type { StyleProp } from '../../types';
 import { isElementDebugData, splitElementMarkerStyleProp } from '../elementMarkerData';
 import {
-  createResolvedStyleItem,
   createResolvedStyleItemFromItems,
-  getDirectStyleItem,
   getStyleTokenValues,
   isResolvedStyleItem,
   type ResolvedStyleItem,
 } from './item';
+import { createResolvedStyleItemWithResolver, getDirectStyleItemWithResolver } from './itemWithResolver';
 import { getStylePropCacheValue } from './propCache';
 import { createStylePropResult, emptyStylePropResult, type ResolvedStyleProp } from './result';
 import { runtimeTokenValueResolver } from './token';
@@ -202,7 +201,7 @@ function normalizeStylePropItem(
     const tokens = mergeTokenOverrides(null, bound.tokens, runtimeTokenValueResolver);
 
     if (isStyleData(bound.data) || isSheetData(bound.data) || isSlotData(bound.data)) {
-      return createResolvedStyleItem(bound.data, [], tokens, runtimeTokenValueResolver);
+      return createResolvedStyleItemWithResolver(bound.data, tokens, runtimeTokenValueResolver);
     }
 
     return normalizeStylePropItem(bound.data, false);
@@ -213,7 +212,7 @@ function normalizeStylePropItem(
   }
 
   if (isStyleData(item) || isSheetData(item) || isSlotData(item)) {
-    return getDirectStyleItem(item, runtimeTokenValueResolver);
+    return getDirectStyleItemWithResolver(item, runtimeTokenValueResolver);
   }
 
   return null;

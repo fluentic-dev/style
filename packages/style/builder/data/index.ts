@@ -1,4 +1,3 @@
-export * from './check_selector';
 export * from './const';
 export * from './create';
 export * from './data';

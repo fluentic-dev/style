@@ -42,17 +42,27 @@ export default [
     'entry/prod/css': 'entry/prod/css.ts',
     'entry/prod/adapter/solid': 'entry/prod/adapter/solid.ts',
     'entry/prod/adapter/react': 'entry/prod/adapter/react.ts',
-    'entry/prod/runtime': 'entry/prod/runtime.ts',
-    'entry/prod/extract': 'entry/prod/extract.ts',
-    'entry/prod/jsx-runtime': 'entry/prod/jsx_runtime.ts',
-    'entry/prod/jsx-dev-runtime': 'entry/prod/jsx_dev_runtime.ts',
     'entry/rsc-prod': 'entry/rsc_prod/index.ts',
     'entry/rsc-prod/css': 'entry/rsc_prod/css.ts',
     'entry/rsc-prod/adapter/solid': 'entry/rsc_prod/adapter/solid.ts',
     'entry/rsc-prod/adapter/react': 'entry/rsc_prod/adapter/react.ts',
+  }, {
+    checkSelector: false,
+  }),
+
+  createRuntimeConfig({
+    'entry/prod/runtime': 'entry/prod/runtime.ts',
+    'entry/prod/jsx-runtime': 'entry/prod/jsx_runtime.ts',
+    'entry/prod/jsx-dev-runtime': 'entry/prod/jsx_dev_runtime.ts',
     'entry/rsc-prod/runtime': 'entry/rsc_prod/runtime.ts',
     'entry/rsc-prod/jsx-runtime': 'entry/rsc_prod/jsx_runtime.ts',
     'entry/rsc-prod/jsx-dev-runtime': 'entry/rsc_prod/jsx_dev_runtime.ts',
+  }, {
+    checkSelector: false,
+  }),
+
+  createRuntimeConfig({
+    'entry/prod/extract': 'entry/prod/extract.ts',
   }, {
     checkSelector: false,
   }),
@@ -124,9 +134,13 @@ function createRuntimeConfig(
   const checkSelectorAlias = options.checkSelector !== false
     ? resolveLocal('builder/data/check_selector.ts')
     : resolveLocal('builder/data/check_selector.noop.ts');
+  const selectorOverrideAlias = options.checkSelector !== false
+    ? resolveLocal('builder/selector_override.ts')
+    : resolveLocal('builder/selector_override.noop.ts');
 
   const alias: Record<string, string> = {
     './data/check_selector': checkSelectorAlias,
+    './selector_override': selectorOverrideAlias,
   };
 
   return defineConfig({

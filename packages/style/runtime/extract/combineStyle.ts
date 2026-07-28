@@ -1,5 +1,5 @@
-import type { SheetData, SlotData, StyleData } from '../../builder/data';
-import { isSheetData, isSlotData, isStyleData } from '../../builder/data';
+import type { SheetData, SlotData, StyleData } from '../../builder/data/data';
+import { isSheetData, isSlotData, isStyleData } from '../../builder/data/is';
 import { type CombinedStyleArg, createCombinedStyleGetter } from '../core/cache/combine';
 import type { CombinedStyle } from '../core/combinedStyle';
 import type { StyleProp } from '../types';

@@ -2,13 +2,12 @@ import type { ScopeTargetData, SelectorData, SheetData, SlotData, StyleData } fr
 import { globalData } from '../../utils/global';
 import { hasOwn } from '../../utils/object';
 import type { ResolvedStyleItem } from './cache/item';
-import type { StyleTokenValues, TokenValueResolver } from './cache/tokenValues';
+import type { StyleTokenValues } from './cache/tokenValues';
 
 export type CombinedStyleMeta<Styles = unknown> = {
   styles: Styles;
   scopes: readonly ScopeTargetData[];
   tokens: StyleTokenValues | null;
-  resolver: TokenValueResolver;
 };
 
 export type CombinedStyle<Styles = unknown> = InferData<Styles>;
@@ -62,10 +61,6 @@ export function getCombinedStyleScopes(style: CombinedStyle) {
 
 export function getCombinedStyleTokens(style: CombinedStyle) {
   return getTarget(style).tokens;
-}
-
-export function getCombinedStyleResolver(style: CombinedStyle) {
-  return getTarget(style).resolver;
 }
 
 const handlers: ProxyHandler<object> = {

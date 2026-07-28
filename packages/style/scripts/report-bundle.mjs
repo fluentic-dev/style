@@ -39,6 +39,7 @@ const entries = [
         'entry/prod/runtime.js',
         [
           'getClassName',
+          'combineStyle',
           'mergeClassName',
           'mergeStyle',
         ],

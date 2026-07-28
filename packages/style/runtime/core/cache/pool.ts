@@ -60,7 +60,7 @@ export function createCombinedStylePool(
         const allScopes = concatScopes(inheritedScopes, collected.scopes);
 
         return {
-          style: createCombinedStyleFacade(styles, allScopes, resolver) as CombinedStyle<typeof styles>,
+          style: createCombinedStyleFacade(styles, allScopes) as CombinedStyle<typeof styles>,
           tokenCache: null,
           tokens: collected.tokens,
         };
@@ -86,7 +86,7 @@ export function createCombinedStylePool(
 
       const allScopes = concatScopes(inheritedScopes, collected.scopes);
 
-      node.value.style = createCombinedStyleFacade(styles, allScopes, resolver);
+      node.value.style = createCombinedStyleFacade(styles, allScopes);
 
       scheduleCleanup();
 
