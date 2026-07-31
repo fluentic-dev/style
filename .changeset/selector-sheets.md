@@ -10,5 +10,7 @@ Add attachable selector sheets for styling fixed third-party class names without
 - Add `createStyleTarget(...)` for applying style props to explicit DOM targets such as `document.body`, with shared-target reference counting for overlapping portal users.
 - Make `combineStyle(...)` compose sheets directly, and add `combineStyle.with(...)` plus array-only `combineStyle.multi(...)` for cache-friendly style and sheet composition.
 - Support selector sheet extraction, local token overrides, debug class names, source tracing, and sourcemap data across runtime and extracted builds.
+- Add Preact css prop support with a `CssPropPresets.Preact` compiler preset, runtime adapters, JSX types, and a Vite example.
+- Keep plugin css prop configuration focused on `CssPropPresets` instead of exporting each framework preset as a separate top-level plugin API.
 - Keep the extracted production runtime below 5 KB minified and gzipped with `combineStyle` included, and keep selector parsing helpers out of the extracted production entry.
-- Add a React Select third-party selectors example and docs for styling third-party components, selector sheets, style targets, and the new `combineStyle` helpers.
+- Add a React Select third-party selectors example, Preact integration docs, and a clearer third-party styling guide for selector sheets, style targets, portal menus, and the new `combineStyle` helpers.

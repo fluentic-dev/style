@@ -25,12 +25,16 @@
   - Support selector sheet extraction, local token overrides, debug class
     names, source tracing, and sourcemap data across runtime and extracted
     builds.
+  - Add Preact css prop support with a `CssPropPresets.Preact` compiler
+    preset, runtime adapters, JSX types, and a Vite example.
+  - Keep plugin css prop configuration focused on `CssPropPresets` instead of
+    exporting each framework preset as a separate top-level plugin API.
   - Keep the extracted production runtime below 5 KB minified and gzipped with
     `combineStyle` included, and keep selector parsing helpers out of the
     extracted production entry.
-  - Add a React Select third-party selectors example and docs for styling
-    third-party components, selector sheets, style targets, and the new
-    `combineStyle` helpers.
+  - Add a React Select third-party selectors example, Preact integration docs,
+    and a clearer third-party styling guide for selector sheets, style targets,
+    portal menus, and the new `combineStyle` helpers.
 
 ## 0.1.0-beta.4
 

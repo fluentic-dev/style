@@ -1,17 +1,18 @@
 # Fluentic Style
 
-Build your own styling language on top of a stable React styling model.
+Build your own styling language on top of a stable JSX styling model.
 
-React styling has a lot of good answers already: CSS files, utility classes,
+Styling JSX apps has a lot of good answers already: CSS files, utility classes,
 CSS-in-JS, compiled CSS, design tokens, and component libraries. Fluentic
 explores a specific question inside that space: what if styles composed around
-React components the same way props and state do?
+components the same way props and state do?
 
 With Fluentic, you start simple with type-safe `style(...)` and the JSX `css`
-prop. If your team prefers utility class names, you can also create class-name
-style chains, including a Tailwind-like preset. When a component needs variants,
-themes, nested parts, or consumer overrides, add slots, scopes, tokens, and
-`combineStyle(...)` so those styles stay organized around the component.
+prop in React, Preact, Solid, and compatible JSX runtimes. If your team prefers
+utility class names, you can also create class-name style chains, including a
+Tailwind-like preset. When a component needs variants, themes, nested parts, or
+consumer overrides, add slots, scopes, tokens, and `combineStyle(...)` so those
+styles stay organized around the component.
 
 For production builds, styles are extracted into static atomic CSS output.
 Dynamic values from props and state still work as usual.
@@ -35,7 +36,7 @@ Or with pnpm:
 pnpm add @fluentic/style@beta
 ```
 
-Use Fluentic in a React app. Add a bundler plugin later when you want production
+Use Fluentic in a JSX app. Add a bundler plugin later when you want production
 extraction.
 
 ## Configure Runtime JSX
