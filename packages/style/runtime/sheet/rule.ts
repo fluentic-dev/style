@@ -16,21 +16,13 @@ export function createRuntimeSheetRules(item: StateItem): RuntimeSheetRule[] | n
 
   const runtimeItem = item as RuntimeItem;
 
-  const value = Array.isArray(runtimeItem.value)
-    ? runtimeItem.value[0]
-    : runtimeItem.value;
-
-  const priority = Array.isArray(runtimeItem.value)
-    ? runtimeItem.value[1]
-    : null;
-
   const parentSelector = runtimeItem.type === BUILDER_TYPE_SCOPE
     ? runtimeItem.parentSelector
     : null;
 
   const layerPriority = getAtomicRuleLayerPriority(
     runtimeItem.property,
-    priority,
+    runtimeItem.weight,
     runtimeItem.selector,
     parentSelector,
     runtimeItem.atRule,
@@ -40,7 +32,8 @@ export function createRuntimeSheetRules(item: StateItem): RuntimeSheetRule[] | n
   const ruleCss = buildAtomicRule(
     runtimeItem.className,
     runtimeItem.property,
-    value,
+    runtimeItem.value,
+    runtimeItem.important,
     runtimeItem.selector,
     parentSelector,
     runtimeItem.atRule,

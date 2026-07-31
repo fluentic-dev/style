@@ -37,6 +37,7 @@ import type {
 import { normalizeManualSelectors } from '../../../../builder/selector_override';
 import type { ClassNameFormat, TokenNameFormat, TransformClassNameFormat } from '../../../../config/types';
 import type { Selector } from '../../../../selector/types';
+import { importantValue, isStyleImportantValue } from '../../../../style/important';
 import type { StyleFnMeta } from '../../../../style/style';
 import {
   getStyleTokenId,
@@ -51,6 +52,7 @@ import {
   type StyleTransform,
 } from '../../../../style/transform';
 import { isAtRuleRef } from '../../../../style/valueRef';
+import { isStyleWeightValue, weightValue } from '../../../../style/weight';
 import { hashString } from '../../../../utils/hash';
 import { CompilerRuntimeMode } from '../../../compiler/constants';
 import type { CompilerOptions } from '../../../compiler/types';
@@ -130,7 +132,8 @@ function transformRuntimeValues(
   let result: Record<string, unknown> | null = null;
 
   for (const [property, rawValue] of Object.entries(styleObj)) {
-    const value = getPriorityTupleValue(rawValue);
+    const weighted = isStyleWeightValue(rawValue) ? rawValue : null;
+    const value = weighted ? weighted.value : rawValue;
     const runtimeValue = getCompiledRuntimeValue(value);
     if (!runtimeValue) continue;
 
@@ -138,18 +141,11 @@ function transformRuntimeValues(
     if (transformedRuntimeValue === runtimeValue) continue;
 
     result ??= cloneCompiledStyleObject(styleObj);
-    result[property] = Array.isArray(rawValue) && rawValue.length === 2 && typeof rawValue[0] === 'number'
-      ? [rawValue[0], createCompiledRuntimeValue(transformedRuntimeValue)]
-      : createCompiledRuntimeValue(transformedRuntimeValue);
+    const transformed = createCompiledRuntimeValue(transformedRuntimeValue);
+    result[property] = weighted ? weightValue(transformed, weighted.weight) : transformed;
   }
 
   return result ?? styleObj;
-}
-
-function getPriorityTupleValue(value: unknown) {
-  return Array.isArray(value) && value.length === 2 && typeof value[0] === 'number'
-    ? value[1]
-    : value;
 }
 
 function cloneCompiledStyleObject(
@@ -1011,18 +1007,27 @@ function decorateClassNameStyle(
       continue;
     }
 
-    if (Array.isArray(value) && value.length === 2 && typeof value[0] === 'number') {
-      const rawValue = value[1];
-      result[property] = isClassNameValue(rawValue)
-        ? value
-        : [value[0], classNameValue(rawValue, className)];
-      continue;
-    }
-
-    result[property] = isClassNameValue(value) ? value : classNameValue(value, className);
+    result[property] = decorateClassNameValue(value, className);
   }
 
   return result;
+}
+
+function decorateClassNameValue(
+  value: unknown,
+  className: string,
+) {
+  if (isClassNameValue(value)) return value;
+
+  if (isStyleImportantValue(value)) {
+    return importantValue(decorateClassNameValue(value.value, className));
+  }
+
+  if (isStyleWeightValue(value)) {
+    return weightValue(decorateClassNameValue(value.value, className), value.weight);
+  }
+
+  return classNameValue(value, className);
 }
 
 function isWeightedClassName(
@@ -1046,11 +1051,7 @@ function applyClassNameWeight(
       continue;
     }
 
-    const rawValue = Array.isArray(value) && value.length === 2 && typeof value[0] === 'number'
-      ? value[1]
-      : value;
-
-    weighted[property] = [weight, rawValue];
+    weighted[property] = weightValue(value, weight);
   }
 
   return weighted;
@@ -2592,6 +2593,8 @@ function addSlotOverrideDataItems(
         dedupe: overrideItem.dedupe,
         className: overrideItem.className,
         property: overrideItem.property,
+        weight: overrideItem.weight,
+        important: overrideItem.important,
         value: overrideItem.value,
         variable: overrideItem.variable,
         token: overrideItem.token,
@@ -2678,13 +2681,10 @@ function addRuntimeScopeItem(
   cssConfig: CssConfig,
   callsiteOverride: TraceCallsiteOverride = null,
 ) {
-  let priority: number | null = null;
+  const weight = sourceItem.weight;
+  let important = false;
   let value = sourceItem.value;
-
-  if (Array.isArray(value)) {
-    priority = value[1];
-    value = value[0];
-  }
+  important = sourceItem.important;
 
   const itemParentSelector = parentSelector ?? sourceItem.parentSelector;
   const itemAtRules = mergeAtRules(atRules, sourceItem.atRule);
@@ -2693,7 +2693,8 @@ function addRuntimeScopeItem(
 
   const dedupe = getClassNameDedupe(
     sourceItem.property,
-    priority,
+    weight,
+    important,
     sourceItem.selector,
     itemParentSelector,
     itemAtRules,
@@ -2701,7 +2702,8 @@ function addRuntimeScopeItem(
 
   const className = getAtomicClassName(
     sourceItem.property,
-    priority,
+    weight,
+    important,
     valueStr,
     sourceItem.selector,
     itemParentSelector,
@@ -2730,6 +2732,7 @@ function addRuntimeScopeItem(
     className,
     sourceItem.property,
     valueStr,
+    important,
     sourceItem.selector,
     itemParentSelector,
     itemAtRules,
@@ -2738,7 +2741,7 @@ function addRuntimeScopeItem(
 
   const layerPriority = getAtomicRuleLayerPriority(
     sourceItem.property,
-    priority,
+    weight,
     sourceItem.selector,
     itemParentSelector,
     itemAtRules,
@@ -2905,13 +2908,9 @@ function addRuntimeStyleItem(
   cssConfig: CssConfig,
   callsiteOverride: TraceCallsiteOverride = null,
 ) {
-  let priority: number | null = null;
+  const weight = sourceItem.weight;
+  const important = sourceItem.important;
   let value = sourceItem.value;
-
-  if (Array.isArray(value)) {
-    priority = value[1];
-    value = value[0];
-  }
 
   const itemSelector = selector && sourceItem.selector
     ? combineSelectors(selector, sourceItem.selector)
@@ -2933,7 +2932,8 @@ function addRuntimeStyleItem(
 
   const dedupe = getClassNameDedupe(
     sourceItem.property,
-    priority,
+    weight,
+    important,
     itemSelector,
     parentSelector,
     itemAtRules,
@@ -2943,7 +2943,8 @@ function addRuntimeStyleItem(
 
   const className = getAtomicClassName(
     sourceItem.property,
-    priority,
+    weight,
+    important,
     valueStr,
     itemSelector,
     parentSelector,
@@ -2978,6 +2979,7 @@ function addRuntimeStyleItem(
     className,
     sourceItem.property,
     valueStr,
+    important,
     itemSelector,
     parentSelector,
     itemAtRules,
@@ -2986,7 +2988,7 @@ function addRuntimeStyleItem(
 
   const layerPriority = getAtomicRuleLayerPriority(
     sourceItem.property,
-    priority,
+    weight,
     itemSelector,
     parentSelector,
     itemAtRules,
@@ -3109,14 +3111,12 @@ function addStyleItems(
     const property = keys[i];
     const rawValue = styleObj[property];
 
-    let priority: number | null = null;
+    let weight: number | null = null;
+    let important = false;
     let value: unknown = rawValue;
     let transformClassName: string | null = null;
 
-    if (Array.isArray(rawValue) && rawValue.length === 2 && typeof rawValue[0] === 'number') {
-      priority = rawValue[0];
-      value = rawValue[1];
-    }
+    [value, weight, important] = unwrapStaticStyleValue(value);
 
     if (isClassNameValue(value)) {
       transformClassName = value.className;
@@ -3167,7 +3167,8 @@ function addStyleItems(
 
     const dedupe = getClassNameDedupe(
       property,
-      priority,
+      weight,
+      important,
       selector,
       parentSelector,
       atRules,
@@ -3175,7 +3176,8 @@ function addStyleItems(
 
     const className = getAtomicClassName(
       property,
-      priority,
+      weight,
+      important,
       valueStr,
       selector,
       parentSelector,
@@ -3234,6 +3236,7 @@ function addStyleItems(
       className,
       property,
       valueStr,
+      important,
       selector,
       parentSelector,
       atRules,
@@ -3242,7 +3245,7 @@ function addStyleItems(
 
     const layerPriority = getAtomicRuleLayerPriority(
       property,
-      priority,
+      weight,
       selector,
       parentSelector,
       atRules,
@@ -3284,6 +3287,29 @@ function addStyleItems(
   }
 
   return true;
+}
+
+function unwrapStaticStyleValue(value: unknown): [value: unknown, weight: number | null, important: boolean] {
+  let weight: number | null = null;
+  let important = false;
+
+  while (true) {
+    if (isStyleImportantValue(value)) {
+      important = true;
+      value = value.value;
+      continue;
+    }
+
+    if (isStyleWeightValue(value)) {
+      weight = value.weight;
+      value = value.value;
+      continue;
+    }
+
+    break;
+  }
+
+  return [value, weight, important];
 }
 
 function throwIfRequiredStaticStyleValue(result: EvalResult) {

@@ -1,4 +1,5 @@
-import type { AtRuleRef, PlainStyleObject, StyleKeyframesObject, StyleObject, StyleValueTuple } from '../../style';
+import type { AtRuleRef, PlainStyleObject, StyleKeyframesObject, StyleObject, StyleWeightValue } from '../../style';
+import type { StyleImportantValue } from '../../style/important';
 import type { Collapse } from '../../utils/type';
 import type { BUILDER_SELECTOR, BUILDER_SLOT_ID } from '../data';
 import type { ManualSelectorInput } from '../selector_override';
@@ -54,7 +55,8 @@ export function typeAliases<Style, Selectors>() {
     (style?: StyleObject<Style>): ReturnType<typeof styleRule<Style, Selectors>>;
     slot: SlotFn<Style>;
     scope: ScopeFn;
-    value: ValueFn;
+    weight: ValueFn;
+    important: ImportantFn;
     raw: RawFn<Style>;
     plain: PlainFn<Style>;
     keyframes: KeyframesFn<Style>;
@@ -62,7 +64,9 @@ export function typeAliases<Style, Selectors>() {
     selector: SelectorFn<Style>;
   };
 
-  type ValueFn = <const T>(value: T, weight: number) => StyleValueTuple<T>;
+  type ValueFn = <const T>(value: T, weight: number) => StyleWeightValue<T>;
+
+  type ImportantFn = <const T>(value: T) => StyleImportantValue<T>;
 
   type RawFn<Style> = <T extends StyleObject<Style>>(style: T) => T;
 
@@ -95,6 +99,7 @@ export function typeAliases<Style, Selectors>() {
     ScopeFn: ScopeFn;
     //
     ValueFn: ValueFn;
+    ImportantFn: ImportantFn;
     RawFn: RawFn<Style>;
     PlainFn: PlainFn<Style>;
     KeyframesFn: KeyframesFn<Style>;

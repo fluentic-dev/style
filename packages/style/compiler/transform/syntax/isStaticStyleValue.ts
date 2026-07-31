@@ -1,4 +1,4 @@
-import { FN_STYLE_VALUE } from '../../utils/constants';
+import { FN_STYLE_IMPORTANT, FN_STYLE_WEIGHT } from '../../utils/constants';
 import type { BabelTypes } from '../utils/babel';
 
 export function isStaticStyleValue(value: BabelTypes.Node): boolean {
@@ -15,11 +15,18 @@ export function isStaticStyleValue(value: BabelTypes.Node): boolean {
     return value.expressions.length === 0;
   }
 
-  if (value.type === 'ArrayExpression') {
-    const [priority, itemValue] = value.elements;
+  if (
+    value.type === 'CallExpression' &&
+    value.callee.type === 'MemberExpression' &&
+    !value.callee.computed &&
+    value.callee.property.type === 'Identifier' &&
+    value.callee.property.name === FN_STYLE_WEIGHT
+  ) {
+    const [itemValue, weight] = value.arguments;
 
-    return !!priority && priority.type === 'NumericLiteral' &&
-      !!itemValue && isStaticStyleValue(itemValue);
+    return !!itemValue && itemValue.type !== 'SpreadElement' &&
+      isStaticStyleValue(itemValue) &&
+      !!weight && weight.type === 'NumericLiteral';
   }
 
   if (
@@ -27,13 +34,12 @@ export function isStaticStyleValue(value: BabelTypes.Node): boolean {
     value.callee.type === 'MemberExpression' &&
     !value.callee.computed &&
     value.callee.property.type === 'Identifier' &&
-    value.callee.property.name === FN_STYLE_VALUE
+    value.callee.property.name === FN_STYLE_IMPORTANT
   ) {
-    const [itemValue, weight] = value.arguments;
+    const [itemValue] = value.arguments;
 
     return !!itemValue && itemValue.type !== 'SpreadElement' &&
-      isStaticStyleValue(itemValue) &&
-      !!weight && weight.type === 'NumericLiteral';
+      isStaticStyleValue(itemValue);
   }
 
   if (value.type === 'UnaryExpression') {

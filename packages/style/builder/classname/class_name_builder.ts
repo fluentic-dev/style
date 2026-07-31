@@ -1,7 +1,8 @@
 import { DEV_CONFIG } from '../../config/config/dev';
 import type { Selector } from '../../selector';
-import { type ClassNameTransform, classNameValue, isClassNameValue } from '../../style';
-import type { StyleValueTuple } from '../../style/types';
+import { type ClassNameTransform, classNameValue, importantValue, isClassNameValue } from '../../style';
+import { isStyleImportantValue } from '../../style/important';
+import { isStyleWeightValue, weightValue } from '../../style/weight';
 import { traceMarker } from '../../utils/trace';
 import {
   createStyleData,
@@ -21,11 +22,19 @@ import { mergeStyleData } from '../style_data';
 import { createDefaultFnResult, createFns } from '../style_fns';
 import type { SelectorsRecord } from '../types';
 import { FnPrefixStyle, resolveCallsite } from '../utils';
-import type { ClassNameBuilder, ClassNameFn, ClassNameItem, ClassNameMergeData, WeightedClassName } from './types';
+import type {
+  ClassNameBuilder,
+  ClassNameFn,
+  ClassNameItem,
+  ClassNameMergeData,
+  ImportantClassName,
+  WeightedClassName,
+} from './types';
 
 type StyleRecord = Record<string, unknown>;
 type FlattenedClassName<ClassName extends string> = {
   className: ClassName;
+  important: boolean;
   weight: number | null;
 };
 
@@ -144,11 +153,11 @@ function createAtRuleFn<ClassName extends string>(
 
     let arg: string | readonly string[];
     let items: readonly ClassNameItem<ClassName>[];
-    let priority: number | null = null;
+    let weight: number | null = null;
 
     if (hasArg) {
       if (isMedia && typeof withoutDebug[0] === 'number') {
-        priority = withoutDebug[0];
+        weight = withoutDebug[0];
         arg = withoutDebug[1] as string | readonly string[];
         items = withoutDebug.slice(2) as readonly ClassNameItem<ClassName>[];
       } else {
@@ -156,7 +165,7 @@ function createAtRuleFn<ClassName extends string>(
         items = withoutDebug.slice(1) as readonly ClassNameItem<ClassName>[];
       }
     } else if (isMedia && typeof withoutDebug[0] === 'number') {
-      priority = withoutDebug[0];
+      weight = withoutDebug[0];
       arg = fnSelector.selector;
       items = withoutDebug.slice(1) as readonly ClassNameItem<ClassName>[];
     } else {
@@ -187,7 +196,7 @@ function createAtRuleFn<ClassName extends string>(
         classNameStyle.style,
         classNameStyle.debug,
         null,
-        [priority !== null ? [selector, priority] : selector],
+        [weight !== null ? [selector, weight] : selector],
       );
     }
 
@@ -321,8 +330,9 @@ function classNameItemsToStyle<ClassName extends string>(
     const weighted: StyleRecord = item.weight === null
       ? transformed
       : applyClassNameWeight(transformed, item.weight);
+    const nextStyle = item.important ? applyClassNameImportant(weighted) : weighted;
 
-    style = style ? Object.assign({}, style, weighted) : weighted;
+    style = style ? Object.assign({}, style, nextStyle) : nextStyle;
 
     const loc = debug?.classNames?.[item.className];
     if (loc) {
@@ -359,18 +369,27 @@ function decorateClassNameStyle<ClassName extends string>(
       continue;
     }
 
-    if (Array.isArray(value) && value.length === 2 && typeof value[0] === 'number') {
-      const rawValue = (value as StyleValueTuple)[1];
-      result[property] = isClassNameValue(rawValue)
-        ? value
-        : [(value as StyleValueTuple)[0], classNameValue(rawValue, className)];
-      continue;
-    }
-
-    result[property] = isClassNameValue(value) ? value : classNameValue(value, className);
+    result[property] = decorateClassNameValue(value, className);
   }
 
   return result;
+}
+
+function decorateClassNameValue<ClassName extends string>(
+  value: unknown,
+  className: ClassName,
+) {
+  if (isClassNameValue(value)) return value;
+
+  if (isStyleImportantValue(value)) {
+    return importantValue(decorateClassNameValue(value.value, className));
+  }
+
+  if (isStyleWeightValue(value)) {
+    return weightValue(decorateClassNameValue(value.value, className), value.weight);
+  }
+
+  return classNameValue(value, className);
 }
 
 function flattenClassNameItems<ClassName extends string>(
@@ -392,7 +411,7 @@ function collectClassNameItem<ClassName extends string>(
   if (!item) return;
 
   if (typeof item === 'string') {
-    result.push({ className: item, weight: null });
+    result.push({ className: item, important: false, weight: null });
     return;
   }
 
@@ -402,7 +421,12 @@ function collectClassNameItem<ClassName extends string>(
   }
 
   if (isWeightedClassName(item)) {
-    result.push(item);
+    result.push({ ...item, important: false });
+    return;
+  }
+
+  if (isImportantClassName(item)) {
+    result.push({ className: item.className, important: true, weight: null });
   }
 }
 
@@ -413,6 +437,15 @@ function isWeightedClassName<ClassName extends string>(
 
   const weighted = item as Partial<WeightedClassName<ClassName>>;
   return typeof weighted.className === 'string' && typeof weighted.weight === 'number';
+}
+
+function isImportantClassName<ClassName extends string>(
+  item: unknown,
+): item is ImportantClassName<ClassName> {
+  if (!item || typeof item !== 'object') return false;
+
+  const important = item as Partial<ImportantClassName<ClassName>>;
+  return typeof important.className === 'string' && important.important === true;
 }
 
 function applyClassNameWeight(
@@ -427,14 +460,25 @@ function applyClassNameWeight(
       continue;
     }
 
-    const rawValue = Array.isArray(value) && value.length === 2 && typeof value[0] === 'number'
-      ? value[1]
-      : value;
-
-    weighted[property] = [weight, rawValue];
+    weighted[property] = weightValue(value, weight);
   }
 
   return weighted;
+}
+
+function applyClassNameImportant(style: StyleRecord): StyleRecord {
+  const important: StyleRecord = {};
+
+  for (const [property, value] of Object.entries(style)) {
+    if (value === null || value === undefined) {
+      important[property] = value;
+      continue;
+    }
+
+    important[property] = importantValue(value);
+  }
+
+  return important;
 }
 
 function splitDebug<T>(

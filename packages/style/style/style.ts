@@ -15,9 +15,11 @@ import { PrioritySelectors } from '../selector/presets';
 import { symbol } from '../utils/symbol';
 import { type } from '../utils/type';
 import type { Type } from '../utils/type';
+import { importantValue } from './important';
 import { createStyleKeyframes } from './keyframes';
 import type { ClassNameTransform, StyleTransform } from './transform';
 import type { CSSProperties } from './types';
+import { weightValue } from './weight';
 
 const META: unique symbol = symbol('style.fn:meta');
 
@@ -59,9 +61,10 @@ export function createStyleFn<
   const fnScope = createScopeBuilder<Selectors>(selectors);
   const fnSelector = createSelectorBuilder<Style, Selectors>(selectors, transform);
 
-  const fnValue: Types['ValueFn'] = (value, weight) => {
-    return [weight, value];
+  const fnWeight: Types['ValueFn'] = (value, weight) => {
+    return weightValue(value, weight);
   };
+  const fnImportant: Types['ImportantFn'] = (value) => importantValue(value);
   const fnRaw: Types['RawFn'] = (style) => style;
   const fnPlain: Types['PlainFn'] = (style) => style;
   const fnKeyframes: Types['KeyframesFn'] =
@@ -82,7 +85,8 @@ export function createStyleFn<
 
   style.slot = fnSlot;
   style.scope = fnScope;
-  style.value = fnValue;
+  style.weight = fnWeight;
+  style.important = fnImportant;
   style.raw = fnRaw;
   style.plain = fnPlain;
   style.keyframes = fnKeyframes;

@@ -274,19 +274,9 @@ export const selectors = {
 };
 
 type SelectorTable = typeof selectors;
-type StyleApi = ReturnType<typeof createStyleBuilder<Record<string, unknown>, SelectorTable>>;
-type SlotApi = ReturnType<typeof createSlotBuilder<Record<string, unknown>, SelectorTable>>;
-type ScopeApi = ReturnType<typeof createScopeBuilder<SelectorTable>>;
-type SelectorApi = ReturnType<typeof createSelectorBuilder<Record<string, unknown>, SelectorTable>>;
-
-export const style = createStyleBuilder<Record<string, unknown>, SelectorTable>(
+export const { style } = createStyleFn<Record<string, unknown>, SelectorTable>({
   selectors,
-  null,
-) as (StyleApi & { slot: SlotApi; scope: ScopeApi; selector: SelectorApi; });
-
-style.slot = createSlotBuilder<Record<string, unknown>, typeof selectors>(selectors, null);
-style.scope = createScopeBuilder<typeof selectors>(selectors);
-style.selector = createSelectorBuilder<Record<string, unknown>, typeof selectors>(selectors, null);
+});
 
 export const styles = {
   container: style.slot({

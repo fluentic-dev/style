@@ -1382,7 +1382,7 @@ const scope = style.scope().hover([
   equal(parentHoverBaseIndex < childHoverIndex, true);
 });
 
-test('compiler evaluates style.value helper as static value tuple', () => {
+test('compiler evaluates style weight helper as static value metadata', () => {
   const compiler = createCompiler({
     layer: false,
     css: { debugClassName: true },
@@ -1393,7 +1393,7 @@ import { style } from '@fluentic/style';
 
 const styles = {
   container: style.slot({
-    display: style.value('flex', 1),
+    display: style.weight('flex', 1),
   }),
   hidden: style.slot({
     display: 'none',
@@ -1413,7 +1413,7 @@ const styles = {
   equal(css.indexOf('display: none') < css.indexOf('display: flex'), true);
 });
 
-test('compiler includes value priority in extracted class hash', () => {
+test('compiler includes style value weight in extracted class hash', () => {
   const compiler = createCompiler({
     layer: false,
   });
@@ -1422,10 +1422,10 @@ test('compiler includes value priority in extracted class hash', () => {
 import { style } from '@fluentic/style';
 
 const one = style({
-  display: style.value('flex', 1),
+  display: style.weight('flex', 1),
 });
 const two = style({
-  display: style.value('flex', 2),
+  display: style.weight('flex', 2),
 });
 `,
     '/tmp/compiler-value-priority-class-hash.ts',
@@ -1437,6 +1437,49 @@ const two = style({
 
   equal(classNames.length, 2);
   notEqual(classNames[0], classNames[1]);
+});
+
+test('compiler extracts important style values', () => {
+  const compiler = createCompiler({
+    layer: false,
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+const direct = style({
+  color: style.important('red'),
+  marginTop: style.important(8),
+});
+
+const weighted = style({
+  color: style.weight(style.important('red'), 1),
+});
+
+const importantWeighted = style({
+  color: style.important(style.weight('blue', 2)),
+});
+
+const sheet = createSheet([
+  style.selector('.third-party-control', {
+    borderColor: style.important('red'),
+  }),
+]);
+`,
+    '/tmp/compiler-important-style-values.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+  const classNames = getCssClassNames(result.css);
+
+  includes(css, 'color: red !important');
+  includes(css, 'color: blue !important');
+  includes(css, 'margin-top: 8px !important');
+  includes(css, 'border-color: red !important');
+  equal(classNames.length, 5);
 });
 
 test('compiler extracts keyframes used as style value refs', () => {
@@ -1668,17 +1711,16 @@ const one = style({
   includes(css, 'base-palette: 1;');
 });
 
-test('runtime builder preserves explicit zero value priority', () => {
+test('runtime builder preserves explicit zero value weight', () => {
   const prioritized = style({
-    display: [0, 'flex'] as never,
+    display: style.weight('flex', 0),
   });
 
   const item = prioritized[BUILDER_STATE].items[0];
   if (Array.isArray(item)) throw new Error('expected runtime style item');
 
-  equal(Array.isArray(item.value), true);
-  equal((item.value as [string, number])[0], 'flex');
-  equal((item.value as [string, number])[1], 0);
+  equal(item.value, 'flex');
+  equal(item.weight, 0);
 });
 
 test('compiler includes media priority in extracted class hash', () => {
@@ -3576,11 +3618,11 @@ const rule = style({ color: 'black' })
   .hover({ color: 'red' })
   .media('(max-width: 700px)', { color: 'blue' })
   .media(2, '(max-width: 600px)', { color: 'purple' })
-  .media(2, '(max-width: 600px)', { color: [1, 'orange'] });
+  .media(2, '(max-width: 600px)', { color: style.weight('orange', 1) });
 
-const equalWeight = style({ backgroundColor: [1, 'black'] })
-  .media(2, '(max-width: 600px)', { backgroundColor: [1, 'purple'] })
-  .hover({ backgroundColor: [1, 'red'] });
+const equalWeight = style({ backgroundColor: style.weight('black', 1) })
+  .media(2, '(max-width: 600px)', { backgroundColor: style.weight('purple', 1) })
+  .hover({ backgroundColor: style.weight('red', 1) });
 `,
     '/tmp/compiler-expanded-layer-priority.ts',
   );

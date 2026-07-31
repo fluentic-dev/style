@@ -168,35 +168,35 @@ function createAtRuleFn<Data extends BuilderData>(
     debug?: DebugData,
   ];
 
-  type PriorityParams = [priority: number, ...Params];
+  type WeightParams = [weight: number, ...Params];
   type SelfParams = [style: AtRuleStyleData, debug?: DebugData];
-  type PrioritySelfParams = [priority: number, ...SelfParams];
+  type WeightSelfParams = [weight: number, ...SelfParams];
 
   return function(
     this: Data,
-    ...params: Params | PriorityParams | SelfParams | PrioritySelfParams
+    ...params: Params | WeightParams | SelfParams | WeightSelfParams
   ) {
     let arg: Params[0];
     let style: Params[1];
     let debug: Params[2];
-    let priority: number | null = null;
+    let weight: number | null = null;
 
     if (hasArg) {
       if (isMedia && typeof params[0] === 'number') {
-        priority = (params as PriorityParams)[0];
-        arg = (params as PriorityParams)[1];
-        style = (params as PriorityParams)[2];
-        debug = (params as PriorityParams)[3];
+        weight = (params as WeightParams)[0];
+        arg = (params as WeightParams)[1];
+        style = (params as WeightParams)[2];
+        debug = (params as WeightParams)[3];
       } else {
         arg = (params as Params)[0];
         style = (params as Params)[1];
         debug = (params as Params)[2];
       }
     } else if (isMedia && typeof params[0] === 'number') {
-      priority = (params as PrioritySelfParams)[0];
+      weight = (params as WeightSelfParams)[0];
       arg = fnSelector.selector;
-      style = (params as PrioritySelfParams)[1];
-      debug = (params as PrioritySelfParams)[2];
+      style = (params as WeightSelfParams)[1];
+      debug = (params as WeightSelfParams)[2];
     } else {
       arg = fnSelector.selector;
       style = (params as SelfParams)[0];
@@ -230,7 +230,7 @@ function createAtRuleFn<Data extends BuilderData>(
           isStyleData(item) ? item : transformStyle(item as StyleObject, transform),
           debug ?? null,
           null,
-          [priority !== null ? [selector, priority] : selector],
+          [weight !== null ? [selector, weight] : selector],
         );
       }
     }
@@ -425,35 +425,35 @@ function createScopeAtRuleFn(
     debug?: DebugData,
   ];
 
-  type PriorityParams = [priority: number, ...Params];
+  type WeightParams = [weight: number, ...Params];
   type SelfParams = [data: ScopeItems, debug?: DebugData];
-  type PrioritySelfParams = [priority: number, ...SelfParams];
+  type WeightSelfParams = [weight: number, ...SelfParams];
 
   return function(
     this: ScopeData,
-    ...params: Params | PriorityParams | SelfParams | PrioritySelfParams
+    ...params: Params | WeightParams | SelfParams | WeightSelfParams
   ) {
     let arg: Params[0];
     let data: Params[1];
     let debug: Params[2];
-    let priority: number | null = null;
+    let weight: number | null = null;
 
     if (hasArg) {
       if (isMedia && typeof params[0] === 'number') {
-        priority = (params as PriorityParams)[0];
-        arg = (params as PriorityParams)[1];
-        data = (params as PriorityParams)[2];
-        debug = (params as PriorityParams)[3];
+        weight = (params as WeightParams)[0];
+        arg = (params as WeightParams)[1];
+        data = (params as WeightParams)[2];
+        debug = (params as WeightParams)[3];
       } else {
         arg = (params as Params)[0];
         data = (params as Params)[1];
         debug = (params as Params)[2];
       }
     } else if (isMedia && typeof params[0] === 'number') {
-      priority = (params as PrioritySelfParams)[0];
+      weight = (params as WeightSelfParams)[0];
       arg = fnSelector.selector;
-      data = (params as PrioritySelfParams)[1];
-      debug = (params as PrioritySelfParams)[2];
+      data = (params as WeightSelfParams)[1];
+      debug = (params as WeightSelfParams)[2];
     } else {
       arg = fnSelector.selector;
       data = (params as SelfParams)[0];
@@ -483,7 +483,7 @@ function createScopeAtRuleFn(
         data,
         debug ?? null,
         null,
-        priority !== null ? [selector, priority] : selector,
+        weight !== null ? [selector, weight] : selector,
         cloneScope,
       );
     }

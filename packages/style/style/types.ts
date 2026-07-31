@@ -1,6 +1,8 @@
 import type { CSSProperties } from '../atomic/utils/types';
+import type { StyleImportantValue } from './important';
 import type { StyleTokenData } from './token';
 import type { AtRuleRef } from './valueRef';
+import type { StyleWeightValue } from './weight';
 
 export type { CSSProperties };
 
@@ -10,10 +12,10 @@ type StyleTokenize<T> = Exclude<
   StyleTokenData<undefined>
 >;
 
-type Value<T> = T | StyleValueTuple<Exclude<T, null | undefined>>;
-type PlainValue<T> = T | StyleValueTuple<Exclude<T, null | undefined>>;
-
-export type StyleValueTuple<T = unknown> = [priority: number, value: T];
+type Important<T> = StyleImportantValue<Exclude<T, null | undefined>>;
+type Weight<T> = StyleWeightValue<Exclude<T, null | undefined>>;
+type Value<T> = T | Weight<T> | Important<T>;
+type PlainValue<T> = T | Weight<T> | Important<T>;
 
 export type StyleValue<T> = Value<T | StyleTokenize<T> | AtRuleRef>;
 

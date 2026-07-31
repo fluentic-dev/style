@@ -629,13 +629,13 @@ export const theme = style.scope([
   notIncludes(result.code, `linkedColors('brand | mint', {`);
 });
 
-test('dev debug transform treats static style.value values as static', () => {
+test('dev debug transform treats static style weight values as static', () => {
   const result = injectStyleDebugData(
     `
 import { style } from '@fluentic/style';
 
 const styles = {
-  card: style({ padding: style.value(18, 2) }),
+  card: style({ padding: style.weight(18, 2) }),
 };
 `,
     '/src/page.tsx',
@@ -1360,6 +1360,41 @@ test('createSheet supports ampersand-only selector anchors', () => {
 
   includes(css, `:where(.${colorClassName}){color: red}`);
   includes(css, `:where(.${backgroundClassName}){background-color: blue}`);
+});
+
+test('style important values emit important declarations for styles, sheets, and class names', () => {
+  const direct = style({
+    color: style.important('red'),
+    marginTop: style.important(8),
+    padding: style.weight(style.important(12), 2),
+  });
+
+  const directCss = getSheetRules(direct).map((rule) => rule.css).join('\n');
+
+  includes(directCss, 'color: red !important');
+  includes(directCss, 'margin-top: 8px !important');
+  includes(directCss, 'padding: 12px !important');
+
+  const sheet = createSheet([
+    style.selector('.third-party-control', {
+      borderColor: style.important('red'),
+    }),
+  ]);
+  const sheetCss = getSheetRules(sheet).map((rule) => rule.css).join('\n');
+
+  includes(sheetCss, ' .third-party-control{border-color: red !important}');
+
+  const { className: cx } = createClassNameFn({
+    selectors: {},
+    transform: classNameTransform({
+      transform(className: string) {
+        return className === 'font-bold' ? { fontWeight: 700 } : {};
+      },
+    }),
+  });
+  const classNameCss = getSheetRules(cx(cx.important('font-bold'))).map((rule) => rule.css).join('\n');
+
+  includes(classNameCss, 'font-weight: 700 !important');
 });
 
 test('createSheet accepts local token overrides and combineStyle can override them', () => {

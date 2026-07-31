@@ -29,11 +29,11 @@ type ClassNameAtRuleNoArgFn<ClassName extends string, Self> = {
 };
 
 type ClassNameMediaFn<ClassName extends string, Self, Arg> = ClassNameAtRuleFn<ClassName, Self, Arg> & {
-  (priority: number, selector: Arg, ...items: ClassNameItems<ClassName>): Self;
+  (weight: number, selector: Arg, ...items: ClassNameItems<ClassName>): Self;
 };
 
 type ClassNameMediaNoArgFn<ClassName extends string, Self> = ClassNameAtRuleNoArgFn<ClassName, Self> & {
-  (priority: number, ...items: ClassNameItems<ClassName>): Self;
+  (weight: number, ...items: ClassNameItems<ClassName>): Self;
 };
 
 type ClassNameAtRuleArgFn<ClassName extends string, Self, Arg extends string> = ClassNameAtRuleFn<ClassName, Self, Arg>;

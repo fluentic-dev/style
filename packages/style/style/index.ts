@@ -1,4 +1,5 @@
 export * from './classname';
+export * from './important';
 export * from './keyframes';
 export * from './style';
 export * from './theme';
@@ -8,3 +9,4 @@ export * from './transform';
 export * from './types';
 export * from './value';
 export * from './valueRef';
+export * from './weight';

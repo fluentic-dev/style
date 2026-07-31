@@ -19,6 +19,7 @@ import { CSS_CONFIG } from '../../../config/config/css';
 import { CSS_EXTRA_CONFIG } from '../../../config/config/css_extra';
 import type { NamedAtRuleFormat, TokenNameFormat } from '../../../config/types';
 import { createNamedToken, createNamedTokens } from '../../../dialect';
+import { importantValue } from '../../../style/important';
 import { transformKeyframes } from '../../../style/keyframes';
 import type { StyleFnMeta } from '../../../style/style';
 import {
@@ -34,6 +35,7 @@ import {
 import type { StyleTransform } from '../../../style/transform';
 import { exposeStyle } from '../../../style/utils';
 import { type AtRuleRef, createAtRuleRef } from '../../../style/valueRef';
+import { weightValue } from '../../../style/weight';
 import { hashString } from '../../../utils/hash';
 import type { StableId } from '../../../utils/id';
 import type { CompilerRuntimeMode } from '../../compiler';
@@ -57,10 +59,11 @@ import {
   FN_EXPOSE_STYLE,
   FN_FONT_SRC,
   FN_GET_EXTRACTED_STYLE_ITEMS,
+  FN_STYLE_IMPORTANT,
   FN_STYLE_KEYFRAMES,
   FN_STYLE_PLAIN,
   FN_STYLE_RAW,
-  FN_STYLE_VALUE,
+  FN_STYLE_WEIGHT,
   IMPORT_EXTRACT,
   IMPORT_PATHS,
   STYLE_UTILS_IMPORT_PATH,
@@ -755,7 +758,7 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
     node.callee.type === 'MemberExpression' &&
     !node.callee.computed &&
     node.callee.property.type === 'Identifier' &&
-    node.callee.property.name === FN_STYLE_VALUE &&
+    node.callee.property.name === FN_STYLE_WEIGHT &&
     node.callee.object.type === 'Identifier' &&
     scope.styleNames?.has(node.callee.object.name)
   ) {
@@ -766,10 +769,24 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
     if (!weight.ok) return weight;
 
     if (typeof weight.value !== 'number') {
-      return evalFail('style.value weight must be a number');
+      return evalFail(`${node.callee.property.name} weight must be a number`);
     }
 
-    return evalOk([weight.value, value.value]);
+    return evalOk(weightValue(value.value, weight.value));
+  }
+
+  if (
+    node.callee.type === 'MemberExpression' &&
+    !node.callee.computed &&
+    node.callee.property.type === 'Identifier' &&
+    node.callee.property.name === FN_STYLE_IMPORTANT &&
+    node.callee.object.type === 'Identifier' &&
+    scope.styleNames?.has(node.callee.object.name)
+  ) {
+    const value = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+    if (!value.ok) return value;
+
+    return evalOk(importantValue(value.value));
   }
 
   if (

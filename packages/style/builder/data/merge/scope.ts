@@ -7,7 +7,7 @@ import { BUILDER_SLOT_ID, BUILDER_STATE, BUILDER_TYPE_SCOPE, BUILDER_TYPE_SLOT_O
 import type { BuilderCallsite, ScopeData, SlotOverrideData } from '../data';
 import { type DebugData, type DebugLoc, getDebugFieldCallsite, TRACE_STYLE, TRACE_VALUE } from '../debug';
 import { isScopeData, isSlotOverrideData } from '../is';
-import type { ItemSelector, ItemValue, RuntimeScopeItem, RuntimeSlotOverrideItem, StateItem } from '../state';
+import type { ItemSelector, RuntimeScopeItem, RuntimeSlotOverrideItem, StateItem } from '../state';
 import { cloneData, logInvalidData } from './utils';
 
 export type ScopeItem =
@@ -42,8 +42,9 @@ export function mergeScopeData(
   let source: ScopeItem;
   let item: StateItem;
   let lookupIndex: number;
-  let priority: number | null;
-  let value: ItemValue;
+  let weight: number | null;
+  let important: boolean;
+  let value: string;
   let atRule: ItemSelector[] | null;
   let dedupe: string;
   let className: string;
@@ -93,16 +94,13 @@ export function mergeScopeData(
           scopeItem.callsite;
 
         value = scopeItem.value;
-        priority = null;
-
-        if (Array.isArray(value)) {
-          priority = value[1];
-          value = value[0];
-        }
+        weight = scopeItem.weight;
+        important = scopeItem.important;
 
         dedupe = getClassNameDedupe(
           scopeItem.property,
-          priority,
+          weight,
+          important,
           scopeItem.selector,
           scopeItem.parentSelector,
           scopeItem.atRule,
@@ -110,7 +108,8 @@ export function mergeScopeData(
 
         className = getAtomicClassName(
           scopeItem.property,
-          priority,
+          weight,
+          important,
           value,
           scopeItem.selector,
           scopeItem.parentSelector,
@@ -172,6 +171,8 @@ export function mergeScopeData(
         dedupe: '',
         className: '',
         property: overrideItem.property,
+        weight: overrideItem.weight,
+        important: overrideItem.important,
         value: overrideItem.value,
         transformClassName: overrideItem.transformClassName,
         token: overrideItem.token,
@@ -184,16 +185,13 @@ export function mergeScopeData(
       };
 
       value = scopeItem.value;
-      priority = null;
-
-      if (Array.isArray(value)) {
-        priority = value[1];
-        value = value[0];
-      }
+      weight = scopeItem.weight;
+      important = scopeItem.important;
 
       dedupe = getClassNameDedupe(
         scopeItem.property,
-        priority,
+        weight,
+        important,
         scopeItem.selector,
         parentSelector,
         scopeItem.atRule,
@@ -201,7 +199,8 @@ export function mergeScopeData(
 
       className = getAtomicClassName(
         scopeItem.property,
-        priority,
+        weight,
+        important,
         value,
         scopeItem.selector,
         parentSelector,

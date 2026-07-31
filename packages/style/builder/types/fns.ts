@@ -31,11 +31,11 @@ type StyleAtRuleNoArgFn<Style, Self> = {
 };
 
 type StyleMediaFn<Style, Self, Arg> = StyleAtRuleFn<Style, Self, Arg> & {
-  (priority: number, selector: Arg, style: AtRuleStyleData<Style>): Self;
+  (weight: number, selector: Arg, style: AtRuleStyleData<Style>): Self;
 };
 
 type StyleMediaNoArgFn<Style, Self> = StyleAtRuleNoArgFn<Style, Self> & {
-  (priority: number, style: AtRuleStyleData<Style>): Self;
+  (weight: number, style: AtRuleStyleData<Style>): Self;
 };
 
 type StyleAtRuleArgFn<Style, Self, Arg extends string> = StyleAtRuleFn<Style, Self, Arg>;
@@ -113,11 +113,11 @@ type ScopeAtRuleNoArgFn<Style, Result> = {
 };
 
 type ScopeMediaFn<Style, Result, Arg> = ScopeAtRuleFn<Style, Result, Arg> & {
-  (priority: number, selector: Arg, styles: Style): Result;
+  (weight: number, selector: Arg, styles: Style): Result;
 };
 
 type ScopeMediaNoArgFn<Style, Result> = ScopeAtRuleNoArgFn<Style, Result> & {
-  (priority: number, styles: Style): Result;
+  (weight: number, styles: Style): Result;
 };
 
 type ScopeAtRuleArgFn<Style, Result, Arg extends string> = ScopeAtRuleFn<Style, Result, Arg>;

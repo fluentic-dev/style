@@ -90,6 +90,8 @@ export type RuntimeItemData = {
   dedupe: string;
   className: string;
   property: string;
+  weight: number | null;
+  important: boolean;
   value: ItemValue;
   transformClassName?: string | null;
   variable?: ExtractedItemValue;
@@ -131,9 +133,9 @@ export type RuntimeItem =
   | RuntimeSlotOverrideItem
   | RuntimeScopeItem;
 
-export type ItemSelector = string | [selector: string, priority: number];
+export type ItemSelector = string | [selector: string, weight: number];
 
-export type ItemValue = string | [value: string, priority: number];
+export type ItemValue = string;
 
 export type StateItem = ExtractedItem | RuntimeItem | StyleTokenOverride;
 

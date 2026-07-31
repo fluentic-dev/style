@@ -31,7 +31,8 @@ export const FN_STYLE = 'style';
 
 export const FN_STYLE_SLOT = 'slot';
 export const FN_STYLE_SCOPE = 'scope';
-export const FN_STYLE_VALUE = 'value';
+export const FN_STYLE_WEIGHT = 'weight';
+export const FN_STYLE_IMPORTANT = 'important';
 export const FN_STYLE_RAW = 'raw';
 export const FN_STYLE_PLAIN = 'plain';
 export const FN_STYLE_KEYFRAMES = 'keyframes';

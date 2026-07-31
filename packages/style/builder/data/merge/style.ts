@@ -5,10 +5,12 @@ import { shouldAppendCssPx } from '../../../atomic/value';
 import { CSS_CONFIG } from '../../../config/config/css';
 import { DEBUG_CONFIG } from '../../../config/config/debug';
 import { DEV_CONFIG } from '../../../config/config/dev';
+import { isStyleImportantValue } from '../../../style/important';
 import { isStyleTokenData, isStyleTokenOverrideData, type StyleTokenData } from '../../../style/token';
 import { isClassNameValue } from '../../../style/transform';
-import type { StyleObject, StyleValueTuple } from '../../../style/types';
+import type { StyleObject } from '../../../style/types';
 import { type AtRuleRef, isAtRuleRef } from '../../../style/valueRef';
+import { isStyleWeightValue } from '../../../style/weight';
 import {
   BUILDER_SLOT_ID,
   BUILDER_STATE,
@@ -30,7 +32,7 @@ import {
   TRACE_VALUE,
 } from '../debug';
 import { isSlotData, isSlotOverrideData, isStyleData } from '../is';
-import type { BuilderType, ItemSelector, ItemValue, RuntimeItem, RuntimeItemData, StateItem } from '../state';
+import type { BuilderType, ItemSelector, RuntimeItem, RuntimeItemData, StateItem } from '../state';
 import { cloneData, logInvalidData } from './utils';
 
 export type CreateData<Data extends BuilderData> = (
@@ -66,8 +68,9 @@ export function mergeBuilderData<Data extends BuilderData>(
   let itemData: RuntimeItemData;
 
   let valueRaw: unknown;
-  let value: ItemValue;
-  let priority: number | null;
+  let value: string;
+  let weight: number | null;
+  let important: boolean;
   let itemCallsite: BuilderCallsite | null;
   let className: string;
   let dedupe: string;
@@ -126,12 +129,7 @@ export function mergeBuilderData<Data extends BuilderData>(
   } else {
     for (const property in style) {
       valueRaw = style[property as keyof typeof style];
-      priority = null;
-
-      if (Array.isArray(valueRaw) && valueRaw.length === 2 && typeof valueRaw[0] === 'number') {
-        priority = (valueRaw as StyleValueTuple)[0];
-        valueRaw = (valueRaw as StyleValueTuple)[1];
-      }
+      [valueRaw, weight, important] = unwrapAuthoredStyleValue(valueRaw);
 
       transformClassName = null;
       if (isClassNameValue(valueRaw)) {
@@ -151,7 +149,6 @@ export function mergeBuilderData<Data extends BuilderData>(
         ? getTokenVar(token, CSS_CONFIG.tokenNameFormat ?? null)
         : String(valueRaw ?? '');
 
-      value = priority !== null ? [value, priority] : value;
       itemCallsite = getDebugFieldCallsite(debug, property) ?? callsite;
 
       itemData = {
@@ -161,6 +158,8 @@ export function mergeBuilderData<Data extends BuilderData>(
         dedupe: '',
         className: '',
         property,
+        weight,
+        important,
         value,
         transformClassName,
         variable: ref
@@ -217,16 +216,13 @@ export function mergeBuilderData<Data extends BuilderData>(
 
     const runtimeItem = item as RuntimeItem;
     value = runtimeItem.value;
-    priority = null;
-
-    if (Array.isArray(value)) {
-      priority = value[1];
-      value = value[0];
-    }
+    weight = runtimeItem.weight;
+    important = runtimeItem.important;
 
     dedupe = getClassNameDedupe(
       runtimeItem.property,
-      priority,
+      weight,
+      important,
       runtimeItem.selector,
       null,
       runtimeItem.atRule,
@@ -234,7 +230,8 @@ export function mergeBuilderData<Data extends BuilderData>(
 
     className = getAtomicClassName(
       runtimeItem.property,
-      priority,
+      weight,
+      important,
       value,
       runtimeItem.selector,
       null,
@@ -261,6 +258,29 @@ export function mergeBuilderData<Data extends BuilderData>(
   }
 
   return data;
+}
+
+function unwrapAuthoredStyleValue(value: unknown): [value: unknown, weight: number | null, important: boolean] {
+  let weight: number | null = null;
+  let important = false;
+
+  while (true) {
+    if (isStyleImportantValue(value)) {
+      important = true;
+      value = value.value;
+      continue;
+    }
+
+    if (isStyleWeightValue(value)) {
+      weight = value.weight;
+      value = value.value;
+      continue;
+    }
+
+    break;
+  }
+
+  return [value, weight, important];
 }
 
 function combineSelectors(
