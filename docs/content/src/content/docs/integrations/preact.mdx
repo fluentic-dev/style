@@ -1,0 +1,98 @@
+---
+title: Preact
+description: Configure Fluentic Style with Preact and Vite.
+---
+
+Use the Preact integration when you want Fluentic's `css` prop in a client-side
+Preact app. This path uses the same style data model as React and Solid, but the
+compiler lowers `css` into Preact's normal `class` and `style` props.
+
+Install the package:
+
+<Tabs items={['pnpm', 'npm', 'Yarn', 'Bun']}>
+  <Tab>
+
+```sh
+pnpm add @fluentic/style preact
+pnpm add -D @preact/preset-vite vite
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+npm install @fluentic/style preact
+npm install -D @preact/preset-vite vite
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+yarn add @fluentic/style preact
+yarn add -D @preact/preset-vite vite
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+bun add @fluentic/style preact
+bun add -d @preact/preset-vite vite
+```
+
+  </Tab>
+</Tabs>
+
+Add the Fluentic Vite plugin before the Preact plugin and enable the Preact
+css-prop preset:
+
+```ts title="vite.config.ts"
+import { CssPropPresets, plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+import preact from '@preact/preset-vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: [
+    stylePlugin({
+      cssProp: CssPropPresets.Preact,
+    }),
+    preact(),
+  ],
+});
+```
+
+Configure TypeScript for Preact's automatic JSX runtime:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact"
+  }
+}
+```
+
+Then write normal Fluentic styles:
+
+```tsx title="src/App.tsx"
+import { style } from '@fluentic/style';
+
+const card = style({
+  padding: 16,
+  borderRadius: 8,
+  backgroundColor: '#fff',
+}).hover({
+  boxShadow: '0 12px 30px rgb(15 23 42 / 0.16)',
+});
+
+export function App() {
+  return <section css={card}>Styled by Fluentic.</section>;
+}
+```
+
+The adapter is compiler plumbing. Application code should use `style(...)` and
+`css={...}`; it should not call low-level class-name helpers for normal Preact
+elements.
+
+See `examples/preact-basic` for a minimal Vite app.
