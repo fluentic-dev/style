@@ -11,13 +11,14 @@ export function buildAtomicRule(
   className: string,
   property: string,
   value: string,
+  important: boolean,
   selector: ItemSelector | null,
   parentSelector: ItemSelector | null,
   atRules: ItemSelector[] | null,
   scopeClassNameFormat: ScopeClassNameFormat | null,
 ): string {
   const cssProp = getCssPropertyName(property);
-  const cssValue = getCssPropertyValue(property, value);
+  const cssValue = getCssPropertyValue(property, value) + (important ? ' !important' : '');
   const escapedClass = escapeCssIdent(className);
 
   const classSelector = hasSheetSelectorAnchor(selector)

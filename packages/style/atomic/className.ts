@@ -13,6 +13,7 @@ import { getSelectorHash, getSelectorText, hasSheetSelectorAnchor } from './util
 export function getAtomicClassName(
   property: string,
   priority: number | null,
+  important: boolean,
   value: string,
   selector: ItemSelector | null,
   parentSelector: ItemSelector | null,
@@ -29,6 +30,7 @@ export function getAtomicClassName(
   let hash = property;
 
   hash += '\n' + (priority || '');
+  if (important) hash += '\nimportant';
   hash += '\n' + value;
   hash += '\n' + (selector ? getSelectorHash(selector) : '');
   hash += '\n' + (parentSelector ? getSelectorHash(parentSelector) : '');
@@ -86,6 +88,7 @@ function getRuntimeClassNameHashLength(debugClassName: boolean) {
 export function getClassNameDedupe(
   property: string,
   priority: number | null,
+  important: boolean,
   selector: ItemSelector | null,
   parentSelector: ItemSelector | null,
   atRule: ItemSelector[] | null,
@@ -93,6 +96,7 @@ export function getClassNameDedupe(
   let hash = property;
 
   hash += '\n' + (priority || '');
+  if (important) hash += '\nimportant';
   hash += '\n' + (selector ? getSelectorHash(selector) : '');
   hash += '\n' + (parentSelector ? getSelectorHash(parentSelector) : '');
   hash += '\n' + (atRule ? atRule.map(getSelectorHash).join('\n') : '');

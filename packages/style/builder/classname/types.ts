@@ -6,12 +6,18 @@ export type WeightedClassName<ClassName extends string = string> = {
   readonly weight: number;
 };
 
+export type ImportantClassName<ClassName extends string = string> = {
+  readonly className: ClassName;
+  readonly important: true;
+};
+
 export type ClassNameItem<ClassName extends string = string> =
   | ClassName
   | false
   | null
   | undefined
   | WeightedClassName<ClassName>
+  | ImportantClassName<ClassName>
   | readonly ClassNameItem<ClassName>[];
 
 export type ClassNameMergeData<ClassName extends string = string> =
@@ -31,4 +37,5 @@ export type ClassNameFn<ClassName extends string, Selectors> =
   & ClassNameSelfFn<ClassName, Selectors>
   & {
     weight(className: ClassName, weight: number): WeightedClassName<ClassName>;
+    important(className: ClassName): ImportantClassName<ClassName>;
   };

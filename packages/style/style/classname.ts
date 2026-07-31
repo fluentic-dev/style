@@ -1,4 +1,9 @@
-import { type ClassNameFn, createClassNameBuilder, type WeightedClassName } from '../builder/classname';
+import {
+  type ClassNameFn,
+  createClassNameBuilder,
+  type ImportantClassName,
+  type WeightedClassName,
+} from '../builder/classname';
 import type { SelectorsRecord } from '../builder/types';
 import { PrioritySelectors } from '../selector/presets';
 import type { Type } from '../utils/type';
@@ -24,11 +29,12 @@ export function createClassNameFn<
   const fnClassName = createClassNameBuilder<ClassName, Selectors>(selectors, transform);
   const className = fnClassName as ClassNameFn<ClassName, Selectors>;
 
-  className.weight = (classNameValue, weight): WeightedClassName<ClassName> => {
-    return {
-      className: classNameValue,
-      weight,
-    };
+  className.weight = (className, weight): WeightedClassName<ClassName> => {
+    return { className, weight };
+  };
+
+  className.important = (className): ImportantClassName<ClassName> => {
+    return { className, important: true };
   };
 
   assignStyleFnMeta(className, {
