@@ -30,8 +30,8 @@ const containerHover = style.raw({
 const styles = {
   container: style.slot({
     fontFamily: Fonts.Default,
-    width: [1, ContainerWidth.Base],
-    display: style.value('flex', 1),
+    width: style.weight(ContainerWidth.Base, 1),
+    display: style.weight('flex', 1),
     ...containerBase,
   }).hover({
     width: ContainerWidth.Hover,

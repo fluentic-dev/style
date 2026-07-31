@@ -357,7 +357,7 @@ export const pageStyles = {
 
 export const cardStyles = {
   card: style.slot({
-    padding: style.value(18, 2),
+    padding: style.weight(18, 2),
     borderRadius: 18,
     background: themeTokens.color.surface,
     border: '1px solid',

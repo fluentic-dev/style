@@ -3,7 +3,7 @@ import type { StyleTheme } from '@fluentic/style';
 
 const cardStyles = {
   card: style.slot({
-    padding: style.value(18, 2),
+    padding: style.weight(18, 2),
     borderRadius: 18,
     background: '#ffffff',
     border: '1px solid #dbeafe',

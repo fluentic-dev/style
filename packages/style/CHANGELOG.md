@@ -25,9 +25,9 @@
   - Support selector sheet extraction, local token overrides, debug class
     names, source tracing, and sourcemap data across runtime and extracted
     builds.
-  - Add Preact css prop support with a `CssPropPresets.Preact` compiler
+  - Add Preact css-prop support with a `CssPropPresets.Preact` compiler
     preset, runtime adapters, JSX types, and a Vite example.
-  - Keep plugin css prop configuration focused on `CssPropPresets` instead of
+  - Keep plugin css-prop configuration focused on `CssPropPresets` instead of
     exporting each framework preset as a separate top-level plugin API.
   - Add `style.important(...)` and `className.important(...)` for interop cases
     that need emitted `!important` declarations, especially selector sheets
@@ -68,7 +68,7 @@ for transform-driven styling.
 ### Highlights
 
 - Add `createClassNameFn` for class-name-driven style builders.
-- Support nested class-name values, conditional falsey entries, weighted
+- Support nested class-name values, conditional falsy entries, weighted
   class-name tokens, selector chaining, at-rules, and merges.
 - Add compiler extraction for class-name style chains.
 - Add Tailwind presets for both style-object and class-name authoring.

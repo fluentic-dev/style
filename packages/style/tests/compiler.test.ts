@@ -5,6 +5,7 @@ import { formatClassName } from '../atomic/debug/className';
 import { compareLayerPriority, type LayerPriority } from '../atomic/layer';
 import { escapeCssIdent } from '../atomic/utils/cssIdent';
 import { normalizeDebugKeywordValue, normalizePropertyName, sanitizeDebugPropertyName } from '../atomic/utils/debug';
+import { BUILDER_TYPE_STYLE } from '../builder/data/const';
 import { CompilerRuntimeMode, CssPropPresets } from '../compiler';
 import webpackLoader from '../plugin/bundler/webpack/loader';
 import { webpackRegistry } from '../plugin/bundler/webpack/utils';
@@ -1717,7 +1718,9 @@ test('runtime builder preserves explicit zero value weight', () => {
   });
 
   const item = prioritized[BUILDER_STATE].items[0];
-  if (Array.isArray(item)) throw new Error('expected runtime style item');
+  if (Array.isArray(item) || !('type' in item) || item.type !== BUILDER_TYPE_STYLE) {
+    throw new Error('expected runtime style item');
+  }
 
   equal(item.value, 'flex');
   equal(item.weight, 0);

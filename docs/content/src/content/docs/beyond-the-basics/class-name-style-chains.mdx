@@ -167,7 +167,7 @@ defined by your app, preset, or design system.
 The important part is that your class-name transform is a normal TypeScript
 function. The class-name type you give to `classNameTransform<T>(...)` becomes
 the type accepted by the generated `cx(...)` function, including nested arrays,
-conditional falsey values, selector methods, and `cx.weight(...)`.
+conditional falsy values, selector methods, and `cx.weight(...)`.
 
 For a small project dialect, that can be a plain string union:
 
@@ -249,7 +249,7 @@ values.
 
 ## What The Builder Accepts
 
-Class-name style chains accept nested arrays and falsey conditional values, so
+Class-name style chains accept nested arrays and falsy conditional values, so
 you can compose class names with the same conditional patterns you already use
 in JSX:
 

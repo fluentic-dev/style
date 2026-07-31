@@ -1016,7 +1016,7 @@ function decorateClassNameStyle(
 function decorateClassNameValue(
   value: unknown,
   className: string,
-) {
+): unknown {
   if (isClassNameValue(value)) return value;
 
   if (isStyleImportantValue(value)) {

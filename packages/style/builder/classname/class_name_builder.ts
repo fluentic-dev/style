@@ -378,7 +378,7 @@ function decorateClassNameStyle<ClassName extends string>(
 function decorateClassNameValue<ClassName extends string>(
   value: unknown,
   className: ClassName,
-) {
+): unknown {
   if (isClassNameValue(value)) return value;
 
   if (isStyleImportantValue(value)) {

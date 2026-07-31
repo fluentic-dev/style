@@ -41,8 +41,8 @@ const card = style({
 | `createProperty()` | `@property` | custom property name, `transitionProperty` |
 | `createPositionTry()` | `@position-try` | `positionTryFallbacks` |
 
-Each create helper returns an at-rule value reference. Use the reference directly
-where CSS expects the generated name.
+Each create helper returns the generated name for that CSS feature. Use the
+returned value directly where CSS expects the name.
 
 Each helper also has its own reference page:
 
@@ -77,7 +77,7 @@ export const statusDot = style({
 });
 ```
 
-The generated keyframes are emitted when the value reference is used.
+The generated keyframes are emitted when the returned value is used.
 
 ## createFontFace
 
