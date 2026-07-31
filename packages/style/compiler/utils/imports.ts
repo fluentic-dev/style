@@ -1,5 +1,6 @@
 import type { CompilerRuntimeMode } from '../compiler/constants';
 import {
+  STYLE_ADAPTER_PREACT_IMPORT_PATH,
   STYLE_ADAPTER_REACT_IMPORT_PATH,
   STYLE_ADAPTER_SOLID_IMPORT_PATH,
   STYLE_EXTRACT_RUNTIME_IMPORT_PATH,
@@ -13,6 +14,7 @@ export function getStyleRuntimeImportPath(mode: CompilerRuntimeMode) {
 
 export function getStyleRuntimeAdapterImportPath(source: string, mode: CompilerRuntimeMode) {
   if (source === STYLE_ADAPTER_SOLID_IMPORT_PATH) return `${getStyleRuntimeImportPath(mode)}/adapter/solid`;
+  if (source === STYLE_ADAPTER_PREACT_IMPORT_PATH) return `${getStyleRuntimeImportPath(mode)}/adapter/preact`;
   if (source === STYLE_ADAPTER_REACT_IMPORT_PATH) return `${getStyleRuntimeImportPath(mode)}/adapter/react`;
   return null;
 }

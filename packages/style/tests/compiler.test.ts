@@ -3138,6 +3138,62 @@ export const value = <div css={styles.root} />;
   notIncludes(result.code, '@fluentic/style/adapter/solid');
 });
 
+test('compiler lowers intrinsic jsx css prop through preact adapter preset', () => {
+  const compiler = createCompiler({
+    cssProp: CssPropPresets.Preact,
+    layer: false,
+  });
+
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const styles = { root: style({ color: 'red' }) };
+const view = <div {...props} class="base" style={styleObj} css={styles.root} data-id="x" />;
+const component = <Button css={styles.root} />;
+`,
+    '/tmp/compiler-jsx-css-prop-preact.tsx',
+  );
+
+  if (!result) throw new Error('expected transform result');
+
+  includes(result.code, 'mergeJsxProps');
+  includes(result.code, '@fluentic/style/adapter/preact');
+  includes(result.code, '_fluenticMergeJsxProps([props,');
+  includes(result.code, 'class: "base"');
+  includes(result.code, 'style: styleObj');
+  includes(result.code, 'css: styles.root');
+  includes(result.code, '<Button css={styles.root} />');
+  includes(result.css.join('\n'), 'color: red');
+});
+
+test('plugin compiler rewrites preact jsx css prop adapter imports through runtime mode', () => {
+  const compiler = createPluginCompiler({
+    dev: true,
+    projectDir: testDir,
+    cacheDir: testDir + '.test-cache',
+    options: {
+      cssProp: CssPropPresets.Preact,
+    },
+    runtimeMode: CompilerRuntimeMode.Dev,
+  });
+
+  const result = compiler.transform(
+    `
+import { style } from "@fluentic/style";
+
+const styles = { root: style({ color: "red" }) };
+export const value = <div css={styles.root} />;
+`,
+    '/project/src/App.tsx',
+  );
+
+  if (!result) throw new Error('expected transform result');
+
+  includes(result.code, '@fluentic/style/entry/dev/adapter/preact');
+  notIncludes(result.code, '@fluentic/style/adapter/preact');
+});
+
 test('compiler lowers intrinsic jsx css prop through react adapter preset', () => {
   const compiler = createCompiler({
     cssProp: CssPropPresets.React,

@@ -7,14 +7,21 @@ export type CompilerCssPropOptions = {
   adapter: string;
 };
 
-export const CssPropSolid: CompilerCssPropOptions = {
+const CssPropSolid: CompilerCssPropOptions = {
   classProp: 'class',
   styleProp: 'style',
   styleMode: 'solid',
   adapter: '@fluentic/style/adapter/solid',
 };
 
-export const CssPropReact: CompilerCssPropOptions = {
+const CssPropPreact: CompilerCssPropOptions = {
+  classProp: 'class',
+  styleProp: 'style',
+  styleMode: 'react',
+  adapter: '@fluentic/style/adapter/preact',
+};
+
+const CssPropReact: CompilerCssPropOptions = {
   classProp: 'className',
   styleProp: 'style',
   styleMode: 'react',
@@ -23,5 +30,6 @@ export const CssPropReact: CompilerCssPropOptions = {
 
 export const CssPropPresets = {
   Solid: CssPropSolid,
+  Preact: CssPropPreact,
   React: CssPropReact,
 };

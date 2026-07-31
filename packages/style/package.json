@@ -117,6 +117,10 @@
       "types": "./adapter/solid.ts",
       "import": "./dist/adapter/solid.js"
     },
+    "./adapter/preact": {
+      "types": "./adapter/preact.ts",
+      "import": "./dist/adapter/preact.js"
+    },
     "./adapter/react": {
       "types": "./adapter/react.ts",
       "import": "./dist/adapter/react.js"
@@ -215,6 +219,10 @@
       "types": "./entry/dev/adapter/solid.ts",
       "import": "./dist/entry/dev/adapter/solid.js"
     },
+    "./entry/dev/adapter/preact": {
+      "types": "./entry/dev/adapter/preact.ts",
+      "import": "./dist/entry/dev/adapter/preact.js"
+    },
     "./entry/dev/adapter/react": {
       "types": "./entry/dev/adapter/react.ts",
       "import": "./dist/entry/dev/adapter/react.js"
@@ -226,6 +234,10 @@
     "./entry/prod/adapter/solid": {
       "types": "./entry/prod/adapter/solid.ts",
       "import": "./dist/entry/prod/adapter/solid.js"
+    },
+    "./entry/prod/adapter/preact": {
+      "types": "./entry/prod/adapter/preact.ts",
+      "import": "./dist/entry/prod/adapter/preact.js"
     },
     "./entry/prod/adapter/react": {
       "types": "./entry/prod/adapter/react.ts",
@@ -239,6 +251,10 @@
       "types": "./entry/rsc_dev/adapter/solid.ts",
       "import": "./dist/entry/rsc-dev/adapter/solid.js"
     },
+    "./entry/rsc-dev/adapter/preact": {
+      "types": "./entry/rsc_dev/adapter/preact.ts",
+      "import": "./dist/entry/rsc-dev/adapter/preact.js"
+    },
     "./entry/rsc-dev/adapter/react": {
       "types": "./entry/rsc_dev/adapter/react.ts",
       "import": "./dist/entry/rsc-dev/adapter/react.js"
@@ -250,6 +266,10 @@
     "./entry/rsc-prod/adapter/solid": {
       "types": "./entry/rsc_prod/adapter/solid.ts",
       "import": "./dist/entry/rsc-prod/adapter/solid.js"
+    },
+    "./entry/rsc-prod/adapter/preact": {
+      "types": "./entry/rsc_prod/adapter/preact.ts",
+      "import": "./dist/entry/rsc-prod/adapter/preact.js"
     },
     "./entry/rsc-prod/adapter/react": {
       "types": "./entry/rsc_prod/adapter/react.ts",
@@ -310,6 +330,7 @@
     "@types/babel__core": "7.20.5",
     "@types/picomatch": "4.0.3",
     "@types/react": "19.2.14",
+    "preact": "10.29.7",
     "react": "19.2.0",
     "tsdown": "0.22.1",
     "tsx": "4.20.6",
@@ -323,6 +344,7 @@
     "@parcel/plugin": ">=2",
     "@rspack/core": ">=1",
     "next": ">=15",
+    "preact": ">=10",
     "react": ">=16.14",
     "vite": ">=5",
     "webpack": ">=5"
@@ -341,6 +363,9 @@
       "optional": true
     },
     "next": {
+      "optional": true
+    },
+    "preact": {
       "optional": true
     },
     "vite": {

@@ -8,6 +8,7 @@ export const STYLE_UTILS_IMPORT_PATH = pkg + '/utils';
 export const STYLE_DIALECT_IMPORT_PATH = pkg + '/dialect';
 export const STYLE_DEV_RSC_IMPORT_PATH = pkg + '/dev/rsc';
 export const STYLE_ADAPTER_SOLID_IMPORT_PATH = pkg + '/adapter/solid';
+export const STYLE_ADAPTER_PREACT_IMPORT_PATH = pkg + '/adapter/preact';
 export const STYLE_ADAPTER_REACT_IMPORT_PATH = pkg + '/adapter/react';
 export const STYLE_ENTRY_PROD_EXTRACT_IMPORT_PATH = pkg + '/entry/prod/extract';
 export const STYLE_EXTRACT_RUNTIME_IMPORT_PATH = pkg + '/entry/prod/runtime';

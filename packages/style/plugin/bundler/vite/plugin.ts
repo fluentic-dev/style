@@ -5,7 +5,7 @@ import { formatError } from '../../utils/misc';
 import { getVirtualModuleId, RESOLVED_RUNTIME_MODULE_ID } from '../../utils/virtual';
 import { createVitePluginState } from './state';
 
-export { CssPropPresets, CssPropReact, CssPropSolid } from '../../utils';
+export { CssPropPresets } from '../../utils';
 export type { CompilerCssPropOptions, PluginCssOptions, PluginOptions } from '../../utils';
 
 type CssAsset = {

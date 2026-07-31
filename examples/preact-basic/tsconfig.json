@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "lib": ["ES2020", "DOM"],
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}

@@ -7,7 +7,7 @@ import { createTransformFilter, normalizeModuleId, type TransformFilterOptions }
 import type { BundlerSourceMap } from './sourcemap';
 
 export type PluginCssOptions = CompilerCssOptions;
-export { CssPropPresets, CssPropReact, CssPropSolid } from '../../compiler';
+export { CssPropPresets } from '../../compiler';
 export type { CompilerCssPropOptions } from '../../compiler';
 
 export type PluginOptions = CompilerOptions & TransformFilterOptions & {

@@ -32,7 +32,7 @@ export type FarmPluginOptions = PluginOptions & {
   dev?: boolean;
 };
 
-export { CssPropPresets, CssPropReact, CssPropSolid } from '../../utils';
+export { CssPropPresets } from '../../utils';
 export type { CompilerCssPropOptions } from '../../utils';
 export type { FarmPluginOptions as PluginOptions };
 

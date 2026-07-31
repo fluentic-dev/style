@@ -53,7 +53,7 @@ import {
   resolveNextCompilerOptions,
 } from './utils';
 
-export { CssPropPresets, CssPropReact, CssPropSolid } from '../utils';
+export { CssPropPresets } from '../utils';
 export type { CompilerCssPropOptions } from '../utils';
 
 export default plugin;

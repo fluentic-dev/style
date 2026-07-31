@@ -1,7 +1,7 @@
 import { plugin as webpackPlugin } from '../webpack';
 import type { PluginOptions } from '../webpack';
 
-export { CssPropPresets, CssPropReact, CssPropSolid } from '../webpack';
+export { CssPropPresets } from '../webpack';
 export type { PluginOptions };
 
 export default plugin;
