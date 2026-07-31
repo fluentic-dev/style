@@ -139,7 +139,7 @@ overrides, not only in base styles.
 Custom style functions expose `raw(...)` and `plain(...)` for reusable fragments.
 
 Use `raw(...)` when the fragment should accept the full Fluentic style value
-model, including tokens, value references, and value weight tuples.
+model, including tokens, value references, and weighted values.
 
 ```ts
 import { createToken } from '@fluentic/style';
@@ -150,7 +150,7 @@ const reset = layout.raw({
   row: true,
   gapX: 4,
   backgroundColor: surface,
-  color: [1, 'CanvasText'],
+  color: layout.weight('CanvasText', 1),
 });
 ```
 

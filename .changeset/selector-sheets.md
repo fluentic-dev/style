@@ -12,5 +12,7 @@ Add attachable selector sheets for styling fixed third-party class names without
 - Support selector sheet extraction, local token overrides, debug class names, source tracing, and sourcemap data across runtime and extracted builds.
 - Add Preact css prop support with a `CssPropPresets.Preact` compiler preset, runtime adapters, JSX types, and a Vite example.
 - Keep plugin css prop configuration focused on `CssPropPresets` instead of exporting each framework preset as a separate top-level plugin API.
+- Add `style.important(...)` and `className.important(...)` for interop cases that need emitted `!important` declarations, especially selector sheets wrapping third-party CSS.
+- Add `style.weight(...)` as the style-object counterpart to `className.weight(...)`.
 - Keep the extracted production runtime below 5 KB minified and gzipped with `combineStyle` included, and keep selector parsing helpers out of the extracted production entry.
 - Add a React Select third-party selectors example, Preact integration docs, and a clearer third-party styling guide for selector sheets, style targets, portal menus, and the new `combineStyle` helpers.

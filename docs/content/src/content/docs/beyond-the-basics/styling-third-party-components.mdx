@@ -485,6 +485,26 @@ Selector sheets sit between those worlds. They acknowledge that the DOM belongs
 to someone else, while keeping your styling language, tokens, extraction, and
 debugging inside Fluentic.
 
+Some libraries also ship their own CSS with high specificity or load it after
+your app styles. Fluentic can order the rules it owns, but it cannot move a
+third-party stylesheet into your layer system. When a wrapper is intentionally
+overriding that external CSS, mark the value itself:
+
+```ts
+const selectSheet = createSheet([
+  selectPart.control({
+    borderColor: style.important(selectTokens.accent),
+    boxShadow: style.important('none'),
+  }),
+]);
+```
+
+`style.important(...)` emits the final declaration with `!important`. It is an
+interop tool, mostly useful in selector sheets and component wrappers that need
+to beat library CSS. Ordinary Fluentic styles usually should not need it,
+because composition, variants, scopes, and sheet order already describe the
+priority inside the styles Fluentic controls.
+
 ## Debugging
 
 Selector sheets still produce atomic rules. If a later sheet sets the same

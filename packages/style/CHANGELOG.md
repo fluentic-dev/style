@@ -29,6 +29,11 @@
     preset, runtime adapters, JSX types, and a Vite example.
   - Keep plugin css prop configuration focused on `CssPropPresets` instead of
     exporting each framework preset as a separate top-level plugin API.
+  - Add `style.important(...)` and `className.important(...)` for interop cases
+    that need emitted `!important` declarations, especially selector sheets
+    wrapping third-party CSS.
+  - Add `style.weight(...)` as the style-object counterpart to
+    `className.weight(...)`.
   - Keep the extracted production runtime below 5 KB minified and gzipped with
     `combineStyle` included, and keep selector parsing helpers out of the
     extracted production entry.

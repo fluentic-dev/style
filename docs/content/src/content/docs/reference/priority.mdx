@@ -32,7 +32,7 @@ Explicit value weight is the outermost override layer.
 
 ```ts
 const strong = style({
-  color: [1, 'red'],
+  color: style.weight('red', 1),
 });
 ```
 
@@ -41,7 +41,7 @@ is inside a selector or media rule.
 
 ```ts
 const button = style({
-  color: [1, '#111827'],
+  color: style.weight('#111827', 1),
 }).hover({
   color: '#2563eb',
 });

@@ -26,14 +26,14 @@ Fluentic keeps the normal CSS cascade, but it places each style in a known
 priority path. It also makes each source of priority visible in the style you
 wrote. A selector chain adds selector priority. A scope adds scope priority to
 the slot rules inside it. A media call adds media context, and can also carry
-explicit media priority. Shorthand and longhand properties keep their CSS-shaped
-declaration priority. A value can carry explicit value priority when it must sit
+explicit media weight. Shorthand and longhand properties keep their CSS-shaped
+declaration priority. A value can carry explicit value weight when it must sit
 above the normal path.
 
 The built-in model covers common UI cases, and the parts that usually need
 project control are configurable. You can set selector priority in your style
 builder, such as `hover`, `active`, `focusVisible`, or `firstChild`, and you can
-give media rules or property values explicit priority where the normal path is
+give media rules or property values explicit weight where the normal path is
 not enough.
 
 ```txt
@@ -213,7 +213,7 @@ const button = style({
 Now the purple rule wins only when both conditions match: the button is hovered
 and the media query applies.
 
-Media can also carry an explicit media priority:
+Media can also carry an explicit media weight:
 
 ```tsx
 const panel = style().media(2, '(max-width: 700px)', {
@@ -221,7 +221,7 @@ const panel = style().media(2, '(max-width: 700px)', {
 });
 ```
 
-That priority is still inside the current selector and scope context. It can
+That weight is still inside the current selector and scope context. It can
 help order media rules, but it does not jump over a direct selector state like
 hover or active.
 
@@ -254,53 +254,33 @@ component state, theme, breakpoint, or parent-provided override should win, expr
 with the matching styling path instead of relying on where two properties happen
 to appear in the object.
 
-## Value Priority Is Explicit
+## Value Weight Is Explicit
 
-Value priority is the outermost bucket.
+Value weight is the outermost bucket.
 
 ```tsx
 const button = style({
-  color: style.value('#111827', 1),
+  color: style.weight('#111827', 1),
 }).hover({
   color: '#2563eb',
 });
 ```
 
-`style.value(value, priority)` keeps the CSS value in the first position and
-the priority in the second. The unweighted form, `color: '#111827'`, uses
-priority `0`.
-
-The higher-priority base color can beat the normal hover color because it lives
-in a higher value-priority bucket.
-
-Under the hood, that value priority is represented as the tuple
-`[weight, cssValue]`. You may see or use that tuple form for simple values:
-
-```tsx
-const button = style({
-  color: [1, '#111827'],
-});
-```
-
-Prefer `style.value()` when you want explicit value priority. It reads as
-"this value has this priority":
+`style.weight(value, weight)` attaches an explicit Fluentic weight to one value.
+The unweighted form, `color: '#111827'`, uses weight `0`. When two values for
+the same property conflict, the value with the higher weight wins.
 
 ```tsx
 const layout = style({
-  display: style.value('flex', 1),
-  flexDirection: style.value('row', 1),
+  display: style.weight('flex', 1),
+  flexDirection: style.weight('row', 1),
 });
 ```
 
-That matters for literal values such as `'row'`. The tuple form is allowed, but
-`[1, 'row']` can widen the value to `[1, string]`. That may fail for typed CSS
-properties such as `flexDirection`, where TypeScript expects one of the known
-direction values instead of any string.
-
-Value priority is powerful because it lets one value sit above normal
+Value weight is powerful because it lets one value sit above normal
 composition, selector, scope, and media behavior without turning the whole
 declaration into a broad `!important` escape hatch. However, use it sparingly:
-the default priority path should handle most cases, and explicit value priority
+the default priority path should handle most cases, and explicit value weight
 should be reserved for overrides that really need it.
 
 ## Style Composition Inside Component
