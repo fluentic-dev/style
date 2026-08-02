@@ -17,6 +17,10 @@ import type {
   CombinedStyleFor,
   ClassNameProps,
   ClassNameResult,
+  ClassNameFn,
+  ClassNameTransform,
+  StyleFn,
+  StyleTransform,
 } from '@fluentic/style';
 ```
 
@@ -35,3 +39,12 @@ Use `ClassNameProps` and `ClassNameResult` with [Runtime Interop](runtime-intero
 
 `CSS`, `CSSProperties`, `CSSPropertyName`, and `CSSValueExclude` describe CSS
 property/value types used by style builders and custom transforms.
+
+Use `StyleFn` when a helper accepts a style builder created by
+`createStyleFn(...)`.
+
+Use `StyleTransform` with custom object builders and `ClassNameTransform` with
+custom class-name builders.
+
+Use `ClassNameFn` when a helper accepts a builder returned by
+`createClassNameFn(...)`.

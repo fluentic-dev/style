@@ -3,7 +3,8 @@ title: Reference Overview
 description: Public Fluentic APIs grouped by import path.
 ---
 
-Reference pages document exact public APIs.
+Reference pages document the public APIs you import when building with
+Fluentic.
 
 Use Learn for the usage path, Beyond the Basics for advanced patterns, and
 Design for architecture.
@@ -24,12 +25,47 @@ Other public subpaths are:
 @fluentic/style/dev/rsc   RSC development bridge
 ```
 
-Each API page should answer:
+## Core Styling
 
-```txt
-what to import
-what it accepts
-what it returns
-when to use it
-where the guide lives
-```
+- [style](style) creates styles for one rendered element.
+- [style.slot](style-slot) names component styling targets.
+- [style.scope](style-scope) groups slot overrides into reusable component
+  themes.
+- [combineStyle](combine-style) resolves styles, themes, scopes, and caller
+  overrides for one component boundary.
+- [bindScope](bind-scope) binds scopes to component style objects.
+- [exposeStyle](expose-style) helps component libraries expose their style
+  contract.
+
+## Tokens And Themes
+
+- [createTokens](create-tokens) creates named token families.
+- [createValues](create-values) creates reusable value scales.
+- [createTheme](create-theme) groups token overrides into a theme.
+- [Numeric Values](numeric-values) explains how numbers become CSS values.
+
+## Custom Builders
+
+- [createStyleFn](create-style-fn) creates object-style builders for design
+  systems.
+- [Transforms](transforms) map custom style fields or class names to CSS.
+- [createClassNameFn](create-class-name-fn) creates class-name style chains.
+- [Selectors](selectors) documents selector constructors and presets.
+- [Priority](priority) explains resolution and rule ordering.
+
+## Runtime And CSS Interop
+
+- [Runtime Interop](runtime-interop) covers `getClassName(...)`,
+  `getToken(...)`, `mergeClassName(...)`, and `mergeStyle(...)`.
+- [Runtime And Dev](runtime-and-dev) covers runtime configuration and
+  development utilities.
+- [CSS Helpers](css-helpers) covers named at-rules.
+- [createSheet](create-sheet) creates selector sheets for third-party DOM.
+- [createStyleTarget](create-style-target) applies Fluentic styles to external
+  elements.
+
+## Supporting Pages
+
+- [Imports](imports) lists public import paths.
+- [Types](types) lists common TypeScript types.
+- [Plugin Options](plugin-options) lists shared adapter and compiler options.

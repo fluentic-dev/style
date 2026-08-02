@@ -1,11 +1,15 @@
 ---
-title: Preact
+title: PreactJS
 description: Configure Fluentic Style with Preact and Vite.
 ---
 
-Use the Preact integration when you want Fluentic's `css` prop in a client-side
-Preact app. This path uses the same style data model as React and Solid, but the
-compiler lowers `css` into Preact's normal `class` and `style` props.
+Use the PreactJS integration when you want Fluentic's `css` prop in a
+client-side Preact app.
+
+Unlike React projects, Preact projects do not switch `jsxImportSource` to
+`@fluentic/style/plugin/jsx`. Keep Preact's normal automatic JSX runtime. The
+Fluentic Vite adapter sees `css={...}` before the Preact preset runs and
+compiles it into Preact's normal `class` and `style` props.
 
 Install the package:
 
@@ -44,8 +48,9 @@ bun add -d @preact/preset-vite vite
   </Tab>
 </Tabs>
 
-Add the Fluentic Vite plugin before the Preact plugin and enable the Preact
-css-prop preset:
+Add the Fluentic Vite adapter before the Preact plugin and enable the Preact
+css-prop preset. The order matters: Fluentic should transform the `css` prop
+while the file is still JSX, then Preact can compile the JSX as usual.
 
 ```ts title="vite.config.ts"
 import { CssPropPresets, plugin as stylePlugin } from '@fluentic/style/plugin/vite';
@@ -62,7 +67,8 @@ export default defineConfig({
 });
 ```
 
-Configure TypeScript for Preact's automatic JSX runtime:
+Configure TypeScript the same way you normally would for a Preact Vite app.
+`jsxImportSource` stays `preact`, not Fluentic:
 
 ```json title="tsconfig.json"
 {
@@ -92,7 +98,15 @@ export function App() {
 ```
 
 The adapter is compiler plumbing. Application code should use `style(...)` and
-`css={...}`; it should not call low-level class-name helpers for normal Preact
-elements.
+`css={...}`. You should not import a Fluentic JSX runtime or call low-level
+class-name helpers for normal Preact elements.
+
+In short:
+
+```txt
+Preact JSX config stays Preact
+Fluentic Vite adapter compiles css={...}
+@preact/preset-vite compiles the remaining JSX
+```
 
 See `examples/preact-basic` for a minimal Vite app.

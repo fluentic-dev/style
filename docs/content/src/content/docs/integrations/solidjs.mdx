@@ -1,0 +1,127 @@
+---
+title: SolidJS
+description: Configure Fluentic Style with SolidJS and Vite.
+---
+
+Use the SolidJS integration when you want Fluentic's `css` prop in a
+client-side Solid app.
+
+Unlike React projects, SolidJS projects do not switch `jsxImportSource` to a
+Fluentic JSX runtime. Keep Solid's normal JSX transform. The Fluentic Vite
+adapter sees `css={...}` before `vite-plugin-solid` runs and compiles it into
+Solid-compatible `class` and `style` props.
+
+Install the package:
+
+<Tabs items={['pnpm', 'npm', 'Yarn', 'Bun']}>
+  <Tab>
+
+```sh
+pnpm add @fluentic/style solid-js
+pnpm add -D vite vite-plugin-solid
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+npm install @fluentic/style solid-js
+npm install -D vite vite-plugin-solid
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+yarn add @fluentic/style solid-js
+yarn add -D vite vite-plugin-solid
+```
+
+  </Tab>
+  <Tab>
+
+```sh
+bun add @fluentic/style solid-js
+bun add -d vite vite-plugin-solid
+```
+
+  </Tab>
+</Tabs>
+
+Add the Fluentic Vite adapter before the Solid plugin and enable the SolidJS
+css-prop preset. The order matters: Fluentic should transform the `css` prop
+while the file is still JSX, then Solid can compile the JSX as usual.
+
+```ts title="vite.config.ts"
+import { CssPropPresets, plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+import { defineConfig } from 'vite';
+import solid from 'vite-plugin-solid';
+
+export default defineConfig({
+  plugins: [
+    stylePlugin({
+      cssProp: CssPropPresets.Solid,
+    }),
+    solid(),
+  ],
+});
+```
+
+Configure TypeScript the same way you normally would for a SolidJS Vite app.
+There is no Fluentic `jsxImportSource` here:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "preserve",
+    "types": ["vite/client", "solid-js"]
+  }
+}
+```
+
+Then write normal Fluentic styles:
+
+```tsx title="src/App.tsx"
+import { style } from '@fluentic/style';
+
+const card = style({
+  padding: 16,
+  borderRadius: 8,
+  backgroundColor: '#fff',
+}).hover({
+  boxShadow: '0 12px 30px rgb(15 23 42 / 0.16)',
+});
+
+export function App() {
+  return <section css={card}>Styled by Fluentic.</section>;
+}
+```
+
+For development helpers, enable the standard Fluentic dev utilities before
+rendering:
+
+```tsx title="src/main.tsx"
+import { enableStyleDevUtils } from '@fluentic/style/dev';
+import { render } from 'solid-js/web';
+import { App } from './App';
+
+if (import.meta.env.DEV) {
+  enableStyleDevUtils();
+}
+
+render(() => <App />, document.getElementById('root')!);
+```
+
+The adapter is compiler plumbing. Application code should use `style(...)` and
+`css={...}`. You should not import a Fluentic JSX runtime or call low-level
+class-name helpers for normal Solid elements.
+
+In short:
+
+```txt
+SolidJS JSX config stays SolidJS
+Fluentic Vite adapter compiles css={...}
+vite-plugin-solid compiles the remaining JSX
+```
+
+See `examples/solid-basic` for a minimal Vite app.

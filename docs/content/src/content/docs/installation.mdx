@@ -121,8 +121,12 @@ export default defineConfig({
 
 See the full [Vite guide](/docs/integrations/vite/).
 
-For Preact, keep Preact's JSX runtime and enable Fluentic's Preact css-prop
-preset in the Vite plugin. See the full [Preact guide](/docs/integrations/preact/).
+For SolidJS and Preact, keep the framework's normal JSX configuration and
+enable the matching Fluentic css-prop preset in the Vite adapter. Fluentic
+compiles `css={...}` before the framework JSX plugin runs; these integrations do
+not use `@fluentic/style/plugin/jsx`. See the full
+[SolidJS guide](/docs/integrations/solidjs/) or
+[PreactJS guide](/docs/integrations/preact/).
 
 ## Webpack
 

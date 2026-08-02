@@ -4,7 +4,8 @@ description: CSS helper APIs for named at-rules and low-level CSS constructs.
 ---
 
 Use `@fluentic/style/css` for named CSS at-rules that need to be referenced
-from a style value.
+from a style value, and for low-level helpers that apply Fluentic style data to
+selector sheets or external DOM elements.
 
 Most component styles should import from `@fluentic/style`. Reach for this entry
 when the CSS feature creates a name first, then uses that name in a declaration:
@@ -40,6 +41,8 @@ const card = style({
 | `createCounterStyle()` | `@counter-style` | `listStyleType` |
 | `createProperty()` | `@property` | custom property name, `transitionProperty` |
 | `createPositionTry()` | `@position-try` | `positionTryFallbacks` |
+| `createSheet()` | selector sheet | third-party DOM styling |
+| `createStyleTarget()` | external style target | portal and ref styling |
 
 Each create helper returns the generated name for that CSS feature. Use the
 returned value directly where CSS expects the name.
@@ -53,6 +56,44 @@ Each helper also has its own reference page:
 - [createCounterStyle](create-counter-style)
 - [createProperty](create-property)
 - [createPositionTry](create-position-try)
+- [createSheet](create-sheet)
+- [createStyleTarget](create-style-target)
+
+## Selector And Target Helpers
+
+`createSheet(...)` groups selector styles created with `style.selector(...)`.
+Use it for third-party component internals or other DOM you target by selector.
+
+```ts
+import { style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+const control = style.selector('.react-select__control');
+
+const selectSheet = createSheet([
+  control({
+    minHeight: 42,
+    borderRadius: 10,
+  }).hover({
+    borderColor: '#2563eb',
+  }),
+]);
+```
+
+`createStyleTarget()` applies a resolved Fluentic style prop to an element
+outside your render tree, such as a portal target.
+
+```ts
+import { createStyleTarget } from '@fluentic/style/css';
+
+const target = createStyleTarget();
+
+target.apply(portalElement, selectSheet);
+target.destroy();
+```
+
+See [createSheet](create-sheet) and [createStyleTarget](create-style-target)
+for the full reference.
 
 ## createKeyframes
 

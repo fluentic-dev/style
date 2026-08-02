@@ -1,0 +1,98 @@
+---
+title: createStyleTarget
+description: Apply Fluentic styles to an element outside your render tree.
+---
+
+Use `createStyleTarget()` when a Fluentic style prop needs to be applied to a
+DOM element you do not render directly.
+
+The common case is a portal target. Your wrapper can render normal in-tree
+styles with the `css` prop, then apply a separate selector sheet to the detached
+portal element.
+
+```tsx
+import { combineStyle, style, type StyleProp, type StyleTheme } from '@fluentic/style';
+import { createSheet, createStyleTarget } from '@fluentic/style/css';
+import { useEffect, useMemo } from 'react';
+
+const menu = style.selector('.react-select__menu');
+
+const menuSheet = createSheet([
+  menu({
+    borderRadius: 10,
+    boxShadow: '0 18px 50px rgb(15 23 42 / 0.18)',
+  }),
+]);
+
+export function Select(props: {
+  css?: StyleProp;
+  portalTarget: HTMLElement | null;
+  theme?: StyleTheme;
+}) {
+  const target = useMemo(() => createStyleTarget(), []);
+
+  useEffect(() => {
+    return () => target.destroy();
+  }, [target]);
+
+  target.apply(
+    props.portalTarget,
+    combineStyle(menuSheet, props.theme),
+    { enabled: !!props.portalTarget },
+  );
+
+  return (
+    <div css={combineStyle(menuSheet, props.theme, props.css)}>
+      <ReactSelect menuPortalTarget={props.portalTarget} unstyled />
+    </div>
+  );
+}
+```
+
+## API
+
+```ts
+import { createStyleTarget } from '@fluentic/style/css';
+
+const target = createStyleTarget();
+
+target.apply(element, css, options);
+target.destroy();
+```
+
+`apply(...)` accepts:
+
+| Argument | Description |
+| --- | --- |
+| `element` | The `Element` to receive resolved Fluentic classes and inline style values. `null` and `undefined` are ignored. |
+| `css` | Any `StyleProp`, including styles, sheets, scopes, themes, arrays, and conditional values. |
+| `options.enabled` | When `false`, remove this target's previously applied classes and style values from the element. |
+
+`destroy()` removes all classes and inline style values that this target
+instance applied.
+
+## Shared Elements
+
+Multiple style targets can apply styles to the same element. Fluentic reference
+counts class names and tracks the initial inline style value for each property,
+so destroying one target does not remove another target's styles.
+
+Still, avoid attaching conflicting themed sheets to one portal element. If two
+component instances need different portal themes, give them separate portal
+targets.
+
+## When To Use It
+
+Use `createStyleTarget()` for:
+
+- portal roots;
+- DOM nodes owned by a third-party library;
+- integration code that receives an element ref after render;
+- temporary style attachment that needs cleanup.
+
+Use the `css` prop when you own the rendered element. Use `getClassName(...)`
+when you only need the resolved `{ className, style }` object for another
+component API.
+
+For the guide version, see
+[Styling Third-Party Components](../beyond-the-basics/styling-third-party-components).

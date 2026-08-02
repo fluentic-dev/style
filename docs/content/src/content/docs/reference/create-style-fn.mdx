@@ -3,13 +3,111 @@ title: createStyleFn
 description: Create a custom style builder for design systems.
 ---
 
+Use `createStyleFn(...)` when the default `style(...)` object shape is not the
+shape your design system wants authors to write.
+
+The custom builder can add typed fields, use a custom transform, and choose a
+selector set. The result has the same feature surface as `style(...)`: style
+chains, slots, scopes, selectors, `raw(...)`, `plain(...)`, `keyframes(...)`,
+weights, and important values.
+
 ```ts
-const customStyle = createStyleFn({
-  transform(input) {
-    return input;
+import {
+  createStyleFn,
+  styleTransform,
+  type CSSProperties,
+} from '@fluentic/style';
+import { MinimalPrioritySelectors } from '@fluentic/style/selector';
+
+type LayoutStyle = CSSProperties & {
+  row?: boolean;
+  center?: boolean;
+  gapX?: CSSProperties['columnGap'];
+};
+
+const transform = styleTransform<LayoutStyle>({
+  transform(style) {
+    const { row, center, gapX, ...css } = style;
+
+    if (row) {
+      css.display = 'flex';
+      css.flexDirection = 'row';
+    }
+
+    if (center) {
+      css.alignItems = 'center';
+      css.justifyContent = 'center';
+    }
+
+    if (gapX !== undefined) css.columnGap = gapX;
+
+    return css;
   },
+});
+
+export const { style: layout } = createStyleFn({
+  selectors: MinimalPrioritySelectors,
+  transform,
 });
 ```
 
-Use `createStyleFn(...)` to define custom style types, transforms, selectors,
-and priority behavior.
+Use the returned builder like the default `style(...)` export:
+
+```ts
+const toolbar = layout({
+  row: true,
+  center: true,
+  gapX: 8,
+}).hover({
+  gapX: 12,
+});
+```
+
+## Arguments
+
+`createStyleFn(...)` accepts:
+
+| Option | Description |
+| --- | --- |
+| `style` | Optional type-only helper for the accepted style object type. Most code uses the generic parameter instead. |
+| `selectors` | The selector methods added to the chain. |
+| `transform` | Optional `styleTransform(...)` that maps custom fields to CSS properties. |
+
+If `transform` is omitted, the builder treats the style object as CSS-compatible
+data.
+
+## Return Value
+
+The function returns an object:
+
+```ts
+const { style } = createStyleFn(...);
+```
+
+The returned builder exposes:
+
+| Helper | Use |
+| --- | --- |
+| `style(...)` | Create a style chain for one element. |
+| `style.slot(...)` | Create a typed component slot. |
+| `style.scope(...)` | Create typed slot override groups. |
+| `style.selector(...)` | Create selector targets for `createSheet(...)`. |
+| `style.raw(...)` | Create reusable Fluentic style object fragments. |
+| `style.plain(...)` | Create plain object fragments for spreading. |
+| `style.keyframes(...)` | Create keyframes using the custom style shape. |
+| `style.weight(...)` | Add explicit value weight. |
+| `style.important(...)` | Mark a value as important. |
+| `style.merge(...)` | Merge one style chain into another. |
+
+## When To Use It
+
+Use `createStyleFn(...)` for design-system vocabulary such as `row`, `stack`,
+`surface`, `tone`, token aliases, or constrained spacing fields.
+
+Use [createClassNameFn](create-class-name-fn) when the custom vocabulary should
+be class-name strings. Use [style](style) when standard CSS property names are
+enough.
+
+For transform details, see [Transforms](transforms). For guide-level examples,
+see [Custom Style Fields](../beyond-the-basics/custom-style-fields) and
+[Custom Style Builders](../beyond-the-basics/custom-style-builders).

@@ -1,0 +1,125 @@
+---
+title: createSheet
+description: Create reusable selector sheets for styling DOM you do not own.
+---
+
+Use `createSheet(...)` for grouped selector styles, usually at boundaries with
+third-party components whose internal DOM has known class names or attributes.
+
+Most component styles should use `style(...)`, `style.slot(...)`, and
+`style.scope(...)`. Reach for `createSheet(...)` when the style target is a DOM
+selector such as `.react-select__control` rather than a Fluentic slot.
+
+```ts
+import { createTokens, style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+const selectTokens = createTokens({
+  accent: '#2563eb',
+  panel: '#eff6ff',
+  text: '#1e3a8a',
+});
+
+const selectPart = {
+  control: style.selector('.react-select__control'),
+  value: style.selector('.react-select__single-value'),
+};
+
+export const selectSheet = createSheet([
+  selectPart.control({
+    minHeight: 42,
+    border: '1px solid',
+    borderColor: selectTokens.accent,
+    borderRadius: 10,
+    backgroundColor: selectTokens.panel,
+  }).hover({
+    borderColor: '#1d4ed8',
+  }),
+
+  selectPart.value({
+    color: selectTokens.text,
+    fontWeight: 650,
+  }),
+]);
+```
+
+Apply the sheet with the normal `css` prop or compose it with
+`combineStyle(...)`:
+
+```tsx
+import { combineStyle, type StyleTheme } from '@fluentic/style';
+
+export function Select(props: {
+  compact?: boolean;
+  theme?: StyleTheme;
+}) {
+  return (
+    <div css={combineStyle(selectSheet, props.theme)}>
+      <ReactSelect unstyled />
+    </div>
+  );
+}
+```
+
+## Arguments
+
+`createSheet(items?)` accepts a selector-oriented style input:
+
+| Item | Description |
+| --- | --- |
+| `style.selector(selector)(style)` | Add rules for a selector below the element that receives the sheet class. |
+| `style.selector(selector).hover(style)` | Add selector rules under pseudo-classes, media queries, supports queries, and other selector chains. |
+| Token overrides | Include token overrides that should apply inside the sheet target. |
+| Arrays | Group items and conditionally include falsy values. |
+
+If an item is not a selector item or token override, `createSheet(...)` throws.
+Use `style(...)` for normal element styles.
+
+## Return Value
+
+`createSheet(...)` returns a Fluentic sheet style item. It can be passed anywhere
+a `StyleProp` can be passed:
+
+```ts
+combineStyle(selectSheet, compact && compactSheet, props.css);
+```
+
+The sheet's generated class becomes the scope for its selector rules. If the
+same sheet is attached to multiple elements, each element becomes a scope for
+the same rules.
+
+## Selector Shape
+
+Prefer one selector per `style.selector(...)` call:
+
+```ts
+const control = style.selector('.react-select__control');
+const input = style.selector('.react-select__input-container');
+```
+
+Use an array when one logical part has several supported selectors:
+
+```ts
+const field = style.selector([
+  '.react-select__control',
+  '.react-select__input-container',
+]);
+```
+
+Avoid comma-separated selector strings. Arrays keep the selector model visible
+to Fluentic.
+
+## When To Use It
+
+Use `createSheet(...)` for:
+
+- third-party component internals;
+- styling portal or overlay DOM with known selectors;
+- wrapper components that expose a controlled selector contract;
+- selector groups that need tokens, extraction, debug names, and sourcemaps.
+
+Use `style.slot(...)` and `style.scope(...)` when you own the component and can
+name its styling targets directly.
+
+For the guide version, see
+[Styling Third-Party Components](../beyond-the-basics/styling-third-party-components).

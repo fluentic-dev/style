@@ -3,6 +3,8 @@ title: style.slot
 description: Create a public component styling target.
 ---
 
+`style.slot(...)` creates a named styling target for one part of a component.
+
 ```ts
 const styles = {
   root: style.slot({ padding: 12 }),
@@ -10,10 +12,54 @@ const styles = {
 };
 ```
 
-Calling a slot creates an override for that slot:
+Use slots when a component has parts that callers may style from outside:
+
+```tsx
+export function Button(props: { css?: StyleTheme }) {
+  return (
+    <button css={combineStyle(styles.root, props.css)}>
+      <span css={styles.label}>Save</span>
+    </button>
+  );
+}
+```
+
+## Calling A Slot
+
+Calling a slot function creates an override for that slot:
 
 ```ts
 styles.label({ color: 'white' });
 ```
 
-Slot overrides belong in scopes or `bindScope(...)` inputs.
+Slot overrides are usually placed in [style.scope](style-scope) values or
+`bindScope(...)` inputs:
+
+```ts
+const primary = style.scope([
+  styles.root({ backgroundColor: '#2563eb' }),
+  styles.label({ color: 'white' }),
+]);
+```
+
+## Return Value
+
+`style.slot(...)` returns a style chain for the slot. That chain can be used as
+the slot's base style in the component, and it can also be called to produce
+slot overrides.
+
+```ts
+const rootBase = styles.root;
+const rootOverride = styles.root({ padding: 16 });
+```
+
+The slot identity is what lets Fluentic know which override belongs to which
+component part.
+
+## When To Use It
+
+Use `style.slot(...)` for public component parts such as `root`, `label`,
+`icon`, `trigger`, `content`, and `item`.
+
+Use plain [style](style) for private element styles that callers should not
+target directly.

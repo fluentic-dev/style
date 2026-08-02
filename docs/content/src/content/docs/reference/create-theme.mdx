@@ -3,12 +3,62 @@ title: createTheme
 description: Create a token or value theme.
 ---
 
+`createTheme(...)` groups token overrides into a reusable theme.
+
 ```ts
+import { createTheme, createTokens } from '@fluentic/style';
+
+const color = createTokens({
+  surface: '#ffffff',
+  text: '#111827',
+});
+
 const darkTheme = createTheme([
   color.surface('#111827'),
   color.text('white'),
 ]);
 ```
 
-Pass themes to `combineStyle(...)` or include them in composition where token
-values should change.
+Pass themes to `combineStyle(...)`, `style.scope(...)`, or any style
+composition where token values should change:
+
+```tsx
+<Card css={darkTheme} />
+```
+
+## Arguments
+
+`createTheme(items)` accepts token overrides:
+
+```ts
+createTheme([
+  color.surface('#0f172a'),
+  color.text('#f8fafc'),
+]);
+```
+
+Falsy values and nested arrays are allowed, which makes conditional themes easy
+to assemble:
+
+```ts
+const appTheme = createTheme([
+  dark && color.surface('#0f172a'),
+  highContrast && color.text('#ffffff'),
+]);
+```
+
+## Return Value
+
+The return value is a `TokenTheme`. It carries generated theme class data and
+can be passed wherever Fluentic accepts theme input.
+
+When a style reads a token, Fluentic resolves that token from the nearest theme
+in the composed style input and falls back to the token's default value when no
+override is present.
+
+## createTheme vs style.scope
+
+Use `createTheme(...)` when the theme only changes token values.
+
+Use [style.scope](style-scope) when the theme also needs slot overrides,
+selectors, state styles, or responsive groups.

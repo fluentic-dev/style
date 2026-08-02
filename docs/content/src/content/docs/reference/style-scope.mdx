@@ -3,6 +3,9 @@ title: style.scope
 description: Group slot overrides into a reusable component theme.
 ---
 
+`style.scope(...)` groups slot overrides and token overrides into a reusable
+component theme.
+
 ```ts
 const primary = style.scope([
   styles.root({ backgroundColor: '#2563eb' }),
@@ -10,7 +13,22 @@ const primary = style.scope([
 ]);
 ```
 
-Scopes can use selector and at-rule chains:
+Apply the scope at the component boundary with `combineStyle(...)`:
+
+```tsx
+export function Button(props: { theme?: StyleTheme }) {
+  return (
+    <button css={combineStyle(styles.root, props.theme)}>
+      <span css={styles.label}>Save</span>
+    </button>
+  );
+}
+```
+
+## Selector Chains
+
+Scopes can use selector and at-rule chains. The selector wraps all overrides in
+the scope:
 
 ```ts
 const interactive = style.scope().hover([
@@ -18,8 +36,31 @@ const interactive = style.scope().hover([
 ]);
 ```
 
-Apply a scope to a target slot:
+## Targeting A Slot
+
+Calling a scope with a slot creates a style item for that slot:
 
 ```ts
 primary(styles.root);
 ```
+
+Most component code does not need to call scopes manually. `combineStyle(...)`
+does this when it resolves the component's base slot with incoming themes and
+overrides.
+
+## What Scopes Contain
+
+A scope can contain:
+
+- slot overrides such as `styles.label({ color: 'white' })`;
+- token overrides from `createTokens(...)` or `createValues(...)`;
+- nested arrays and conditional falsy values;
+- selector chains such as `.hover(...)`, `.media(...)`, and `.supports(...)`.
+
+## When To Use It
+
+Use `style.scope(...)` for reusable component themes, variants, responsive
+groups, and state groups that affect multiple slots.
+
+Use [createTheme](create-theme) for token-only themes. Use [createSheet](create-sheet)
+for selector-based styling of third-party DOM.

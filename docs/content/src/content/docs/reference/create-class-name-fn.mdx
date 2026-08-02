@@ -1,0 +1,139 @@
+---
+title: createClassNameFn
+description: Create a custom class-name style builder.
+---
+
+Use `createClassNameFn(...)` when you want Fluentic style chains to start from
+class-name tokens instead of style objects.
+
+The class names are not global CSS classes by themselves. They are vocabulary
+items that your transform maps to CSS declarations. The result is still
+Fluentic style data, so it works with the `css` prop, selector chains,
+`combineStyle(...)`, slots, scopes, extraction, and debug CSS.
+
+```ts
+import {
+  classNameTransform,
+  createClassNameFn,
+  type CSSProperties,
+} from '@fluentic/style';
+import { MinimalPrioritySelectors } from '@fluentic/style/selector';
+
+type UiClassName =
+  | 'inline-flex'
+  | 'items-center'
+  | 'gap-2'
+  | 'bg-accent'
+  | 'bg-accent-hover';
+
+const transform = classNameTransform<UiClassName>({
+  transform(className) {
+    const css: CSSProperties = {};
+
+    if (className === 'inline-flex') css.display = 'inline-flex';
+    if (className === 'items-center') css.alignItems = 'center';
+    if (className === 'gap-2') css.gap = 8;
+    if (className === 'bg-accent') css.backgroundColor = 'var(--accent)';
+    if (className === 'bg-accent-hover') {
+      css.backgroundColor = 'var(--accent-hover)';
+    }
+
+    return css;
+  },
+});
+
+export const { className: cx } = createClassNameFn({
+  selectors: MinimalPrioritySelectors,
+  transform,
+});
+```
+
+Then use the returned function like a style builder:
+
+```tsx
+const button = cx('inline-flex', 'items-center', 'gap-2', 'bg-accent')
+  .hover('bg-accent-hover');
+
+export function Button() {
+  return <button css={button}>Save</button>;
+}
+```
+
+## Arguments
+
+`createClassNameFn(...)` accepts:
+
+| Option | Description |
+| --- | --- |
+| `selectors` | The selector methods added to the chain, such as `.hover(...)`, `.media(...)`, or your own custom selectors. |
+| `transform` | A `classNameTransform(...)` object that maps one class-name token to a style object. |
+| `className` | Optional type-only helper for the accepted class-name string type. Most code gets this from `classNameTransform<T>(...)`. |
+
+The selector set is usually `PrioritySelectors`, `MinimalPrioritySelectors`, or
+a custom selector set from `selector(...)` and `selectorPriority(...)`.
+
+## Return Value
+
+The function returns an object:
+
+```ts
+const { className } = createClassNameFn(...);
+```
+
+The `className` builder accepts strings, arrays, and falsy conditional values:
+
+```ts
+cx(
+  'inline-flex',
+  active && 'bg-accent',
+  ['items-center', compact ? 'gap-2' : false],
+);
+```
+
+It also exposes helpers:
+
+| Helper | Use |
+| --- | --- |
+| `cx.weight(className, weight)` | Give a class-name token explicit value weight when it should win a competing declaration. |
+| `cx.important(className)` | Mark declarations produced by that class-name token as important. |
+
+## Debug Class Names
+
+Use `classNameValue(value, label)` inside a transform when generated debug CSS
+should use a readable label from your class-name vocabulary:
+
+```ts
+import { classNameTransform, classNameValue } from '@fluentic/style';
+
+const transform = classNameTransform<'bg-accent'>({
+  transform(className) {
+    if (className === 'bg-accent') {
+      return {
+        backgroundColor: classNameValue('var(--accent)', 'bg-accent'),
+      };
+    }
+
+    return {};
+  },
+});
+```
+
+With debug class names enabled, Fluentic keeps the label and appends its hash so
+the CSS remains isolated by callsite.
+
+## When To Use It
+
+Use `createClassNameFn(...)` for:
+
+- design systems with a controlled utility vocabulary;
+- Tailwind-like class-name presets;
+- component libraries that want class-name authoring but Fluentic extraction;
+- migration paths where authors know class names better than object fields.
+
+Use `style(...)` or `createStyleFn(...)` when authors should write object
+fields directly.
+
+For the guide version, see
+[Class Name Style Chains](../beyond-the-basics/class-name-style-chains). For a
+ready-made Tailwind-like preset, see
+[Tailwind Class Name Preset](../presets/tailwind/class-name).

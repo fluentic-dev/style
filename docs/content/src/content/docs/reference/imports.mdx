@@ -31,3 +31,11 @@ description: Public subpath exports and when to use them.
 | `@fluentic/style/plugin/nextjs/loader` | Next.js loader entry used by the adapter. |
 | `@fluentic/style/compiler` | Lower-level compiler APIs for custom integrations. |
 | `@fluentic/style/builder/extract` | Extraction entry used by custom compiler/runtime integrations. |
+| `@fluentic/style/adapter/react` | JSX prop merge adapter used by React-oriented compiler entries. |
+| `@fluentic/style/adapter/preact` | JSX prop merge adapter used by Preact css-prop compilation. |
+| `@fluentic/style/adapter/solid` | JSX prop merge adapter used by SolidJS css-prop compilation. |
+
+Most application and component-library code should import from
+`@fluentic/style`, `@fluentic/style/css`, and `@fluentic/style/selector`.
+Adapter, entry, compiler, and extraction subpaths are mainly for framework
+adapters, custom integrations, and generated output.

@@ -5,6 +5,7 @@
     "options",
     "nextjs",
     "vite",
+    "solidjs",
     "preact",
     "webpack",
     "rspack",
