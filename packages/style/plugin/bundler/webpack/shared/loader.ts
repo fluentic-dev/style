@@ -31,11 +31,13 @@ export type WebpackLoaderFilterArgs<State> = {
   options: WebpackLoaderOptions;
 };
 
+export type MaybePromise<T> = Promise<T> | T;
+
 export function createWebpackLoader<State>(args: {
   getEntry: (compilerId: string, options: WebpackLoaderOptions) => State | null | undefined;
   missingCompilerMessage: string;
   shouldTransform?: (args: WebpackLoaderFilterArgs<State>) => boolean;
-  transform: (args: WebpackLoaderTransformArgs<State>) => WebpackLoaderResult | null;
+  transform: (args: WebpackLoaderTransformArgs<State>) => MaybePromise<WebpackLoaderResult | null>;
 }): LoaderDefinitionFunction<WebpackLoaderOptions> {
   return function(source, inputMap) {
     const callback = this.async();
@@ -58,16 +60,16 @@ export function createWebpackLoader<State>(args: {
       return;
     }
 
-    try {
-      const result = args.transform({
+    Promise.resolve().then(() =>
+      args.transform({
         code: source.toString(),
         entry,
         filePath,
         inputMap: inputMap as BabelTransformSourceMap,
         loaderContext: this,
         options,
-      });
-
+      })
+    ).then((result) => {
       if (!result) {
         callback(null, source, inputMap);
         return;
@@ -81,9 +83,9 @@ export function createWebpackLoader<State>(args: {
           this.rootContext,
         ),
       );
-    } catch (err) {
+    }).catch((err) => {
       callback(err as Error);
-    }
+    });
   };
 }
 

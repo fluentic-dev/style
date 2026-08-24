@@ -86,6 +86,7 @@ export type CompiledStyleObjectLocations = Record<string, {
   line: number;
   column: number;
   trace?: typeof TRACE_STYLE | typeof TRACE_VALUE;
+  variable?: boolean;
 }>;
 
 export type CompiledStyleObject = Record<string, unknown> & {

@@ -39,7 +39,8 @@
     ".": {
       "types": "./index.ts",
       "react-server": "./dist/server.js",
-      "import": "./dist/index.js"
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./plugin/vite": {
       "types": "./plugin/bundler/vite/index.ts",
@@ -130,7 +131,8 @@
     },
     "./config": {
       "types": "./config/index.ts",
-      "import": "./dist/config/index.js"
+      "import": "./dist/config/index.js",
+      "default": "./dist/config/index.js"
     },
     "./compiler": {
       "types": "./compiler/index.ts",
@@ -138,35 +140,43 @@
     },
     "./selector": {
       "types": "./selector/index.ts",
-      "import": "./dist/selector/index.js"
+      "import": "./dist/selector/index.js",
+      "default": "./dist/selector/index.js"
     },
     "./dialect": {
       "types": "./dialect/index.ts",
-      "import": "./dist/dialect/index.js"
+      "import": "./dist/dialect/index.js",
+      "default": "./dist/dialect/index.js"
     },
     "./dialect/extracted": {
       "types": "./dialect/extracted/index.ts",
-      "import": "./dist/dialect/extracted/index.js"
+      "import": "./dist/dialect/extracted/index.js",
+      "default": "./dist/dialect/extracted/index.js"
     },
     "./presets/tailwind": {
       "types": "./presets/tailwind/index.ts",
-      "import": "./dist/presets/tailwind/index.js"
+      "import": "./dist/presets/tailwind/index.js",
+      "default": "./dist/presets/tailwind/index.js"
     },
     "./dev": {
       "types": "./dev/index.ts",
-      "import": "./dist/dev.js"
+      "import": "./dist/dev.js",
+      "default": "./dist/dev.js"
     },
     "./dev/rsc": {
       "types": "./runtime/rsc/index.ts",
-      "import": "./dist/dev/rsc.js"
+      "import": "./dist/dev/rsc.js",
+      "default": "./dist/dev/rsc.js"
     },
     "./css": {
       "types": "./css/index.ts",
-      "import": "./dist/css.js"
+      "import": "./dist/css.js",
+      "default": "./dist/css.js"
     },
     "./utils": {
       "types": "./style/utils/index.ts",
-      "import": "./dist/utils.js"
+      "import": "./dist/utils.js",
+      "default": "./dist/utils.js"
     },
     "./builder/extract": {
       "types": "./builder/extract/index.ts",

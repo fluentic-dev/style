@@ -9,9 +9,11 @@ import { BUILDER_TYPE_STYLE } from '../builder/data/const';
 import { CompilerRuntimeMode, CssPropPresets } from '../compiler';
 import webpackLoader from '../plugin/bundler/webpack/loader';
 import { webpackRegistry } from '../plugin/bundler/webpack/utils';
+import nextStylePlugin from '../plugin/nextjs';
 import { writeCacheFile } from '../plugin/utils/cache';
 import {
   createDefaultedTailwindStyleConfig,
+  createTailwindClassNamePreset,
   createTailwindStyleTransform,
   defaultTailwindColors,
   TailwindSelectors,
@@ -23,6 +25,7 @@ import {
   BUILDER_STATE,
   countOccurrences,
   createCompiler,
+  createNamedTokens,
   createPluginCompiler,
   createStyleFn,
   createTransformFilter,
@@ -1131,6 +1134,46 @@ export function Swatch({ swatch }) {
   notIncludes(result.code, 'transformExtractedValue');
   notIncludes(result.code, "from './tw'");
   notIncludes(result.code, '$blue.600');
+});
+
+test('tailwind class name preset maps arbitrary text length to font size', () => {
+  const tailwind = createTailwindClassNamePreset({
+    theme: {
+      colors: {
+        white: '#fff',
+      },
+    },
+  });
+  const { className: cx } = createClassNameFn({
+    selectors: tailwind.selectors,
+    transform: tailwind.transform,
+  });
+  const compiler = createCompiler({
+    layer: false,
+    importSources: [{
+      source: './cx',
+      name: 'cx',
+      styleFn: cx,
+    }],
+  });
+  const result = compiler.transform(
+    `
+import { cx } from './cx';
+
+export const button = cx('text-white', 'text-[13px]', 'text-[color:purple]');
+export const whiteButton = cx('text-white', 'text-[13px]');
+`,
+    '/tmp/compiler-tailwind-classname-arbitrary-text.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(css, 'color: #fff');
+  includes(css, 'font-size: 13px');
+  includes(css, 'color: purple');
+  notIncludes(css, 'color: 13px');
 });
 
 test('compiler importSources can match source by regexp', () => {
@@ -3017,6 +3060,135 @@ test('next dev loader keeps precollect css from the server graph', async () => {
   equal(writes[0]?.rules[0]?.className, 'server');
 });
 
+test('rsc dev extracted css uses runtime debug hash length', () => {
+  const compiler = createPluginCompiler({
+    dev: true,
+    projectDir: '/tmp/project',
+    cacheDir: testDir + '.test-cache',
+    options: {
+      css: {
+        debugClassName: true,
+        layer: false,
+      },
+    },
+    runtimeMode: CompilerRuntimeMode.RscDev,
+  });
+
+  const result = compiler.compiler.compileDebugRSC({
+    code: `
+import { style } from "@fluentic/style";
+
+export const shell = style({
+  width: "shell",
+  display: "flex",
+  backgroundColor: "paper",
+});
+`,
+    filePath: '/tmp/project/lib/styles.ts',
+    sourcemap: null,
+  });
+
+  const classNames = result?.rules.map((rule) => rule.className) ?? [];
+
+  deepEqual(
+    classNames.map((className) => className.match(/--([a-z0-9]+)$/)?.[1]?.length),
+    [3, 3, 3],
+  );
+  includes(classNames.join(' '), 'width-shell--');
+  includes(classNames.join(' '), 'display-flex--');
+  includes(classNames.join(' '), 'background-color-paper--');
+});
+
+test('rsc dev class name extraction keeps class token local callsites', () => {
+  const transform = classNameTransform({
+    transform(className: string) {
+      if (className === 'flex') return { display: 'flex' };
+      return {};
+    },
+  });
+  const { className: cx } = createClassNameFn({ selectors: {}, transform });
+  const compiler = createPluginCompiler({
+    dev: true,
+    projectDir: '/tmp/project',
+    cacheDir: testDir + '.test-cache',
+    options: {
+      css: {
+        debugClassName: true,
+        layer: false,
+      },
+      importSources: [{
+        source: './style-fn',
+        name: 'cx',
+        styleFn: cx,
+      }],
+    },
+    runtimeMode: CompilerRuntimeMode.RscDev,
+  });
+
+  const result = compiler.compiler.compileDebugRSC({
+    code: `
+import { cx } from './style-fn';
+
+export const a = cx('flex');
+export const b = cx('flex');
+`,
+    filePath: '/tmp/project/lib/styles.ts',
+    sourcemap: null,
+  });
+
+  const classNames = result?.rules.map((rule) => rule.className) ?? [];
+
+  equal(classNames.length, 2);
+  includes(classNames[0] ?? '', 'flex--');
+  includes(classNames[1] ?? '', 'flex--');
+  notEqual(classNames[0], classNames[1]);
+});
+
+test('rsc dev class name extraction does not local-var wrap token utilities', () => {
+  const colors = createNamedTokens('test.color', {
+    paper: '#fffbfa',
+  });
+  const transform = classNameTransform({
+    transform(className: string) {
+      if (className === 'bg-paper') return { backgroundColor: colors.paper };
+      return {};
+    },
+  });
+  const { className: cx } = createClassNameFn({ selectors: {}, transform });
+  const compiler = createPluginCompiler({
+    dev: true,
+    projectDir: '/tmp/project',
+    cacheDir: testDir + '.test-cache',
+    options: {
+      css: {
+        debugClassName: true,
+        layer: false,
+      },
+      importSources: [{
+        source: './style-fn',
+        name: 'cx',
+        styleFn: cx,
+      }],
+    },
+    runtimeMode: CompilerRuntimeMode.RscDev,
+  });
+
+  const result = compiler.compiler.compileDebugRSC({
+    code: `
+import { cx } from './style-fn';
+
+export const page = cx('bg-paper');
+`,
+    filePath: '/tmp/project/lib/styles.ts',
+    sourcemap: null,
+  });
+  const rule = result?.rules.find((item) => item.className.startsWith('bg-paper--'));
+
+  if (!rule) throw new Error('expected bg-paper rule');
+  includes(rule.css, 'var(--token-test-color-paper-');
+  notIncludes(rule.css, 'var(--var-');
+});
+
 test('next turbopack dev loader uses rsc runtime for explicit getClassName calls', async () => {
   const compilerId = 'nextjs:turbopack-explicit-get-class-name-test';
 
@@ -3067,6 +3239,60 @@ test('next turbopack dev loader uses rsc runtime for explicit getClassName calls
   includes(result.code, 'from "@fluentic/style/entry/rsc-dev"');
   notIncludes(result.code, 'from "@fluentic/style/entry/dev"');
 });
+
+test('next turbopack loader options stay serializable with custom importSources', () => {
+  const transform = classNameTransform({
+    transform(className: string) {
+      if (className === 'text-red') return { color: 'red' };
+      return {};
+    },
+  });
+  const { className: cx } = createClassNameFn({
+    selectors: { hover: selector(':hover') },
+    transform,
+  });
+
+  const config = nextStylePlugin({}, {
+    importSources: [{
+      source: './style',
+      name: 'cx',
+      styleFn: cx,
+    }],
+  })('phase-production-build' as never, { defaultConfig: {} });
+
+  if (config && typeof (config as { then?: unknown; }).then === 'function') {
+    throw new Error('expected sync config');
+  }
+
+  const loader = (config as any).turbopack.rules['*.ts'].loaders[0];
+
+  equal(isSerializablePlainValue(loader.options), true);
+  equal(JSON.stringify(loader.options).includes('styleFn'), false);
+});
+
+function isSerializablePlainValue(value: unknown): boolean {
+  if (value === null) return true;
+
+  switch (typeof value) {
+    case 'string':
+    case 'number':
+    case 'boolean':
+      return true;
+    case 'undefined':
+    case 'function':
+    case 'symbol':
+    case 'bigint':
+      return false;
+  }
+
+  if (Array.isArray(value)) {
+    return value.every(isSerializablePlainValue);
+  }
+
+  if (Object.getPrototypeOf(value) !== Object.prototype) return false;
+
+  return Object.values(value).every(isSerializablePlainValue);
+}
 
 test('webpack plugin prepends runtime to existing entries', () => {
   const runtime = '/tmp/fluentic-style/webpack-runtime.js';
@@ -3260,6 +3486,220 @@ const view = <div className="base" css={styles.root} />;
   includes(result.code, '@fluentic/style/adapter/react');
   includes(result.code, 'className: "base"');
   includes(result.code, 'css: styles.root');
+});
+
+test('compiler keeps jsx key outside lowered react css prop spread', () => {
+  const compiler = createCompiler({
+    cssProp: CssPropPresets.React,
+    layer: false,
+  });
+
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const styles = { card: style({ color: 'red' }) };
+const view = items.map((item) => (
+  <article key={item.id} className="base" css={styles.card}>
+    {item.title}
+  </article>
+));
+`,
+    '/tmp/compiler-jsx-css-prop-react-key.tsx',
+  );
+
+  if (!result) throw new Error('expected transform result');
+
+  includes(result.code, '<article key={item.id} {..._fluenticMergeJsxProps([');
+  includes(result.code, 'className: "base"');
+  includes(result.code, 'css: styles.card');
+  notIncludes(result.code, 'key: item.id');
+});
+
+test('compiler hoists jsx key before spreads so react keeps list identity', () => {
+  const compiler = createCompiler({
+    cssProp: CssPropPresets.React,
+    layer: false,
+  });
+
+  const result = compiler.transform(
+    `
+const props = { className: 'card' };
+const view = items.map((item) => (
+  <Link href={item.href} {...props} key={item.id}>
+    {item.title}
+  </Link>
+));
+`,
+    '/tmp/compiler-jsx-key-before-spread.tsx',
+  );
+
+  if (!result) throw new Error('expected transform result');
+
+  includes(result.code, '<Link key={item.id} href={item.href} {...props}>');
+  notIncludes(result.code, 'key: item.id');
+});
+
+test('compiler lowers direct class name chain jsx css prop through react adapter preset', () => {
+  const { className: cx } = createClassNameFn({
+    selectors: {},
+    transform: classNameTransform({
+      transform(className) {
+        if (className === 'flex') return { display: 'flex' };
+        if (className === 'min-h-screen') return { minHeight: '100vh' };
+        return {};
+      },
+    }),
+  });
+  const compiler = createCompiler({
+    cssProp: CssPropPresets.React,
+    layer: false,
+    importSources: [{
+      source: './style-fn',
+      name: 'cx',
+      styleFn: cx,
+    }],
+  });
+  const result = compiler.transform(
+    `
+import { cx } from './style-fn';
+
+const styles = {
+  page: cx('min-h-screen'),
+  nav: cx('flex'),
+};
+
+const view = (
+  <>
+    <main css={styles.page} />
+    <nav css={styles.nav} />
+  </>
+);
+`,
+    '/tmp/compiler-jsx-css-prop-react-class-name.tsx',
+  );
+
+  if (!result) throw new Error('expected transform result');
+
+  const css = result.css.join('\n');
+
+  includes(result.code, '@fluentic/style/adapter/react');
+  includes(result.code, 'css: styles.page');
+  includes(result.code, 'css: styles.nav');
+  includes(css, 'min-height: 100vh');
+  includes(css, 'display: flex');
+});
+
+test('compiler lowers intrinsic jsx css prop through custom adapter path', () => {
+  const compiler = createCompiler({
+    cssProp: {
+      adapter: '@acme/fluentic-jsx-adapter',
+    },
+    layer: false,
+  });
+
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+
+const styles = { root: style({ color: 'red' }) };
+const view = <div css={styles.root} />;
+`,
+    '/tmp/compiler-jsx-css-prop-custom-adapter.tsx',
+  );
+
+  if (!result) throw new Error('expected transform result');
+
+  includes(result.code, '@acme/fluentic-jsx-adapter');
+  includes(result.code, 'mergeJsxProps');
+  includes(result.code, 'css: styles.root');
+});
+
+test('plugin compiler rewrites react jsx css prop adapter imports through runtime mode', () => {
+  const compiler = createPluginCompiler({
+    dev: true,
+    projectDir: testDir,
+    cacheDir: testDir + '.test-cache',
+    options: {
+      cssProp: CssPropPresets.React,
+    },
+    runtimeMode: CompilerRuntimeMode.Dev,
+  });
+
+  const result = compiler.transform(
+    `
+import { style } from "@fluentic/style";
+
+const styles = { root: style({ color: "red" }) };
+export const value = <div css={styles.root} />;
+`,
+    '/project/src/App.tsx',
+  );
+
+  if (!result) throw new Error('expected transform result');
+
+  includes(result.code, '@fluentic/style/entry/dev/adapter/react');
+  notIncludes(result.code, '@fluentic/style/adapter/react');
+});
+
+test('plugin compiler keeps server rsc dev css prop adapter imports on rsc runtime', () => {
+  const compiler = createPluginCompiler({
+    dev: true,
+    projectDir: testDir,
+    cacheDir: testDir + '.test-cache',
+    options: {
+      cssProp: CssPropPresets.React,
+    },
+    runtimeMode: CompilerRuntimeMode.RscDev,
+  });
+
+  const result = compiler.compiler.compileDebugRSC({
+    code: `
+import { style } from "@fluentic/style";
+
+const styles = { root: style({ color: "red" }) };
+export const value = <div css={styles.root} />;
+`,
+    filePath: '/project/src/server-page.tsx',
+    sourcemap: null,
+  });
+
+  if (!result) throw new Error('expected transform result');
+
+  includes(result.code, '@fluentic/style/entry/rsc-dev/adapter/react');
+  includes(result.code, '@fluentic/style/entry/rsc-dev');
+  notIncludes(result.code, '@fluentic/style/entry/dev/adapter/react');
+});
+
+test('plugin compiler rewrites use client rsc dev css prop adapter imports to dev runtime', () => {
+  const compiler = createPluginCompiler({
+    dev: true,
+    projectDir: testDir,
+    cacheDir: testDir + '.test-cache',
+    options: {
+      cssProp: CssPropPresets.React,
+    },
+    runtimeMode: CompilerRuntimeMode.RscDev,
+  });
+
+  const result = compiler.compiler.compileDebugRSC({
+    code: `
+'use client';
+
+import { style } from "@fluentic/style";
+
+const styles = { root: style({ color: "red" }) };
+export const value = <button css={styles.root} />;
+`,
+    filePath: '/project/src/client-filter.tsx',
+    sourcemap: null,
+  });
+
+  if (!result) throw new Error('expected transform result');
+
+  includes(result.code, '@fluentic/style/entry/dev/adapter/react');
+  includes(result.code, '@fluentic/style/entry/dev');
+  notIncludes(result.code, '@fluentic/style/entry/rsc-dev/adapter/react');
 });
 
 test('plugin compiler rewrites rsc dev helper imports through runtime mode', () => {

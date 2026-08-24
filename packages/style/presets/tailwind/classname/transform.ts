@@ -127,7 +127,7 @@ function classNameToStyle(className: TailwindClassName, theme: TailwindTheme): R
   if (className.startsWith('w-')) return { w: ref(className, 'w-', [theme.sizes, theme.spacing]) };
   if (className.startsWith('h-')) return { h: ref(className, 'h-', [theme.sizes, theme.spacing]) };
   if (className.startsWith('bg-')) return { bg: ref(className, 'bg-', theme.colors) };
-  if (className.startsWith('text-')) return { text: ref(className, 'text-', [theme.fontSizes, theme.colors]) };
+  if (className.startsWith('text-')) return textStyle(className.slice('text-'.length), theme);
   if (className.startsWith('font-')) return { font: ref(className, 'font-', theme.fontWeights) };
   if (className.startsWith('leading-')) return { leading: ref(className, 'leading-', theme.lineHeights) };
   if (className.startsWith('rounded-')) return { rounded: ref(className, 'rounded-', theme.radii) };
@@ -149,6 +149,37 @@ function borderStyle(value: string, theme: TailwindTheme): Record<string, unknow
   if (value.startsWith('[') && value.endsWith(']')) return { border: value.slice(1, -1).replace(/_/g, ' ') };
   if (/^\d/.test(value)) return { border: value.replace(/_/g, ' ') };
   return { borderColor: scaleRef(value, theme.colors) };
+}
+
+function textStyle(value: string, theme: TailwindTheme): Record<string, unknown> {
+  if (value.startsWith('[') && value.endsWith(']')) {
+    const arbitrary = value.slice(1, -1).replace(/_/g, ' ');
+    const hinted = parseArbitraryTextHint(arbitrary);
+
+    if (hinted) return hinted;
+    if (isLikelyFontSize(arbitrary)) return { textSize: arbitrary };
+
+    return { text: arbitrary };
+  }
+
+  return { text: scaleRef(value, [theme.fontSizes, theme.colors]) };
+}
+
+function parseArbitraryTextHint(value: string): Record<string, unknown> | null {
+  const splitAt = value.indexOf(':');
+  if (splitAt < 1) return null;
+
+  const hint = value.slice(0, splitAt);
+  const textValue = value.slice(splitAt + 1);
+
+  if (hint === 'length' || hint === 'size') return { textSize: textValue };
+  if (hint === 'color') return { text: textValue };
+
+  return null;
+}
+
+function isLikelyFontSize(value: string) {
+  return /^(?:-?\d*\.?\d+(?:px|r?em|lh|vh|vw|vmin|vmax|%|ch|ex|cap|ic)|(?:calc|clamp|min|max)\()/.test(value);
 }
 
 function scaleRef(value: string, scale?: TailwindScale | (TailwindScale | undefined)[]) {

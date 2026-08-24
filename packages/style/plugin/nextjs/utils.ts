@@ -3,8 +3,10 @@ import { createRequire } from 'node:module';
 import path from 'node:path';
 import type { Compilation, Compiler, WebpackPluginInstance } from 'webpack';
 import type { Compiler as PluginCompiler } from '../../compiler';
+import type { ImportSource } from '../../compiler/utils/import_source';
 import { normalizePath } from '../../compiler/utils/path';
 import type { BuildConfig, BuildDevConfig } from '../../config/build';
+import { getStyleFnMeta } from '../../style/style';
 import { createWebpackRegistry } from '../bundler/webpack/shared/registry';
 import type { FileCssCache } from '../utils/cache';
 import type { PluginOptions as BasePluginOptions } from '../utils/compiler';
@@ -69,13 +71,61 @@ export function createNextBuildDevConfig(options: PluginOptions): BuildDevConfig
 export function createNextConfigHash(
   buildConfig: BuildConfig,
   dev: boolean,
+  importSources?: readonly ImportSource[] | null,
 ) {
   const values = [
     dev ? 'dev' : 'prod',
     buildConfig.hoist ? 'hoist' : 'no-hoist',
+    JSON.stringify(createSerializableImportSources(importSources)),
   ];
 
   return createHash('sha256').update(values.join('\0')).digest('hex');
+}
+
+export function createSerializableImportSources(
+  importSources: readonly ImportSource[] | null | undefined,
+): ImportSource[] | undefined {
+  if (!importSources?.length) return undefined;
+
+  const result: ImportSource[] = [];
+
+  for (const entry of importSources) {
+    if (entry.check) continue;
+
+    const source = serializeImportSourcePattern(entry.source);
+    const name = entry.name;
+    const meta = entry.meta ?? (entry.styleFn ? getStyleFnMeta(entry.styleFn) : null);
+
+    if (!meta) continue;
+    if (entry.source !== undefined && source === undefined) continue;
+
+    result.push(removeUndefinedValues({
+      source,
+      name,
+      meta,
+    }));
+  }
+
+  return result.length ? result : undefined;
+}
+
+function serializeImportSourcePattern(
+  source: ImportSource['source'],
+): string | string[] | undefined {
+  if (source === undefined) return undefined;
+
+  if (Array.isArray(source)) {
+    const result: string[] = [];
+
+    for (const item of source) {
+      if (typeof item !== 'string') return undefined;
+      result.push(item);
+    }
+
+    return result;
+  }
+
+  return typeof source === 'string' ? source : undefined;
 }
 
 export function resolveNextCompilerOptions(

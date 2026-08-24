@@ -2,13 +2,14 @@ import type { NextConfig } from 'next';
 import { PHASE_DEVELOPMENT_SERVER } from 'next/constants';
 import fs from 'node:fs';
 import path from 'node:path';
-import type { Compiler, RuleSetRule } from 'webpack';
+import type { Compilation, Compiler, RuleSetRule } from 'webpack';
 import type { BuildConfig, BuildDevConfig } from '../../config/build';
 import { isPromiseLike } from '../../utils/object';
 import {
   BUNDLE_CSS_FILE,
   createCompilerId,
   createFileCssCache,
+  createFileCssContentHash,
   createPluginCompiler,
   DEFAULT_TRANSFORM_EXCLUDE,
   DEFAULT_TRANSFORM_INCLUDE,
@@ -42,6 +43,7 @@ import {
   createNextBuildConfig,
   createNextBuildDevConfig,
   createNextConfigHash,
+  createSerializableImportSources,
   getNextCacheDir,
   getNextPrecollectCacheSubdir,
   getTransformLoaderPath,
@@ -49,8 +51,8 @@ import {
   type NextLoaderState,
   nextRegistry,
   removeUndefinedValues,
-  replaceCssMarkerAsset,
   resolveNextCompilerOptions,
+  replaceCssMarkerAsset,
 } from './utils';
 
 export { CssPropPresets } from '../utils';
@@ -59,8 +61,6 @@ export type { CompilerCssPropOptions } from '../utils';
 export default plugin;
 
 const TURBOPACK_TRANSFORM_EXTENSIONS: readonly string[] = ['*.ts', '*.tsx', '*.js', '*.jsx'];
-const clearedPrecollectCacheRoots = new Set<string>();
-
 type NextPhaseState = {
   buildConfig: BuildConfig;
   buildDevConfig: BuildDevConfig | null;
@@ -110,17 +110,20 @@ function createNextConfig(
   phaseState.configHash = createNextConfigHash(
     phaseState.buildConfig,
     phaseState.dev,
+    options.importSources,
   );
 
   let sidecar: SourcemapSidecar | null = null;
 
   if (dev) {
-    const route: SidecarRouteHandler = () => ({
+    const getDevCss = () => cssCache.getCss({
+      ...phaseState.buildConfig.css,
+      configHash: phaseState.configHash,
+    });
+
+    const route: SidecarRouteHandler = async () => ({
       contentType: 'text/css; charset=utf-8',
-      body: cssCache.getCss({
-        ...phaseState.buildConfig.css,
-        configHash: phaseState.configHash,
-      }),
+      body: await waitForDevCss(getDevCss),
     });
 
     sidecar = getSourcemapSidecar({
@@ -146,6 +149,22 @@ function createNextConfig(
     : finish();
 }
 
+async function waitForDevCss(getCss: () => string) {
+  let css = getCss();
+  if (css) return css;
+
+  const deadline = Date.now() + 5000;
+
+  while (Date.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+
+    css = getCss();
+    if (css) return css;
+  }
+
+  return css;
+}
+
 function createFluenticNextConfigResolved(
   nextConfig: NextConfig,
   options: PluginOptions,
@@ -162,7 +181,7 @@ function createFluenticNextConfigResolved(
   const projectDir = process.cwd();
 
   const devCssHref = dev && sidecar
-    ? sidecar.getRouteUrl(DEV_CSS_ROUTE)
+    ? DEV_CSS_ROUTE
     : null;
 
   const turbopackCompilerId = createCompilerId(NEXT_COMPILER_IDS.turbopack);
@@ -204,6 +223,7 @@ function createFluenticNextConfigResolved(
   return {
     ...nextConfig,
     env: nextConfig.env,
+    rewrites: createNextRewrites(nextConfig.rewrites, dev && sidecar ? sidecar : null),
     compiler: {
       ...originalCompiler,
       define: {
@@ -246,6 +266,7 @@ function createFluenticNextConfigResolved(
       cssAliases: turbopackCssAliases,
       dev,
       devCssHref,
+      options,
       projectDir,
     }),
     webpack(config: WebpackConfiguration, context: WebpackConfigContext) {
@@ -302,11 +323,51 @@ function createFluenticNextConfigResolved(
         cssOutput: options.cssOutput,
         cssCache,
         dev: context.dev,
+        filter: state.filter,
         sidecar,
       });
 
       return config;
     },
+  };
+}
+
+function createNextRewrites(
+  originalRewrites: NextConfig['rewrites'],
+  sidecar: SourcemapSidecar | null,
+): NextConfig['rewrites'] {
+  if (!sidecar) return originalRewrites;
+
+  return async () => {
+    await sidecar.ensureStarted();
+
+    const devCssRewrite = {
+      source: DEV_CSS_ROUTE,
+      destination: sidecar.getRouteUrl(DEV_CSS_ROUTE),
+    };
+
+    const original = await originalRewrites?.();
+
+    if (!original) {
+      return {
+        beforeFiles: [devCssRewrite],
+        afterFiles: [],
+        fallback: [],
+      };
+    }
+
+    if (Array.isArray(original)) {
+      return {
+        beforeFiles: [devCssRewrite],
+        afterFiles: original,
+        fallback: [],
+      };
+    }
+
+    return {
+      ...original,
+      beforeFiles: [devCssRewrite, ...(original.beforeFiles ?? [])],
+    };
   };
 }
 
@@ -325,6 +386,7 @@ function createTurbopackConfig(
     cssAliases: Record<string, string>;
     dev: boolean;
     devCssHref: string | null;
+    options: PluginOptions;
     projectDir: string;
   },
 ): TurbopackConfig {
@@ -354,12 +416,16 @@ function mergeTurbopackRules(
     cssAliases: Record<string, string>;
     dev: boolean;
     devCssHref: string | null;
+    options: PluginOptions;
     projectDir: string;
   },
 ): TurbopackRules {
+  const compilerOptions = createSerializableTurbopackCompilerOptions(args.options);
+
   const loaderItem: TurbopackLoaderItem = {
     loader: LOADER_IMPORT_PATH,
     options: removeUndefinedValues({
+      ...compilerOptions,
       buildConfig: args.buildConfig,
       buildDevConfig: args.buildDevConfig,
       cacheDir: args.cacheDir,
@@ -380,6 +446,55 @@ function mergeTurbopackRules(
   }
 
   return nextRules as TurbopackRules;
+}
+
+function createSerializableTurbopackCompilerOptions(
+  options: PluginOptions,
+): Partial<PluginOptions> {
+  return removeUndefinedValues({
+    css: options.css,
+    cssProp: options.cssProp,
+    dev: options.dev,
+    hoist: options.hoist,
+    importSources: createSerializableTurbopackImportSources(options.importSources),
+  });
+}
+
+function createSerializableTurbopackImportSources(
+  importSources: PluginOptions['importSources'],
+): PluginOptions['importSources'] | undefined {
+  const serialized = createSerializableImportSources(importSources);
+  if (!serialized) return undefined;
+
+  const result = serialized.filter((entry) => isSerializableLoaderValue(entry));
+  return result.length ? result : undefined;
+}
+
+function isSerializableLoaderValue(value: unknown): boolean {
+  if (value === null) return true;
+
+  const valueType = typeof value;
+
+  if (
+    valueType === 'string' ||
+    valueType === 'number' ||
+    valueType === 'boolean'
+  ) {
+    return true;
+  }
+
+  if (valueType !== 'object') return false;
+
+  if (Array.isArray(value)) {
+    return value.every((item) => isSerializableLoaderValue(item));
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) return false;
+
+  return Object.values(value as Record<string, unknown>).every((item) =>
+    isSerializableLoaderValue(item),
+  );
 }
 
 function prependTurbopackLoader(rule: unknown, loader: TurbopackLoaderItem) {
@@ -478,6 +593,7 @@ function addLifecyclePlugin(
     cssOutput: PluginCssOutputOptions | undefined;
     cssCache: ReturnType<typeof createFileCssCache>;
     dev: boolean;
+    filter: NextLoaderState['filter'];
     sidecar: SourcemapSidecar | null;
   },
 ) {
@@ -485,11 +601,6 @@ function addLifecyclePlugin(
     apply(webpackCompiler: Compiler) {
       webpackCompiler.hooks.beforeRun.tapPromise(PLUGIN_NAME, async () => {
         await args.sidecar?.ensureStarted();
-
-        if (!args.dev && !clearedPrecollectCacheRoots.has(args.cssCache.rootDir)) {
-          clearedPrecollectCacheRoots.add(args.cssCache.rootDir);
-          args.cssCache.clear();
-        }
       });
 
       webpackCompiler.hooks.watchRun.tapPromise(PLUGIN_NAME, async (watchCompiler) => {
@@ -510,6 +621,8 @@ function addLifecyclePlugin(
             stage: webpackCompiler.webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONS,
           },
           async () => {
+            precollectProductionCssFromCompilation(args, compilation, webpackCompiler);
+
             const css = await transformCssOutput(
               args.cssCache.getCss({
                 ...args.buildConfig.css,
@@ -532,4 +645,81 @@ function addLifecyclePlugin(
       });
     },
   });
+}
+
+function precollectProductionCssFromCompilation(
+  args: {
+    configHash: string;
+    compiler: NextLoaderState['compiler'];
+    cssCache: ReturnType<typeof createFileCssCache>;
+    dev: boolean;
+    filter: NextLoaderState['filter'];
+  },
+  compilation: Compilation,
+  webpackCompiler: Compiler,
+) {
+  if (args.dev) return;
+
+  const existingCss = args.cssCache.getCss({
+    configHash: args.configHash,
+  });
+
+  if (existingCss) return;
+
+  const files = getCompilationSourceFiles(compilation, webpackCompiler.context, args.filter);
+
+  for (const filePath of files) {
+    let code: string;
+
+    try {
+      code = fs.readFileSync(filePath, 'utf8');
+    } catch {
+      continue;
+    }
+
+    const result = args.compiler.compileExtract({
+      code,
+      filePath,
+      sourcemap: null,
+    });
+
+    if (!result) continue;
+
+    args.cssCache.setFileCss({
+      filePath,
+      contentHash: createFileCssContentHash(code),
+      configHash: args.configHash,
+      rules: result.rules,
+    });
+  }
+}
+
+function getCompilationSourceFiles(
+  compilation: Compilation,
+  projectDir: string,
+  filter: NextLoaderState['filter'],
+) {
+  const files = new Set<string>();
+  const dependencies = compilation.fileDependencies ?? new Set<string>();
+
+  for (const filePath of dependencies) {
+    if (!isProjectSourceFile(filePath, projectDir, filter)) continue;
+    files.add(path.normalize(filePath));
+  }
+
+  return [...files].sort();
+}
+
+function isProjectSourceFile(
+  filePath: string,
+  projectDir: string,
+  filter: NextLoaderState['filter'],
+) {
+  if (!path.isAbsolute(filePath)) return false;
+  if (!filePath.startsWith(projectDir + path.sep)) return false;
+  if (filePath.includes(`${path.sep}.next${path.sep}`)) return false;
+  if (filePath.includes(`${path.sep}.git${path.sep}`)) return false;
+  if (!filter(filePath)) return false;
+
+  return true;
 }

@@ -7,6 +7,7 @@ export type JsxCssPropMergeOptions = {
   classProp: 'class' | 'className';
   styleProp: 'style';
   styleMode: JsxCssPropStyleMode;
+  preserveResultProps?: boolean;
 };
 
 export type JsxCssPropInput = Record<PropertyKey, unknown>;
@@ -22,22 +23,27 @@ export function createMergeJsxProps(
 ) {
   return function mergeJsxProps(parts: readonly unknown[]) {
     let props: JsxCssPropInput | null = null;
+    let cssProps: StyleProp[] | null = null;
 
     for (let index = 0; index < parts.length; index++) {
-      props = mergePart(props, parts[index], getClassName, options);
+      const result = mergePart(props, parts[index]);
+      props = result.props;
+
+      if (result.css) {
+        if (!cssProps) cssProps = [];
+        cssProps.push(result.css);
+      }
     }
 
-    return props ?? {};
+    return mergeCssProps(props ?? {}, cssProps, getClassName, options);
   };
 }
 
 function mergePart(
   props: JsxCssPropInput | null,
   part: unknown,
-  getClassName: GetClassNameFn,
-  options: JsxCssPropMergeOptions,
 ) {
-  if (!part) return props;
+  if (!part) return { css: null, props };
 
   const next = props ? { ...props } : {};
   const attrs = part as JsxCssPropInput;
@@ -47,27 +53,47 @@ function mergePart(
     if (key !== 'css') next[key] = attrs[key];
   }
 
-  if (!css) return next;
+  return {
+    css: css ? css as StyleProp : null,
+    props: next,
+  };
+}
 
-  const className = getClassName(css as StyleProp, {
-    className: getClassValue(next, options.classProp),
-    style: next[options.styleProp] as ClassNameProps['style'],
+function mergeCssProps(
+  props: JsxCssPropInput,
+  cssProps: StyleProp[] | null,
+  getClassName: GetClassNameFn,
+  options: JsxCssPropMergeOptions,
+) {
+  if (!cssProps?.length) return props;
+
+  const className = getClassName(cssProps.length === 1 ? cssProps[0] : cssProps, {
+    className: getClassValue(props, options.classProp),
+    style: props[options.styleProp] as ClassNameProps['style'],
   });
 
-  delete next.class;
-  delete next.className;
+  delete props.class;
+  delete props.className;
 
   if (className.className !== undefined) {
-    next[options.classProp] = className.className;
+    props[options.classProp] = className.className;
   }
 
   if (className.style !== undefined) {
-    next[options.styleProp] = options.styleMode === 'solid'
+    props[options.styleProp] = options.styleMode === 'solid'
       ? toSolidStyle(className.style as Record<string, unknown>)
       : className.style;
   }
 
-  return next;
+  if (options.preserveResultProps) {
+    for (const key in className) {
+      if (key === 'className' || key === 'style') continue;
+
+      props[key] = className[key as keyof ClassNameResult];
+    }
+  }
+
+  return props;
 }
 
 function getClassValue(

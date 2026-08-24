@@ -45,14 +45,21 @@ export function createCssPropPlugin(args: PluginArgs) {
         },
 
         JSXOpeningElement(path: NodePath<BabelTypes.JSXOpeningElement>, state: PluginState) {
+          const keyHoistedAttributes = hoistKeyAttributes(path.node.attributes);
+          if (keyHoistedAttributes) path.node.attributes = keyHoistedAttributes;
+
           const options = getCssPropOptions(state.options);
           if (!options || !state.mergeId) return;
           if (!isIntrinsicElement(path.node.name)) return;
           if (!hasCssAttribute(path.node.attributes)) return;
 
-          const parts = path.node.attributes.map((attr) => buildPart(t, attr));
+          const keyAttributes = path.node.attributes.filter(isKeyAttribute);
+          const parts = path.node.attributes
+            .filter((attr) => !isKeyAttribute(attr))
+            .map((attr) => buildPart(t, attr));
 
           path.node.attributes = [
+            ...keyAttributes,
             t.jsxSpreadAttribute(t.callExpression(state.mergeId, [
               t.arrayExpression(parts),
             ])),
@@ -79,6 +86,31 @@ function hasCssAttribute(attrs: readonly (BabelTypes.JSXAttribute | BabelTypes.J
       attr.name.type === 'JSXIdentifier' &&
       attr.name.name === 'css';
   });
+}
+
+function hoistKeyAttributes(
+  attrs: readonly (BabelTypes.JSXAttribute | BabelTypes.JSXSpreadAttribute)[],
+) {
+  const keyAttributes = attrs.filter(isKeyAttribute);
+  if (!keyAttributes.length) return null;
+
+  const firstKeyIndex = attrs.findIndex(isKeyAttribute);
+  const firstSpreadIndex = attrs.findIndex((attr) => attr.type === 'JSXSpreadAttribute');
+
+  if (firstSpreadIndex < 0 || firstKeyIndex < firstSpreadIndex) return null;
+
+  return [
+    ...keyAttributes,
+    ...attrs.filter((attr) => !isKeyAttribute(attr)),
+  ];
+}
+
+function isKeyAttribute(
+  attr: BabelTypes.JSXAttribute | BabelTypes.JSXSpreadAttribute,
+) {
+  return attr.type === 'JSXAttribute' &&
+    attr.name.type === 'JSXIdentifier' &&
+    attr.name.name === 'key';
 }
 
 function buildPart(

@@ -1,4 +1,6 @@
+import { getIdentifierSafeHash } from '../atomic/utils/hash';
 import { DEV_CONFIG } from '../config/config/dev';
+import { createMergeJsxProps } from '../runtime/adapter/utils';
 import { clearElementMarkers } from '../runtime/core/elementMarker';
 import { getClassName as getExtractedClassName } from '../runtime/extract/getClassName';
 import { transformElement as transformExtractedElement } from '../runtime/extract/jsx';
@@ -39,6 +41,7 @@ import {
   createToken,
   createTokens,
   createValues,
+  deepEqual,
   type DebugData,
   ELEMENT_CSS_DATA_ATTR,
   equal,
@@ -71,6 +74,12 @@ import {
   transformRscElement,
   withTokens,
 } from './setup';
+
+test('identifier-safe hashes are deterministic when short hashes collide', () => {
+  equal(getIdentifierSafeHash('value-25', 3), 'bk5');
+  equal(getIdentifierSafeHash('value-31', 3), 'bk5');
+  equal(getIdentifierSafeHash('value-25', 3), 'bk5');
+});
 
 test('createValues parses pipe and semicolon labels', () => {
   const color = createValues([
@@ -171,6 +180,101 @@ test('style prop resolver accepts direct raw style and slot data', () => {
 
   if (!result.className) throw new Error('expected direct raw css class name');
   equal(result, cached);
+});
+
+test('jsx css prop adapter merges css after normal jsx prop precedence', () => {
+  const mergeJsxProps = createMergeJsxProps(
+    (_css, props) => {
+      const style = props?.style as Record<string, unknown> | undefined;
+
+      return {
+        className: props?.className ? `generated ${props.className}` : 'generated',
+        style: {
+          ...style,
+          color: 'red',
+        },
+      };
+    },
+    {
+      classProp: 'className',
+      styleProp: 'style',
+      styleMode: 'react',
+    },
+  );
+
+  deepEqual(
+    mergeJsxProps([
+      { css: 'style-a' },
+      { className: 'base', style: { marginTop: 4 } },
+    ]),
+    {
+      style: {
+        marginTop: 4,
+        color: 'red',
+      },
+      className: 'generated base',
+    },
+  );
+
+  deepEqual(
+    mergeJsxProps([
+      { className: 'base', style: { marginTop: 4 } },
+      { css: 'style-a' },
+    ]),
+    {
+      style: {
+        marginTop: 4,
+        color: 'red',
+      },
+      className: 'generated base',
+    },
+  );
+});
+
+test('jsx css prop adapter omits runtime result metadata props by default', () => {
+  const mergeJsxProps = createMergeJsxProps(
+    () => ({
+      className: 'generated',
+      [ELEMENT_CSS_DATA_ATTR]: '[{"key":"x","css":".x{}"}]',
+    }),
+    {
+      classProp: 'className',
+      styleProp: 'style',
+      styleMode: 'react',
+    },
+  );
+
+  deepEqual(
+    mergeJsxProps([{ css: 'style-a', id: 'target' }]),
+    {
+      id: 'target',
+      className: 'generated',
+    },
+  );
+});
+
+test('jsx css prop adapter can preserve runtime result metadata props', () => {
+  const mergeJsxProps = createMergeJsxProps(
+    () => ({
+      className: 'generated',
+      [ELEMENT_CSS_DATA_ATTR]: '[{"key":"x","css":".x{}"}]',
+    }),
+    {
+      classProp: 'className',
+      styleProp: 'style',
+      styleMode: 'react',
+      preserveResultProps: true,
+    },
+  );
+
+  deepEqual(
+    mergeJsxProps([{ css: 'style-a', id: 'target' }]),
+    {
+      id: 'target',
+      className: 'generated',
+      [ELEMENT_CSS_DATA_ATTR]: '[{"key":"x","css":".x{}"}]',
+    },
+  );
 });
 
 test('exposeStyle keeps tokens, slots, and selectors from nested style objects', () => {

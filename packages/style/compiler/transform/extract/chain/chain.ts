@@ -1,4 +1,4 @@
-import { getAtomicClassName, getClassNameDedupe } from '../../../../atomic/className';
+import { getAtomicClassName, getClassNameDedupe, getClassNameHashLength } from '../../../../atomic/className';
 import { LayerDefaultPriority } from '../../../../atomic/layer';
 import { buildAtomicRule, getAtomicRuleLayerPriority } from '../../../../atomic/rule';
 import { getTokenOverrideValue, getTokenVar, getTokenVarName } from '../../../../atomic/token';
@@ -62,6 +62,7 @@ import {
   COMPILED_STYLE_OBJECT_LOCATIONS,
   type CompiledRuntimeValue,
   type CompiledStyleObject,
+  type CompiledStyleObjectLocations,
   type EvalScope,
   evaluateNode,
 } from '../../evaluator/evaluator';
@@ -338,7 +339,7 @@ export function compileChain(
 
   if (meta.mode === 'ClassName') {
     if (chain.kind !== 'style') return null;
-    return compileClassNameChain(chain, meta.selectors, fileId, scope, css, meta.transform, styleNames, opts);
+    return compileClassNameChain(chain, meta.selectors, fileId, nodeLoc, scope, css, meta.transform, styleNames, opts);
   }
 
   const selectors = meta.selectors;
@@ -666,15 +667,20 @@ function getCssConfig(
 ): CssConfig {
   const css = opts.css as ExtractCssOptions | undefined;
   const isDevRuntimeMode = runtimeMode === CompilerRuntimeMode.Dev || runtimeMode === CompilerRuntimeMode.RscDev;
+  const debugClassName = css?.debugClassName ?? isDevRuntimeMode;
 
   return {
     classNameFormat: css?.classNameFormat ?? DEFAULT_CONFIG.classNameFormat ?? null,
     sheetClassNameFormat: css?.sheetClassNameFormat ?? DEFAULT_CONFIG.sheetClassNameFormat ?? null,
     transformClassNameFormat: css?.transformClassNameFormat ?? DEFAULT_CONFIG.transformClassNameFormat ?? null,
-    hashLength: css?.hashLength ?? DEFAULT_CONFIG.hashLength ?? 7,
+    hashLength: getClassNameHashLength({
+      debugClassName,
+      isDev: isDevRuntimeMode,
+      cssHashLength: css?.hashLength ?? DEFAULT_CONFIG.hashLength,
+    }),
     tokenNameFormat: css?.tokenNameFormat ?? DEFAULT_CONFIG.tokenNameFormat ?? null,
     localClassName: isDevRuntimeMode,
-    debugClassName: css?.debugClassName ?? isDevRuntimeMode,
+    debugClassName,
     scopeTargetPrefix: css?.scopeTargetPrefix ?? '',
   };
 }
@@ -731,6 +737,7 @@ function compileClassNameChain(
   chain: NonNullable<StyleChainParseResult>,
   selectors: SelectorsMap,
   fileId: string,
+  nodeLoc: { line: number; column: number; } | null | undefined,
   scope: EvalScope,
   cssConfig: CssConfig,
   transform: ClassNameTransform,
@@ -748,6 +755,7 @@ function compileClassNameChain(
       null,
       fileId,
       scope,
+      createClassNameFallbackLocation(nodeLoc, scope, fileId),
       cssConfig,
       transform,
       BUILDER_TYPE_STYLE,
@@ -808,6 +816,7 @@ function compileClassNameChainMethod(
         localChain,
         localMeta.selectors,
         fileId,
+        method.nameNode.loc?.start,
         scope,
         cssConfig,
         localMeta.transform,
@@ -860,6 +869,7 @@ function compileClassNameChainMethod(
       [atRuleSelector],
       fileId,
       scope,
+      createClassNameFallbackLocation(method.nameNode.loc?.start, scope, fileId),
       cssConfig,
       transform,
       BUILDER_TYPE_STYLE,
@@ -894,6 +904,7 @@ function compileClassNameChainMethod(
       null,
       fileId,
       scope,
+      createClassNameFallbackLocation(method.nameNode.loc?.start, scope, fileId),
       cssConfig,
       transform,
       BUILDER_TYPE_STYLE,
@@ -914,6 +925,7 @@ function compileClassNameChainMethod(
     null,
     fileId,
     scope,
+    createClassNameFallbackLocation(method.nameNode.loc?.start, scope, fileId),
     cssConfig,
     transform,
     BUILDER_TYPE_STYLE,
@@ -930,6 +942,7 @@ function compileClassNameArgsInto(
   atRules: ItemSelector[] | null,
   fileId: string,
   scope: EvalScope,
+  fallbackLocation: CompiledStyleObjectLocations[string] | null,
   cssConfig: CssConfig,
   transform: ClassNameTransform,
   type: ExtractedCssBuilderType,
@@ -939,7 +952,8 @@ function compileClassNameArgsInto(
 ): boolean {
   if (startIndex >= args.length) return true;
 
-  const styleObj: Record<string, unknown> = {};
+  const styleObj: CompiledStyleObject = {};
+  const locations: CompiledStyleObjectLocations = {};
 
   let i = startIndex;
   while (i < args.length) {
@@ -949,8 +963,18 @@ function compileClassNameArgsInto(
       return false;
     }
 
-    if (!appendClassNameArgStyle(arg.value, transform, styleObj)) return false;
+    if (!appendClassNameArgStyle(args[i], arg.value, transform, styleObj, locations, fallbackLocation, scope, fileId)) {
+      return false;
+    }
     i++;
+  }
+
+  if (Object.keys(locations).length) {
+    Object.defineProperty(styleObj, COMPILED_STYLE_OBJECT_LOCATIONS, {
+      configurable: true,
+      enumerable: false,
+      value: locations,
+    });
   }
 
   return addStyleItems(
@@ -968,20 +992,36 @@ function compileClassNameArgsInto(
 }
 
 function appendClassNameArgStyle(
+  node: BabelTypes.Node,
   value: unknown,
   transform: ClassNameTransform,
-  styleObj: Record<string, unknown>,
+  styleObj: CompiledStyleObject,
+  locations: CompiledStyleObjectLocations,
+  fallbackLocation: CompiledStyleObjectLocations[string] | null,
+  scope: EvalScope,
+  fileId: string,
 ): boolean {
   if (!value) return true;
 
   if (typeof value === 'string') {
-    Object.assign(styleObj, decorateClassNameStyle(transform.transform(value), value));
+    const transformed = decorateClassNameStyle(transform.transform(value), value);
+    Object.assign(styleObj, transformed);
+    assignClassNameStyleLocations(
+      transformed,
+      locations,
+      getClassNameArgLocation(node, fallbackLocation, scope, fileId),
+    );
     return true;
   }
 
   if (Array.isArray(value)) {
-    for (const item of value) {
-      if (!appendClassNameArgStyle(item, transform, styleObj)) return false;
+    const nodes = node.type === 'ArrayExpression' ? node.elements : [];
+
+    for (let i = 0; i < value.length; i++) {
+      const itemNode = nodes[i] ?? node;
+      if (!appendClassNameArgStyle(itemNode, value[i], transform, styleObj, locations, fallbackLocation, scope, fileId)) {
+        return false;
+      }
     }
     return true;
   }
@@ -989,10 +1029,79 @@ function appendClassNameArgStyle(
   if (isWeightedClassName(value)) {
     const transformed = decorateClassNameStyle(transform.transform(value.className), value.className);
     Object.assign(styleObj, applyClassNameWeight(transformed, value.weight));
+    assignClassNameStyleLocations(
+      transformed,
+      locations,
+      getWeightedClassNameArgLocation(node, fallbackLocation, scope, fileId),
+    );
     return true;
   }
 
   return false;
+}
+
+function assignClassNameStyleLocations(
+  styleObj: Record<string, unknown>,
+  locations: CompiledStyleObjectLocations,
+  location: CompiledStyleObjectLocations[string] | null,
+) {
+  if (!location) return;
+
+  for (const property of Object.keys(styleObj)) {
+    locations[property] = location;
+  }
+}
+
+function getClassNameArgLocation(
+  node: BabelTypes.Node,
+  fallbackLocation: CompiledStyleObjectLocations[string] | null,
+  scope: EvalScope,
+  fileId: string,
+): CompiledStyleObjectLocations[string] | null {
+  if (node.type === 'StringLiteral') {
+    return createClassNameFallbackLocation(node.loc?.start, scope, fileId);
+  }
+
+  if (node.type === 'TemplateLiteral' && node.expressions.length === 0) {
+    return createClassNameFallbackLocation(node.loc?.start, scope, fileId);
+  }
+
+  return fallbackLocation;
+}
+
+function getWeightedClassNameArgLocation(
+  node: BabelTypes.Node,
+  fallbackLocation: CompiledStyleObjectLocations[string] | null,
+  scope: EvalScope,
+  fileId: string,
+): CompiledStyleObjectLocations[string] | null {
+  if (
+    node.type === 'CallExpression' &&
+    node.arguments[0] &&
+    node.callee.type === 'MemberExpression' &&
+    !node.callee.computed &&
+    node.callee.property.type === 'Identifier' &&
+    node.callee.property.name === 'weight'
+  ) {
+    return getClassNameArgLocation(node.arguments[0] as BabelTypes.Node, fallbackLocation, scope, fileId);
+  }
+
+  return fallbackLocation;
+}
+
+function createClassNameFallbackLocation(
+  loc: { line: number; column: number; } | null | undefined,
+  scope: EvalScope,
+  fileId: string,
+): CompiledStyleObjectLocations[string] | null {
+  if (!loc) return null;
+
+  return {
+    filePath: scope.styleFilePath ?? fileId,
+    line: loc.line,
+    column: loc.column + 1,
+    variable: false,
+  };
 }
 
 function decorateClassNameStyle(
@@ -3148,7 +3257,7 @@ function addStyleItems(
 
     const shouldUseVariable = !!(token || runtimeValue);
 
-    const variableName = shouldUseVariable && propertyLoc
+    const variableName = shouldUseVariable && propertyLoc && propertyLoc.variable !== false
       ? getLocalVarName(
         propertyLoc.filePath ?? fileId,
         propertyLoc.line,

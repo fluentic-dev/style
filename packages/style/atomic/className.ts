@@ -81,8 +81,25 @@ export function getAtomicClassName(
 }
 
 function getRuntimeClassNameHashLength(debugClassName: boolean) {
-  if (debugClassName && DEV_CONFIG.isDev) return DEV_CONFIG.hashLength ?? CSS_CONFIG.hashLength ?? 3;
-  return CSS_CONFIG.hashLength ?? 7;
+  return getClassNameHashLength({
+    debugClassName,
+    isDev: DEV_CONFIG.isDev,
+    devHashLength: DEV_CONFIG.hashLength,
+    cssHashLength: CSS_CONFIG.hashLength,
+  });
+}
+
+export function getClassNameHashLength(options: {
+  debugClassName: boolean;
+  isDev: boolean;
+  devHashLength?: number | null;
+  cssHashLength?: number | null;
+}) {
+  if (options.debugClassName && options.isDev) {
+    return options.devHashLength ?? options.cssHashLength ?? 3;
+  }
+
+  return options.cssHashLength ?? 7;
 }
 
 export function getClassNameDedupe(

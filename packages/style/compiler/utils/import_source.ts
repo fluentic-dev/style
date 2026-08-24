@@ -12,12 +12,19 @@ export type ImportSourceInfo = {
 export type ImportSourcePattern = string | RegExp;
 export type ImportSourceCheckFn = (args: ImportSourceInfo) => boolean;
 
-export type ImportSource = {
-  styleFn: StyleFnWithMeta;
-  source?: ImportSourcePattern | ImportSourcePattern[];
-  name?: string | string[];
-  check?: ImportSourceCheckFn;
-};
+export type ImportSource =
+  & ({
+    styleFn: StyleFnWithMeta;
+    meta?: never;
+  } | {
+    styleFn?: never;
+    meta: StyleFnMeta;
+  })
+  & {
+    source?: ImportSourcePattern | ImportSourcePattern[];
+    name?: string | string[];
+    check?: ImportSourceCheckFn;
+  };
 
 export type ImportSourceMatcherState = {
   bySource: Map<string, Map<string, StyleFnMeta> | StyleFnMeta>;
@@ -52,9 +59,12 @@ export function createImportSourceMatcher(
   });
 
   importSources?.forEach((entry) => {
+    const meta = entry.meta ?? (entry.styleFn ? getStyleFnMeta(entry.styleFn) : null);
+    if (!meta) return;
+
     addImportSourceEntry(state, {
       ...entry,
-      meta: getStyleFnMeta(entry.styleFn),
+      meta,
     });
   });
 

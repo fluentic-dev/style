@@ -1,5 +1,4 @@
 import type { NextConfig } from 'next';
-import type { PHASE_TYPE } from 'next/constants';
 import type { OmitProps } from '../../utils/type';
 import type { PluginOptions as BasePluginOptions } from '../utils';
 
@@ -12,7 +11,7 @@ export type NextConfigContext = {
 };
 
 export type NextConfigFunction = (
-  phase: PHASE_TYPE,
+  phase: string,
   context: NextConfigContext,
 ) => MaybePromise<NextConfig>;
 
