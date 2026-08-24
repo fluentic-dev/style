@@ -39,6 +39,9 @@ stylePlugin({
     checkSelector: true,
     hashLength: 3,
   },
+  cssProp: {
+    adapter: '@fluentic/style/adapter/react',
+  },
 });
 ```
 
@@ -51,9 +54,53 @@ stylePlugin({
 | `hoist` | Control supported style hoisting during extraction. |
 | `css` | Configure extracted CSS behavior where supported. |
 | `dev` | Configure development runtime behavior. |
+| `cssProp` | Compile intrinsic JSX `css` props through an adapter. |
 | `importSources` | Configure recognized Fluentic import sources. |
 | `getSourcemapFilePath` | Customize source paths in CSS sourcemaps. |
 | `devSourcemap` | Choose how development source text is exposed to DevTools. |
+
+### CSS Prop
+
+`cssProp` enables compiler lowering for intrinsic JSX `css` props. This lets a
+framework keep its normal JSX runtime while Fluentic compiles `css={...}` into
+framework props before JSX is transformed.
+
+```ts
+import { CssPropPresets, plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+
+stylePlugin({
+  cssProp: CssPropPresets.React,
+});
+```
+
+Built-in presets select an adapter module:
+
+| Preset | Adapter |
+| --- | --- |
+| `CssPropPresets.React` | `@fluentic/style/adapter/react` |
+| `CssPropPresets.Preact` | `@fluentic/style/adapter/preact` |
+| `CssPropPresets.Solid` | `@fluentic/style/adapter/solid` |
+
+Custom adapters are supported:
+
+```ts
+stylePlugin({
+  cssProp: {
+    adapter: '@acme/fluentic-jsx-adapter',
+  },
+});
+```
+
+The adapter module must export `mergeJsxProps`:
+
+```ts
+export function mergeJsxProps(parts: readonly unknown[]): Record<PropertyKey, unknown> {
+  // merge ordered JSX prop chunks and return framework props
+}
+```
+
+The compiler only lowers intrinsic elements such as `div`, `button`, and `svg`.
+Component props are preserved.
 
 ### Import Sources
 

@@ -128,6 +128,64 @@ spacing, sizing, font, radius, shadow, opacity, and breakpoint scales, but it
 does not automatically opt your app into Tailwind's default color palette. Spread
 `defaultTailwindColors` only when you want those names.
 
+## Register Custom Functions
+
+The compiler automatically recognizes the default `style` import from
+`@fluentic/style`. Tailwind presets are custom functions created with
+`createStyleFn(...)` or `createClassNameFn(...)`, so the plugin also needs an
+`importSources` entry for each function your app imports.
+
+If components import `tw` or `cx` from a local module:
+
+```tsx
+import { tw, cx } from '@/lib/styles';
+```
+
+configure the plugin with the same import source and names:
+
+```ts
+stylePlugin({
+  importSources: [
+    {
+      source: '@/lib/styles',
+      name: 'tw',
+      styleFn: tw,
+    },
+    {
+      source: '@/lib/styles',
+      name: 'cx',
+      styleFn: cx,
+    },
+  ],
+});
+```
+
+`source` is matched against the import string in transformed app files, so use
+the path your components write. The config file can import the actual function
+object from a different relative path if needed.
+
+For Next.js, pass those options as the second argument:
+
+```ts title="next.config.ts"
+import stylePlugin from '@fluentic/style/plugin/nextjs';
+import { tw, cx } from './lib/styles';
+
+const nextConfig = {
+  // your Next config
+};
+
+export default stylePlugin(nextConfig, {
+  importSources: [
+    { source: '@/lib/styles', name: 'tw', styleFn: tw },
+    { source: '@/lib/styles', name: 'cx', styleFn: cx },
+  ],
+});
+```
+
+Without this registration, the runtime can still call the function in
+development, but extracted production builds do not know that imported `tw` or
+`cx` is a Fluentic style function and may miss its CSS.
+
 Next:
 
 - [Style Object](/docs/presets/tailwind/style-object/) explains the object-field dialect.

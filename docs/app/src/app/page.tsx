@@ -413,7 +413,7 @@ const modelSteps = [
 const readingCards = [
   [
     'Why Fluentic',
-    'Start with the idea: React solved UI composition. What would style composition look like?',
+    'Start with the idea: component code solved UI composition. What would style composition look like?',
     '/docs/why-fluentic/',
   ],
   [
@@ -444,7 +444,7 @@ const productionCards = [
   ],
   [
     'Runtime values',
-    'Keep values that depend on props, state, or data without switching to a second styling pattern.',
+    'Keep values that depend on props, state, signals, request data, or themes without switching styling patterns.',
   ],
   [
     'Debuggable output',
@@ -452,7 +452,7 @@ const productionCards = [
   ],
   [
     'Integrations',
-    'Use it with Next.js, Vite, Webpack, Rspack, Babel, or your own compiler pipeline.',
+    'Use it with React, Next.js, Preact, SolidJS, Vite, Webpack, Rspack, Farm, Parcel, Babel, or your own compiler pipeline.',
   ],
 ];
 
@@ -488,16 +488,16 @@ export default function HomePage() {
 
       <section className='home-hero'>
         <div className='home-copy'>
-          <p className='home-kicker'>Component style composition for React</p>
-          <h1>What if styling composed like React components do?</h1>
+          <p className='home-kicker'>Component style composition for JSX apps</p>
+          <h1>What if styling composed like components do?</h1>
           <p className='home-lede'>
-            Fluentic gives React teams a composable styling model with runtime flexibility and build-time CSS
-            extraction. Define reusable styles, keep styles close to the components that own them, and create your own
-            tokens, variants, utilities, and design-system rules that compile to predictable CSS.
+            Fluentic gives UI teams a composable styling model with runtime flexibility and build-time CSS extraction.
+            Define reusable styles, keep styles close to the components that own them, and create your own tokens,
+            variants, utilities, and design-system rules that compile to predictable CSS.
           </p>
           <p className='home-tagline'>
-            Most developers no longer struggle writing styles. The difficult part is confidently changing them months
-            later.
+            Use it today with React, Next.js, Preact, and SolidJS. The core model is built to keep moving across JSX
+            runtimes, compiler-backed frameworks, and server-rendered UI stacks.
           </p>
           <div className='home-actions'>
             <Link className='home-primary' href='/docs/fluentic-approach/from-elements-to-components/'>
@@ -595,19 +595,19 @@ export default function HomePage() {
         <div className='home-section-head'>
           <h2 id='composition-title'>Change is easier when ownership is clear.</h2>
           <p>
-            Component code usually gives change a place to live: markup belongs to a component, props describe what
-            callers can change, and context moves values through a tree. Styling needs the same clarity once themes,
+            Component code gives change a place to live: markup belongs to a component, public inputs describe what
+            callers can change, and shared values move through a tree. Styling needs the same clarity once themes,
             overrides, and shared components enter the picture.
           </p>
         </div>
         <div className='home-compare' aria-label='Composition comparison'>
           <article>
-            <span>React</span>
+            <span>Components</span>
             <ul>
-              <li>Components</li>
-              <li>Props</li>
+              <li>Markup</li>
+              <li>Inputs</li>
+              <li>State</li>
               <li>Context</li>
-              <li>Hooks</li>
             </ul>
             <p>Components keep implementation details inside.</p>
           </article>
@@ -694,7 +694,7 @@ export default function HomePage() {
           <h2 id='production-title'>From TypeScript to production CSS.</h2>
           <p>
             Write component styles in TypeScript, extract the static parts to CSS, and keep runtime values working when
-            they depend on props or state.
+            they depend on props, state, signals, request data, or themes.
           </p>
         </div>
         <div className='home-production-grid'>

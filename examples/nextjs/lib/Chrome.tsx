@@ -11,6 +11,7 @@ const links = [
   ['/rsc', 'RSC'],
   ['/theme', 'Theme'],
   ['/client', 'Client hook'],
+  ['/class-name', 'Class name'],
   ['/sample', 'Sample'],
 ];
 

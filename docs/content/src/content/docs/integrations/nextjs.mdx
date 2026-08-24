@@ -68,6 +68,31 @@ Configure TypeScript JSX import source:
 }
 ```
 
+If you prefer to keep Next's normal React JSX runtime, enable the React css-prop
+preset in the plugin options instead of setting `jsxImportSource` to Fluentic:
+
+```js title="next.config.mjs"
+import stylePlugin, { CssPropPresets } from '@fluentic/style/plugin/nextjs';
+
+const nextConfig = {
+  // your Next config
+};
+
+export default stylePlugin(nextConfig, {
+  cssProp: CssPropPresets.React,
+});
+```
+
+With this mode, keep your normal React TypeScript JSX settings:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx"
+  }
+}
+```
+
 Add the development RSC bridge in your root layout:
 
 ```tsx title="app/layout.tsx"

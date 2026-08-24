@@ -50,6 +50,7 @@ parcel index.html --config @fluentic/style/plugin/parcel/config
 | `hoist` | Next.js, Vite, Webpack, Rspack, Farm, Parcel internals | Control supported style hoisting during extraction. Defaults to enabled. |
 | `css` | Next.js, Vite, Webpack, Rspack, Farm, Parcel internals | Configure emitted CSS names, layers, and related CSS output details. |
 | `dev` | Next.js, Vite, Webpack, Rspack, Farm, Parcel internals | Configure development runtime behavior such as priority mode, sourcemap mode, element markers, and selector checks. |
+| `cssProp` | Next.js, Vite, Webpack, Rspack, Farm, Parcel internals | Compile intrinsic JSX `css` props through a framework adapter instead of using Fluentic's JSX runtime. |
 | `importSources` | Next.js, Vite, Webpack, Rspack, Farm, Parcel internals | Teach the compiler about custom or re-exported style builders. |
 | `getSourcemapFilePath` | Next.js, Vite, Webpack, Rspack, Farm, Parcel internals | Customize the source URL written into generated CSS sourcemaps. |
 | `devSourcemap` | Vite, Webpack, Rspack, Farm, Parcel internals | Choose how development sourcemap sources are written. Next.js chooses this for you. |
@@ -75,6 +76,70 @@ stylePlugin({
 
 The plugin should see source before another transform hides `style(...)`,
 `style.slot(...)`, `style.scope(...)`, `createTheme(...)`, or JSX.
+
+## CSS Prop Adapters
+
+Use `cssProp` when you want Fluentic to compile intrinsic JSX `css` props before
+the framework's JSX transform runs:
+
+```ts
+import { CssPropPresets, plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+
+stylePlugin({
+  cssProp: CssPropPresets.React,
+});
+```
+
+This is the normal setup for SolidJS and Preact integrations. For React, it is
+an alternative to the Fluentic JSX runtime. If `cssProp` is not set, React apps
+that use `css={...}` should configure `jsxImportSource` as described in the
+React integration guide.
+
+The built-in presets select the adapter import:
+
+| Preset | Adapter |
+| --- | --- |
+| `CssPropPresets.React` | `@fluentic/style/adapter/react` |
+| `CssPropPresets.Preact` | `@fluentic/style/adapter/preact` |
+| `CssPropPresets.Solid` | `@fluentic/style/adapter/solid` |
+
+You can also pass a custom adapter module:
+
+```ts
+stylePlugin({
+  cssProp: {
+    adapter: '@acme/fluentic-jsx-adapter',
+  },
+});
+```
+
+The adapter module must export `mergeJsxProps`:
+
+```ts
+export function mergeJsxProps(parts: readonly unknown[]): Record<PropertyKey, unknown> {
+  // merge ordered JSX prop chunks and return framework props
+}
+```
+
+For an element like this:
+
+```tsx
+<div className="base" {...props} css={styles.root} />
+```
+
+the compiler calls the adapter with ordered prop chunks:
+
+```ts
+mergeJsxProps([
+  { className: 'base' },
+  props,
+  { css: styles.root },
+]);
+```
+
+The compiler only lowers intrinsic elements such as `div`, `button`, and `svg`.
+Component props like `<Button css={styles.root} />` are preserved for the
+component to handle.
 
 ## CSS Output
 

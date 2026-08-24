@@ -59,6 +59,42 @@ export const { className: cx } = createClassNameFn({
 });
 ```
 
+Register that custom `cx` import in your bundler plugin options. The compiler
+already knows the default `style` import from `@fluentic/style`, but a function
+created with `createClassNameFn(...)` has project-specific selectors and
+classname transform metadata:
+
+```ts
+import { cx } from './styles/tailwind';
+
+stylePlugin({
+  importSources: [
+    {
+      source: './styles/tailwind',
+      name: 'cx',
+      styleFn: cx,
+    },
+  ],
+});
+```
+
+The `source` and `name` should match how app files import the function:
+
+```tsx
+import { cx } from './styles/tailwind';
+```
+
+The config file may import `cx` from a different relative path; `source` is the
+module string the compiler sees in app source files.
+
+For Next.js, pass the same option as the second argument to
+`stylePlugin(nextConfig, options)`.
+
+Without `importSources`, `cx(...)` may work at runtime but production extraction
+cannot reliably recognize it as a Fluentic classname function. That registration
+is what lets extracted builds resolve static expressions, run the Tailwind
+classname transform, and emit CSS.
+
 Use it like any other Fluentic style value:
 
 ```tsx
@@ -97,6 +133,41 @@ cx(
 
 Truthy class names are transformed one at a time. False, null, and undefined
 are ignored.
+
+## Static Expression Tracing
+
+Class names do not have to be literal strings as long as the compiler can trace
+the expression to a static value:
+
+```tsx
+const gaps = {
+  sm: 2,
+  md: 4,
+  lg: 6,
+} as const;
+
+const tones = {
+  primary: 'blue-600',
+  danger: 'red-600',
+} as const;
+
+const card = cx(
+  'mt-' + gaps.md,
+  `gap-${gaps.sm}`,
+  'bg-' + tones.primary,
+)
+  .hover('bg-' + tones.danger)
+  .md('gap-' + gaps.lg);
+```
+
+In an extracted build, Fluentic resolves those expressions before running the
+Tailwind classname transform, so the compiler sees `mt-4`, `gap-2`,
+`bg-blue-600`, `bg-red-600`, and `gap-6` and emits CSS for them.
+
+This is different from class scanners that only look for complete utility
+strings in source text. You can keep utility names tied to small static maps,
+shared constants, generated lookup tables, and template-literal helpers without
+losing extraction, as long as the final value is statically traceable.
 
 ## Chains Instead Of Prefixes
 

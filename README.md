@@ -1,24 +1,28 @@
 # Fluentic Style
 
-Build your own styling language on top of a stable JSX styling model.
+Build your own styling language on top of a stable component styling model.
 
-Styling JSX apps has a lot of good answers already: CSS files, utility classes,
+Styling UI apps has a lot of good answers already: CSS files, utility classes,
 CSS-in-JS, compiled CSS, design tokens, and component libraries. Fluentic
 explores a specific question inside that space: what if styles composed around
-components the same way props and state do?
+components the same way props, state, and themes do?
 
-With Fluentic, you start simple with type-safe `style(...)` and the JSX `css`
-prop in React, Preact, Solid, and compatible JSX runtimes. If your team prefers
-utility class names, you can also create class-name style chains, including a
-Tailwind-like preset. When a component needs variants, themes, nested parts, or
-consumer overrides, add slots, scopes, tokens, and `combineStyle(...)` so those
-styles stay organized around the component.
+With Fluentic, you start simple with type-safe `style(...)` values and attach
+them through a JSX `css` prop or a framework adapter. React, Preact, and SolidJS
+are supported today, with the core style data model designed to keep expanding
+across JSX runtimes, compiler-backed frameworks, and server-rendered UI stacks.
+If your team prefers utility class names, you can also create class-name style
+chains, including a Tailwind-like preset.
 
-For production builds, styles are extracted into static atomic CSS output.
-Dynamic values from props and state still work as usual.
+When a component needs variants, themes, nested parts, or consumer overrides,
+add slots, scopes, tokens, values, and `combineStyle(...)` so those styles stay
+organized around the component instead of leaking through class names or private
+DOM structure. For production builds, Fluentic extracts static styles into
+atomic CSS output while dynamic values from props, state, signals, or request
+data still work at runtime.
 
 [Docs](https://fluenticstack.com/style) |
-[Quick start](https://fluenticstack.com/style/docs/getting-started/quick-start/) |
+[Start here](https://fluenticstack.com/style/docs/learn/start-here/) |
 [Playground](https://fluenticstack.com/style/playground/) |
 [npm](https://www.npmjs.com/package/@fluentic/style)
 
@@ -36,13 +40,35 @@ Or with pnpm:
 pnpm add @fluentic/style@beta
 ```
 
-Use Fluentic in a JSX app. Add a bundler plugin later when you want production
-extraction.
+Use Fluentic in a JSX app. Add a bundler or framework plugin when you want
+production extraction.
+
+## What Fluentic Supports
+
+Fluentic is not tied to one styling vocabulary or one framework runtime. The
+same style model powers CSS-like objects, custom design-system fields,
+Tailwind-like object fields, class-name chains, slots, scopes, themes, tokens,
+runtime values, static extraction, and development traces.
+
+| Area                   | Support                                                                                                                                                                                                                                                                                                                                                                                                  |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Core styling model     | [`style(...)`](https://fluenticstack.com/style/docs/reference/style/), [`style.slot(...)`](https://fluenticstack.com/style/docs/reference/style-slot/), [`style.scope(...)`](https://fluenticstack.com/style/docs/reference/style-scope/), [`combineStyle(...)`](https://fluenticstack.com/style/docs/reference/combine-style/), themes, tokens, values, selectors, at-rules, keyframes, and font faces. |
+| Authoring vocabularies | CSS-like object styles, custom style functions, custom selectors, custom properties, Tailwind-like object fields, and Tailwind-like class-name chains.                                                                                                                                                                                                                                                   |
+| Runtime paths          | Runtime-only JSX setup for quick adoption, compiler-backed extracted runtime for production, and framework css-prop adapters that keep the framework's normal JSX transform.                                                                                                                                                                                                                             |
+| Frameworks today       | React, Next.js App Router, Preact, and SolidJS.                                                                                                                                                                                                                                                                                                                                                          |
+| Bundlers today         | Vite, Webpack, Rspack, Farm, Parcel 2, Babel/custom compiler use, and the Next.js integration for App Router projects.                                                                                                                                                                                                                                                                                   |
+| Development tools      | Readable debug class names, source traces, JSX element markers, sourcemaps, priority inspection, and React Server Component development support for Next.js.                                                                                                                                                                                                                                             |
+
+See the [integration overview](https://fluenticstack.com/style/docs/integrations/overview/)
+for setup guides and the
+[reference overview](https://fluenticstack.com/style/docs/reference/overview/)
+for the API surface.
 
 ## Configure Runtime JSX
 
 Enable the runtime JSX import source so DOM and SVG elements accept the `css`
-prop. This path works without a Fluentic bundler plugin.
+prop. This path works without a Fluentic bundler plugin and is the quickest
+React setup path.
 
 ```jsonc
 /* tsconfig.json */
@@ -54,10 +80,14 @@ prop. This path works without a Fluentic bundler plugin.
 }
 ```
 
+For SolidJS and Preact, keep the framework's normal JSX configuration and use
+the Vite css-prop adapter instead:
+[SolidJS](https://fluenticstack.com/style/docs/integrations/solidjs/) and
+[PreactJS](https://fluenticstack.com/style/docs/integrations/preact/).
+
 ## Why Another Style Library?
 
-Component libraries need more than a way to attach styles to elements. They
-need:
+Component systems need more than a way to attach styles to elements. They need:
 
 - base styles owned by the component;
 - state styles for hover, focus, active, disabled, media, and container queries;
@@ -99,8 +129,9 @@ export function Card() {
 }
 ```
 
-That is the smallest version of Fluentic Style: type-safe styles, selectors, and
-a `css` prop.
+That is the smallest version of Fluentic Style: type-safe styles, selectors,
+and a component-owned style value attached to JSX. The example uses React-style
+syntax, but the same style data can be lowered through framework adapters.
 
 ## Class Name Chains
 
@@ -147,7 +178,11 @@ for the built-in Tailwind-like class-name vocabulary.
 
 ## Scale Into Components
 
-When a component becomes reusable, give its styles component structure.
+When a component becomes reusable, give its styles component structure. This
+section uses React component types for the example, but the important part is
+the framework-independent style model: slots name public styling targets, scopes
+describe changes to those targets, and the component decides where resolved
+styles attach.
 
 ```tsx
 /* tokens.ts */
@@ -330,15 +365,24 @@ priority with layers or sorted output.
 
 ## Add Production Extraction
 
-Fluentic Style works without a compiler. In runtime mode, the JSX `css` prop
-resolves class names and inserts atomic CSS rules as needed.
+Fluentic Style works without a compiler. In runtime-only mode, the JSX `css`
+prop resolves class names and inserts atomic CSS rules as needed. That is useful
+for trying the API, custom environments, and incremental adoption.
 
-For production builds, add a bundler plugin. Styles are extracted into static
-atomic CSS output. Dynamic values from props, state, or user input still work as
-usual.
+For production builds, add a bundler or framework plugin. Static styles are
+extracted into ordered atomic CSS output. Runtime composition stays available
+for values that still depend on props, state, signals, request data, user input,
+or incoming themes.
 
-After adding a Fluentic bundler plugin, change the JSX import source from
-`@fluentic/style/jsx` to `@fluentic/style/plugin/jsx`.
+There are two integration shapes:
+
+- React apps can use Fluentic's JSX runtime import source, switching from
+  `@fluentic/style/jsx` to `@fluentic/style/plugin/jsx` after adding a plugin.
+- React, Preact, and SolidJS can also use a compiler css-prop adapter, letting
+  the framework keep its normal JSX runtime while Fluentic compiles
+  `css={...}` before the framework JSX transform runs.
+
+The React JSX-runtime setup looks like this:
 
 ```jsonc
 /* tsconfig.json */
@@ -370,8 +414,38 @@ export default defineConfig({
 development sourcemaps, and extracted CSS output. See
 [Plugin Options](https://fluenticstack.com/style/docs/reference/plugin-options/).
 
-For Next.js and other bundlers, see the
-[integration docs](https://fluenticstack.com/style/docs/integrations/overview/).
+The framework-adapter setup passes a css-prop preset to the plugin. This is the
+normal path for SolidJS and Preact, and an optional path for React:
+
+```ts
+/* vite.config.ts */
+import { CssPropPresets, plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: [
+    stylePlugin({
+      cssProp: CssPropPresets.Solid,
+    }),
+    // then the framework JSX plugin, such as vite-plugin-solid
+  ],
+});
+```
+
+For framework and bundler-specific setup, see:
+
+| Environment                | Guide                                                                                     |
+| -------------------------- | ----------------------------------------------------------------------------------------- |
+| Next.js App Router         | [Next.js](https://fluenticstack.com/style/docs/integrations/nextjs/)                      |
+| Vite + React               | [Vite](https://fluenticstack.com/style/docs/integrations/vite/)                           |
+| Vite + SolidJS             | [SolidJS](https://fluenticstack.com/style/docs/integrations/solidjs/)                     |
+| Vite + Preact              | [PreactJS](https://fluenticstack.com/style/docs/integrations/preact/)                     |
+| Webpack                    | [Webpack](https://fluenticstack.com/style/docs/integrations/webpack/)                     |
+| Rspack                     | [Rspack](https://fluenticstack.com/style/docs/integrations/rspack/)                       |
+| Farm                       | [Farm](https://fluenticstack.com/style/docs/integrations/farm/)                           |
+| Parcel 2                   | [Parcel](https://fluenticstack.com/style/docs/integrations/parcel/)                       |
+| Runtime-only               | [Runtime-Only Mode](https://fluenticstack.com/style/docs/integrations/runtime-only-mode/) |
+| Custom compiler or bundler | [Custom Compiler](https://fluenticstack.com/style/docs/integrations/custom-compiler/)     |
 
 ## Benchmarks
 

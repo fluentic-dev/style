@@ -100,6 +100,7 @@ const config = createDefaultedTailwindStyleConfig({
     },
   },
 });
+
 const transform = createTailwindStyleTransform(config);
 
 export const { style: tw } = createStyleFn({
@@ -107,6 +108,40 @@ export const { style: tw } = createStyleFn({
   transform,
 });
 ```
+
+Register that custom `tw` import in your bundler plugin options. The compiler
+already knows the default `style` import from `@fluentic/style`, but a function
+created with `createStyleFn(...)` has project-specific selectors and transform
+metadata:
+
+```ts
+import { tw } from './styles/tailwind';
+
+stylePlugin({
+  importSources: [
+    {
+      source: './styles/tailwind',
+      name: 'tw',
+      styleFn: tw,
+    },
+  ],
+});
+```
+
+The `source` and `name` should match how app files import the function:
+
+```tsx
+import { tw } from './styles/tailwind';
+```
+
+The config file may import `tw` from a different relative path; `source` is the
+module string the compiler sees in app source files.
+
+For Next.js, pass the same option as the second argument to
+`stylePlugin(nextConfig, options)`.
+
+Without `importSources`, `tw(...)` may work at runtime but production extraction
+cannot reliably recognize it as a Fluentic style function.
 
 `createTailwindStyleTransform(...)` is strict: it exposes the Tailwind dialect
 fields, not every CSS property. For raw CSS properties, compose with your normal
@@ -365,6 +400,7 @@ const config = createDefaultedTailwindStyleConfig({
     },
   },
 });
+
 const transform = createTailwindStyleTransform(config);
 
 tw({
@@ -393,6 +429,7 @@ export const Colors = createNamedTokens('app.color', {
 const config = createDefaultedTailwindStyleConfig({
   theme: { colors: Colors },
 });
+
 const transform = createTailwindStyleTransform(config);
 
 tw({
@@ -467,6 +504,7 @@ import { Colors } from './tokens';
 const config = createDefaultedTailwindStyleConfig({
   theme: { colors: Colors },
 });
+
 const transform = createTailwindStyleTransform(config);
 
 export const { style: tw } = createStyleFn({
@@ -682,6 +720,7 @@ const config = createDefaultedTailwindStyleConfig({
     },
   },
 });
+
 const transform = createTailwindStyleTransform(config);
 
 tw({ w: '$content' });
@@ -722,6 +761,7 @@ const Colors = createNamedTokens('app.color', {
 const config = createDefaultedTailwindStyleConfig({
   theme: { colors: Colors },
 });
+
 const transform = createTailwindStyleTransform(config);
 
 tw({ bg: '$accent' }).hover({ bg: '$accentHover' });
