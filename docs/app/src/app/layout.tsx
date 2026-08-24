@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     default: 'Fluentic Style',
     template: '%s | Fluentic Style',
   },
-  description: 'Component Style Composition for React.',
+  description: 'Component style composition for JSX apps and modern UI frameworks.',
   icons: {
     icon: `${basePath}/logo.png`,
     shortcut: `${basePath}/logo.png`,
