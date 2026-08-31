@@ -41,8 +41,10 @@ export function Select(props: {
     { enabled: !!props.portalTarget },
   );
 
+  const rootCss = combineStyle(menuSheet, props.theme);
+
   return (
-    <div css={combineStyle(menuSheet, props.theme, props.css)}>
+    <div css={[rootCss, props.css]}>
       <ReactSelect menuPortalTarget={props.portalTarget} unstyled />
     </div>
   );

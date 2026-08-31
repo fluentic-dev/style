@@ -77,11 +77,18 @@ Use `style(...)` for normal element styles.
 
 ## Return Value
 
-`createSheet(...)` returns a Fluentic sheet style item. It can be passed anywhere
-a `StyleProp` can be passed:
+`createSheet(...)` returns a Fluentic sheet style item. It can be passed directly
+to the `css` prop, or through `combineStyle(...)` when it needs themes,
+variants, or token overrides:
 
 ```ts
-combineStyle(selectSheet, compact && compactSheet, props.css);
+const css = combineStyle(selectSheet, compact && compactSheet);
+```
+
+Append incoming `StyleProp` values at the final attachment point:
+
+```tsx
+<div css={[css, props.css]} />
 ```
 
 The sheet's generated class becomes the scope for its selector rules. If the
@@ -106,8 +113,8 @@ const field = style.selector([
 ]);
 ```
 
-Avoid comma-separated selector strings. Arrays keep the selector model visible
-to Fluentic.
+Avoid comma-separated selector strings. Arrays keep the selector structure
+visible to Fluentic.
 
 ## When To Use It
 

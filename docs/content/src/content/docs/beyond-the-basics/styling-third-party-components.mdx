@@ -64,7 +64,7 @@ names:
 .react-select__option
 ```
 
-The wrapper can model those classes as named parts:
+The wrapper can define those classes as named parts:
 
 ```ts
 import { createTokens, style } from '@fluentic/style';
@@ -256,8 +256,13 @@ const css = combineStyle(
   selectSheet,
   props.tone === 'rose' ? roseSelect : blueSelect,
   props.compact && compactSheet,
-  props.css,
 );
+```
+
+Append incoming `StyleProp` values at the final attachment point:
+
+```tsx
+<div css={[css, props.css]} />
 ```
 
 The selectors still read the same token values as ordinary Fluentic styles. You
@@ -309,8 +314,8 @@ menu element itself:
 :where(.sheetClass).react-select__menu { ... }
 ```
 
-The option does not need the same duplication in this model. It is still a child
-under the attached container, whether that container is the wrapper or the menu.
+The option does not need the same duplication here. It is still a child under
+the attached container, whether that container is the wrapper or the menu.
 
 The container rule is the part that starts to repeat:
 
@@ -373,7 +378,7 @@ The three selector forms have distinct meanings:
 
 A resolved sheet can be applied to more than one element. Each element that
 receives the generated class becomes a scope for the same rules. That is useful
-for interop, but it is not the first model to reach for. In the menu example,
+for interop, but it is not the first pattern to reach for. In the menu example,
 the menu or portal container is the target; options remain descendants inside
 that target.
 
@@ -443,7 +448,6 @@ export function Select(props: {
     [selectSheet, menuSheet],
     props.theme,
     props.compact && compactSheet,
-    props.css,
   );
 
   const portalCss = combineStyle(
@@ -456,7 +460,7 @@ export function Select(props: {
   });
 
   return (
-    <div css={rootCss}>
+    <div css={[rootCss, props.css]}>
       <ReactSelect menuPortalTarget={props.portalTarget} unstyled />
     </div>
   );
