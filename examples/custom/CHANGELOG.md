@@ -1,5 +1,12 @@
 # @example/custom
 
+## 0.0.1-beta.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @fluentic/style@0.1.0-beta.7
+
 ## 0.0.1-beta.1
 
 ### Patch Changes

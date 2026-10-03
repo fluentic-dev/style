@@ -79,6 +79,14 @@ There is no Fluentic `jsxImportSource` here:
 }
 ```
 
+Add Fluentic's SolidJS JSX types once in a project declaration file. This makes
+the `css` prop available to Solid JSX without loading SolidJS types for React
+projects:
+
+```ts title="src/fluentic.d.ts"
+import '@fluentic/style/types/solid';
+```
+
 Then write normal Fluentic styles:
 
 ```tsx title="src/App.tsx"
