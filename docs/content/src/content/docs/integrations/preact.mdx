@@ -79,6 +79,14 @@ Configure TypeScript the same way you normally would for a Preact Vite app.
 }
 ```
 
+Add Fluentic's Preact JSX types once in a project declaration file. This makes
+the `css` prop available to Preact JSX without loading Preact types for React
+projects:
+
+```ts title="src/fluentic.d.ts"
+import '@fluentic/style/types/preact';
+```
+
 Then write normal Fluentic styles:
 
 ```tsx title="src/App.tsx"

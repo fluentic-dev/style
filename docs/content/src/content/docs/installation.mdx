@@ -137,7 +137,9 @@ Fluentic plugin instead of setting Fluentic as `jsxImportSource`.
 For SolidJS and Preact, keep the framework's normal JSX configuration and
 enable the matching Fluentic css-prop preset in the Vite adapter. Fluentic
 compiles `css={...}` before the framework JSX plugin runs; these integrations do
-not use `@fluentic/style/plugin/jsx`. See the full
+not use `@fluentic/style/plugin/jsx`. Add
+`@fluentic/style/types/solid` or `@fluentic/style/types/preact` once in a
+project declaration file for JSX `css` prop types. See the full
 [SolidJS guide](/docs/integrations/solidjs/) or
 [PreactJS guide](/docs/integrations/preact/).
 
