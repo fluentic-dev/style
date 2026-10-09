@@ -1,5 +1,22 @@
 # @fluentic/style
 
+## 0.1.0-beta.8
+
+### Patch Changes
+
+- Improve Next.js RSC development CSS stability.
+
+  - Include imported `createValues(...)` and named-token `getToken(...)` values
+    in RSC dev precollected CSS so initial server styles match the dev
+    stylesheet.
+  - Use stable project-relative callsites for RSC dev local CSS variables,
+    including values imported from shared theme modules.
+  - Include the installed package identity in the Next.js cache key so local
+    tarball/package changes invalidate dev CSS caches.
+  - Increase the default dev/debug hash suffix from 3 to 5 characters to avoid
+    readable class-name collisions in large debug stylesheets while preserving
+    explicit `hashLength` configuration.
+
 ## 0.1.0-beta.7
 
 ### Patch Changes
