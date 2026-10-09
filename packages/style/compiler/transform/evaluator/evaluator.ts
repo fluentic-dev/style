@@ -5,6 +5,7 @@ import { fontSrc } from '../../../atomic/atRule/fontSrc';
 import { buildKeyframesCss, formatKeyFramesName, type KeyframesObject } from '../../../atomic/atRule/keyframes';
 import { buildPositionTryCss, formatPositionTryName } from '../../../atomic/atRule/positionTry';
 import { buildPropertyCss, formatPropertyName, type PropertyObject } from '../../../atomic/atRule/property';
+import { getTokenVar } from '../../../atomic/token';
 import { TRACE_STYLE, TRACE_VALUE } from '../../../builder/data/debug';
 import {
   createExtractedScope,
@@ -58,6 +59,7 @@ import {
   FN_CREATE_VALUES,
   FN_EXPOSE_STYLE,
   FN_FONT_SRC,
+  FN_GET_TOKEN,
   FN_GET_EXTRACTED_STYLE_ITEMS,
   FN_STYLE_IMPORTANT,
   FN_STYLE_KEYFRAMES,
@@ -87,6 +89,8 @@ export type CompiledStyleObjectLocations = Record<string, {
   column: number;
   trace?: typeof TRACE_STYLE | typeof TRACE_VALUE;
   variable?: boolean;
+  variableLine?: number;
+  variableColumn?: number;
 }>;
 
 export type CompiledStyleObject = Record<string, unknown> & {
@@ -360,10 +364,14 @@ function evaluateObject(node: BabelTypes.ObjectExpression, scope: EvalScope): Ev
         : createCompiledRuntimeValue(prop.value as BabelTypes.Expression);
 
       if (prop.loc?.start) {
+        const variableLoc = prop.value.loc?.start ?? prop.loc?.start;
+
         locations[key] = {
           line: prop.loc.start.line,
           column: prop.loc.start.column + 1,
           filePath: scope.styleFilePath ?? scope.filePath,
+          variableLine: variableLoc?.line,
+          variableColumn: variableLoc ? variableLoc.column + 1 : undefined,
         };
       }
     } else {
@@ -654,6 +662,17 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
       }
 
       return evalOk(createNamedTokens(namespace.value, values.value as object));
+    }
+
+    if (imp && STYLE_IMPORT_PATHS.has(imp.source) && imp.name === FN_GET_TOKEN) {
+      const value = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
+      if (!value.ok) return value;
+
+      if (isStyleTokenData(value.value)) {
+        return evalOk(getTokenVar(value.value, CSS_CONFIG.tokenNameFormat || null));
+      }
+
+      return evalOk(value.value);
     }
 
     if (imp && imp.source === STYLE_UTILS_IMPORT_PATH && imp.name === FN_EXPOSE_STYLE) {

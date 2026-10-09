@@ -18,7 +18,7 @@ export function getElementClassName(
   elementClassNameFormat: ElementClassNameFormat | null,
 ) {
   const name = sanitizeDebugName(label) || null;
-  const hash = getIdentifierSafeHash(id, DEV_CONFIG.hashLength ?? CSS_CONFIG.hashLength ?? 3);
+  const hash = getIdentifierSafeHash(id, DEV_CONFIG.hashLength ?? CSS_CONFIG.hashLength ?? 5);
 
   return formatElementClassName(
     elementClassNameFormat || ELEMENT_CLASS_NAME_FORMAT,

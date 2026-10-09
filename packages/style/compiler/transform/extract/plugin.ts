@@ -76,7 +76,9 @@ export function createExtractPlugin(args: PluginArgs) {
         this.filePath = this.file?.opts?.filename ?? 'unknown';
         this.styleFilePath = args.styleFilePath ?? this.filePath;
         this.sourcemapTrace = options.dev?.sourcemapMode ?? 'style';
-        this.fileId = args.styleFilePath ?? getProjectFileId(args.projectDir, this.file?.opts?.filename);
+        this.fileId = args.runtimeMode === 'rsc-dev'
+          ? getProjectFileId(args.projectDir, this.file?.opts?.filename)
+          : args.styleFilePath ?? getProjectFileId(args.projectDir, this.file?.opts?.filename);
       },
 
       visitor: {
