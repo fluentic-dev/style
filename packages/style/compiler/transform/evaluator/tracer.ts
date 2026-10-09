@@ -431,10 +431,14 @@ function evaluateResolvedObject(
     result[String(key.value)] = value.ok ? value.value : value;
 
     if (prop.loc?.start) {
+      const variableLoc = prop.value.loc?.start ?? prop.loc?.start;
+
       locations[String(key.value)] = {
         line: prop.loc.start.line,
         column: prop.loc.start.column + 1,
         filePath: scope.styleFilePath ?? scope.filePath,
+        variableLine: variableLoc?.line,
+        variableColumn: variableLoc ? variableLoc.column + 1 : undefined,
       };
     }
   }

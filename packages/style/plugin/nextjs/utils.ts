@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto';
+import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Compilation, Compiler, WebpackPluginInstance } from 'webpack';
 import type { Compiler as PluginCompiler } from '../../compiler';
 import type { ImportSource } from '../../compiler/utils/import_source';
@@ -74,12 +76,81 @@ export function createNextConfigHash(
   importSources?: readonly ImportSource[] | null,
 ) {
   const values = [
+    createPackageCacheIdentity(),
     dev ? 'dev' : 'prod',
     buildConfig.hoist ? 'hoist' : 'no-hoist',
     JSON.stringify(createSerializableImportSources(importSources)),
   ];
 
   return createHash('sha256').update(values.join('\0')).digest('hex');
+}
+
+function createPackageCacheIdentity() {
+  const require = createRequire(import.meta.url);
+  let entryPath = '';
+
+  try {
+    entryPath = require.resolve('@fluentic/style/plugin/nextjs');
+  } catch {
+    entryPath = fileURLToPath(import.meta.url);
+  }
+
+  const packageInfo = findPackageInfo(entryPath);
+  const parts = [
+    packageInfo.version,
+    normalizePath(packageInfo.packageRoot),
+    normalizePath(entryPath),
+    getStatIdentity(packageInfo.packageJsonPath),
+    getStatIdentity(entryPath),
+  ];
+
+  return parts.join('\0');
+}
+
+function findPackageInfo(entryPath: string) {
+  let current = path.dirname(entryPath);
+
+  while (true) {
+    const packageJsonPath = path.join(current, 'package.json');
+
+    try {
+      const pkg = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as {
+        name?: string;
+        version?: string;
+      };
+
+      if (pkg.name === '@fluentic/style') {
+        return {
+          packageRoot: current,
+          packageJsonPath,
+          version: pkg.version ?? '',
+        };
+      }
+    } catch {
+      // Keep walking toward the filesystem root.
+    }
+
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+
+  return {
+    packageRoot: path.dirname(entryPath),
+    packageJsonPath: '',
+    version: '',
+  };
+}
+
+function getStatIdentity(filePath: string) {
+  if (!filePath) return '';
+
+  try {
+    const stat = fs.statSync(filePath);
+    return `${stat.size}:${stat.mtimeMs}`;
+  } catch {
+    return '';
+  }
 }
 
 export function createSerializableImportSources(

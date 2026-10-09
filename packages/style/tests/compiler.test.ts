@@ -3092,7 +3092,7 @@ export const shell = style({
 
   deepEqual(
     classNames.map((className) => className.match(/--([a-z0-9]+)$/)?.[1]?.length),
-    [3, 3, 3],
+    [5, 5, 5],
   );
   includes(classNames.join(' '), 'width-shell--');
   includes(classNames.join(' '), 'display-flex--');
@@ -3187,6 +3187,141 @@ export const page = cx('bg-paper');
   if (!rule) throw new Error('expected bg-paper rule');
   includes(rule.css, 'var(--token-test-color-paper-');
   notIncludes(rule.css, 'var(--var-');
+});
+
+test('rsc dev css precollect includes imported createValues token rules', () => {
+  const root = mkdtempSync(path.join(testDir, 'tmp-rsc-dev-create-values-'));
+  const themeFile = path.join(root, 'theme.ts');
+  const stylesFile = path.join(root, 'card.styles.ts');
+
+  writeFileSync(
+    themeFile,
+    `
+import { createValues } from '@fluentic/style';
+
+export const color = createValues([
+  '#ffffff | Canvas',
+  '#e4ebfb | Border',
+]);
+`,
+    'utf8',
+  );
+
+  const compiler = createPluginCompiler({
+    dev: true,
+    projectDir: root,
+    cacheDir: root + '.test-cache',
+    options: {
+      css: {
+        debugClassName: true,
+        layer: false,
+      },
+    },
+    runtimeMode: CompilerRuntimeMode.RscDev,
+  });
+
+  const result = compiler.compiler.compileDebugRSC({
+    code: `
+import { style } from '@fluentic/style';
+import { color } from './theme';
+
+export const card = style({
+  backgroundColor: color('#ffffff | Canvas'),
+  border: '1px solid',
+  borderColor: color('#e4ebfb | Border'),
+});
+`,
+    filePath: stylesFile,
+    sourcemap: null,
+  });
+
+  if (!result) throw new Error('expected rsc dev transform result');
+
+  const css = result.rules.map((rule) => rule.css).join('\n');
+  const backgroundVar = result.code.match(/"backgroundColor": "(--var-[^"]+)"/)?.[1];
+  const borderVar = result.code.match(/"borderColor": "(--var-[^"]+)"/)?.[1];
+
+  includes(css, 'border: 1px solid');
+  includes(css, 'background-color: var(--var-');
+  includes(css, 'border-color: var(--var-');
+  if (!backgroundVar || !borderVar) throw new Error('expected debug css variables');
+  includes(css, `background-color: var(${backgroundVar},`);
+  includes(css, `border-color: var(${borderVar},`);
+});
+
+test('rsc dev css precollect includes imported createValues from theme modules with named tokens', () => {
+  const root = mkdtempSync(path.join(testDir, 'tmp-rsc-dev-theme-module-'));
+  const themeFile = path.join(root, 'theme.ts');
+  const stylesFile = path.join(root, 'pricing.styles.ts');
+
+  writeFileSync(
+    themeFile,
+    `
+import { createTheme, createValues } from '@fluentic/style';
+import { createNamedTokens } from '@fluentic/style/dialect';
+
+export const color = createValues([
+  '#ffffff | Canvas',
+  '#e4ebfb | Border',
+]);
+
+export const tokens = createNamedTokens('sympl.theme', {
+  color: {
+    canvas: '#ffffff',
+    wave1: '#eaf1ff',
+    wave2: '#f7faff',
+  },
+});
+
+export const lightTheme = createTheme([
+  tokens.color.canvas('#ffffff'),
+  color('#ffffff | Canvas', '#ffffff'),
+  color('#e4ebfb | Border', '#e4e9f7'),
+]);
+`,
+    'utf8',
+  );
+
+  const compiler = createPluginCompiler({
+    dev: true,
+    projectDir: root,
+    cacheDir: root + '.test-cache',
+    options: {
+      css: {
+        debugClassName: true,
+        layer: false,
+      },
+    },
+    runtimeMode: CompilerRuntimeMode.RscDev,
+  });
+
+  const result = compiler.compiler.compileDebugRSC({
+    code: `
+import { getToken, style } from '@fluentic/style';
+import { color, tokens } from './theme';
+
+export const featureCard = style({
+  backgroundColor: color('#ffffff | Canvas'),
+  border: '1px solid',
+  borderColor: color('#e4ebfb | Border'),
+});
+
+export const priceCard = style({
+  background: \`linear-gradient(180deg, \${getToken(tokens.color.wave2)}, \${getToken(tokens.color.wave1)})\`,
+});
+`,
+    filePath: stylesFile,
+    sourcemap: null,
+  });
+
+  if (!result) throw new Error('expected rsc dev transform result');
+
+  const css = result.rules.map((rule) => rule.css).join('\n');
+
+  includes(css, 'border: 1px solid');
+  includes(css, 'background-color: var(--var-');
+  includes(css, 'border-color: var(--var-');
+  includes(css, 'background: linear-gradient(180deg, var(--token-sympl-theme-color-wave2-');
 });
 
 test('next turbopack dev loader uses rsc runtime for explicit getClassName calls', async () => {

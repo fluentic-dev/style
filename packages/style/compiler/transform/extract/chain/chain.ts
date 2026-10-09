@@ -93,6 +93,7 @@ type CssConfig = {
   tokenNameFormat: TokenNameFormat | null;
   localClassName: boolean;
   debugClassName: boolean;
+  runtimeMode: CompilerRuntimeMode | null;
   scopeTargetPrefix: string;
 };
 
@@ -681,6 +682,7 @@ function getCssConfig(
     tokenNameFormat: css?.tokenNameFormat ?? DEFAULT_CONFIG.tokenNameFormat ?? null,
     localClassName: isDevRuntimeMode,
     debugClassName,
+    runtimeMode,
     scopeTargetPrefix: css?.scopeTargetPrefix ?? '',
   };
 }
@@ -2364,7 +2366,10 @@ function getMergeStyleCallsite(
   scope: EvalScope,
   options: CompilerOptions,
 ): TraceCallsiteOverride {
-  if (options.dev?.sourcemapMode !== 'style') return null;
+  const sourcemapMode = options.dev?.sourcemapMode ?? (
+    scope.runtimeMode === CompilerRuntimeMode.RscDev ? 'style' : null
+  );
+  if (sourcemapMode !== 'style') return null;
 
   const loc = node?.loc?.start;
   if (!loc) return null;
@@ -3259,9 +3264,15 @@ function addStyleItems(
 
     const variableName = shouldUseVariable && propertyLoc && propertyLoc.variable !== false
       ? getLocalVarName(
-        propertyLoc.filePath ?? fileId,
-        propertyLoc.line,
-        propertyLoc.column,
+        cssConfig.runtimeMode === CompilerRuntimeMode.RscDev
+          ? fileId
+          : propertyLoc.filePath ?? fileId,
+        cssConfig.runtimeMode === CompilerRuntimeMode.RscDev
+          ? propertyLoc.variableLine ?? propertyLoc.line
+          : propertyLoc.line,
+        cssConfig.runtimeMode === CompilerRuntimeMode.RscDev
+          ? propertyLoc.variableColumn ?? propertyLoc.column
+          : propertyLoc.column,
         cssConfig.tokenNameFormat,
       )
       : null;

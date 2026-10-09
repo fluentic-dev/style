@@ -1734,8 +1734,8 @@ test('runtime debug class names use short hashes', () => {
   const classNameHash = result.className?.match(/text-danger--([a-zA-Z0-9]+)\b/)?.[1];
   const markerHash = markerClassName.match(/@button--([a-zA-Z0-9]+)\b/)?.[1];
 
-  equal(classNameHash?.length, 3);
-  equal(markerHash?.length, 3);
+  equal(classNameHash?.length, 5);
+  equal(markerHash?.length, 5);
 });
 
 test('runtime debug hash length can be configured', () => {

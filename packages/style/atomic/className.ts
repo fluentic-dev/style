@@ -96,7 +96,7 @@ export function getClassNameHashLength(options: {
   cssHashLength?: number | null;
 }) {
   if (options.debugClassName && options.isDev) {
-    return options.devHashLength ?? options.cssHashLength ?? 3;
+    return options.devHashLength ?? options.cssHashLength ?? 5;
   }
 
   return options.cssHashLength ?? 7;
