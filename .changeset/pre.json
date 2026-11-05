@@ -41,6 +41,7 @@
     "first-public-beta-release-notes",
     "global-prod-classnames",
     "optional-framework-jsx-types",
+    "resolve-tsconfig-path-aliases",
     "selector-sheets",
     "slim-extracted-token-runtime",
     "sync-beta-release-metadata",
