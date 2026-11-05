@@ -1,5 +1,14 @@
 # @fluentic/style
 
+## 0.1.0-beta.9
+
+### Patch Changes
+
+- 0309b3b: Resolve TypeScript path aliases when statically extracting imported theme
+  values. Imported `createValues(...)` palettes referenced through `tsconfig`
+  paths now extract correctly, including in React Server Component production
+  builds.
+
 ## 0.1.0-beta.8
 
 ### Patch Changes
