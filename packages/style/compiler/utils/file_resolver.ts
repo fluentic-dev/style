@@ -20,6 +20,7 @@ const resolver = new ResolverFactory({
   conditionNames: ['import', 'module', 'default', 'types'],
   extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts'],
   mainFiles: ['index'],
+  tsconfig: 'auto',
 });
 
 export function clearResolverCache(): void {

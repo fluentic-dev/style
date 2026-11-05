@@ -1,4 +1,4 @@
-import { mkdtempSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { formatClassName } from '../atomic/debug/className';
@@ -3247,6 +3247,51 @@ export const card = style({
   if (!backgroundVar || !borderVar) throw new Error('expected debug css variables');
   includes(css, `background-color: var(${backgroundVar},`);
   includes(css, `border-color: var(${borderVar},`);
+});
+
+test('compiler extracts imported createValues through tsconfig path aliases', () => {
+  const root = mkdtempSync(path.join(testDir, 'tmp-tsconfig-create-values-'));
+  const themeFile = path.join(root, 'src/styles/theme.ts');
+  const stylesFile = path.join(root, 'src/features/home/card.styles.ts');
+
+  writeFileSync(
+    path.join(root, 'tsconfig.json'),
+    JSON.stringify({ compilerOptions: { paths: { '@/*': ['./src/*'] } } }),
+    'utf8',
+  );
+  mkdirSync(path.dirname(themeFile), { recursive: true });
+  mkdirSync(path.dirname(stylesFile), { recursive: true });
+  writeFileSync(
+    themeFile,
+    `
+import { createValues } from '@fluentic/style';
+
+export const color = createValues(['#ffffff | Canvas']);
+`,
+    'utf8',
+  );
+
+  const compiler = createPluginCompiler({
+    dev: false,
+    projectDir: root,
+    cacheDir: root + '.test-cache',
+    options: { css: { debugClassName: true, layer: false } },
+    runtimeMode: CompilerRuntimeMode.RscProd,
+  });
+  const result = compiler.compiler.compileExtract({
+    code: `
+import { style } from '@fluentic/style';
+import { color } from '@/styles/theme';
+
+export const card = style({ backgroundColor: color('#ffffff | Canvas') });
+`,
+    filePath: stylesFile,
+    sourcemap: null,
+  });
+
+  if (!result) throw new Error('expected extracted transform result');
+  includes(result.code, 'createExtractedToken(');
+  notIncludes(result.code, `color('#ffffff | Canvas')`);
 });
 
 test('rsc dev css precollect includes imported createValues from theme modules with named tokens', () => {
