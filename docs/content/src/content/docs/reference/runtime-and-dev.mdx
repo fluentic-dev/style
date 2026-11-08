@@ -16,6 +16,12 @@ Most bundler integrations configure this for you.
 
 ```ts
 configureStyleRuntime({
+  check: {
+    important: {
+      rawValue: 'error',
+      outsideSheet: 'warn',
+    },
+  },
   css: {
     debugClassName: true,
     classNameFormat: '(property)-$hash',
@@ -23,6 +29,17 @@ configureStyleRuntime({
   },
 });
 ```
+
+`check.important.rawValue` checks for raw string values containing
+`!important`; use `style.important(value)` instead. The
+`check.important.outsideSheet` check recommends `style.weight(...)` when an
+ordinary Fluentic style only needs higher internal priority. Each check accepts
+`false`, `'warn'`, or `'error'` and is disabled by default. Runtime warnings are
+development-only, while runtime errors remain active when explicitly enabled.
+
+When a bundler plugin is installed, configure `check` on the plugin instead so
+the compiler can report static cases and pass the same settings to the runtime.
+See [Plugin Options](plugin-options#check-options).
 
 ## configureStyleDev
 

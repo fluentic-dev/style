@@ -1,3 +1,4 @@
+import type { StyleCheckOptions } from '../../config/config/check';
 import type { CssConfig } from '../../config/config/css';
 import type { DevRuntimeOptions } from '../../config/config/dev';
 import type { CheckSelectorMode } from '../../config/types';
@@ -20,6 +21,7 @@ export type DevSourcemapMode = 'sourceUrl' | 'sourceContent' | 'sidecarServer';
 
 export type CompilerOptions = {
   hoist?: boolean;
+  check?: StyleCheckOptions;
   css?: CompilerCssOptions;
   cssProp?: false | CompilerCssPropOptions;
   dev?: CompilerDevOptions;

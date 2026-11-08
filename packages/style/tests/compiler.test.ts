@@ -1526,6 +1526,70 @@ const sheet = createSheet([
   equal(classNames.length, 5);
 });
 
+test('compiler important checks reject raw values and important outside sheets', () => {
+  const rawValueCompiler = createCompiler({
+    check: { important: { rawValue: 'error' } },
+  });
+  let rawValueError: unknown;
+
+  try {
+    rawValueCompiler.transform(
+      `
+import { style } from '@fluentic/style';
+
+export const invalid = style({ color: 'red !important' });
+`,
+      '/tmp/compiler-check-important-raw-value.ts',
+    );
+  } catch (error) {
+    rawValueError = error;
+  }
+
+  assertCompileError(rawValueError, 'style.important');
+
+  const outsideSheetCompiler = createCompiler({
+    check: { important: { outsideSheet: 'error' } },
+  });
+  let outsideSheetError: unknown;
+
+  try {
+    outsideSheetCompiler.transform(
+      `
+import { style } from '@fluentic/style';
+
+export const invalid = style({ color: style.important('red') });
+`,
+      '/tmp/compiler-check-important-outside-sheet.ts',
+    );
+  } catch (error) {
+    outsideSheetError = error;
+  }
+
+  assertCompileError(outsideSheetError, 'style.weight');
+});
+
+test('compiler important outside-sheet checks allow createSheet rules', () => {
+  const compiler = createCompiler({
+    check: { important: { outsideSheet: 'error' } },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+export const sheet = createSheet([
+  style.selector('.third-party-control', {
+    color: style.important('red'),
+  }),
+]);
+`,
+    '/tmp/compiler-check-important-sheet.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+  includes(result.css.join('\n'), 'color: red !important');
+});
+
 test('compiler extracts keyframes used as style value refs', () => {
   const compiler = createCompiler({
     layer: false,

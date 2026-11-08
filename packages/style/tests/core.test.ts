@@ -1447,6 +1447,72 @@ test('style important values emit important declarations for styles, sheets, and
   includes(classNameCss, 'font-weight: 700 !important');
 });
 
+test('important usage checks reject raw values and important outside sheets when enabled', () => {
+  try {
+    configureTestRuntime({
+      check: {
+        important: {
+          rawValue: 'error',
+          outsideSheet: 'error',
+        },
+      },
+    });
+
+    let rawValueError = '';
+    try {
+      style({ color: 'red !important' });
+    } catch (error) {
+      rawValueError = String(error);
+    }
+    includes(rawValueError, 'style.important');
+
+    let outsideSheetError = '';
+    try {
+      style({ color: style.important('red') });
+    } catch (error) {
+      outsideSheetError = String(error);
+    }
+    includes(outsideSheetError, 'style.weight');
+
+    const sheet = createSheet([
+      style.selector('.third-party-control', {
+        color: style.important('red'),
+      }),
+    ]);
+    includes(getSheetRules(sheet)[0]?.css ?? '', 'color: red !important');
+  } finally {
+    configureTestRuntime();
+  }
+});
+
+test('important usage warnings are reported only in runtime development mode', () => {
+  const warnings: unknown[][] = [];
+  const warn = console.warn;
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args);
+  };
+
+  try {
+    configureTestRuntime({
+      dev: true,
+      check: { important: { rawValue: 'warn' } },
+    });
+    style({ color: 'red !important' });
+    equal(warnings.length, 1);
+    includes(String(warnings[0]?.[0]), 'style.important');
+
+    configureTestRuntime({
+      dev: false,
+      check: { important: { rawValue: 'warn' } },
+    });
+    style({ color: 'blue !important' });
+    equal(warnings.length, 1);
+  } finally {
+    console.warn = warn;
+    configureTestRuntime();
+  }
+});
+
 test('createSheet accepts local token overrides and combineStyle can override them', () => {
   const color = createToken('blue');
   const sheet = createSheet([

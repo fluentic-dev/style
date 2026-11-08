@@ -16,5 +16,6 @@ Add attachable selector sheets for styling fixed third-party class names without
 - Keep Fluentic priority ordering stable for important declarations in cascade-layer mode, leave selector sheets unlayered by default for third-party overrides, and support opt-in `css.layer.sheet`/per-sheet layering through the derived `<layerNamespace>.sheet` layer.
 - Add options-first `createSheet({ layer, weight }, items)` overloads, including repeated sheet anchors for deliberate selector-specificity increases without `!important`.
 - Add `style.weight(...)` as the style-object counterpart to `className.weight(...)`.
+- Add opt-in `check.important.rawValue` and `check.important.outsideSheet` compiler/runtime checks, with `warn` and `error` modes, to enforce the recommended `style.important(...)` and `style.weight(...)` usage.
 - Keep the extracted production runtime below 5 KB minified and gzipped with `combineStyle` included, and keep selector parsing helpers out of the extracted production entry.
 - Add a React Select third-party selectors example, Preact integration docs, and a clearer third-party styling guide for selector sheets, style targets, portal menus, and the new `combineStyle` helpers.

@@ -26,6 +26,7 @@ export type CssExtractRule = {
   className: string;
   css: string;
   priority: LayerPriority;
+  important?: boolean;
   layer?: 'sheet' | false;
   trace?: {
     filePath: string;
