@@ -43,6 +43,7 @@
     "optional-framework-jsx-types",
     "resolve-tsconfig-path-aliases",
     "selector-sheets",
+    "sheet-layer-controls",
     "slim-extracted-token-runtime",
     "sync-beta-release-metadata",
     "typed-selector-asserts"
