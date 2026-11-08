@@ -13,6 +13,8 @@ Add attachable selector sheets for styling fixed third-party class names without
 - Add Preact css-prop support with a `CssPropPresets.Preact` compiler preset, runtime adapters, JSX types, and a Vite example.
 - Keep plugin css-prop configuration focused on `CssPropPresets` instead of exporting each framework preset as a separate top-level plugin API.
 - Add `style.important(...)` and `className.important(...)` for interop cases that need emitted `!important` declarations, especially selector sheets wrapping third-party CSS.
+- Keep Fluentic priority ordering stable for important declarations in cascade-layer mode, leave selector sheets unlayered by default for third-party overrides, and support opt-in `css.layer.sheet`/per-sheet layering through the derived `<layerNamespace>.sheet` layer.
+- Add options-first `createSheet({ layer, weight }, items)` overloads, including repeated sheet anchors for deliberate selector-specificity increases without `!important`.
 - Add `style.weight(...)` as the style-object counterpart to `className.weight(...)`.
 - Keep the extracted production runtime below 5 KB minified and gzipped with `combineStyle` included, and keep selector parsing helpers out of the extracted production entry.
 - Add a React Select third-party selectors example, Preact integration docs, and a clearer third-party styling guide for selector sheets, style targets, portal menus, and the new `combineStyle` helpers.

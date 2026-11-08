@@ -1,11 +1,13 @@
 import { getLayerBlockCss, getLayerOrderCss } from '../atomic/layer';
-import { CSS_CONFIG, CSS_CONFIG_DEFAULT } from '../config/config/css';
+import { CSS_CONFIG, CSS_CONFIG_DEFAULT, isStyleLayerEnabled } from '../config/config/css';
 import type { SheetOptions, StyleSheet } from './types';
 import {
   createNoopSheet,
   createSheetLayerState,
   createStyleTag,
-  getSheetRulePriority,
+  getSheetLayerName,
+  getSheetLayerNames,
+  getSheetRuleLayerPriority,
   insertStyleTagAfter,
   normalizeRule,
   resolveDocument,
@@ -24,12 +26,13 @@ export function createProdSheet(options: SheetOptions = {}): StyleSheet {
   let layerText = '';
   let layerTag: HTMLStyleElement | null = null;
   let ruleTag: HTMLStyleElement | null = null;
+  let hasSheetLayer = false;
 
   return {
     updateLayers(layers) {
       activeLayers = layers;
 
-      const next = getLayerOrderCss(layers, layerState.getNames());
+      const next = getLayerOrderCss(layers, getSheetLayerNames(layerState, hasSheetLayer));
       if (next === layerText) return;
 
       layerText = next;
@@ -43,12 +46,20 @@ export function createProdSheet(options: SheetOptions = {}): StyleSheet {
 
       if (ruleKey && inserted.has(ruleKey)) return;
 
-      const priority = typeof rule === 'string' ? null : rule.priority;
-      const layerName = layerState.getName(getSheetRulePriority(priority));
+      const priority = typeof rule === 'string'
+        ? getSheetRuleLayerPriority(null, false)
+        : getSheetRuleLayerPriority(rule.priority, rule.important);
+      const ruleLayer = typeof rule === 'string' ? 'style' : rule.layer ?? 'style';
+      if (ruleLayer === 'sheet') hasSheetLayer = true;
+      const layerName = ruleLayer === 'sheet'
+        ? getSheetLayerName()
+        : ruleLayer === false || !isStyleLayerEnabled()
+        ? null
+        : layerState.getName(priority);
 
       const nextLayerText = getLayerOrderCss(
         activeLayers,
-        layerState.getNames(),
+        getSheetLayerNames(layerState, hasSheetLayer),
       );
 
       if (nextLayerText !== layerText) {
@@ -57,7 +68,7 @@ export function createProdSheet(options: SheetOptions = {}): StyleSheet {
         layerTag.textContent = nextLayerText;
       }
 
-      const css = getLayerBlockCss(layerName, rawCss);
+      const css = layerName ? getLayerBlockCss(layerName, rawCss) : rawCss;
       const key = typeof rule === 'string' ? css : ruleKey;
 
       if (key && inserted.has(key)) return;

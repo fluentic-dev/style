@@ -14,6 +14,7 @@ import {
   SELECTOR_MEDIA,
   SELECTOR_MERGE,
 } from '../../../../builder/data';
+import type { CreateSheetOptions } from '../../../../builder/data';
 import {
   BUILDER_SLOT_ID,
   BUILDER_STATE,
@@ -34,7 +35,8 @@ import type {
   RuntimeSlotOverrideItem,
   RuntimeStyleItem,
 } from '../../../../builder/data/state';
-import { normalizeManualSelectors } from '../../../../builder/selector_override';
+import { normalizeManualSelectors, setSheetSelectorOptions } from '../../../../builder/selector_override';
+import { isSheetLayerEnabled } from '../../../../config/config/css';
 import type { ClassNameFormat, TokenNameFormat, TransformClassNameFormat } from '../../../../config/types';
 import type { Selector } from '../../../../selector/types';
 import { importantValue, isStyleImportantValue } from '../../../../style/important';
@@ -369,17 +371,49 @@ function compileSheetChain(
   cssConfig: CssConfig,
   options: CompilerOptions,
 ): CompiledChainData | null {
-  if (chain.methods.length > 0 || chain.baseArgs.length > 1) return null;
+  if (chain.methods.length > 0 || chain.baseArgs.length > 2) return null;
 
   const items: CompiledItem[] = [];
   const rules: CssExtractRule[] = [];
-  const sheetItems = chain.baseArgs[0];
+  const hasOptions = chain.baseArgs.length === 2;
+  const sheetOptions = hasOptions
+    ? evaluateCreateSheetOptions(chain.baseArgs[0], scope)
+    : {};
+  if (!sheetOptions) return null;
 
-  if (sheetItems && !compileSheetItemsArg(sheetItems, fileId, scope, cssConfig, options, items, rules)) {
+  const sheetItems = chain.baseArgs[hasOptions ? 1 : 0];
+
+  if (
+    sheetItems &&
+    !compileSheetItemsArg(sheetItems, fileId, scope, cssConfig, options, items, rules, sheetOptions)
+  ) {
     return null;
   }
 
-  return { type: 'sheet', items, rules };
+  const sheetLayer = sheetOptions.layer ?? isSheetLayerEnabled(options.css?.layer ?? DEFAULT_CONFIG.layer);
+  for (let i = 0, len = rules.length; i < len; i++) {
+    rules[i].layer = sheetLayer ? 'sheet' : false;
+  }
+
+  return { type: 'sheet', items, rules, sheetOptions };
+}
+
+function evaluateCreateSheetOptions(
+  node: BabelTypes.Node,
+  scope: EvalScope,
+): CreateSheetOptions | null {
+  const result = evaluateNode(node, scope);
+  if (!result.ok || !result.value || typeof result.value !== 'object' || Array.isArray(result.value)) return null;
+
+  const value = result.value as Record<string, unknown>;
+  if (Object.keys(value).some((key) => key !== 'layer' && key !== 'weight')) return null;
+  if (value.layer !== undefined && typeof value.layer !== 'boolean') return null;
+  if (value.weight !== undefined && (!Number.isInteger(value.weight) || (value.weight as number) < 1)) return null;
+
+  return {
+    layer: value.layer as boolean | undefined,
+    weight: value.weight as number | undefined,
+  };
 }
 
 function compileSheetItemsArg(
@@ -390,12 +424,13 @@ function compileSheetItemsArg(
   options: CompilerOptions,
   items: CompiledItem[],
   rules: CssExtractRule[],
+  sheetOptions: CreateSheetOptions,
 ): boolean {
   if (node.type === 'ArrayExpression') {
     for (const element of node.elements) {
       if (!element) continue;
       if (element.type === 'SpreadElement') return false;
-      if (!compileSheetItemsArg(element, fileId, scope, cssConfig, options, items, rules)) return false;
+      if (!compileSheetItemsArg(element, fileId, scope, cssConfig, options, items, rules, sheetOptions)) return false;
     }
 
     return true;
@@ -452,6 +487,7 @@ function compileSheetItemsArg(
     options,
     items,
     rules,
+    sheetOptions,
   );
 }
 
@@ -466,6 +502,7 @@ function compileSelectorOverrideChain(
   options: CompilerOptions,
   items: CompiledItem[],
   rules: CssExtractRule[],
+  sheetOptions: CreateSheetOptions,
 ): boolean {
   if (chain.baseArgs.length === 0 || chain.baseArgs.length > 2) return false;
 
@@ -491,7 +528,7 @@ function compileSelectorOverrideChain(
         options,
         items,
         rules,
-        manualSelectors[i],
+        setSheetSelectorOptions(manualSelectors[i], sheetOptions),
       )
     ) {
       return false;
@@ -1021,7 +1058,9 @@ function appendClassNameArgStyle(
 
     for (let i = 0; i < value.length; i++) {
       const itemNode = nodes[i] ?? node;
-      if (!appendClassNameArgStyle(itemNode, value[i], transform, styleObj, locations, fallbackLocation, scope, fileId)) {
+      if (
+        !appendClassNameArgStyle(itemNode, value[i], transform, styleObj, locations, fallbackLocation, scope, fileId)
+      ) {
         return false;
       }
     }

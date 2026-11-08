@@ -63,7 +63,45 @@ export function Select(props: {
 
 ## Arguments
 
-`createSheet(items?)` accepts a selector-oriented style input:
+Use either form:
+
+```ts
+createSheet(items);
+createSheet(options, items);
+```
+
+The options come first so exceptional cascade behavior is visible at the call
+site:
+
+| Option | Description |
+| --- | --- |
+| `layer` | Put this sheet in or out of the generated `<layerNamespace>.sheet` layer, overriding the global `css.layer.sheet` setting. |
+| `weight` | Repeat the generated sheet anchor class to increase selector specificity. It must be a positive integer. |
+
+Sheets are unlayered by default because they commonly override third-party CSS
+that is not inside Fluentic's layer system. Enable a layer for a particular
+sheet when it should participate in your declared layer order:
+
+```ts
+const integratedSheet = createSheet({ layer: true }, [
+  control({ color: 'red' }),
+]);
+```
+
+The default sheet anchor uses `:where(...)` and contributes no specificity.
+Use `weight` when an integration needs a stronger—but still overridable—anchor:
+
+```ts
+const strongerSheet = createSheet({ weight: 2 }, [
+  control({ color: 'red' }),
+]);
+```
+
+For a generated class named `sheet-x`, `weight: 2` emits an anchor equivalent
+to `.sheet-x.sheet-x`. This is often preferable to `style.important(...)`
+when specificity alone is enough.
+
+The items argument accepts selector-oriented style input:
 
 | Item | Description |
 | --- | --- |

@@ -1,8 +1,13 @@
 import { getLayerBlockCss, getLayerOrderCss, joinLayerCss } from '../../atomic/layer';
-import { CSS_CONFIG, CSS_CONFIG_DEFAULT } from '../../config/config/css';
+import { CSS_CONFIG, CSS_CONFIG_DEFAULT, isStyleLayerEnabled } from '../../config/config/css';
 import { RUNTIME_CONFIG } from '../../config/config/runtime';
 import type { SheetRule } from '../../sheet';
-import { createSheetLayerState, getSheetRulePriority } from '../../sheet/utils';
+import {
+  createSheetLayerState,
+  getSheetLayerName,
+  getSheetLayerNames,
+  getSheetRuleLayerPriority,
+} from '../../sheet/utils';
 import { clearGlobalData, getGlobalData, globalData } from '../../utils/global';
 import { IS_SERVER_RUNTIME } from '../env';
 
@@ -53,16 +58,22 @@ export function getRscStyleCss(): string {
 
   const layerState = createSheetLayerState();
 
+  let hasSheetLayer = false;
   const cssItems = store.rules.map((rule) => {
-    return getLayerBlockCss(
-      layerState.getName(getSheetRulePriority(rule.priority)),
-      rule.css,
-    );
+    const ruleLayer = rule.layer ?? 'style';
+    if (ruleLayer === 'sheet') hasSheetLayer = true;
+    const layerName = ruleLayer === 'sheet'
+      ? getSheetLayerName()
+      : ruleLayer === false || !isStyleLayerEnabled()
+      ? null
+      : layerState.getName(getSheetRuleLayerPriority(rule.priority, rule.important));
+
+    return layerName ? getLayerBlockCss(layerName, rule.css) : rule.css;
   });
 
   const layerOrderCss = getLayerOrderCss(
     CSS_CONFIG.layers ?? CSS_CONFIG_DEFAULT.layers ?? [],
-    layerState.getNames(),
+    getSheetLayerNames(layerState, hasSheetLayer),
   );
 
   return joinLayerCss(layerOrderCss, cssItems);

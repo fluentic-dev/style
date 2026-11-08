@@ -8,6 +8,8 @@ export type SheetRule = {
   css: string;
   key?: string | null;
   priority?: LayerPriority | null;
+  important?: boolean;
+  layer?: 'style' | 'sheet' | false;
   callsite?: SheetCallsite | null;
   debug?: DebugData | null;
   debugField?: string | null;

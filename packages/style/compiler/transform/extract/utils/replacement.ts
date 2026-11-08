@@ -65,7 +65,10 @@ export function buildReplacement(
 
     return t.callExpression(
       t.identifier(FN_CREATE_EXTRACTED_SHEET),
-      [buildItemsArray(t, chain, BUILDER_TYPE_SHEET, state, options)],
+      [
+        buildItemsArray(t, chain, BUILDER_TYPE_SHEET, state, options),
+        buildSheetOptions(t, chain),
+      ],
     );
   }
 
@@ -91,6 +94,23 @@ export function buildReplacement(
   }
 
   return null;
+}
+
+function buildSheetOptions(
+  t: typeof BabelTypes,
+  chain: CompiledChainData,
+): BabelTypes.ObjectExpression {
+  const options = chain.sheetOptions ?? {};
+  const properties: BabelTypes.ObjectProperty[] = [];
+
+  if (options.layer !== undefined) {
+    properties.push(t.objectProperty(t.identifier('layer'), t.booleanLiteral(options.layer)));
+  }
+  if (options.weight !== undefined) {
+    properties.push(t.objectProperty(t.identifier('weight'), t.numericLiteral(options.weight)));
+  }
+
+  return t.objectExpression(properties);
 }
 
 function buildStyleMergeArgs(

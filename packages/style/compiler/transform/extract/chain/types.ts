@@ -1,3 +1,4 @@
+import type { CreateSheetOptions } from '../../../../builder/data';
 import type { StyleTokenOverride } from '../../../../style/token';
 import type { CssExtractItem, CssExtractRule } from '../../../extract';
 import type { BabelTypes } from '../../utils/babel';
@@ -34,4 +35,5 @@ export type CompiledChainData = {
   slotId?: string;
   items: CompiledItem[];
   rules: CssExtractRule[];
+  sheetOptions?: CreateSheetOptions;
 };

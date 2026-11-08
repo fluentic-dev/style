@@ -175,7 +175,7 @@ function. See
 
 | Option | Purpose |
 | --- | --- |
-| `layer` | Wrap generated CSS in cascade layers. |
+| `layer` | Enable style layers with a boolean, or select targets with `{ style?: boolean, sheet?: boolean }`. Sheets default to `false`. |
 | `layers` | Configure layer order. Use `$layer` where Fluentic priority layers should be inserted. |
 | `layerNamespace` | Prefix generated priority layer names. |
 | `classNameFormat` | Format atomic class names. Supports strings or functions. |
@@ -191,6 +191,32 @@ function. See
 Most apps only change `layer`, `layers`, `layerNamespace`, or naming formats.
 Leave the rest at defaults unless you are aligning Fluentic with existing CSS
 infrastructure.
+
+The boolean form remains shorthand for ordinary Fluentic styles:
+
+```ts
+css: { layer: true }  // styles layered, sheets unlayered
+css: { layer: false } // styles and sheets unlayered
+```
+
+Use the target form to opt selector sheets into a separate generated layer:
+
+```ts
+css: {
+  layer: {
+    style: true,
+    sheet: true,
+  },
+  layerNamespace: 'fluentic',
+}
+```
+
+This produces the sheet layer name `fluentic.sheet`. Fluentic derives that
+name; there is no separate sheet-layer name option. When extracted style and
+sheet rules coexist, ordinary styles use the sibling `fluentic.style` layer so
+neither set is left unlayered inside their shared `fluentic` parent. A
+`createSheet({ layer }, items)` setting overrides the global sheet target for
+that sheet.
 
 Callsite-local class names are automatic in development and disabled for
 production builds. Production class names always include a stable hash, but the

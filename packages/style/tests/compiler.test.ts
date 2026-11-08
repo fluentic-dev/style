@@ -1996,6 +1996,77 @@ export const sheet = createSheet([
   includes(css, ':has(.third-party-button){color: green}');
 });
 
+test('compiler extracts createSheet options for layer and selector weight', () => {
+  const compiler = createCompiler({
+    css: {
+      debugClassName: true,
+      layer: { style: true, sheet: false },
+      layerNamespace: 'fluentic',
+    },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+export const regular = style({ display: 'block' });
+export const weighted = createSheet({ layer: true, weight: 2 }, [
+  style.selector('.third-party-label', { color: 'red' }),
+]);
+export const plain = createSheet([
+  style.selector('.third-party-copy', { color: 'blue' }),
+]);
+`,
+    '/tmp/compiler-create-sheet-options.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+
+  includes(result.code, 'createExtractedSheet');
+  includes(result.code, 'weight: 2');
+  includes(css, '@layer fluentic.style');
+  includes(css, '@layer fluentic.sheet');
+  includes(css, '.sheet-color-red--');
+  includes(css, ' .third-party-copy{color: blue}');
+  const weightedRule = css.split('\n').find((line) => line.includes('.third-party-label')) ?? '';
+  equal((weightedRule.match(/\.sheet-color-red--/g) ?? []).length, 2);
+});
+
+test('compiler uses global sheet layering and allows a per-sheet override', () => {
+  const compiler = createCompiler({
+    css: {
+      debugClassName: true,
+      layer: { sheet: true },
+      layerNamespace: 'css',
+    },
+  });
+  const result = compiler.transform(
+    `
+import { style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+export const layered = createSheet([
+  style.selector('.layered', { color: 'red' }),
+]);
+export const unlayered = createSheet({ layer: false }, [
+  style.selector('.unlayered', { color: 'blue' }),
+]);
+`,
+    '/tmp/compiler-create-sheet-global-layer.ts',
+  );
+
+  if (!result) throw new Error('expected compiler transform result');
+
+  const css = result.css.join('\n');
+  const sheetBlock = css.slice(css.indexOf('@layer css.sheet {'));
+
+  includes(sheetBlock, '.layered');
+  notIncludes(sheetBlock.split('\n}')[0] ?? '', '.unlayered');
+  includes(css, '.unlayered');
+});
+
 test('compiler applies sheetClassNameFormat to extracted selector sheets', () => {
   const compiler = createCompiler({
     layer: false,

@@ -5,6 +5,7 @@ import type {
   BUILDER_SCOPE,
   BUILDER_SCOPE_ID,
   BUILDER_SELECTOR,
+  BUILDER_SHEET_OPTIONS,
   BUILDER_SLOT_ID,
   BUILDER_STATE,
   BUILDER_TYPE,
@@ -61,7 +62,12 @@ export type SelectorOverrideData<Style = unknown> =
 
 export type SheetData<Style = unknown> =
   & BuilderData<Style, typeof BUILDER_TYPE_SHEET>
-  & {};
+  & { [BUILDER_SHEET_OPTIONS]: CreateSheetOptions; };
+
+export type CreateSheetOptions = {
+  layer?: boolean;
+  weight?: number;
+};
 
 export type ScopeData =
   & BuilderData<unknown, typeof BUILDER_TYPE_SCOPE>

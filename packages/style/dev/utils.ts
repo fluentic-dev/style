@@ -1,4 +1,4 @@
-import { CSS_CONFIG } from '../config/config/css';
+import { CSS_CONFIG, isStyleLayerEnabled } from '../config/config/css';
 import { CSS_EXTRA_CONFIG } from '../config/config/css_extra';
 import { DEBUG_CONFIG } from '../config/config/debug';
 import { DEV_CONFIG, getBuildDevConfig, setDevUtilsRuntimeOptions } from '../config/config/dev';
@@ -408,14 +408,14 @@ function getCssModeLabel() {
 
 function getCssModeDetail() {
   if (DEV_CONFIG.stylePriorityMode === 'layer') {
-    const layer = CSS_CONFIG.layer
+    const layer = isStyleLayerEnabled()
       ? 'Rules are wrapped in the configured CSS layer.'
       : 'Rules are not wrapped in an output CSS layer.';
 
     return `${layer} Priority sublayers control order.`;
   }
 
-  return CSS_CONFIG.layer
+  return isStyleLayerEnabled()
     ? 'Sorted rules are wrapped in the configured CSS layer.'
     : 'Sorted rules are emitted without an output CSS layer.';
 }

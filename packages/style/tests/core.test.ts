@@ -1362,6 +1362,54 @@ test('createSheet supports ampersand-only selector anchors', () => {
   includes(css, `:where(.${backgroundClassName}){background-color: blue}`);
 });
 
+test('createSheet options weight repeats the specificity-bearing anchor', () => {
+  const sheet = createSheet({ weight: 2 }, [
+    style.selector('.third-party-label', { color: 'red' }),
+  ]);
+  const result = getClassName(sheet);
+  const css = getSheetRules(sheet).map((rule) => rule.css).join('\n');
+
+  if (!result.className) throw new Error('expected sheet class name');
+
+  includes(css, `.${result.className}.${result.className} .third-party-label{color: red}`);
+  notIncludes(css, `:where(.${result.className})`);
+});
+
+test('createSheet is unlayered by default and supports global and local layer enablement', () => {
+  try {
+    configureTestRuntime({ css: { layer: true } });
+    const defaultSheet = createSheet([
+      style.selector('.default', { color: 'red' }),
+    ]);
+    equal(getSheetRules(defaultSheet)[0]?.layer, false);
+
+    configureTestRuntime({ css: { layer: { style: true, sheet: true } } });
+    const globalSheet = createSheet([
+      style.selector('.global', { color: 'red' }),
+    ]);
+    const localSheet = createSheet({ layer: false }, [
+      style.selector('.local', { color: 'red' }),
+    ]);
+
+    equal(getSheetRules(globalSheet)[0]?.layer, 'sheet');
+    equal(getSheetRules(localSheet)[0]?.layer, false);
+  } finally {
+    configureTestRuntime({ css: { layer: true } });
+  }
+});
+
+test('createSheet validates options', () => {
+  let error = '';
+
+  try {
+    createSheet({ weight: 0 }, []);
+  } catch (value) {
+    error = String(value);
+  }
+
+  includes(error, 'positive integer');
+});
+
 test('style important values emit important declarations for styles, sheets, and class names', () => {
   const direct = style({
     color: style.important('red'),
@@ -1381,8 +1429,10 @@ test('style important values emit important declarations for styles, sheets, and
     }),
   ]);
   const sheetCss = getSheetRules(sheet).map((rule) => rule.css).join('\n');
+  const importantSheetRule = getSheetRules(sheet).find((rule) => rule.css.includes('border-color'));
 
   includes(sheetCss, ' .third-party-control{border-color: red !important}');
+  equal(importantSheetRule?.important, true);
 
   const { className: cx } = createClassNameFn({
     selectors: {},

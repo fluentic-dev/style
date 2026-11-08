@@ -1,6 +1,7 @@
 import type { StyleObject } from '../style/types';
 import {
   BUILDER_SELECTOR,
+  BUILDER_SHEET_OPTIONS,
   BUILDER_SLOT_ID,
   BUILDER_TYPE_SELECTOR_OVERRIDE,
   BUILDER_TYPE_SLOT,
@@ -43,8 +44,8 @@ export const mergeStyleData = createMerge(
   BUILDER_TYPE_STYLE,
 );
 
-const mergeSheetCreate: CreateData<SheetData> = (callsite) => {
-  return createSheetData(callsite);
+const mergeSheetCreate: CreateData<SheetData> = (callsite, data) => {
+  return createSheetData(callsite, data[BUILDER_SHEET_OPTIONS]);
 };
 
 export const mergeSheetData = createMerge(

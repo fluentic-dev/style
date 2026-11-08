@@ -1,7 +1,8 @@
-import { BUILDER_CALLSITE } from '../../builder/data/const';
+import { BUILDER_CALLSITE, BUILDER_SHEET_OPTIONS } from '../../builder/data/const';
 import type { ThemeData } from '../../builder/data/data';
-import { isThemeData } from '../../builder/data/is';
+import { isSheetData, isThemeData } from '../../builder/data/is';
 import type { SheetRule } from '../../sheet';
+import { isResolvedStyleItem } from '../core/cache/item';
 import { getStylePropItems, type StylePropItem, walkStyleProp } from '../core/cache/prop';
 import type { StyleProp } from '../types';
 import { createRuntimeSheetRules, type RuntimeSheetRule } from './rule';
@@ -38,9 +39,11 @@ function walkStylePropItemSheetRules(
   }
 
   const items = getStylePropItems(item);
+  const sheetData = isResolvedStyleItem(item) && isSheetData(item.data) ? item.data : null;
+  const sheetOptions = sheetData ? sheetData[BUILDER_SHEET_OPTIONS] : null;
 
   for (let i = 0, len = items.length; i < len; i++) {
-    const rules = createRuntimeSheetRules(items[i]);
+    const rules = createRuntimeSheetRules(items[i], sheetOptions);
     if (!rules) continue;
 
     for (let j = 0, len = rules.length; j < len; j++) {
@@ -127,5 +130,7 @@ function createSheetRulePayload(rule: RuntimeSheetRule): SheetRule {
     debug: rule.debug || null,
     debugField: rule.debugField || null,
     priority: rule.priority,
+    important: rule.important,
+    layer: rule.layer,
   };
 }

@@ -59,8 +59,8 @@ import {
   FN_CREATE_VALUES,
   FN_EXPOSE_STYLE,
   FN_FONT_SRC,
-  FN_GET_TOKEN,
   FN_GET_EXTRACTED_STYLE_ITEMS,
+  FN_GET_TOKEN,
   FN_STYLE_IMPORTANT,
   FN_STYLE_KEYFRAMES,
   FN_STYLE_PLAIN,
@@ -452,8 +452,18 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
       const items = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
       if (!items.ok) return items;
       if (!Array.isArray(items.value)) return evalFail('createExtractedSheet items must be an array');
+      const options = node.arguments[1]
+        ? evaluateNode(node.arguments[1] as BabelTypes.Node, scope)
+        : evalOk({});
+      if (!options.ok) return options;
+      if (!options.value || typeof options.value !== 'object' || Array.isArray(options.value)) {
+        return evalFail('createExtractedSheet options must be an object');
+      }
 
-      return evalOk(createExtractedSheet(items.value as Parameters<typeof createExtractedSheet>[0]));
+      return evalOk(createExtractedSheet(
+        items.value as Parameters<typeof createExtractedSheet>[0],
+        options.value as Parameters<typeof createExtractedSheet>[1],
+      ));
     }
 
     if (imp && imp.source === IMPORT_EXTRACT && imp.name === FN_GET_EXTRACTED_STYLE_ITEMS) {

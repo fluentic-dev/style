@@ -489,6 +489,12 @@ Selector sheets sit between those worlds. They acknowledge that the DOM belongs
 to someone else, while keeping your styling language, tokens, extraction, and
 debugging inside Fluentic.
 
+Selector sheets are emitted outside Fluentic's cascade layer by default. That
+is intentional: third-party CSS is commonly unlayered, and normal unlayered
+rules outrank normal layered rules. If the third-party stylesheet participates
+in your layer architecture, opt a sheet in with `createSheet({ layer: true },
+items)` or enable `css.layer.sheet` globally.
+
 Some libraries also ship their own CSS with high specificity or load it after
 your app styles. Fluentic can order the rules it owns, but it cannot move a
 third-party stylesheet into your layer system. When a wrapper is intentionally
@@ -508,6 +514,11 @@ interop tool, mostly useful in selector sheets and component wrappers that need
 to beat library CSS. Ordinary Fluentic styles usually should not need it,
 because composition, variants, scopes, and sheet order already describe the
 priority inside the styles Fluentic controls.
+
+CSS reverses cascade-layer order for important declarations. Fluentic accounts
+for that reversal in its generated priority layers, so `style.important(...)`
+keeps the intended Fluentic priority instead of accidentally becoming weaker
+inside the layer system.
 
 ## Debugging
 
