@@ -16,6 +16,7 @@ export function getPluginBuildConfig(options: PluginOptions, dev = false): Build
   return {
     hoist: !dev && options.hoist !== false,
     css,
+    check: options.check,
   };
 }
 

@@ -1,5 +1,6 @@
 import { globalData } from '../utils/global';
 import type { ReplaceProps } from '../utils/type';
+import { setStyleCheckOptions, type StyleCheckOptions } from './config/check';
 import { CSS_CONFIG, type CssConfig } from './config/css';
 import type { DevRuntimeOptions } from './config/dev';
 import { RUNTIME_CONFIG } from './config/runtime';
@@ -16,6 +17,7 @@ export type BuildDevConfig = ReplaceProps<DevRuntimeOptions, {
 export type BuildConfig = {
   hoist: boolean;
   css: BuildCssConfig;
+  check?: StyleCheckOptions;
 };
 
 export const BUILD_CONFIG = globalData(
@@ -32,4 +34,6 @@ export function setBuildConfig(config: BuildConfig) {
     const { debugClassName: _debugClassName, ...css } = config.css;
     Object.assign(CSS_CONFIG, css);
   }
+
+  setStyleCheckOptions(config.check ?? {});
 }

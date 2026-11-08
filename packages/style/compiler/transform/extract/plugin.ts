@@ -1,3 +1,4 @@
+import type { CheckImportantOptions, StyleCheckLevel } from '../../../config/config/check';
 import { hashString } from '../../../utils/hash';
 import type { CompilerRuntimeMode } from '../../compiler';
 import type { CompilerOptions } from '../../compiler/types';
@@ -228,6 +229,11 @@ export function createExtractPlugin(args: PluginArgs) {
           }
           if (!result) return;
 
+          checkCompiledImportantUsage(result, options.check?.important, (level, message) => {
+            if (level === 'error') throw path.buildCodeFrameError(message);
+            console.warn('[fluentic-style] ' + message);
+          });
+
           result.rules.forEach((rule) => {
             state.collector.add(rule);
           });
@@ -284,6 +290,37 @@ export function createExtractPlugin(args: PluginArgs) {
       },
     };
   });
+}
+
+function checkCompiledImportantUsage(
+  result: NonNullable<ReturnType<typeof compileChain>>,
+  options: CheckImportantOptions | undefined,
+  report: (level: Exclude<StyleCheckLevel, false>, message: string) => void,
+) {
+  if (!options) return;
+
+  let hasRawValue = false;
+  let hasOutsideSheet = false;
+
+  for (let i = 0, len = result.rules.length; i < len; i++) {
+    const rule = result.rules[i];
+    if (!rule.important && /!\s*important\b/i.test(rule.css)) hasRawValue = true;
+    if (result.type !== 'sheet' && rule.important) hasOutsideSheet = true;
+  }
+
+  if (hasRawValue && options.rawValue) {
+    report(
+      options.rawValue,
+      'Do not write raw "!important" values. Wrap the value with style.important(...) instead.',
+    );
+  }
+
+  if (hasOutsideSheet && options.outsideSheet) {
+    report(
+      options.outsideSheet,
+      'style.important(...) outside createSheet is discouraged. Prefer style.weight(...) for Fluentic style priority.',
+    );
+  }
 }
 
 function pruneUnusedStyleInputDeclarations(

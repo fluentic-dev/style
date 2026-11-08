@@ -497,8 +497,19 @@ items)` or enable `css.layer.sheet` globally.
 
 Some libraries also ship their own CSS with high specificity or load it after
 your app styles. Fluentic can order the rules it owns, but it cannot move a
-third-party stylesheet into your layer system. When a wrapper is intentionally
-overriding that external CSS, mark the value itself:
+third-party stylesheet into your layer system. Try a sheet `weight` first when
+increased selector specificity is enough:
+
+```ts
+const selectSheet = createSheet({ weight: 2 }, [
+  selectPart.control({
+    borderColor: selectTokens.accent,
+  }),
+]);
+```
+
+When a wrapper must override external declarations that already use
+`!important`, mark the value itself:
 
 ```ts
 const selectSheet = createSheet([
@@ -513,7 +524,13 @@ const selectSheet = createSheet([
 interop tool, mostly useful in selector sheets and component wrappers that need
 to beat library CSS. Ordinary Fluentic styles usually should not need it,
 because composition, variants, scopes, and sheet order already describe the
-priority inside the styles Fluentic controls.
+priority inside the styles Fluentic controls. Prefer `style.weight(...)` when
+you need to adjust priority between ordinary Fluentic styles.
+
+Always use the wrapper form. Do not write raw strings such as
+`'red !important'`; raw values bypass Fluentic's important-value metadata. The
+opt-in `check.important.rawValue` and `check.important.outsideSheet` plugin
+options can warn or fail when these recommendations are violated.
 
 CSS reverses cascade-layer order for important declarations. Fluentic accounts
 for that reversal in its generated priority layers, so `style.important(...)`

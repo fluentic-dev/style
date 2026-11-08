@@ -2906,6 +2906,7 @@ function addRuntimeScopeItem(
     className,
     css,
     priority: layerPriority,
+    important,
     trace: traceCallsite
       ? {
         filePath: traceCallsite.filePath ?? fileId,
@@ -3153,6 +3154,7 @@ function addRuntimeStyleItem(
     className,
     css,
     priority: layerPriority,
+    important,
     trace: traceCallsite
       ? {
         filePath: traceCallsite.filePath ?? fileId,
@@ -3416,6 +3418,7 @@ function addStyleItems(
       className,
       css,
       priority: layerPriority,
+      important,
       trace: propertyCallsite
         ? {
           filePath: propertyCallsite.filePath ?? fileId,

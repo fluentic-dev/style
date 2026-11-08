@@ -14,6 +14,12 @@ stylePlugin({
   exclude: /node_modules/,
   hoist: true,
   devSourcemap: 'sidecarServer',
+  check: {
+    important: {
+      rawValue: 'error',
+      outsideSheet: 'warn',
+    },
+  },
   getSourcemapFilePath({ sourcePath, sourceUrl }) {
     return sourcePath.startsWith('src/')
       ? `source://@app/${sourcePath}`
@@ -52,6 +58,7 @@ stylePlugin({
 | `include` | Limit files processed by the transform. |
 | `exclude` | Exclude files from the transform. |
 | `hoist` | Control supported style hoisting during extraction. |
+| `check` | Opt into compiler and runtime checks for discouraged style patterns. |
 | `css` | Configure extracted CSS behavior where supported. |
 | `dev` | Configure development runtime behavior. |
 | `cssProp` | Compile intrinsic JSX `css` props through an adapter. |
@@ -168,6 +175,37 @@ stylePlugin({
 This is what lets extraction understand merged chains from more than one style
 function. See
 [Multiple Style Functions](/docs/beyond-the-basics/multiple-style-functions/).
+
+## Check Options
+
+`check` enables opt-in compiler and runtime checks. Every check is disabled
+unless configured as `warn` or `error`:
+
+```ts
+stylePlugin({
+  check: {
+    important: {
+      rawValue: 'error',
+      outsideSheet: 'warn',
+    },
+  },
+});
+```
+
+| Option | Recommendation |
+| --- | --- |
+| `important.rawValue` | Reject or warn about string values containing raw `!important`. Use `style.important(value)` so Fluentic can preserve its priority rules. |
+| `important.outsideSheet` | Reject or warn about `style.important(...)` in ordinary Fluentic styles. Prefer `style.weight(...)` for priority between Fluentic styles. |
+
+`warn` reports during compilation. Runtime warnings are development-only so
+they do not add production console noise. `error` fails both compilation and
+runtime-authored styles, including dynamic styles the compiler cannot extract.
+
+The recommended strict setup is `rawValue: 'error'` and
+`outsideSheet: 'warn'`. Raw `!important` bypasses Fluentic's value metadata and
+should be replaced directly. `style.important(...)` outside a sheet is valid,
+but warning first makes migrations less disruptive. Both settings remain off
+by default.
 
 ## CSS Options
 

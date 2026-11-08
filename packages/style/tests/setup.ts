@@ -24,6 +24,7 @@ import {
 } from '../builder/extract';
 import type { CompilerOptions } from '../compiler';
 import { configureStyleRuntime, type ConfigureStyleRuntimeOptions } from '../config';
+import { CHECK_CONFIG, CHECK_CONFIG_DEFAULT } from '../config/config/check';
 import { CSS_CONFIG, CSS_CONFIG_DEFAULT } from '../config/config/css';
 import {
   DEBUG_CONFIG,
@@ -311,6 +312,7 @@ export function configureTestRuntime(options: TestRuntimeOptions = {}) {
   const { dev, priorityMode, sourcemapMode, elementClassName, checkSelector, hashLength, ...runtimeOptions } = options;
 
   resetTestConfig(CSS_CONFIG, CSS_CONFIG_DEFAULT);
+  resetTestConfig(CHECK_CONFIG, CHECK_CONFIG_DEFAULT);
   resetTestConfig(DEBUG_CONFIG, DEFAULT_DEBUG_CONFIG);
   resetTestConfig(DEV_CONFIG, DEV_CONFIG_DEFAULT);
   resetTestConfig(RUNTIME_CONFIG, RUNTIME_CONFIG_DEFAULT);

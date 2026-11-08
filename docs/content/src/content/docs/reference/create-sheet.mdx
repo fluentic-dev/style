@@ -101,6 +101,20 @@ For a generated class named `sheet-x`, `weight: 2` emits an anchor equivalent
 to `.sheet-x.sheet-x`. This is often preferable to `style.important(...)`
 when specificity alone is enough.
 
+Use this order when choosing an override mechanism:
+
+1. For priority between ordinary Fluentic styles, use composition or
+   `style.weight(...)`.
+2. For a selector sheet that only needs more specificity, use the sheet's
+   `weight` option.
+3. Use `style.important(...)` when a sheet must override third-party CSS that
+   already uses `!important` or cannot otherwise be ordered.
+
+Do not put `!important` inside a raw string value because it bypasses Fluentic's
+important-value metadata. Write `style.important(value)` instead. Projects can
+enforce these recommendations with the opt-in
+[`check.important` plugin options](plugin-options#check-options).
+
 The items argument accepts selector-oriented style input:
 
 | Item | Description |

@@ -2,6 +2,7 @@ import { getAtomicClassName, getClassNameDedupe } from '../../../atomic/classNam
 import { getTokenVar } from '../../../atomic/token';
 import { getCssVarRawFallback } from '../../../atomic/utils/cssVar';
 import { shouldAppendCssPx } from '../../../atomic/value';
+import { CHECK_CONFIG, type StyleCheckLevel } from '../../../config/config/check';
 import { CSS_CONFIG } from '../../../config/config/css';
 import { DEBUG_CONFIG } from '../../../config/config/debug';
 import { DEV_CONFIG } from '../../../config/config/dev';
@@ -14,7 +15,9 @@ import { isStyleWeightValue } from '../../../style/weight';
 import {
   BUILDER_SLOT_ID,
   BUILDER_STATE,
+  BUILDER_TYPE,
   BUILDER_TYPE_SELECTOR_OVERRIDE,
+  BUILDER_TYPE_SHEET,
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
@@ -130,6 +133,12 @@ export function mergeBuilderData<Data extends BuilderData>(
     for (const property in style) {
       valueRaw = style[property as keyof typeof style];
       [valueRaw, weight, important] = unwrapAuthoredStyleValue(valueRaw);
+      const sourceType = source[BUILDER_TYPE];
+      checkImportantUsage(
+        valueRaw,
+        important,
+        sourceType === BUILDER_TYPE_SHEET || sourceType === BUILDER_TYPE_SELECTOR_OVERRIDE,
+      );
 
       transformClassName = null;
       if (isClassNameValue(valueRaw)) {
@@ -281,6 +290,31 @@ function unwrapAuthoredStyleValue(value: unknown): [value: unknown, weight: numb
   }
 
   return [value, weight, important];
+}
+
+function checkImportantUsage(value: unknown, important: boolean, isSheet: boolean) {
+  const options = CHECK_CONFIG.important;
+  if (!options) return;
+
+  if (typeof value === 'string' && /!\s*important\b/i.test(value)) {
+    reportImportantCheck(
+      options.rawValue,
+      'Do not write raw "!important" values. Wrap the value with style.important(...) instead.',
+    );
+  }
+
+  if (important && !isSheet) {
+    reportImportantCheck(
+      options.outsideSheet,
+      'style.important(...) outside createSheet is discouraged. Prefer style.weight(...) for Fluentic style priority.',
+    );
+  }
+}
+
+function reportImportantCheck(level: StyleCheckLevel | undefined, message: string) {
+  if (!level) return;
+  if (level === 'error') throw new Error(message);
+  if (DEV_CONFIG.isDev) console.warn('[fluentic-style] ' + message);
 }
 
 function combineSelectors(
