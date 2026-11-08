@@ -1,4 +1,5 @@
 import type { ItemSelector } from './data';
+import type { CreateSheetOptions } from './data';
 import { SHEET_SELECTOR_ANCHOR } from './data';
 
 export type ManualSelectorInput = string | readonly string[];
@@ -41,6 +42,18 @@ export function assertManualSelectorSyntax(selector: string) {
   if (ampersandIndex === 0 && ampersandSelector && /^\s/.test(ampersandSelector)) {
     throw new Error('selector cannot have whitespace after "&"; omit "&" for descendant selectors');
   }
+}
+
+export function setSheetSelectorOptions(selector: ItemSelector, options: CreateSheetOptions): ItemSelector {
+  if (options.weight === undefined && options.layer === undefined) return selector;
+
+  const text = Array.isArray(selector) ? selector[0] : selector;
+  const optionMarker = ':' + (options.weight ?? '') + ':' + (
+    options.layer === undefined ? '' : options.layer ? '1' : '0'
+  );
+  const weighted = SHEET_SELECTOR_ANCHOR + optionMarker + '\0' + text.slice(SHEET_SELECTOR_ANCHOR.length);
+
+  return Array.isArray(selector) ? [weighted, selector[1]] : weighted;
 }
 
 function normalizeManualSelector(

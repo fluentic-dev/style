@@ -1,10 +1,11 @@
 import { compareLayerPriority, getLayerOrderCss, type LayerPriority } from '../../atomic/layer';
-import { CSS_CONFIG, CSS_CONFIG_DEFAULT } from '../../config/config/css';
+import { CSS_CONFIG, CSS_CONFIG_DEFAULT, isStyleLayerEnabled } from '../../config/config/css';
 import { DEV_CONFIG } from '../../config/config/dev';
 import type { SheetOptions, SheetRule, StyleSheet } from '../types';
 import {
   createNoopSheet,
   createStyleTag,
+  getSheetLayerName,
   getSheetRulePriority,
   getStyleLayerName,
   insertStyleTagAfter,
@@ -18,12 +19,14 @@ type QueuedRule = {
   css: string;
   rule: SheetRule | null;
   priority: LayerPriority;
+  layer: 'style' | 'sheet' | false;
 };
 
 type SortGroup = {
   key: string;
   priority: LayerPriority;
   tags: DevRuleTag[];
+  layer: 'style' | 'sheet' | false;
 };
 
 export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
@@ -36,12 +39,13 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
   const inserted = new Set<string>();
   const queued: QueuedRule[] = [];
   const groups: SortGroup[] = [];
-  const shouldLayer = CSS_CONFIG.layer !== false;
+  const shouldLayer = isStyleLayerEnabled();
   const layerName = getStyleLayerName();
   const tagPrefix = options.tagName ? options.tagName + ' ' : '';
-  const layerTag = shouldLayer ? createStyleTag(document, tagPrefix + 'layers', options.nonce) : null;
+  let layerTag = shouldLayer ? createStyleTag(document, tagPrefix + 'layers', options.nonce) : null;
   let activeLayers: readonly string[] = CSS_CONFIG.layers ?? CSS_CONFIG_DEFAULT.layers ?? [];
   let layerText = '';
+  let hasSheetLayer = false;
 
   if (layerTag) {
     if (options.top) {
@@ -68,12 +72,21 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
       if (key && inserted.has(key)) return;
       if (key) inserted.add(key);
 
+      const requestedLayer = typeof rule === 'string' ? 'style' : rule.layer ?? 'style';
+      const layer = requestedLayer === 'style' && !shouldLayer ? false : requestedLayer;
+      if (layer === 'sheet') {
+        hasSheetLayer = true;
+        ensureLayerTag();
+        updateLayerText();
+      }
+
       queued.push({
         css,
         rule: typeof rule === 'string' ? null : rule,
         priority: getSheetRulePriority(
           typeof rule === 'string' ? null : rule.priority,
         ),
+        layer,
       });
     },
 
@@ -104,7 +117,7 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
 
       for (let i = 0, len = queued.length; i < len; i++) {
         const item = queued[i];
-        const group = ensureGroup(groups, item.priority);
+        const group = ensureGroup(groups, item.priority, item.layer);
         let active = group.tags[group.tags.length - 1] ?? null;
 
         if (!active || active.count >= maxRules) {
@@ -113,7 +126,11 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
             previous: layerTag,
             className: tagPrefix + 'rules ' + group.key,
             top: options.top,
-            layerName: shouldLayer ? layerName : null,
+            layerName: group.layer === 'style'
+              ? layerName
+              : group.layer === 'sheet'
+              ? getSheetLayerName()
+              : null,
             sourcemap,
             nonce: options.nonce,
           });
@@ -146,39 +163,56 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
   function updateLayerText() {
     if (!layerTag) return;
 
-    const next = getLayerOrderCss(activeLayers, layerName);
+    const names = [shouldLayer ? layerName : '', hasSheetLayer ? getSheetLayerName() : ''].filter(Boolean);
+    const next = getLayerOrderCss(activeLayers, names);
 
     if (next === layerText) return;
 
     layerText = next;
     layerTag.textContent = next;
   }
+
+  function ensureLayerTag() {
+    if (layerTag) return;
+
+    layerTag = createStyleTag(document!, tagPrefix + 'layers', options.nonce);
+    if (options.top) {
+      insertStyleTagAtTop(document!, layerTag);
+    } else {
+      insertStyleTagAfter(document!, layerTag, null);
+    }
+  }
 }
 
 function ensureGroup(
   groups: SortGroup[],
   priority: LayerPriority,
+  layer: 'style' | 'sheet' | false,
 ) {
-  const key = getPriorityKey(priority);
+  const key = (layer === 'sheet' ? 'sheet-' : '') + getPriorityKey(priority);
 
   for (let i = 0, len = groups.length; i < len; i++) {
     const group = groups[i];
-    const order = compareLayerPriority(priority, group.priority);
+    const order = getLayerRank(layer) - getLayerRank(group.layer) || compareLayerPriority(priority, group.priority);
 
-    if (order === 0) return group;
+    if (order === 0 && layer === group.layer) return group;
 
     if (order < 0) {
-      const next = { key, priority, tags: [] };
+      const next = { key, priority, tags: [], layer };
       groups.splice(i, 0, next);
       return next;
     }
   }
 
-  const group = { key, priority, tags: [] };
+  const group = { key, priority, tags: [], layer };
 
   groups.push(group);
 
   return group;
+}
+
+function getLayerRank(layer: 'style' | 'sheet' | false) {
+  return layer === 'style' ? 0 : layer === 'sheet' ? 1 : 2;
 }
 
 function createGroupTag(

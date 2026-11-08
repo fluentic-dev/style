@@ -475,6 +475,7 @@ function createExtractedChainValue(
       result.items
         .filter(Array.isArray)
         .map((item) => toExtractedStyleTuple(item as CompiledCssItem) as ExtractedSheetTuple),
+      result.sheetOptions,
     );
 
     defineCompiledStyleLocations(sheet, traceResult);

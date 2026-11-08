@@ -7,6 +7,7 @@ export const BUILDER_SLOT_ID: unique symbol = symbol('builder.slotId');
 export const BUILDER_SCOPE_ID: unique symbol = symbol('builder.scopeId');
 export const BUILDER_SCOPE: unique symbol = symbol('builder.scope');
 export const BUILDER_SELECTOR: unique symbol = symbol('builder.selector');
+export const BUILDER_SHEET_OPTIONS: unique symbol = symbol('builder.sheetOptions');
 
 export const BUILDER_TYPE_STYLE = 1;
 export const BUILDER_TYPE_SLOT = 2;

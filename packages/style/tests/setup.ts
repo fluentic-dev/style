@@ -292,9 +292,17 @@ function assertCombineStyleTypes() {
   const stylesInput: CombinedStyleFor<typeof styles> = combineStyle(styles);
   const combineInput: CombinedStyleFor<typeof combine> = combine();
   const directSheetInput: StyleProp = combineStyle(createSheet());
+  const configuredSheetInput: StyleProp = createSheet(
+    { layer: true, weight: 2 },
+    [style.selector('.third-party', { color: 'red' })],
+  );
+
+  // @ts-expect-error createSheet options require an items argument
+  createSheet({ layer: true });
 
   combine(stylesInput, combineInput);
   resolveStyleProp(directSheetInput);
+  resolveStyleProp(configuredSheetInput);
 }
 
 void assertCombineStyleTypes;

@@ -9,8 +9,13 @@ import type {
   TransformClassNameFormat,
 } from '../types';
 
+export type CssLayerTargets = {
+  style?: boolean;
+  sheet?: boolean;
+};
+
 export type CssConfig = {
-  layer: boolean;
+  layer: boolean | CssLayerTargets;
   layers?: string[];
   layerNamespace?: string;
   hashLength?: number;
@@ -34,3 +39,11 @@ export const CSS_CONFIG = globalData<CssConfig>(
   'config.css',
   () => ({ ...CSS_CONFIG_DEFAULT }),
 );
+
+export function isStyleLayerEnabled(layer: CssConfig['layer'] = CSS_CONFIG.layer) {
+  return typeof layer === 'boolean' ? layer : layer.style ?? true;
+}
+
+export function isSheetLayerEnabled(layer: CssConfig['layer'] = CSS_CONFIG.layer) {
+  return typeof layer === 'object' && (layer.sheet ?? false);
+}

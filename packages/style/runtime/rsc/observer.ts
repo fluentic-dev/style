@@ -184,6 +184,8 @@ function normalizePayloadItem(value: unknown): SheetRule | null {
   const rule = value as RscStylePayloadRule;
 
   if (typeof rule.key !== 'string' || typeof rule.css !== 'string') return null;
+  if (rule.important !== undefined && typeof rule.important !== 'boolean') return null;
+  if (rule.layer !== undefined && rule.layer !== false && rule.layer !== 'style' && rule.layer !== 'sheet') return null;
   if (rule.debug !== undefined && rule.debug !== null && !isDebugData(rule.debug)) return null;
   if (rule.debugField !== undefined && rule.debugField !== null && typeof rule.debugField !== 'string') return null;
 
@@ -191,6 +193,8 @@ function normalizePayloadItem(value: unknown): SheetRule | null {
     key: rule.key,
     css: rule.css,
     priority: rule.priority,
+    important: rule.important,
+    layer: rule.layer,
     callsite: normalizePayloadCallsite(rule.callsite),
     debug: rule.debug,
     debugField: rule.debugField,

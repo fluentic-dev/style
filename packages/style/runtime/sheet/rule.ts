@@ -1,7 +1,8 @@
 import { buildAtomicRule, getAtomicRuleLayerPriority } from '../../atomic/rule';
+import type { CreateSheetOptions } from '../../builder/data';
 import { BUILDER_TYPE_SCOPE } from '../../builder/data/const';
 import type { RuntimeItem, StateItem } from '../../builder/data/state';
-import { CSS_CONFIG } from '../../config/config/css';
+import { CSS_CONFIG, isSheetLayerEnabled } from '../../config/config/css';
 import type { SheetRule } from '../../sheet';
 import { isStyleTokenOverrideData } from '../../style/token';
 import { getStateItemAtRuleRef } from '../core/cache/stateItem';
@@ -10,7 +11,10 @@ export type RuntimeSheetRule = SheetRule & {
   dedupe: string;
 };
 
-export function createRuntimeSheetRules(item: StateItem): RuntimeSheetRule[] | null {
+export function createRuntimeSheetRules(
+  item: StateItem,
+  sheetOptions: CreateSheetOptions | null = null,
+): RuntimeSheetRule[] | null {
   if (Array.isArray(item)) return null;
   if (isStyleTokenOverrideData(item)) return null;
 
@@ -44,6 +48,8 @@ export function createRuntimeSheetRules(item: StateItem): RuntimeSheetRule[] | n
     key: runtimeItem.className,
     dedupe: runtimeItem.dedupe,
     priority: layerPriority,
+    important: runtimeItem.important,
+    layer: getRuntimeRuleLayer(sheetOptions),
     css: ruleCss,
     callsite: runtimeItem.callsite,
     debug: runtimeItem.debug,
@@ -67,4 +73,9 @@ export function createRuntimeSheetRules(item: StateItem): RuntimeSheetRule[] | n
 
 export function createRuntimeSheetRule(item: StateItem): RuntimeSheetRule | null {
   return createRuntimeSheetRules(item)?.[0] ?? null;
+}
+
+function getRuntimeRuleLayer(sheetOptions: CreateSheetOptions | null): SheetRule['layer'] {
+  if (!sheetOptions) return 'style';
+  return (sheetOptions.layer ?? isSheetLayerEnabled()) ? 'sheet' : false;
 }

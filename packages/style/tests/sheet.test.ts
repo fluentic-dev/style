@@ -18,6 +18,7 @@ import {
   getInlineSourceMap,
   getRuleCallsite,
   includes,
+  notIncludes,
   setBuildMeta,
   test,
   traceCallsite,
@@ -1398,6 +1399,67 @@ test('prod sheet uses a layer tag and insertRule tag', () => {
   includes(document.head.childNodes[1].sheet.cssRules[0], '{.one{color:red}}');
 });
 
+test('prod sheet reverses priority layer order for important declarations', () => {
+  const document = createFakeDocument();
+  const sheet = createProdSheet({
+    document: document as unknown as Document,
+  });
+
+  sheet.updateLayers(['$layer']);
+  sheet.insert({
+    key: 'important-low',
+    css: '.important-low{color:red!important}',
+    priority: [0, 0, 0, 0, 0, 0, 0],
+    important: true,
+  });
+  sheet.insert({
+    key: 'important-high',
+    css: '.important-high{color:blue!important}',
+    priority: [1, 0, 0, 0, 0, 0, 0],
+    important: true,
+  });
+
+  const rules = Array.from(document.head.childNodes[1].sheet.cssRules) as unknown as string[];
+  const lowLayer = getRuleLayerName(rules.find((rule) => rule.includes('.important-low')) ?? '');
+  const highLayer = getRuleLayerName(rules.find((rule) => rule.includes('.important-high')) ?? '');
+  const layerOrder = document.head.childNodes[0].textContent;
+
+  equal(Boolean(lowLayer), true);
+  equal(Boolean(highLayer), true);
+  equal(layerOrder.indexOf(highLayer) < layerOrder.indexOf(lowLayer), true);
+});
+
+test('prod sheet emits opted-in sheets in the derived sheet layer', () => {
+  const document = createFakeDocument();
+  const sheet = createProdSheet({
+    document: document as unknown as Document,
+  });
+
+  sheet.updateLayers(['reset', '$layer', 'override']);
+  sheet.insert({
+    key: 'style',
+    css: '.style{color:red}',
+    layer: 'style',
+  });
+  sheet.insert({
+    key: 'sheet',
+    css: '.sheet{color:blue}',
+    layer: 'sheet',
+  });
+  sheet.insert({
+    key: 'unlayered',
+    css: '.unlayered{color:green}',
+    layer: false,
+  });
+
+  const layerOrder = document.head.childNodes[0].textContent;
+  const rules = Array.from(document.head.childNodes[1].sheet.cssRules) as unknown as string[];
+
+  includes(layerOrder, 'css.sheet');
+  includes(rules.find((rule) => rule.includes('.sheet')) ?? '', '@layer css.sheet');
+  notIncludes(rules.find((rule) => rule.includes('.unlayered')) ?? '', '@layer');
+});
+
 test('prod sheet creates rule tag lazily', () => {
   const document = createFakeDocument();
   const sheet = createProdSheet({
@@ -1421,3 +1483,7 @@ test('prod sheet does not create tags until used', () => {
 
   equal(document.head.childNodes.length, 0);
 });
+
+function getRuleLayerName(css: string) {
+  return /^@layer\s+([^\s{]+)/.exec(css)?.[1] ?? '';
+}

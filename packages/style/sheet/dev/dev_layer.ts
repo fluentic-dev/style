@@ -1,12 +1,14 @@
 import { getLayerBlockCss, getLayerOrderCss } from '../../atomic/layer';
-import { CSS_CONFIG, CSS_CONFIG_DEFAULT } from '../../config/config/css';
+import { CSS_CONFIG, CSS_CONFIG_DEFAULT, isStyleLayerEnabled } from '../../config/config/css';
 import { DEV_CONFIG } from '../../config/config/dev';
 import type { SheetOptions, SheetRule, StyleSheet } from '../types';
 import {
   createNoopSheet,
   createSheetLayerState,
   createStyleTag,
-  getSheetRulePriority,
+  getSheetLayerName,
+  getSheetLayerNames,
+  getSheetRuleLayerPriority,
   getStyleLayerName,
   insertStyleTagAfter,
   insertStyleTagAtTop,
@@ -40,6 +42,7 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
   let activeLayers: readonly string[] = CSS_CONFIG.layers ?? CSS_CONFIG_DEFAULT.layers ?? [];
   let active: DevRuleTag | null = null;
   let lastTag: HTMLStyleElement = layerTag;
+  let hasSheetLayer = false;
 
   if (options.top) {
     insertStyleTagAtTop(document, layerTag);
@@ -50,7 +53,7 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
   return {
     updateLayers(layers) {
       activeLayers = layers;
-      const next = getLayerOrderCss(layers, rootLayer ?? layerState.getNames());
+      const next = getLayerOrderCss(layers, rootLayer ?? getSheetLayerNames(layerState, hasSheetLayer));
 
       if (next === layerText) return;
 
@@ -64,11 +67,19 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
 
       if (ruleKey && inserted.has(ruleKey)) return;
 
-      const priority = typeof rule === 'string' ? null : rule.priority;
-      const layerName = rootLayer ?? layerState.getName(getSheetRulePriority(priority));
+      const priority = typeof rule === 'string'
+        ? getSheetRuleLayerPriority(null, false)
+        : getSheetRuleLayerPriority(rule.priority, rule.important);
+      const ruleLayer = typeof rule === 'string' ? 'style' : rule.layer ?? 'style';
+      if (ruleLayer === 'sheet') hasSheetLayer = true;
+      const layerName = rootLayer ?? (ruleLayer === 'sheet'
+        ? getSheetLayerName()
+        : ruleLayer === false || !isStyleLayerEnabled()
+        ? null
+        : layerState.getName(priority));
       const nextLayerText = getLayerOrderCss(
         activeLayers,
-        rootLayer ?? layerState.getNames(),
+        rootLayer ?? getSheetLayerNames(layerState, hasSheetLayer),
       );
 
       if (nextLayerText !== layerText) {
@@ -76,7 +87,7 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
         layerTag.textContent = nextLayerText;
       }
 
-      const css = getLayerBlockCss(layerName, rawCss);
+      const css = layerName ? getLayerBlockCss(layerName, rawCss) : rawCss;
       const key = typeof rule === 'string' ? css : ruleKey;
 
       if (key && inserted.has(key)) return;

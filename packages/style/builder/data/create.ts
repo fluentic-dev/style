@@ -4,6 +4,7 @@ import {
   BUILDER_SCOPE,
   BUILDER_SCOPE_ID,
   BUILDER_SELECTOR,
+  BUILDER_SHEET_OPTIONS,
   BUILDER_SLOT_ID,
   BUILDER_STATE,
   BUILDER_TYPE,
@@ -20,6 +21,7 @@ import {
 import type {
   BuilderCallsite,
   BuilderData,
+  CreateSheetOptions,
   ScopeData,
   ScopeTargetData,
   SelectorData,
@@ -44,11 +46,13 @@ export function createStyleData<Style>(
 
 export function createSheetData<Style>(
   callsite: BuilderCallsite | null,
+  options: CreateSheetOptions = {},
 ): SheetData<Style> {
   return {
     [BUILDER_TYPE]: BUILDER_TYPE_SHEET,
     [BUILDER_STATE]: { items: [], lookup: {} },
     [BUILDER_CALLSITE]: callsite,
+    [BUILDER_SHEET_OPTIONS]: options,
   };
 }
 

@@ -1,9 +1,11 @@
 import {
   BUILDER_CALLSITE,
+  BUILDER_SHEET_OPTIONS,
   BUILDER_STATE,
   BUILDER_TYPE,
   BUILDER_TYPE_STYLE,
   createSheetData,
+  type CreateSheetOptions,
   type DebugData,
   getSelectorSelectors,
   isSelectorData,
@@ -13,6 +15,7 @@ import {
   type SheetData,
   type StyleData,
 } from '../builder/data';
+import { setSheetSelectorOptions } from '../builder/selector_override_core';
 import { mergeSheetData } from '../builder/style_data';
 import { resolveCallsite } from '../builder/utils';
 import { getStyleTokenId, isStyleTokenOverrideData, type StyleTokenOverride } from '../style/token';
@@ -28,12 +31,26 @@ type SheetItem<Style = unknown> =
 
 export type SheetBuilder<Style = unknown> = SheetData<Style>;
 
+export type { CreateSheetOptions } from '../builder/data';
+
+export function createSheet<Style = unknown>(items?: SheetItem<Style>): SheetBuilder<Style>;
 export function createSheet<Style = unknown>(
-  items?: SheetItem<Style>,
+  options: CreateSheetOptions,
+  items: SheetItem<Style>,
+): SheetBuilder<Style>;
+export function createSheet<Style = unknown>(
+  optionsOrItems?: CreateSheetOptions | SheetItem<Style>,
+  itemsOrDebug?: SheetItem<Style> | DebugData,
   debug?: DebugData,
 ): SheetBuilder<Style> {
-  const callsite = resolveCallsite(debug);
-  let data = createSheetData<Style>(callsite);
+  const hasOptions = isCreateSheetOptions(optionsOrItems) && arguments.length >= 2;
+  const options = hasOptions ? optionsOrItems : {};
+  const items = (hasOptions ? itemsOrDebug : optionsOrItems) as SheetItem<Style> | undefined;
+  const resolvedDebug = hasOptions ? debug : itemsOrDebug as DebugData | undefined;
+
+  assertCreateSheetOptions(options);
+  const callsite = resolveCallsite(resolvedDebug);
+  let data = createSheetData<Style>(callsite, options);
 
   if (items) {
     data = mergeSheetItems(data, callsite, items);
@@ -70,6 +87,7 @@ function mergeSheetItems<Style>(
 
   const selectorItem = items as SelectorData<Style> | SelectorOverrideData<Style>;
   const selectors = getSelectorSelectors(selectorItem);
+  const options = data[BUILDER_SHEET_OPTIONS];
   let next = data;
 
   if (isSelectorData(selectorItem)) return next;
@@ -80,12 +98,27 @@ function mergeSheetItems<Style>(
       callsite,
       getSelectorItemStyleData(selectorItem),
       null,
-      selectors[i],
+      setSheetSelectorOptions(selectors[i], options),
       null,
     ) as SheetData<Style>;
   }
 
   return next;
+}
+
+function isCreateSheetOptions(value: unknown): value is CreateSheetOptions {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  return 'layer' in value || 'weight' in value || Object.keys(value).length === 0;
+}
+
+function assertCreateSheetOptions(options: CreateSheetOptions) {
+  if (options.layer !== undefined && typeof options.layer !== 'boolean') {
+    throw new Error('createSheet options.layer must be a boolean');
+  }
+
+  if (options.weight !== undefined && (!Number.isInteger(options.weight) || options.weight < 1)) {
+    throw new Error('createSheet options.weight must be a positive integer');
+  }
 }
 
 function addSheetTokenOverride<Style>(
