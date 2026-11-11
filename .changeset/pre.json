@@ -46,6 +46,7 @@
     "sheet-layer-controls",
     "slim-extracted-token-runtime",
     "sync-beta-release-metadata",
+    "turbopack-css-fingerprint",
     "typed-selector-asserts"
   ]
 }
