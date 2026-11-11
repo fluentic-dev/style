@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import { PHASE_DEVELOPMENT_SERVER } from 'next/constants';
+import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Compilation, Compiler, RuleSetRule } from 'webpack';
@@ -546,41 +547,61 @@ function patchTurbopackExtractedCss(args: {
   distDir: string;
   projectDir: string;
 }) {
-  if (!args.css) return;
+  const distDir = path.resolve(args.projectDir, args.distDir);
+  const renamed = new Map<string, string>();
 
-  const distDir = path.isAbsolute(args.distDir)
-    ? args.distDir
-    : path.join(args.projectDir, args.distDir);
-
-  for (const filePath of findCssFiles(distDir)) {
+  for (const filePath of findBuildFiles(path.join(distDir, 'static'), /\.css$/)) {
     const source = fs.readFileSync(filePath, 'utf8');
     if (!source.includes(EXTRACTED_CSS_MARKER)) continue;
 
-    fs.writeFileSync(filePath, source.split(EXTRACTED_CSS_MARKER).join(args.css), 'utf8');
-  }
-}
-
-function findCssFiles(dir: string): string[] {
-  let entries: fs.Dirent[];
-
-  try {
-    entries = fs.readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return [];
+    const css = source.split(EXTRACTED_CSS_MARKER).join(args.css);
+    const hash = createHash('sha256').update(css).digest('hex').slice(0, 32);
+    const asset = path.relative(distDir, filePath).split(path.sep).join('/');
+    const hashedAsset = path.posix.join(path.posix.dirname(asset), hash + '.css');
+    fs.writeFileSync(path.join(distDir, hashedAsset), css, 'utf8');
+    renamed.set(asset, hashedAsset);
   }
 
-  const files: string[] = [];
+  if (!renamed.size) return;
 
-  for (const entry of entries) {
-    const filePath = path.join(dir, entry.name);
+  // Update Next's manifests before it renders HTML and RSC payloads. The App
+  // Router can also embed the stylesheet directly in its client reference manifest.
+  const manifestName = /manifest.*\.(js|json)$/i;
+  const manifests = [
+    ...fs.readdirSync(distDir).filter((name) => manifestName.test(name)).map((name) => path.join(distDir, name)),
+    ...findBuildFiles(path.join(distDir, 'server'), manifestName),
+    ...findBuildFiles(path.join(distDir, 'static'), /^_buildManifest\.js$/),
+  ];
+  const inlineCss = JSON.stringify(args.css).slice(1, -1);
+  for (const filePath of manifests) {
+    const source = fs.readFileSync(filePath, 'utf8');
+    let updated = source;
 
-    if (entry.isDirectory()) {
-      files.push(...findCssFiles(filePath));
-    } else if (entry.isFile() && entry.name.endsWith('.css')) {
-      files.push(filePath);
+    for (const [asset, hashedAsset] of renamed) {
+      updated = updated.split(asset).join(hashedAsset);
+    }
+    if (updated !== source) {
+      fs.writeFileSync(filePath, updated.split(EXTRACTED_CSS_MARKER).join(inlineCss), 'utf8');
     }
   }
 
+  for (const asset of renamed.keys()) {
+    fs.unlinkSync(path.join(distDir, asset));
+  }
+}
+
+function findBuildFiles(dir: string, pattern: RegExp): string[] {
+  if (!fs.existsSync(dir)) return [];
+
+  const files: string[] = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const filePath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...findBuildFiles(filePath, pattern));
+    } else if (entry.isFile() && pattern.test(entry.name)) {
+      files.push(filePath);
+    }
+  }
   return files;
 }
 

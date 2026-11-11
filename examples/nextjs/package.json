@@ -14,7 +14,8 @@
     "serve": "npx serve out -l tcp://127.0.0.1:4180",
     "test:prod": "pnpm run build:turbo && pnpm run verify:prod",
     "test:ssg": "pnpm run ssg:turbo && node ./scripts/verify-static.mjs",
-    "verify:prod": "node ./scripts/verify-prod.mjs"
+    "verify:prod": "node ./scripts/verify-prod.mjs",
+    "test:css-fingerprint": "node ./scripts/verify-css-fingerprint.mjs"
   },
   "dependencies": {
     "@fluentic/style": "workspace:*",
