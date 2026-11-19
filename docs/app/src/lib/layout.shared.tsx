@@ -30,6 +30,13 @@ export function baseOptions(): BaseLayoutProps {
         url: '/playground',
         active: 'url',
       },
+      {
+        text: 'llms.txt',
+        icon: false,
+        url: `${basePath}/llms.txt`,
+        external: true,
+        on: 'menu',
+      },
     ],
     githubUrl: 'https://github.com/fluentic-dev/style',
   };

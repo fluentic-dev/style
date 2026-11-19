@@ -1,0 +1,49 @@
+# Migrate Tailwind CSS to Fluentic Style
+
+Read [the common migration contract](https://fluenticstack.com/style/llms/migrations/common.txt), [setup](https://fluenticstack.com/style/llms/setup.txt), and [core](https://fluenticstack.com/style/llms/core.txt) first.
+
+Choose plain Fluentic CSS for the smallest dependency on utility syntax, or the Fluentic Tailwind preset when utility vocabulary is desired. Both use the same slots, scopes and themes. The preset is not a complete Tailwind compatibility layer.
+
+- Inspect the installed Tailwind version and actual config/@theme, plugins, custom utilities, breakpoints, dark selector, preflight and layers. Translate resolved declarations, not assumed defaults.
+- Base utilities become declarations. hover/focus/disabled prefixes become chains; responsive prefixes become media with the project's breakpoints. Arbitrary values become CSS strings.
+- group states targeting public descendant parts become scopes bound to the group's root slot. Peer/sibling relationships, arbitrary selectors and portal content require explicit equivalent selectors and DOM boundaries.
+- cva/clsx/tailwind-merge selection becomes typed variant styles/scopes and conditional css arrays; preserve default/compound variants. Tailwind class-string conflict resolution is not Fluentic rule priority.
+
+Plain conversion of px-4 py-2 text-white bg-blue-600 hover:bg-blue-700, assuming the app resolves those exact colors and spacing:
+```tsx
+import { style } from '@fluentic/style';
+const button = style({
+  paddingInline: '1rem', paddingBlock: '0.5rem',
+  color: '#fff', backgroundColor: '#2563eb',
+}).hover({ backgroundColor: '#1d4ed8' });
+// <button css={button}>Save</button>
+```
+
+Optional object preset setup:
+```ts
+import { createStyleFn } from '@fluentic/style';
+import { createNamedTokens } from '@fluentic/style/dialect';
+import {
+  createDefaultedTailwindStyleConfig,
+  createTailwindStyleTransform,
+  TailwindSelectors,
+} from '@fluentic/style/presets/tailwind';
+export const Colors = createNamedTokens('app.color', {
+  accent: '#2563eb', accentHover: '#1d4ed8', accentText: '#ffffff',
+});
+const config = createDefaultedTailwindStyleConfig({ theme: { colors: Colors } });
+export const { style: tw } = createStyleFn({
+  selectors: TailwindSelectors,
+  transform: createTailwindStyleTransform(config),
+});
+const button = tw({ px: '$4', py: '$2', bg: '$accent', text: '$accentText' })
+  .hover({ bg: '$accentHover' });
+```
+
+Register tw with the bundler's importSources: [{source: '<actual app import specifier>', name: 'tw', styleFn: tw}]. Import the actual tw function into the config. The preset defaults do not automatically import your Tailwind config. Colors are explicit; defaultTailwindColors is opt-in and may differ from your source palette. Match the source app's values.
+
+`px: 4` is 4px; `px: '$4'` uses the configured spacing scale. Core style() does not understand $4. Preset .md() means min-width 768px; use .media() or customized selectors when your breakpoints differ. The preset's .dark() uses a .dark ancestor convention; preserve your actual theme activation method.
+
+There is also createClassNameFn + createTailwindClassNamePreset for utility strings. It still uses chains: cx('px-4').hover('bg-accent'), not cx('hover:bg-accent'). Register cx for extraction too. Unsupported utilities must be translated explicitly; do not silently drop them. See https://fluenticstack.com/style/docs/presets/tailwind/class-name/.
+
+Keep preflight/reset, font CSS, plugin utilities and Tailwind processing for remaining consumers. Check border defaults, box sizing, typography, color space/opacity, ring/shadow composition, dark mode and responsive behavior before removing Tailwind. See https://fluenticstack.com/style/docs/presets/tailwind/style-object/ for the preset's supported surface.

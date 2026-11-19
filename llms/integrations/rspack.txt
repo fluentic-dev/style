@@ -1,0 +1,75 @@
+# Fluentic Style: Rspack integration
+
+Read [shared setup](https://fluenticstack.com/style/llms/setup.txt) first. Install @fluentic/style in the app; retain or install the bundler and loaders/plugins imported by the configuration below. Merge these settings with the existing config and entry/output options.
+
+Add the Fluentic Rspack plugin and configure React's automatic JSX runtime to
+use Fluentic's JSX entry:
+
+```js
+import { plugin as stylePlugin } from '@fluentic/style/plugin/rspack';
+import rspack from '@rspack/core';
+
+export default (_, argv) => {
+  const dev = argv.mode === 'development';
+
+  return {
+    resolve: {
+      extensions: ['.tsx', '.ts', '.jsx', '.js'],
+    },
+    module: {
+      rules: [
+        {
+          test: /\.[jt]sx?$/,
+          type: 'javascript/auto',
+          use: {
+            loader: 'builtin:swc-loader',
+            options: {
+              jsc: {
+                parser: {
+                  syntax: 'typescript',
+                  tsx: true,
+                },
+                transform: {
+                  react: {
+                    runtime: 'automatic',
+                    importSource: '@fluentic/style/plugin/jsx',
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          test: /\.css$/i,
+          type: 'css/auto',
+        },
+      ],
+    },
+    experiments: {
+      css: true,
+    },
+    plugins: [
+      stylePlugin(),
+      new rspack.HtmlRspackPlugin({
+        template: './index.html',
+      }),
+    ],
+  };
+};
+```
+
+Keep TypeScript aligned with the same JSX import source:
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+Enable Rspack CSS support so the adapter can emit extracted CSS through the
+bundler.
+
+Run the app typecheck and production build. Verify extracted CSS on initial page load and dynamic style updates.

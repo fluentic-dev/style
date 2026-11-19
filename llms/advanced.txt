@@ -1,0 +1,80 @@
+# Fluentic Style: extensions and interop
+
+## Custom Style Functions
+
+Use `createStyleFn` only when a design system needs custom style properties,
+selectors, or transforms.
+
+```ts
+type UiStyle = CSSProperties & {
+  elevated?: boolean;
+  pill?: boolean;
+};
+
+const uiSelectors = selectorPriority({
+  ...MinimalSelectors,
+  pressed: selector('[aria-pressed="true"]'),
+  tone: selector('[data-tone="$"]', assertEnumSelector('brand', 'danger')),
+}, [
+  'hover',
+  'pressed',
+  'active',
+  'disabled',
+]);
+
+const uiTransform = styleTransform<UiStyle>({
+  transform(style) {
+    const { elevated, pill, ...css } = style;
+    if (elevated) css.boxShadow = '0 18px 44px rgba(15, 23, 42, 0.12)';
+    if (pill) css.borderRadius = 999;
+    return css;
+  },
+});
+
+export const { style: ui } = createStyleFn({
+  style: type<UiStyle>,
+  selectors: uiSelectors,
+  transform: uiTransform,
+});
+```
+
+Custom builders expose the same shape as `style`: `ui(...)`, `ui.slot(...)`,
+`ui.scope(...)`, `ui.raw(...)`, `ui.plain(...)`, `ui.keyframes(...)`, and
+`ui.merge(...)`.
+
+Register custom style functions with compiler plugins through `importSources`.
+
+---
+
+## Register custom builders for extraction
+
+```ts
+import { ui } from './src/style';
+// In the selected bundler plugin options:
+const options = {
+  importSources: [{ source: './style', name: 'ui', styleFn: ui }],
+};
+```
+
+source must match the module specifier in app imports, name the exported builder, and styleFn the actual function. Next.js accepts options as stylePlugin(nextConfig, options). Keep shared token data separate from compiler transform modules.
+
+## Class-name-only boundaries
+
+```tsx
+import { getClassName } from '@fluentic/style';
+const result = getClassName(props.css);
+// Pass both outputs; dynamic values may require result.style.
+return <ThirdParty
+  className={result.className}
+  style={result.style}
+/>;
+```
+
+getClassName returns an object, not a string. getToken(tokenOrValue) returns a CSS variable/fallback string for a token and passes a literal through. Do not treat the returned CSS variable as a resolved color for canvas or another non-CSS consumer.
+
+Use style.keyframes({from: {opacity: 0}, to: {opacity: 1}}) for animations. For named CSS at-rules, selector sheets, global rules, fonts and portal-owned vendor selectors, use the matching public API from @fluentic/style/css rather than inventing a style.global API. Keep existing reset/font CSS until deliberately ported.
+
+Detailed references:
+- https://fluenticstack.com/style/docs/reference/css-helpers/
+- https://fluenticstack.com/style/docs/beyond-the-basics/styling-third-party-components/
+- https://fluenticstack.com/style/docs/reference/create-style-fn/

@@ -1,0 +1,45 @@
+# Fluentic Style: Vite integration
+
+Read [shared setup](https://fluenticstack.com/style/llms/setup.txt) for installation and production rules. Merge configuration into the existing app.
+
+## New React + Vite app
+
+```sh
+pnpm create vite my-app --template react-ts
+cd my-app
+pnpm install
+pnpm add @fluentic/style
+```
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+export default defineConfig({
+  plugins: [
+    stylePlugin(),
+    react({ jsxImportSource: '@fluentic/style/plugin/jsx' }),
+  ],
+});
+```
+
+In the TypeScript config that owns app JSX (often tsconfig.app.json):
+
+```json
+{"compilerOptions":{"jsx":"react-jsx","jsxImportSource":"@fluentic/style/plugin/jsx"}}
+```
+
+```tsx
+// src/App.tsx
+import { style } from '@fluentic/style';
+const page = style({ padding: 24, fontFamily: 'system-ui' });
+const button = style({ padding: '8px 12px', borderRadius: 8 })
+  .hover({ opacity: 0.85 })
+  .focusVisible({ outline: '2px solid currentColor', outlineOffset: 3 });
+export default function App() {
+  return <main css={page}><button css={button}>Save</button></main>;
+}
+```
+
+Retain the normal React entry and root rendering. Run the app's typecheck and production build. The bundler plugin handles generated CSS; do not invent a manual generated CSS import.

@@ -1,0 +1,26 @@
+# Migrate CSS Modules to Fluentic Style
+
+Read [the common migration contract](https://fluenticstack.com/style/llms/migrations/common.txt), [setup](https://fluenticstack.com/style/llms/setup.txt), and [core](https://fluenticstack.com/style/llms/core.txt) first.
+
+- Replace imported module class strings with style objects applied through css. Local class hashes are implementation details; do not carry them into a public contract.
+- Expand composes into css arrays or .merge(existing). Imported compositions require migrating their actual declarations and ordering, not concatenating generated hashes.
+- Move public descendant selectors to slots/scopes. Keep :global rules global and retain animation/font/global dependencies until their consumers move.
+
+Before: styles.root and styles.label from Button.module.css, with a parent targeting .label on root hover.
+After:
+```tsx
+import { style, combineStyle, bindScope, type StyleTheme } from '@fluentic/style';
+export const buttonStyles = {
+  root: style.slot({ display: 'inline-flex', padding: '0.5rem 1rem' }),
+  label: style.slot({ color: '#111' }),
+};
+const interaction = style.scope().hover([
+  buttonStyles.label({ color: '#2563eb' }),
+]);
+export function Button(props: { theme?: StyleTheme }) {
+  const css = combineStyle(buttonStyles, bindScope(buttonStyles.root, interaction, props.theme));
+  return <button css={css.root}><span css={css.label}>Save</span></button>;
+}
+```
+
+Remove the .module.css import only when no class export is used. Check CSS Modules composition and global selectors independently; a class-to-object rename alone is insufficient.

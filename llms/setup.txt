@@ -1,0 +1,40 @@
+# Fluentic Style: installation and production
+
+Target: @fluentic/style 0.1.0-beta.11. Check the app's installed version before using these APIs; preserve its package manager and existing framework configuration.
+
+Install with the project's package manager (choose one):
+
+```sh
+npm install @fluentic/style
+pnpm add @fluentic/style
+yarn add @fluentic/style
+bun add @fluentic/style
+```
+
+Production integrations support Vite, Webpack, Rspack, Parcel 2, Farm, and Next.js App Router with Webpack or Turbopack. Follow only the matching linked guide below; Next.js users should use its adapter rather than configuring a separate Webpack plugin. The Vite guide includes a complete new React app starter.
+
+## Other integrations
+
+For React without a Fluentic plugin, use @fluentic/style/jsx in both TypeScript and the automatic JSX transform. Runtime-only inserts CSS at render time; prefer the bundler plugin for supported production apps. Do not mix plain and plugin JSX entries accidentally.
+
+When retaining React's default JSX runtime (for example during a migration), use the plugin option cssProp: CssPropPresets.React, imported from the bundler adapter, instead of a Fluentic jsxImportSource. Keep React's normal JSX settings. Existing libraries with their own css prop still need explicit boundary planning.
+
+Preact: keep jsxImportSource: 'preact', place stylePlugin({ cssProp: CssPropPresets.Preact }) before the Preact Vite preset, and import '@fluentic/style/types/preact' in a .d.ts file.
+Solid: keep Solid's JSX transform, use CssPropPresets.Solid before vite-plugin-solid and import '@fluentic/style/types/solid' in a .d.ts file. Do not apply React JSX setup to Preact or Solid. Follow the framework guide for complete settings.
+
+Choose the matching plain-text integration guide:
+
+- [Vite (React)](https://fluenticstack.com/style/llms/integrations/vite.txt)
+- [Next.js App Router (Webpack and Turbopack)](https://fluenticstack.com/style/llms/integrations/nextjs.txt)
+- [Webpack](https://fluenticstack.com/style/llms/integrations/webpack.txt)
+- [Rspack](https://fluenticstack.com/style/llms/integrations/rspack.txt)
+- [Parcel 2](https://fluenticstack.com/style/llms/integrations/parcel.txt)
+- [Farm](https://fluenticstack.com/style/llms/integrations/farm.txt)
+
+Framework-specific details: https://fluenticstack.com/style/docs/integrations/preact/ and https://fluenticstack.com/style/docs/integrations/solidjs/.
+
+## Production rules
+
+Keep complete recognizable style(), style.slot(), style.scope() chains. Keep slot override calls inline in scopes. Use .merge(existing) inside a new chain for reuse. Dynamic properties may become prepared CSS variables; dynamic composition remains runtime work.
+
+Register custom builders in plugin importSources. Include UI packages containing Fluentic source in the consuming app plugin's transform scope; extraction belongs in the final app build. Verify CSS is loaded on direct route entry and production SSR, and that live prop/token changes still update. Never claim extraction or migration parity from a successful typecheck alone.

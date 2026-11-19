@@ -1,0 +1,53 @@
+# Fluentic Style: Farm integration
+
+Read [shared setup](https://fluenticstack.com/style/llms/setup.txt) first. Install @fluentic/style in the app; retain or install the bundler and loaders/plugins imported by the configuration below. Merge these settings with the existing config and entry/output options.
+
+Add the Farm adapter and configure the React plugin with Fluentic's JSX import
+source:
+
+```js
+import { defineConfig } from '@farmfe/core';
+import { plugin as stylePlugin } from '@fluentic/style/plugin/farm';
+
+export default defineConfig(({ mode }) => {
+  const dev = mode !== 'production';
+
+  return {
+    plugins: [
+      ['@farmfe/plugin-react', {
+        runtime: 'automatic',
+        importSource: '@fluentic/style/plugin/jsx',
+        development: dev,
+      }],
+      stylePlugin({
+        dev,
+      }),
+    ],
+    compilation: {
+      script: {
+        parser: {
+          tsConfig: {
+            tsx: true,
+          },
+        },
+      },
+    },
+  };
+});
+```
+
+Keep TypeScript aligned with the same JSX import source:
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+The Farm adapter emits extracted CSS through the bundler and keeps runtime
+support for dynamic style values.
+
+Run the app typecheck and production build. Verify extracted CSS on initial page load and dynamic style updates.

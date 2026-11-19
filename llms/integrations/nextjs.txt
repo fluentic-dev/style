@@ -1,0 +1,32 @@
+# Fluentic Style: Next.js integration
+
+Read [shared setup](https://fluenticstack.com/style/llms/setup.txt) for installation and production rules. Merge configuration into the existing app.
+
+## Existing or new Next.js App Router app
+
+Install @fluentic/style, then wrap the existing Next config:
+
+```js
+// next.config.mjs
+import stylePlugin from '@fluentic/style/plugin/nextjs';
+export default stylePlugin({ /* existing Next options */ });
+```
+
+Set jsxImportSource to @fluentic/style/plugin/jsx in tsconfig.json. Keep Next's framework-managed JSX settings. The adapter supports Webpack and Turbopack. Keep normal global CSS imports in the root layout.
+
+Include the RSC development style bridge (required integration plumbing, with console helpers disabled):
+
+```tsx
+// app/layout.tsx
+import { StyleDev } from '@fluentic/style/dev/rsc';
+import type { ReactNode } from 'react';
+import './globals.css';
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return <html lang="en">
+    <body>{children}</body>
+    {process.env.NODE_ENV === 'development' && <StyleDev enableStyleDevUtils={false} />}
+  </html>;
+}
+```
+
+Do not add 'use client' solely for static Fluentic styles. Preserve server/client boundaries for behavior. Run the normal Next production build; check SSR and hydration as well as client navigation.

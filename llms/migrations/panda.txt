@@ -1,0 +1,26 @@
+# Migrate Panda CSS to Fluentic Style
+
+Read [the common migration contract](https://fluenticstack.com/style/llms/migrations/common.txt), [setup](https://fluenticstack.com/style/llms/setup.txt), and [core](https://fluenticstack.com/style/llms/core.txt) first.
+
+- Resolve css/cva/sva, recipes, slot recipes and patterns from the app's generated styled-system config. Convert aliases such as bg, px and rounded to real CSS properties unless a deliberate custom Fluentic transform handles them.
+- Resolve token paths to actual values or Fluentic tokens. Core style({color: 'blue.500'}) does not perform a Panda token lookup.
+- Convert _hover/_focusVisible and responsive condition objects to chains; preserve actual configured breakpoints and condition selectors. Expand responsive arrays explicitly.
+- cva recipes become typed style/variant maps plus conditional css arrays. sva slot recipes become exported slots plus variant scopes. Preserve base, default variants, compound variants and consumer precedence.
+- Replace semantic token conditions with theme overrides and explicit theme boundaries. Port patterns' generated layout declarations, not only their input options.
+
+Example slot recipe conversion:
+```ts
+import { style, createTokens } from '@fluentic/style';
+const tokens = createTokens({ accent: '#2563eb' });
+export const buttonStyles = {
+  root: style.slot({ display: 'inline-flex', backgroundColor: tokens.accent }),
+  label: style.slot({ fontWeight: 600 }),
+};
+export const compact = style.scope([
+  buttonStyles.root({ padding: '4px 8px' }),
+  buttonStyles.label({ fontSize: 12 }),
+]);
+// Component resolves bindScope(buttonStyles.root, size === 'sm' && compact, props.theme).
+```
+
+Retain Panda's reset, global styles and generated output for unmigrated consumers. Remove codegen/PostCSS configuration only after the final generated import is removed. Compare token condition behavior and layers with coexisting CSS.

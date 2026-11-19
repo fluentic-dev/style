@@ -7,7 +7,7 @@ This file keeps repository-only details out of the public package README.
 | Path                  | Purpose                                                                              |
 | --------------------- | ------------------------------------------------------------------------------------ |
 | `packages/style`      | The publishable `@fluentic/style` package.                                           |
-| `docs/app`            | Astro Starlight static documentation app.                                            |
+| `docs/app`            | Next.js/Fumadocs static documentation app.                                           |
 | `docs/content`        | MDX documentation content package, including the browser playground.                 |
 | `examples/basic`      | Basic Vite example.                                                                  |
 | `examples/bundlers/*` | Minimal bundler integration examples.                                                |
@@ -66,8 +66,21 @@ Build the static docs site:
 pnpm --filter @docs/app build
 ```
 
-The docs output is written to `docs/app/dist` and can be deployed to Cloudflare
-Pages as a static site.
+The docs output is written to `docs/app/out`. Build and deploy the Cloudflare
+Worker and static assets with `pnpm --filter @docs/app cf`.
+
+### LLM documentation
+
+`llms.txt` is the canonical index; `llms/` contains curated implementation and
+migration guides. Keep these aligned with Learn and the public APIs, excluding
+debugging workflows. Use absolute production links under
+`https://fluenticstack.com/style/` so copied files remain useful.
+
+Docs dev/build commands run `scripts/sync-llms.mjs`, which validates text-guide
+links, copies the source files into public assets and generates `llms-full.txt`.
+Do not edit the generated copies in `docs/app/public`. The sidebar links directly
+to `/style/llms.txt` after Playground. After deployment, verify the entry URL,
+complete guide and migration URLs return plain text.
 
 ## Benchmark Commands
 

@@ -1,0 +1,22 @@
+# Fluentic Style: migration contract
+
+Read ../setup.txt and ../core.txt, then the source-specific guide. Translate the application's actual CSS behavior, not a library's presumed defaults. These are migration recipes, not automatic compatibility adapters or a guarantee of identical cascade behavior.
+
+1. Inventory the installed styling version, entry/config files, resets, globals, font faces, themes, tokens, breakpoints, recipes/variants, animations, portals and third-party overrides. Record actual resolved values and conditional selectors.
+2. Configure Fluentic while retaining old styles for untouched components. Choose one representative component with a state, responsive rule, theme and consumer override. Preserve markup, semantics, event handlers, refs and native props.
+3. Move declarations to style(); reusable public component parts become style.slot(). Use camelCase CSS properties and explicit units. Move selectors to chain methods, not nested property objects. Keep complete chains attached to their creation calls.
+4. Root overrides become css?: StyleProp, applied last. Named component parts are exposed slots; variants and outside part overrides become style.scope(), resolved inside the component with combineStyle and bindScope. App/subtree token themes use createTheme; component scope props use StyleTheme. They are distinct contracts.
+5. Port token identities and defaults, not just literal colors. Map component tokens to app values through scopes. Preserve separately named roles even if their starting values match. Keep explicit theme boundaries for portals or siblings outside the themed subtree.
+6. Replace class assembly only for converted styles. When a vendor accepts className/style, pass BOTH fields from getClassName. Class string order does not control external CSS cascade. Avoid having old and new systems own the same property on the same element; isolate converted boundaries and assess layers, specificity, resets and !important.
+7. Validate before removing old imports/config: compare computed styles or screenshots at each breakpoint and theme, hover/focus-visible/active/disabled, compound variants, root/part overrides, reduced motion, RTL if supported, dynamic prop changes and SSR/hydration. Check keyboard focus and semantic attributes. Test the production build and direct route entry.
+8. Remove old dependencies, generated files and providers only after the last consumer is migrated and parity checks pass. Report any unsupported source construct or intentional difference instead of silently dropping it.
+
+Conversion rules:
+- CSS lengths: 4 means 4px, not a spacing-scale key; keep rem/%/viewport strings.
+- Explicit breakpoints become .media('(min-width: ...)', {...}); responsive arrays need expansion using the source config.
+- &:hover becomes .hover({...}); attribute states use .attr('[aria-expanded="true"]', {...}); pseudo content needs quoted CSS strings.
+- Parent interaction with public parts becomes a scope bound to the parent root; local descendants can use .select('& > ...', {...}). Sibling/peer selectors and portals need their original DOM relationships preserved, not an assumed descendant scope.
+- Keyframes use style.keyframes; retain global CSS or use the documented @fluentic/style/css APIs for global rules and named at-rules.
+- Later matching inputs win at equal priority. Different state/media buckets are ordered; moving rules into an array does not reproduce arbitrary source-order specificity.
+
+Acceptance: no unexplained visual/behavior difference, theme and consumer overrides work, production CSS is present, old styling is removed only where unused. Do not assert performance or bundle-size equivalence without measuring the migrated app.

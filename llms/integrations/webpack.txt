@@ -1,0 +1,68 @@
+# Fluentic Style: Webpack integration
+
+Read [shared setup](https://fluenticstack.com/style/llms/setup.txt) first. Install @fluentic/style in the app; retain or install the bundler and loaders/plugins imported by the configuration below. Merge these settings with the existing config and entry/output options.
+
+Add the Fluentic Webpack plugin and keep your normal TypeScript/JSX loader for
+React:
+
+```js
+import { plugin as stylePlugin } from '@fluentic/style/plugin/webpack';
+import MiniCssExtractPlugin from 'mini-css-extract-plugin';
+
+export default (_, argv) => {
+  const dev = argv.mode === 'development';
+
+  return {
+    resolve: {
+      extensions: ['.tsx', '.ts', '.jsx', '.js'],
+    },
+    module: {
+      rules: [
+        {
+          test: /\.[jt]sx?$/,
+          exclude: /node_modules/,
+          use: {
+            loader: 'babel-loader',
+            options: {
+              presets: [
+                ['@babel/preset-env', { targets: 'defaults' }],
+                ['@babel/preset-react', {
+                  runtime: 'automatic',
+                  importSource: '@fluentic/style/plugin/jsx',
+                  development: dev,
+                }],
+                ['@babel/preset-typescript', { isTSX: true, allExtensions: true }],
+              ],
+            },
+          },
+        },
+        {
+          test: /\.css$/i,
+          use: [dev ? 'style-loader' : MiniCssExtractPlugin.loader, 'css-loader'],
+        },
+      ],
+    },
+    plugins: [
+      stylePlugin(),
+      !dev && new MiniCssExtractPlugin(),
+    ].filter(Boolean),
+  };
+};
+```
+
+Keep TypeScript aligned with the same JSX import source:
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+Make sure Webpack handles CSS imports. The Fluentic plugin emits CSS through
+Webpack so your existing CSS extraction, hashing, and runtime loading stay in
+one place.
+
+Run the app typecheck and production build. Verify extracted CSS on initial page load and dynamic style updates.

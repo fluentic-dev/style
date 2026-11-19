@@ -34,3 +34,8 @@ docs/app/dist/
 docs/app/out/
 docs/app/next-env.d.ts
 packages/style/README.md
+
+# Generated from the canonical root llms.txt and llms/ guides
+docs/app/public/llms.txt
+docs/app/public/llms-full.txt
+docs/app/public/llms/

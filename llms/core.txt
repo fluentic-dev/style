@@ -1,0 +1,426 @@
+# Fluentic Style: core authoring
+
+Read setup.txt first. Examples use public imports from `@fluentic/style` unless stated otherwise. Define referenced style maps before using them; snippets illustrate independent patterns.
+
+## 1. Start With `style`
+
+Use `style(...)` for one element when no external slot override is needed.
+Builders are immutable: chaining returns a new builder.
+
+```ts
+const interactive = style({
+  display: 'grid',
+  gap: 12,
+  padding: 16,
+})
+  .hover({ backgroundColor: 'Canvas' })
+  .focusVisible({ outline: '2px solid currentColor' })
+  .media('(max-width: 700px)', { padding: 10 });
+```
+
+Use built-in selector and at-rule methods directly:
+
+```ts
+style().hover({ color: 'red' });
+style().active({ transform: 'translateY(1px)' });
+style().disabled({ opacity: 0.5 });
+style().before({ content: '""' });
+style().nthChild('2n', { backgroundColor: 'Canvas' });
+style().is(['button', 'a'], { cursor: 'pointer' });
+style().not('[hidden]', { display: 'block' });
+style().attr('[aria-current="page"]', { fontWeight: 700 });
+style().select('& > * + *', { marginTop: 8 });
+style().media('(max-width: 700px)', { padding: 12 });
+style().container('(min-width: 420px)', { gap: 16 });
+style().supports('(display: grid)', { display: 'grid' });
+```
+
+Use `.select(...)` only for local selectors targeting the current element or
+descendants. Use slots and scopes for component part overrides.
+
+Useful helpers:
+
+```ts
+style.raw({ display: 'flex' });       // typed object for spreading
+style.plain({ opacity: 0.8 });       // plain CSS values
+style.weight('red', 2);                // explicit declaration priority
+style.keyframes({ from: { opacity: 0 }, to: { opacity: 1 } });
+style.merge(target, a, b);            // merge full chains into target
+```
+
+---
+
+## 2. Use `style.slot` For Components
+
+Use slots for reusable component parts. A slot is a style builder plus a stable
+override target.
+
+```ts
+export const buttonStyles = {
+  root: style.slot({
+    alignItems: 'center',
+    border: 0,
+    borderRadius: 8,
+    cursor: 'pointer',
+    display: 'inline-flex',
+    gap: 8,
+    padding: '8px 12px',
+  }),
+  icon: style.slot({
+    flex: '0 0 auto',
+  }),
+  label: style.slot({
+    fontWeight: 700,
+  }),
+};
+```
+
+Calling a slot creates an override for that exact slot:
+
+```ts
+buttonStyles.root({ backgroundColor: 'black' });
+buttonStyles.label({ color: 'white' });
+```
+
+Slot overrides belong inside `style.scope(...)`; bind the resulting scope with `bindScope(...)`. Do not pass
+slot overrides directly to DOM `css`.
+
+---
+
+## 3. Use `style.scope` For Slot Overrides
+
+A scope groups overrides and applies them to a target slot.
+
+```ts
+export const primaryButtonTheme = style.scope([
+  buttonStyles.root({
+    backgroundColor: '#2563eb',
+    color: 'white',
+  }),
+  buttonStyles.label({
+    letterSpacing: 0,
+  }),
+]);
+```
+
+Scopes can express parent state and media variants:
+
+```ts
+export const buttonState = style.scope()
+  .hover([
+    buttonStyles.root({ opacity: 0.86 }),
+  ])
+  .active([
+    buttonStyles.root({ transform: 'translateY(1px)' }),
+  ]);
+
+export const compactButtonTheme = style.scope([
+  buttonStyles.root({ minHeight: 36 }),
+]).media('(max-width: 700px)', [
+  buttonStyles.root({ width: '100%' }),
+  buttonStyles.label({ fontSize: 13 }),
+]);
+```
+
+Apply a scope to a concrete slot:
+
+```ts
+const target = primaryButtonTheme(buttonStyles.root);
+```
+
+For component props, use `StyleTheme` and `bindScope`:
+
+```tsx
+type ButtonProps = {
+  theme?: StyleTheme;
+  css?: StyleProp;
+};
+
+function Button(props: ButtonProps) {
+  const css = combineStyle(
+    buttonStyles,
+    bindScope(buttonStyles.root, buttonState, props.theme),
+  );
+
+  return (
+    <button css={[css.root, props.css]}>
+      <span css={css.label}>Save</span>
+    </button>
+  );
+}
+```
+
+Use `combineScope(...scopes)` when you need to pre-compose scopes and apply the
+result later:
+
+```ts
+const interactiveTheme = combineScope(buttonState, primaryButtonTheme);
+const css = combineStyle(buttonStyles, interactiveTheme(buttonStyles.root));
+```
+
+---
+
+## 4. Slot Override Patterns
+
+Parent overrides child:
+
+```tsx
+const childStyles = {
+  root: style.slot({ padding: 8 }),
+  label: style.slot({ fontWeight: 700 }),
+};
+
+const childTheme = style.scope([
+  childStyles.root({ color: 'purple' }),
+  childStyles.label({ color: 'teal' }),
+]);
+
+const combineChildStyle = combineStyle.for(childStyles);
+type ChildStyle = CombinedStyleFor<typeof combineChildStyle>;
+
+function Child(props: { styles?: ChildStyle; theme?: StyleTheme }) {
+  const css = combineChildStyle(
+    props.styles,
+    bindScope(childStyles.root, props.theme),
+  );
+
+  return <article css={css.root}><span css={css.label}>Label</span></article>;
+}
+
+function Parent() {
+  const childCss = combineChildStyle(childTheme(childStyles.root));
+  return <Child styles={childCss} />;
+}
+```
+
+Parent state changes descendant slots:
+
+```ts
+const parentHover = style.scope().hover([
+  cardStyles.title({ color: '#2563eb' }),
+  cardStyles.action({ opacity: 1 }),
+]);
+
+const css = combineStyle(
+  cardStyles,
+  bindScope(cardStyles.root, parentHover),
+);
+```
+
+Variant props:
+
+```ts
+const danger = style.scope([
+  buttonStyles.root({ backgroundColor: '#dc2626' }),
+]);
+
+const css = combineStyle(
+  buttonStyles,
+  bindScope(buttonStyles.root, props.danger && danger, props.theme),
+);
+```
+
+Later scopes win for matching property and condition at equal priority. Different selectors and media follow priority buckets, not chain call order.
+
+---
+
+## 5. Use `combineStyle` For Rendering
+
+`combineStyle(styles, ...args)` returns a lazy object with the same shape as the
+styles object. Each slot/style field is ready for the JSX `css` prop.
+
+```tsx
+const styles = {
+  root: style.slot({ display: 'grid', gap: 8 }),
+  title: style.slot({ margin: 0 }),
+};
+
+function Card(props: { css?: StyleProp }) {
+  const css = combineStyle(styles);
+
+  return (
+    <section css={[css.root, props.css]}>
+      <h2 css={css.title}>Title</h2>
+    </section>
+  );
+}
+```
+
+`css` accepts recursive arrays and falsy values:
+
+```tsx
+<button css={[css.root, isActive && css.active, props.css]} />
+```
+
+`combineStyle` args may include scope targets, `bindScope(...)` results, token
+overrides, nested arrays, falsy values, and a `CombinedStyle` made from the same
+styles object.
+
+Rules:
+
+- Use `StyleProp` for direct `css` prop plumbing.
+- Use `StyleTheme` for scope/theme prop plumbing.
+- Use `combineStyle.for(styles)` for child components that accept pre-combined
+  styles.
+- Do not carry a `CombinedStyle` from one styles object into a combiner for a
+  different styles object.
+- Prefer JSX `css`; use `getClassName(...)` only when a class string is really
+  needed.
+
+---
+
+## 6. Tokens
+
+Tokens are themeable CSS-variable-backed values.
+
+```ts
+const accent = createToken('#2563eb');
+
+const styles = {
+  root: style.slot({
+    color: accent,
+  }),
+};
+
+const css = combineStyle(styles, accent('#dc2626'));
+```
+
+Use `createTokens` for semantic token trees:
+
+```ts
+export const tokens = createTokens({
+  color: {
+    canvas: '#ffffff',
+    text: '#17201b',
+    accent: '#0f766e',
+  },
+  radius: {
+    panel: 8,
+    pill: 999,
+  },
+});
+
+const cardStyles = {
+  root: style.slot({
+    backgroundColor: tokens.color.canvas,
+    borderRadius: tokens.radius.panel,
+    color: tokens.color.text,
+  }),
+};
+```
+
+A token call creates an override:
+
+```ts
+tokens.color.accent('#5eead4');
+```
+
+Token overrides can be passed to `combineStyle`, included in `style.scope`, or
+collected by `createTheme`.
+
+---
+
+## 7. Values And `createValues`
+
+Use `createValues` for themeable app literals and constrained scales. Use semantic tokens for a component contract; use values when visible literals are easier to edit. Labels distinguish separate roles that happen to share one literal.
+
+```ts
+const space = createValues([0, 4, 8, 12, 16, 24]);
+
+const styles = {
+  root: style.slot({
+    gap: space(12),
+    padding: space(16),
+  }),
+};
+
+const dense = combineStyle(styles, space(16, 12));
+```
+
+Use the `Number` overload when labels are strings but provided CSS values are
+numbers:
+
+```ts
+const space = createValues(Number, ['8 | sm', '12 | md', '16 | lg']);
+const css = combineStyle(styles, space('16 | lg', 12));
+```
+
+Use `createTokens` for semantic trees. Use `createValues` when a known scale
+should reject unknown keys.
+
+---
+
+## 8. Themes
+
+`createTheme([...tokenOverrides])` creates a class that provides token
+values for a subtree.
+
+```ts
+export const lightTheme = createTheme([
+  tokens.color.canvas('#ffffff'),
+  tokens.color.text('#17201b'),
+  tokens.color.accent('#0f766e'),
+]);
+
+export const darkTheme = createTheme([
+  tokens.color.canvas('#101715'),
+  tokens.color.text('#eef8f4'),
+  tokens.color.accent('#5eead4'),
+]);
+```
+
+Apply themes through `css`:
+
+```tsx
+function App() {
+  const css = combineStyle(appStyles);
+  return <main css={[css.page, darkTheme]} />;
+}
+```
+
+Use `createTheme` for app/page/subtree token values. Use `style.scope` for
+component slot changes. They can be applied together.
+
+---
+
+## Expose a deliberate component contract
+
+```ts
+import { exposeStyle } from '@fluentic/style/utils';
+export const ButtonStyle = exposeStyle({
+  root: buttonStyles.root,
+  label: buttonStyles.label,
+  tokens,
+});
+```
+
+Only slots and tokens survive exposeStyle, including nested groups. Keep private styles private. Store reusable definitions in ordinary .ts files beside components; keep app values and component contracts separate.
+
+## Connect app values to component tokens
+
+```ts
+const color = createValues(['#ffffff | Surface', '#ffffff | AccentText']);
+const appButton = style.scope([
+  tokens.color.canvas(color('#ffffff | Surface')),
+]);
+const dark = createTheme([
+  color('#ffffff | Surface', '#18211f'),
+  color('#ffffff | AccentText', '#ffffff'),
+]);
+// App root: css={[appRoot, dark]}; component: theme={appButton}.
+// Resolve appButton with bindScope(buttonStyles.root, props.theme).
+```
+
+A label is part of value identity. `|` and `;` separate the CSS literal from its label. Numeric labeled values need createValues(Number, [...]). Do not collapse equal literals that represent different semantic roles.
+
+## Units, priority, and production shape
+
+Numbers become px on length properties; opacity, lineHeight, fontWeight, zIndex and other unitless properties stay unitless. Use strings for rem, %, ms, calc(), and other units. Property arrays are not responsive arrays: never copy another library's breakpoint-array syntax.
+
+Compose equal-priority matching declarations with later css entries or scopes winning. Default state priority is link < visited < hover < focusWithin < focus < focusVisible < active < disabled. Base media does not beat a direct state: use `.media(query, style({...}).hover({...}))` to change hover at that breakpoint. Longhands refine shorthands. Use `style.weight(value, weight)` sparingly; a weighted base can beat ordinary state styles.
+
+Keep complete chains attached to style(), style.slot(), or style.scope(). Reuse with `style({...}).merge(existing).hover({...})` or css arrays; do not continue an assigned builder with `existing.hover(...)` when extraction is expected. Keep slot override calls inline inside scope arrays. Static values extract to CSS; dynamic property values can use prepared CSS variables. Render-time composition remains runtime work; do not promise zero runtime.
+
+Keep definitions at module scope where practical. Inline dynamic style calls are supported; never replace live values with frozen module constants. Keep root css last for consumer overrides. Never attach raw scopes or slot override calls directly to DOM css. A scope must be bound to a rendered target slot containing the relevant descendants; portals need an explicit theme/target boundary.
+
+For exhaustive semantics see https://fluenticstack.com/style/docs/reference/priority/ and https://fluenticstack.com/style/docs/learn/build-for-production/.

@@ -1,0 +1,21 @@
+# Migrate StyleX to Fluentic Style
+
+Read [the common migration contract](https://fluenticstack.com/style/llms/migrations/common.txt), [setup](https://fluenticstack.com/style/llms/setup.txt), and [core](https://fluenticstack.com/style/llms/core.txt) first.
+
+- Convert stylex.create entries to individual style() calls or slots in a style map. Replace stylex.props(...) with Fluentic css arrays on owned elements.
+- Property-level conditional maps (default, :hover, @media) become declaration objects grouped by chained condition. Do not copy conditional objects into a Fluentic property value.
+- Convert defineVars to createTokens; convert createTheme to Fluentic createTheme token overrides. Preserve token identities and subtree application.
+- Convert dynamic style functions to complete inline Fluentic chains with dynamic property values, or token overrides. Null/unset and fallback behavior need explicit CSS intent; do not assume StyleX conflict resolution matches Fluentic's priority model.
+
+Before: color: { default: 'black', ':hover': 'blue' } and padding under a media condition.
+After:
+```tsx
+import { style } from '@fluentic/style';
+const button = style({ color: 'black', padding: 8 })
+  .hover({ color: 'blue' })
+  .media('(min-width: 48rem)', { padding: 16 });
+const selected = style({ borderColor: 'blue' });
+// <button css={[button, isSelected && selected]} />
+```
+
+For className-only consumers, getClassName returns {className, style}; preserve both fields instead of spreading a StyleX props result. Verify shorthand/longhand, conditional rules and externally supplied overrides. Keep StyleX compiler configuration until all StyleX source consumers have migrated.

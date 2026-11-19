@@ -1,0 +1,24 @@
+# Migrate vanilla-extract to Fluentic Style
+
+Read [the common migration contract](https://fluenticstack.com/style/llms/migrations/common.txt), [setup](https://fluenticstack.com/style/llms/setup.txt), and [core](https://fluenticstack.com/style/llms/core.txt) first.
+
+- Move style declarations from .css.ts to ordinary .ts modules importing Fluentic style. Replace class strings at JSX with css values.
+- Convert selectors and @media blocks into chained selectors/media. Convert styleVariants or recipes to explicit typed variant maps of style values (one element) or scopes (multiple slots), selected at render time.
+- Convert theme contracts and vars to createTokens; convert theme classes to createTheme token overrides applied through css. Preserve contract identity, nested theme boundaries and defaults. assignVars/assignInlineVars become explicit token overrides or dynamic style values, not arbitrary object spreads into css.
+- Convert sprinkles by resolving the project's scales and conditions; Fluentic core does not interpret sprinkle keys or responsive arrays. Keep globalStyle/globalFontFace rules until deliberately migrated with global APIs.
+
+Before: a recipe with size variants and vars.color.accent.
+After:
+```tsx
+import { style, createTokens, createTheme } from '@fluentic/style';
+const tokens = createTokens({ accent: '#2563eb' });
+const button = style({ backgroundColor: tokens.accent, color: 'white' });
+const sizes = {
+  sm: style({ padding: '4px 8px' }),
+  lg: style({ padding: '12px 20px' }),
+};
+const dark = createTheme([tokens.accent('#60a5fa')]);
+// <main css={dark}><button css={[button, sizes[size]]}>Save</button></main>
+```
+
+Carry defaultVariants and every compound condition into typed selection logic. Keep the vanilla-extract plugin until remaining .css.ts imports are gone. Verify generated CSS delivery and token updates in production; neither compiler guarantees identical output to the other.

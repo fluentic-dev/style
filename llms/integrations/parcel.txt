@@ -1,0 +1,38 @@
+# Fluentic Style: Parcel 2 integration
+
+Read [shared setup](https://fluenticstack.com/style/llms/setup.txt) first. Install @fluentic/style in the app; retain or install the bundler and loaders/plugins imported by the configuration below. Merge these settings with the existing config and entry/output options.
+
+Use the bundled Parcel config when running Parcel:
+
+```json
+{
+  "scripts": {
+    "dev": "parcel index.html --config @fluentic/style/plugin/parcel/config",
+    "build": "parcel build index.html --config @fluentic/style/plugin/parcel/config"
+  }
+}
+```
+
+Keep TypeScript aligned with Fluentic's JSX import source:
+
+```json
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+The config extends Parcel's default config and adds Fluentic's transformer,
+resolver, and CSS optimizer. Your HTML entry can stay ordinary:
+
+```html
+<div id="root"></div>
+<script type="module" src="./src/main.tsx"></script>
+```
+
+Parcel owns the emitted JavaScript and CSS assets, including production
+extraction output.
+
+Run the app typecheck and production build. Verify extracted CSS on initial page load and dynamic style updates.

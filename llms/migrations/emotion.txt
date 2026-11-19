@@ -1,0 +1,24 @@
+# Migrate Emotion and styled-components to Fluentic Style
+
+Read [the common migration contract](https://fluenticstack.com/style/llms/migrations/common.txt), [setup](https://fluenticstack.com/style/llms/setup.txt), and [core](https://fluenticstack.com/style/llms/core.txt) first.
+
+- Convert object styles and template literals to typed CSS declaration objects plus chains. Expand interpolations: static blocks become reusable styles, finite prop variants become conditional styles/scopes, live values remain live style properties or tokens.
+- Replace styled wrappers with ordinary components that render the same tag, forward refs/native props as required, and consume styling-only props without leaking them to the DOM. Preserve polymorphic as behavior explicitly if the component exposes it.
+- Replace ThemeProvider value access with Fluentic token/value definitions, createTheme at the relevant subtree, and scope props for component parts. If context also contains non-style behavior, preserve that context.
+- Replace nested component selectors with exported slots/scopes. Keep global styles and keyframes until their consumers migrate. Emotion/styled-components css values are not Fluentic StyleProp inputs.
+
+```tsx
+import { style, type StyleProp } from '@fluentic/style';
+import type { ComponentPropsWithoutRef } from 'react';
+const base = style({ padding: '8px 12px', borderRadius: 8 })
+  .focusVisible({ outline: '2px solid currentColor' });
+const danger = style({ backgroundColor: '#dc2626', color: 'white' });
+type Props = ComponentPropsWithoutRef<'button'> & { danger?: boolean; css?: StyleProp };
+export function Button({ danger: isDanger, css, ...native }: Props) {
+  return <button {...native} css={[base, isDanger && danger, css]} />;
+}
+```
+
+This example has no polymorphic/ref contract; retain those explicitly when migrating a component that has one. Avoid globally switching JSX runtimes while untouched Emotion css-prop files still depend on Emotion: stage boundaries or use the documented compiler css-prop mode and verify each source path. Never feed both libraries' style values to the same css prop.
+
+Keep old cache/provider and SSR style collection until the last consumer is moved. Validate insertion order, hydration, dynamic props, keyframes and portal themes before removing the old runtime.

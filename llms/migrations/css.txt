@@ -1,0 +1,24 @@
+# Migrate Plain CSS to Fluentic Style
+
+Read [the common migration contract](https://fluenticstack.com/style/llms/migrations/common.txt), [setup](https://fluenticstack.com/style/llms/setup.txt), and [core](https://fluenticstack.com/style/llms/core.txt) first.
+
+- Translate only rules owned by the component. Keep resets, @font-face, document styles and vendor CSS until explicitly ported.
+- Preserve inheritance, custom property fallbacks, media/container/supports conditions, pseudo-elements, logical properties, !important and cascade-layer intent. Do not turn a global selector into a local rule accidentally.
+- Class selectors attached to owned elements become direct css values. Public descendant parts become slots; selectors into private markup should stay local.
+
+Before:
+```css
+.card { padding: 1rem; color: var(--text, #17201b); }
+.card:hover { background: #eee; }
+@media (min-width: 48rem) { .card { padding: 2rem; } }
+```
+After:
+```tsx
+import { style } from '@fluentic/style';
+const card = style({ padding: '1rem', color: 'var(--text, #17201b)' })
+  .hover({ background: '#eee' })
+  .media('(min-width: 48rem)', { padding: '2rem' });
+// <article css={card}>...</article>
+```
+
+Retain the existing --text provider for this incremental step. Later replace it with createToken/createTokens and an explicit createTheme provider once all consumers are known. CSS var names do not automatically become Fluentic token identities.
