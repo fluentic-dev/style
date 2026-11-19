@@ -785,7 +785,7 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
     const meta = scope.styleMetas?.get(node.callee.object.name);
     const transformedFrames = transformKeyframes(
       frames.value as KeyframesObject,
-      meta?.transform ?? scope.styleTransform ?? null,
+      (meta?.mode === 'StyleObject' ? meta.transform : null) ?? scope.styleTransform ?? null,
     );
     const format = CSS_EXTRA_CONFIG.namedRuleFormat.keyframes ?? null;
 

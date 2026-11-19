@@ -9,6 +9,7 @@ const ignoredDirs = new Set([
   '.next',
   '.source',
   '.tmp',
+  '.temp',
   'coverage',
   'dist',
   'node_modules',

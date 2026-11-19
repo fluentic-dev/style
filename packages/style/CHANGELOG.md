@@ -8,6 +8,8 @@
 
   Named tokens now use global, hash-free CSS variable names derived from their explicit namespace and property path, independent of tokenNameFormat and hashLength. Rebuild all consumers together and update external CSS references to the new names. Path segments escape punctuation to avoid collisions.
 
+- Use native TypeScript 7.0.2 for workspace checks and declaration emission, with TypeScript 6.0.2 API compatibility for tooling. Validate packed declarations with both TypeScript 5.9 and 7.
+
 ## 0.1.0-beta.13
 
 ### Patch Changes

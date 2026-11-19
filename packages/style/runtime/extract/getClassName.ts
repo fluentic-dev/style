@@ -398,7 +398,7 @@ function addStateItemStyle(
 
       let next = style;
       for (let i = 0, len = refTokens.length; i < len; i++) {
-        const token = refTokens[i];
+        const token: StyleTokenData = refTokens[i];
         const id = getStyleTokenId(token);
         if (tokens[id] !== undefined) {
           next = setStyleValue(next, getTokenVarName(token), tokens[id]);

@@ -19,8 +19,9 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
-    "typescript": "^5.9.3",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
     "vite": "^8.0.16",
-    "playwright-core": "^1.54.2"
+    "playwright-core": "^1.54.2",
+    "typescript-native": "npm:typescript@7.0.2"
   }
 }

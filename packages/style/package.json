@@ -337,7 +337,7 @@
     "bench:autocomplete": "pnpm --filter @benchmark/main bench:autocomplete",
     "report:bundle": "node ./scripts/report-bundle.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx ./tests/run-tests.ts",
+    "test": "node scripts/test-build-types.mjs && tsx ./tests/run-tests.ts",
     "build:types": "node scripts/build-types.mjs"
   },
   "dependencies": {
@@ -358,10 +358,11 @@
     "react": "19.2.0",
     "tsdown": "0.22.1",
     "tsx": "4.20.6",
-    "typescript": "5.8.3",
+    "typescript": "npm:@typescript/typescript6@6.0.2",
     "vite": "8.0.16",
     "webpack": "5.107.2",
-    "solid-js": "1.9.14"
+    "solid-js": "1.9.14",
+    "typescript-native": "npm:typescript@7.0.2"
   },
   "peerDependencies": {
     "@farmfe/core": ">=1",

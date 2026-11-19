@@ -35,6 +35,7 @@ try {
         dependencies: {
           '@fluentic/style': `file:${join(temp, tarball)}`,
           typescript: '5.9.3',
+          'typescript-native': 'npm:typescript@7.0.2',
           '@types/node': '25.9.1',
           '@types/react': '19.2.14',
           '@types/react-dom': '19.2.3',
@@ -139,7 +140,44 @@ export { element, scopedReset, vitePlugin };
         assert(source.isDeclarationFile, `Consumer loaded implementation: ${source.fileName}`);
       }
     }
-    console.log(`Strict packed consumer passed: ${ts.ModuleResolutionKind[moduleResolution]}`);
+    console.log(`Strict TypeScript 5.9 packed consumer passed: ${ts.ModuleResolutionKind[moduleResolution]}`);
+    const nativeConfig = join(temp, 'tsconfig.native.json');
+    writeFileSync(
+      nativeConfig,
+      JSON.stringify({
+        compilerOptions: {
+          module: ts.ModuleKind[module],
+          moduleResolution: ts.ModuleResolutionKind[moduleResolution],
+          target: 'ES2020',
+          lib: ['ESNext', 'DOM', 'DOM.Iterable'],
+          strict: true,
+          noUncheckedIndexedAccess: true,
+          exactOptionalPropertyTypes: true,
+          skipLibCheck: false,
+          noEmit: true,
+          jsx: 'react-jsx',
+          jsxImportSource: '@fluentic/style/plugin/jsx',
+          esModuleInterop: true,
+          types: ['node', 'react'],
+        },
+        files: ['exports.ts', 'consumer.tsx'],
+      }),
+    );
+    const native = spawnSync(process.execPath, [
+      join(temp, 'node_modules/typescript-native/bin/tsc'),
+      '-p',
+      nativeConfig,
+      '--listFiles',
+      '--pretty',
+      'false',
+    ], { cwd: temp, encoding: 'utf8' });
+    assert.equal(native.status, 0, native.stdout + native.stderr);
+    for (const file of native.stdout.split('\n')) {
+      if (file.includes('/@fluentic/style/')) {
+        assert(file.trim().endsWith('.d.ts'), `Native consumer loaded implementation: ${file}`);
+      }
+    }
+    console.log(`Strict TypeScript 7 packed consumer passed: ${ts.ModuleResolutionKind[moduleResolution]}`);
   }
   run('node', [
     '--input-type=module',
@@ -181,7 +219,7 @@ export { element, scopedReset, vitePlugin };
         include: ['src'],
       }),
     );
-    run('pnpm', ['exec', 'tsc', '-p', dest]);
+    run(process.execPath, [join(temp, 'node_modules/typescript-native/bin/tsc'), '-p', dest]);
     run('node', [join(dirname(require.resolve('vite/package.json')), 'bin/vite.js'), 'build'], dest);
   }
   console.log('Packed package checks passed.');

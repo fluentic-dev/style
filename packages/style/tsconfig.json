@@ -8,14 +8,29 @@
     "compiler_old",
     "node_modules",
     "plugin_old",
-    "dist"
+    "dist",
+    ".temp"
   ],
   "compilerOptions": {
-    "lib": ["ES2020", "DOM"],
+    "lib": [
+      "ES2020",
+      "DOM"
+    ],
     "jsx": "react-jsx",
     "jsxImportSource": "@fluentic/style/plugin/jsx",
     "declaration": true,
     "declarationMap": true,
-    "emitDeclarationOnly": false
+    "emitDeclarationOnly": false,
+    "paths": {
+      "@fluentic/style": [
+        "./index.ts"
+      ],
+      "@fluentic/style/plugin/jsx": [
+        "./jsx/index.ts"
+      ],
+      "@fluentic/style/plugin/jsx/*": [
+        "./jsx/*"
+      ]
+    }
   }
 }

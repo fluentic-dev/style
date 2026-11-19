@@ -21,6 +21,21 @@ Preparing a release does not itself publish to npm.
    `.changeset/pre.json`. Private examples and benchmarks are not versioned or
    tagged. Refresh the lockfile if dependency metadata changed.
 
+## TypeScript toolchain
+
+Workspace `tsc` commands use native TypeScript 7.0.2, installed as
+`typescript-native`. The `typescript` name aliases Microsoft's
+`@typescript/typescript6@6.0.2` compatibility package for tools using the legacy
+JavaScript API (including Next.js, MDX tooling, and the autocomplete benchmark).
+Its legacy CLI is `tsc6`, so it does not shadow native `tsc`.
+
+Declaration builds run native `tsc --emitDeclarationOnly` on the public export
+roots. A lightweight compatibility-API pass rewrites relative declaration
+specifiers to `.js` and `/index.js`; it does not type-check or emit the types.
+Watch mode finalizes declarations after successful native compilations. Package
+checks validate the generated tarball under both TypeScript 5.9 and 7 with
+Bundler, Node16, and NodeNext resolution.
+
 ## Packaging contract
 
 - Author implementation in TypeScript; publish compiled JavaScript for runtime

@@ -36,7 +36,8 @@
     "@changesets/cli": "^2.31.0",
     "dprint": "^0.54.0",
     "oxlint": "^1.68.0",
-    "typescript": "^5.9.3"
+    "typescript": "npm:@typescript/typescript6@6.0.2",
+    "typescript-native": "npm:typescript@7.0.2"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
