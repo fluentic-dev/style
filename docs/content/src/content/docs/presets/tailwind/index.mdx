@@ -202,10 +202,10 @@ Two declarations with the same namespace and path intentionally share a variable
 each use can still supply its own fallback value.
 
 Dots in the namespace separate path segments. Segments are joined with `-`;
-characters other than ASCII letters and digits are encoded as `_hex_` using their
+characters other than ASCII letters and digits are encoded as `_x<hex>_` using their
 Unicode code point. This includes hyphens and underscores, so a key `a-b` becomes
-`a_2d_b` and cannot collide with the nested path `a.b`. A literal dot in an object
-key is encoded as `_2e_`.
+`a_x2d_b` and cannot collide with the nested path `a.b`. A literal dot in an object
+key is encoded as `_x2e_`.
 
 This naming changed in beta.14. Rebuild applications and shared style packages
 together, and update any manually written CSS references to the old hashed names.

@@ -66,7 +66,7 @@ export function createNamedTokenId(id: string) {
 
 // Escape separators and the escape marker itself so distinct paths cannot collide.
 function encodeNamedTokenSegment(segment: string) {
-  return segment.replace(/[^a-zA-Z0-9]/gu, (char) => '_' + char.codePointAt(0)!.toString(16) + '_');
+  return segment.replace(/[^a-zA-Z0-9]/gu, (char) => '_x' + char.codePointAt(0)!.toString(16) + '_');
 }
 
 function createNamedTokenProxy(

@@ -32,7 +32,7 @@ fallback remains the default value of that particular token.
 
 Namespace dots delimit segments. Property keys are whole segments; a literal
 dot in a key is escaped. Segments join with `-`, and every non-ASCII-alphanumeric
-character within a segment becomes `_hex_` using its Unicode code point. This
+character within a segment becomes `_x<hex>_` using its Unicode code point. This
 keeps `tokens['a-b'].c` distinct from `tokens.a['b-c']`. Identical explicit
 namespace/path combinations intentionally address the same global CSS variable.
 

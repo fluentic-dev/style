@@ -109,7 +109,7 @@ test('named token names are global, hash-free, configuration-independent and col
     'a-b': { c: '' },
     a: { 'b-c': '', b: '' },
     'a.b': '',
-    '_2d_': '',
+    '_x2d_': '',
     '-': '',
     'é': '',
     '': '',
@@ -119,11 +119,17 @@ test('named token names are global, hash-free, configuration-independent and col
     paths.a['b-c'],
     paths['a.b'],
     paths.a.b,
-    paths['_2d_'],
+    paths['_x2d_'],
     paths['-'],
     paths['é'],
     paths[''],
   ];
+  equal(getStyleTokenVarName(paths['a-b'].c), '--token-app-a_x2d_b-c');
+  equal(getStyleTokenVarName(paths.a['b-c']), '--token-app-a-b_x2d_c');
+  equal(getStyleTokenVarName(paths['a.b']), '--token-app-a_x2e_b');
+  equal(getStyleTokenVarName(paths['_x2d_']), '--token-app-_x5f_x2d_x5f_');
+  equal(getStyleTokenVarName(paths['é']), '--token-app-_xe9_');
+  equal(getToken(createNamedToken('app.a-b', 'red')), 'var(--token-app-a_x2d_b, red)');
   equal(new Set(tokens.map(getStyleTokenVarName)).size, tokens.length);
 });
 
