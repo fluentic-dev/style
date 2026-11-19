@@ -5,3 +5,10 @@
 Use version-only annotated tags for releases, such as `v0.1.0-beta.8`.
 
 Do not create package-prefixed tags such as `@fluentic/style@0.1.0-beta.8`.
+
+## Release workflow
+
+Read [RELEASING.md](RELEASING.md) before preparing, versioning, tagging, or publishing
+any release. Run `pnpm release:check` and verify the packed declarations and consumer
+examples before tagging. Public type exports must use generated declarations, never
+implementation sources. Keep copy-ready GitHub notes in `releases/v<VERSION>.md`.

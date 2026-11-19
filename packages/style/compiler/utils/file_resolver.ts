@@ -17,7 +17,8 @@ export type ResolveFileFn = (info: ResolveFileInfo) => ResolvedFile | null;
 const contentCache = new Map<string, ResolvedFile>();
 
 const resolver = new ResolverFactory({
-  conditionNames: ['import', 'module', 'default', 'types'],
+  // Static evaluation needs executable values, never declaration-only exports.
+  conditionNames: ['import', 'module', 'default'],
   extensions: ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.mts', '.cts'],
   mainFiles: ['index'],
   tsconfig: 'auto',

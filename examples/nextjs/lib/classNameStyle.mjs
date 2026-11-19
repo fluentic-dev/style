@@ -1,10 +1,7 @@
 import { createClassNameFn } from '@fluentic/style';
 import { createNamedTokens } from '@fluentic/style/dialect';
+import { createDefaultedTailwindStyleConfig, createTailwindClassNamePreset } from '@fluentic/style/presets/tailwind';
 import { selector } from '@fluentic/style/selector';
-import {
-  createDefaultedTailwindStyleConfig,
-  createTailwindClassNamePreset,
-} from '@fluentic/style/presets/tailwind';
 
 export const classNameColors = createNamedTokens('next.classname.color', {
   paper: '#fff9f3',

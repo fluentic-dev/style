@@ -1,6 +1,6 @@
 {
   "name": "@fluentic/style",
-  "version": "0.1.0-beta.11",
+  "version": "0.1.0-beta.12",
   "description": "Type-safe styles that scale with your components.",
   "homepage": "https://fluenticstack.com/style",
   "repository": {
@@ -37,34 +37,34 @@
   },
   "exports": {
     ".": {
-      "types": "./index.ts",
+      "types": "./dist/types/index.d.ts",
       "react-server": "./dist/server.js",
       "import": "./dist/index.js",
       "default": "./dist/index.js"
     },
     "./plugin/vite": {
-      "types": "./plugin/bundler/vite/index.ts",
+      "types": "./dist/types/plugin/bundler/vite/index.d.ts",
       "import": "./dist/plugin/vite/index.mjs"
     },
     "./plugin/webpack": {
-      "types": "./plugin/bundler/webpack/index.ts",
+      "types": "./dist/types/plugin/bundler/webpack/index.d.ts",
       "import": "./dist/plugin/webpack/index.mjs"
     },
     "./plugin/webpack/loader": {
-      "types": "./plugin/bundler/webpack/loader.ts",
+      "types": "./dist/types/plugin/bundler/webpack/loader.d.ts",
       "import": "./dist/plugin/webpack/loader.mjs",
       "default": "./dist/plugin/webpack/loader.mjs"
     },
     "./plugin/rspack": {
-      "types": "./plugin/bundler/rspack/index.ts",
+      "types": "./dist/types/plugin/bundler/rspack/index.d.ts",
       "import": "./dist/plugin/rspack/index.mjs"
     },
     "./plugin/farm": {
-      "types": "./plugin/bundler/farm/index.ts",
+      "types": "./dist/types/plugin/bundler/farm/index.d.ts",
       "import": "./dist/plugin/farm/index.mjs"
     },
     "./plugin/parcel": {
-      "types": "./plugin/bundler/parcel/index.ts",
+      "types": "./dist/types/plugin/bundler/parcel/index.d.ts",
       "import": "./dist/plugin/parcel/index.mjs",
       "require": "./dist/plugin/parcel/index.cjs"
     },
@@ -72,237 +72,237 @@
       "default": "./plugin/bundler/parcel/config.json"
     },
     "./plugin/parcel/transformer": {
-      "types": "./plugin/bundler/parcel/transformer.ts",
+      "types": "./dist/types/plugin/bundler/parcel/transformer.d.ts",
       "import": "./dist/plugin/parcel/transformer.mjs",
       "require": "./dist/plugin/parcel/transformer.cjs",
       "default": "./dist/plugin/parcel/transformer.mjs"
     },
     "./plugin/parcel/resolver": {
-      "types": "./plugin/bundler/parcel/resolver.ts",
+      "types": "./dist/types/plugin/bundler/parcel/resolver.d.ts",
       "import": "./dist/plugin/parcel/resolver.mjs",
       "require": "./dist/plugin/parcel/resolver.cjs",
       "default": "./dist/plugin/parcel/resolver.mjs"
     },
     "./plugin/parcel/runtime": {
-      "types": "./plugin/bundler/parcel/runtime.ts",
+      "types": "./dist/types/plugin/bundler/parcel/runtime.d.ts",
       "import": "./dist/plugin/parcel/runtime.mjs",
       "require": "./dist/plugin/parcel/runtime.cjs",
       "default": "./dist/plugin/parcel/runtime.mjs"
     },
     "./plugin/parcel/optimizer": {
-      "types": "./plugin/bundler/parcel/optimizer.ts",
+      "types": "./dist/types/plugin/bundler/parcel/optimizer.d.ts",
       "import": "./dist/plugin/parcel/optimizer.mjs",
       "require": "./dist/plugin/parcel/optimizer.cjs",
       "default": "./dist/plugin/parcel/optimizer.mjs"
     },
     "./plugin/nextjs": {
-      "types": "./plugin/nextjs/index.ts",
+      "types": "./dist/types/plugin/nextjs/index.d.ts",
       "import": "./dist/plugin/nextjs/index.mjs",
       "default": "./dist/plugin/nextjs/index.mjs"
     },
     "./plugin/nextjs/loader": {
-      "types": "./plugin/nextjs/loader.ts",
+      "types": "./dist/types/plugin/nextjs/loader.d.ts",
       "import": "./dist/plugin/nextjs/loader.mjs",
       "default": "./dist/plugin/nextjs/loader.mjs"
     },
     "./plugin/jsx/jsx-runtime": {
-      "types": "./entry/prod/jsx_runtime.ts",
+      "types": "./dist/types/entry/prod/jsx_runtime.d.ts",
       "react-server": "./dist/entry/rsc-prod/jsx-runtime.js",
       "import": "./dist/entry/prod/jsx-runtime.js",
       "default": "./dist/entry/prod/jsx-runtime.js"
     },
     "./plugin/jsx/jsx-dev-runtime": {
-      "types": "./entry/dev/jsx_dev_runtime.ts",
+      "types": "./dist/types/entry/dev/jsx_dev_runtime.d.ts",
       "react-server": "./dist/entry/rsc-dev/jsx-dev-runtime.js",
       "import": "./dist/entry/dev/jsx-dev-runtime.js",
       "default": "./dist/entry/dev/jsx-dev-runtime.js"
     },
     "./adapter/solid": {
-      "types": "./adapter/solid.ts",
+      "types": "./dist/types/adapter/solid.d.ts",
       "import": "./dist/adapter/solid.js"
     },
     "./adapter/preact": {
-      "types": "./adapter/preact.ts",
+      "types": "./dist/types/adapter/preact.d.ts",
       "import": "./dist/adapter/preact.js"
     },
     "./adapter/react": {
-      "types": "./adapter/react.ts",
+      "types": "./dist/types/adapter/react.d.ts",
       "import": "./dist/adapter/react.js"
     },
     "./types/react": {
-      "types": "./jsx/types/react.ts"
+      "types": "./dist/types/jsx/types/react.d.ts"
     },
     "./types/preact": {
-      "types": "./jsx/types/preact.ts"
+      "types": "./dist/types/jsx/types/preact.d.ts"
     },
     "./types/solid": {
-      "types": "./jsx/types/solid.ts"
+      "types": "./dist/types/jsx/types/solid.d.ts"
     },
     "./config": {
-      "types": "./config/index.ts",
+      "types": "./dist/types/config/index.d.ts",
       "import": "./dist/config/index.js",
       "default": "./dist/config/index.js"
     },
     "./compiler": {
-      "types": "./compiler/index.ts",
+      "types": "./dist/types/compiler/index.d.ts",
       "import": "./dist/compiler/index.mjs"
     },
     "./selector": {
-      "types": "./selector/index.ts",
+      "types": "./dist/types/selector/index.d.ts",
       "import": "./dist/selector/index.js",
       "default": "./dist/selector/index.js"
     },
     "./dialect": {
-      "types": "./dialect/index.ts",
+      "types": "./dist/types/dialect/index.d.ts",
       "import": "./dist/dialect/index.js",
       "default": "./dist/dialect/index.js"
     },
     "./dialect/extracted": {
-      "types": "./dialect/extracted/index.ts",
+      "types": "./dist/types/dialect/extracted/index.d.ts",
       "import": "./dist/dialect/extracted/index.js",
       "default": "./dist/dialect/extracted/index.js"
     },
     "./presets/tailwind": {
-      "types": "./presets/tailwind/index.ts",
+      "types": "./dist/types/presets/tailwind/index.d.ts",
       "import": "./dist/presets/tailwind/index.js",
       "default": "./dist/presets/tailwind/index.js"
     },
     "./dev": {
-      "types": "./dev/index.ts",
+      "types": "./dist/types/dev/index.d.ts",
       "import": "./dist/dev.js",
       "default": "./dist/dev.js"
     },
     "./dev/rsc": {
-      "types": "./runtime/rsc/index.ts",
+      "types": "./dist/types/runtime/rsc/index.d.ts",
       "import": "./dist/dev/rsc.js",
       "default": "./dist/dev/rsc.js"
     },
     "./css": {
-      "types": "./css/index.ts",
+      "types": "./dist/types/css/index.d.ts",
       "import": "./dist/css.js",
       "default": "./dist/css.js"
     },
     "./utils": {
-      "types": "./style/utils/index.ts",
+      "types": "./dist/types/style/utils/index.d.ts",
       "import": "./dist/utils.js",
       "default": "./dist/utils.js"
     },
     "./builder/extract": {
-      "types": "./builder/extract/index.ts",
+      "types": "./dist/types/builder/extract/index.d.ts",
       "import": "./dist/entry/prod/extract.js"
     },
     "./server/extracted": {
-      "types": "./entry/rsc_prod/server.ts",
+      "types": "./dist/types/entry/rsc_prod/server.d.ts",
       "import": "./dist/entry/rsc-prod.js"
     },
     "./jsx-runtime/server/extracted": {
-      "types": "./entry/rsc_prod/jsx_runtime.ts",
+      "types": "./dist/types/entry/rsc_prod/jsx_runtime.d.ts",
       "import": "./dist/entry/rsc-prod/jsx-runtime.js"
     },
     "./jsx/jsx-runtime": {
-      "types": "./jsx/runtime/jsx_runtime.ts",
+      "types": "./dist/types/jsx/runtime/jsx_runtime.d.ts",
       "react-server": null,
       "import": "./dist/jsx/jsx-runtime.js"
     },
     "./jsx/jsx-dev-runtime": {
-      "types": "./jsx/runtime/jsx_dev_runtime.ts",
+      "types": "./dist/types/jsx/runtime/jsx_dev_runtime.d.ts",
       "react-server": null,
       "import": "./dist/jsx/jsx-dev-runtime.js"
     },
     "./entry/dev": {
-      "types": "./entry/dev/index.ts",
+      "types": "./dist/types/entry/dev/index.d.ts",
       "import": "./dist/entry/dev.js"
     },
     "./entry/prod": {
-      "types": "./entry/prod/index.ts",
+      "types": "./dist/types/entry/prod/index.d.ts",
       "import": "./dist/entry/prod.js"
     },
     "./entry/rsc-dev": {
-      "types": "./entry/rsc_dev/index.ts",
+      "types": "./dist/types/entry/rsc_dev/index.d.ts",
       "import": "./dist/entry/rsc-dev.js"
     },
     "./entry/rsc-dev/dev": {
-      "types": "./runtime/rsc/index.ts",
+      "types": "./dist/types/runtime/rsc/index.d.ts",
       "import": "./dist/entry/rsc-dev/dev.js"
     },
     "./entry/rsc-prod": {
-      "types": "./entry/rsc_prod/index.ts",
+      "types": "./dist/types/entry/rsc_prod/index.d.ts",
       "import": "./dist/entry/rsc-prod.js"
     },
     "./entry/rsc-prod/runtime": {
-      "types": "./entry/rsc_prod/runtime.ts",
+      "types": "./dist/types/entry/rsc_prod/runtime.d.ts",
       "import": "./dist/entry/rsc-prod/runtime.js"
     },
     "./entry/dev/css": {
-      "types": "./entry/dev/css.ts",
+      "types": "./dist/types/entry/dev/css.d.ts",
       "import": "./dist/entry/dev/css.js"
     },
     "./entry/dev/adapter/solid": {
-      "types": "./entry/dev/adapter/solid.ts",
+      "types": "./dist/types/entry/dev/adapter/solid.d.ts",
       "import": "./dist/entry/dev/adapter/solid.js"
     },
     "./entry/dev/adapter/preact": {
-      "types": "./entry/dev/adapter/preact.ts",
+      "types": "./dist/types/entry/dev/adapter/preact.d.ts",
       "import": "./dist/entry/dev/adapter/preact.js"
     },
     "./entry/dev/adapter/react": {
-      "types": "./entry/dev/adapter/react.ts",
+      "types": "./dist/types/entry/dev/adapter/react.d.ts",
       "import": "./dist/entry/dev/adapter/react.js"
     },
     "./entry/prod/css": {
-      "types": "./entry/prod/css.ts",
+      "types": "./dist/types/entry/prod/css.d.ts",
       "import": "./dist/entry/prod/css.js"
     },
     "./entry/prod/adapter/solid": {
-      "types": "./entry/prod/adapter/solid.ts",
+      "types": "./dist/types/entry/prod/adapter/solid.d.ts",
       "import": "./dist/entry/prod/adapter/solid.js"
     },
     "./entry/prod/adapter/preact": {
-      "types": "./entry/prod/adapter/preact.ts",
+      "types": "./dist/types/entry/prod/adapter/preact.d.ts",
       "import": "./dist/entry/prod/adapter/preact.js"
     },
     "./entry/prod/adapter/react": {
-      "types": "./entry/prod/adapter/react.ts",
+      "types": "./dist/types/entry/prod/adapter/react.d.ts",
       "import": "./dist/entry/prod/adapter/react.js"
     },
     "./entry/rsc-dev/css": {
-      "types": "./entry/rsc_dev/css.ts",
+      "types": "./dist/types/entry/rsc_dev/css.d.ts",
       "import": "./dist/entry/rsc-dev/css.js"
     },
     "./entry/rsc-dev/adapter/solid": {
-      "types": "./entry/rsc_dev/adapter/solid.ts",
+      "types": "./dist/types/entry/rsc_dev/adapter/solid.d.ts",
       "import": "./dist/entry/rsc-dev/adapter/solid.js"
     },
     "./entry/rsc-dev/adapter/preact": {
-      "types": "./entry/rsc_dev/adapter/preact.ts",
+      "types": "./dist/types/entry/rsc_dev/adapter/preact.d.ts",
       "import": "./dist/entry/rsc-dev/adapter/preact.js"
     },
     "./entry/rsc-dev/adapter/react": {
-      "types": "./entry/rsc_dev/adapter/react.ts",
+      "types": "./dist/types/entry/rsc_dev/adapter/react.d.ts",
       "import": "./dist/entry/rsc-dev/adapter/react.js"
     },
     "./entry/rsc-prod/css": {
-      "types": "./entry/rsc_prod/css.ts",
+      "types": "./dist/types/entry/rsc_prod/css.d.ts",
       "import": "./dist/entry/rsc-prod/css.js"
     },
     "./entry/rsc-prod/adapter/solid": {
-      "types": "./entry/rsc_prod/adapter/solid.ts",
+      "types": "./dist/types/entry/rsc_prod/adapter/solid.d.ts",
       "import": "./dist/entry/rsc-prod/adapter/solid.js"
     },
     "./entry/rsc-prod/adapter/preact": {
-      "types": "./entry/rsc_prod/adapter/preact.ts",
+      "types": "./dist/types/entry/rsc_prod/adapter/preact.d.ts",
       "import": "./dist/entry/rsc-prod/adapter/preact.js"
     },
     "./entry/rsc-prod/adapter/react": {
-      "types": "./entry/rsc_prod/adapter/react.ts",
+      "types": "./dist/types/entry/rsc_prod/adapter/react.d.ts",
       "import": "./dist/entry/rsc-prod/adapter/react.js"
     },
     "./entry/prod/runtime": {
-      "types": "./entry/prod/runtime.ts",
+      "types": "./dist/types/entry/prod/runtime.d.ts",
       "import": "./dist/entry/prod/runtime.js"
     },
     "./entry/prod/extract": {
-      "types": "./entry/prod/extract.ts",
+      "types": "./dist/types/entry/prod/extract.d.ts",
       "import": "./dist/entry/prod/extract.js"
     }
   },
@@ -330,14 +330,15 @@
     "index.ts"
   ],
   "scripts": {
-    "build": "tsdown",
-    "dev": "tsdown --watch",
-    "prepack": "node ../../scripts/sync-package-readme.mjs copy",
+    "build": "tsdown && pnpm build:types",
+    "dev": "pnpm build && node scripts/dev.mjs",
+    "prepack": "pnpm build && node ../../scripts/sync-package-readme.mjs copy",
     "postpack": "node ../../scripts/sync-package-readme.mjs clean",
     "bench:autocomplete": "pnpm --filter @benchmark/main bench:autocomplete",
     "report:bundle": "node ./scripts/report-bundle.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsx ./tests/run-tests.ts"
+    "test": "tsx ./tests/run-tests.ts",
+    "build:types": "node scripts/build-types.mjs"
   },
   "dependencies": {
     "@jridgewell/trace-mapping": "0.3.31",
@@ -346,10 +347,11 @@
     "csstype": "3.2.3",
     "lightningcss": "^1.32.0",
     "oxc-resolver": "11.20.0",
-    "picomatch": "4.0.4"
+    "picomatch": "4.0.4",
+    "@babel/core": "^7.28.0",
+    "@types/babel__core": "7.20.5"
   },
   "devDependencies": {
-    "@types/babel__core": "7.20.5",
     "@types/picomatch": "4.0.3",
     "@types/react": "19.2.14",
     "preact": "10.29.7",
@@ -358,10 +360,10 @@
     "tsx": "4.20.6",
     "typescript": "5.8.3",
     "vite": "8.0.16",
-    "webpack": "5.107.2"
+    "webpack": "5.107.2",
+    "solid-js": "1.9.14"
   },
   "peerDependencies": {
-    "@babel/core": ">=7",
     "@farmfe/core": ">=1",
     "@parcel/plugin": ">=2",
     "@rspack/core": ">=1",
@@ -369,12 +371,10 @@
     "preact": ">=10",
     "react": ">=16.14",
     "vite": ">=5",
-    "webpack": ">=5"
+    "webpack": ">=5",
+    "solid-js": ">=1.9"
   },
   "peerDependenciesMeta": {
-    "@babel/core": {
-      "optional": true
-    },
     "@farmfe/core": {
       "optional": true
     },
@@ -395,6 +395,10 @@
     },
     "webpack": {
       "optional": true
+    },
+    "solid-js": {
+      "optional": true
     }
-  }
+  },
+  "types": "./dist/types/index.d.ts"
 }

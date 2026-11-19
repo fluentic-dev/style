@@ -986,7 +986,7 @@ importers:
   packages/style:
     dependencies:
       '@babel/core':
-        specifier: '>=7'
+        specifier: ^7.28.0
         version: 7.29.7
       '@farmfe/core':
         specifier: '>=1'
@@ -1003,6 +1003,9 @@ importers:
       '@rspack/core':
         specifier: '>=1'
         version: 1.7.11(@swc/helpers@0.5.15)
+      '@types/babel__core':
+        specifier: 7.20.5
+        version: 7.20.5
       css-what:
         specifier: 8.0.0
         version: 8.0.0
@@ -1022,9 +1025,6 @@ importers:
         specifier: 4.0.4
         version: 4.0.4
     devDependencies:
-      '@types/babel__core':
-        specifier: 7.20.5
-        version: 7.20.5
       '@types/picomatch':
         specifier: 4.0.3
         version: 4.0.3
@@ -1037,6 +1037,9 @@ importers:
       react:
         specifier: 19.2.0
         version: 19.2.0
+      solid-js:
+        specifier: 1.9.14
+        version: 1.9.14
       tsdown:
         specifier: 0.22.1
         version: 0.22.1(oxc-resolver@11.20.0)(tsx@4.20.6)(typescript@5.8.3)

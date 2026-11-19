@@ -18,7 +18,7 @@
     "test": "pnpm --filter @fluentic/style test",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm build && node scripts/sync-package-readme.mjs run pnpm exec changeset publish",
+    "release": "pnpm release:check && node scripts/sync-package-readme.mjs run pnpm exec changeset publish --no-git-tag",
     "snapshot:style": "pnpm --filter @fluentic/style test && pnpm --filter @example/snapshots generate",
     "format": "DPRINT_CACHE_DIR=$PWD/.dprint-cache dprint fmt",
     "format:check": "DPRINT_CACHE_DIR=$PWD/.dprint-cache dprint check",
@@ -27,7 +27,9 @@
     "check": "node scripts/check-workspace.mjs",
     "lint": "oxlint .",
     "lintcheck": "pnpm run lint",
-    "lint:fix": "oxlint . --fix"
+    "lint:fix": "oxlint . --fix",
+    "test:package": "node scripts/test-package.mjs",
+    "release:check": "pnpm --filter @fluentic/style build && pnpm check && pnpm test && pnpm build && pnpm --filter @example/nextjs test:prod && pnpm test:package"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",

@@ -52,8 +52,8 @@ import {
   type NextLoaderState,
   nextRegistry,
   removeUndefinedValues,
-  resolveNextCompilerOptions,
   replaceCssMarkerAsset,
+  resolveNextCompilerOptions,
 } from './utils';
 
 export { CssPropPresets } from '../utils';
@@ -117,10 +117,11 @@ function createNextConfig(
   let sidecar: SourcemapSidecar | null = null;
 
   if (dev) {
-    const getDevCss = () => cssCache.getCss({
-      ...phaseState.buildConfig.css,
-      configHash: phaseState.configHash,
-    });
+    const getDevCss = () =>
+      cssCache.getCss({
+        ...phaseState.buildConfig.css,
+        configHash: phaseState.configHash,
+      });
 
     const route: SidecarRouteHandler = async () => ({
       contentType: 'text/css; charset=utf-8',
@@ -493,9 +494,7 @@ function isSerializableLoaderValue(value: unknown): boolean {
   const prototype = Object.getPrototypeOf(value);
   if (prototype !== Object.prototype && prototype !== null) return false;
 
-  return Object.values(value as Record<string, unknown>).every((item) =>
-    isSerializableLoaderValue(item),
-  );
+  return Object.values(value as Record<string, unknown>).every((item) => isSerializableLoaderValue(item));
 }
 
 function prependTurbopackLoader(rule: unknown, loader: TurbopackLoaderItem) {

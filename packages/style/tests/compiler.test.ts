@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, statSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { formatClassName } from '../atomic/debug/className';
@@ -2276,7 +2276,7 @@ export const sheet = createSheet([
 });
 
 test('compiler keeps imported token identity for createSheet overrides of colocated styles', () => {
-  const root = mkdtempSync(path.join(testDir, 'tmp-sheet-token-'));
+  const root = createWorkspaceFixture('tmp-sheet-token-');
   const stylesFile = path.join(root, 'Select.style.ts');
   const themesFile = path.join(root, 'themes.ts');
 
@@ -3325,7 +3325,7 @@ export const page = cx('bg-paper');
 });
 
 test('rsc dev css precollect includes imported createValues token rules', () => {
-  const root = mkdtempSync(path.join(testDir, 'tmp-rsc-dev-create-values-'));
+  const root = createWorkspaceFixture('tmp-rsc-dev-create-values-');
   const themeFile = path.join(root, 'theme.ts');
   const stylesFile = path.join(root, 'card.styles.ts');
 
@@ -3385,7 +3385,7 @@ export const card = style({
 });
 
 test('compiler extracts imported createValues through tsconfig path aliases', () => {
-  const root = mkdtempSync(path.join(testDir, 'tmp-tsconfig-create-values-'));
+  const root = createWorkspaceFixture('tmp-tsconfig-create-values-');
   const themeFile = path.join(root, 'src/styles/theme.ts');
   const stylesFile = path.join(root, 'src/features/home/card.styles.ts');
 
@@ -3430,7 +3430,7 @@ export const card = style({ backgroundColor: color('#ffffff | Canvas') });
 });
 
 test('rsc dev css precollect includes imported createValues from theme modules with named tokens', () => {
-  const root = mkdtempSync(path.join(testDir, 'tmp-rsc-dev-theme-module-'));
+  const root = createWorkspaceFixture('tmp-rsc-dev-theme-module-');
   const themeFile = path.join(root, 'theme.ts');
   const stylesFile = path.join(root, 'pricing.styles.ts');
 
@@ -4785,4 +4785,19 @@ const rule = style({
   includes(css, '.overflow-hidden-');
   includes(css, '.pointer-none-');
   includes(css, '.text-transform-uppercase-');
+});
+
+// Keep fixtures inside the package for dependency resolution, but do not leave
+// temporary tsconfigs behind for subsequent workspace checks.
+const workspaceFixtures: string[] = [];
+function createWorkspaceFixture(prefix: string): string {
+  const root = mkdtempSync(path.join(testDir, prefix));
+  workspaceFixtures.push(root);
+  return root;
+}
+process.on('exit', () => {
+  for (const root of workspaceFixtures) {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(root + '.test-cache', { recursive: true, force: true });
+  }
 });

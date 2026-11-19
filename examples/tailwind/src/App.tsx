@@ -4,11 +4,12 @@ import { Hero } from './components/Hero';
 import { Plans } from './components/Plans';
 import { themeOptions } from './components/theme';
 import { tw } from './style';
+import { Themes } from './style/theme';
 
 export function App() {
   const [themeIndex, setThemeIndex] = useState(0);
 
-  const activeTheme = themeOptions[themeIndex].theme;
+  const activeTheme = themeOptions[themeIndex]?.theme ?? Themes.mint;
 
   return (
     <main

@@ -98,10 +98,14 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
 
     if (!result) return null;
 
-    return rewriteTransformResult({
-      ...result,
-      rules: collector.getItems().slice(startIndex),
-    }, internal.runtimeMode, args.code);
+    return rewriteTransformResult(
+      {
+        ...result,
+        rules: collector.getItems().slice(startIndex),
+      },
+      internal.runtimeMode,
+      args.code,
+    );
   };
 
   const getExtractedCss = () => {

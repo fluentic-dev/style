@@ -28,7 +28,9 @@ export default function ClassNamePage() {
           <aside css={s.visual}>
             <div css={s.visualHeader}>
               <h2 css={s.visualTitle}>Operations queue</h2>
-              <span css={s.statusPill}><span css={s.statusDot} /> Live</span>
+              <span css={s.statusPill}>
+                <span css={s.statusDot} /> Live
+              </span>
             </div>
             <div css={s.list}>
               {taskItems.map(([icon, label, value, state]) => (

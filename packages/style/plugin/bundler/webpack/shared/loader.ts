@@ -71,10 +71,13 @@ export function createWebpackLoader<State>(args: {
       })
     ).then((result) => {
       if (!result) {
+        // Webpack exposes a callback API; bridge the completed transform promise.
+        // oxlint-disable-next-line promise/no-callback-in-promise
         callback(null, source, inputMap);
         return;
       }
 
+      // oxlint-disable-next-line promise/no-callback-in-promise
       callback(
         null,
         result.code,
@@ -84,6 +87,7 @@ export function createWebpackLoader<State>(args: {
         ),
       );
     }).catch((err) => {
+      // oxlint-disable-next-line promise/no-callback-in-promise
       callback(err as Error);
     });
   };
