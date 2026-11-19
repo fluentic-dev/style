@@ -6,6 +6,7 @@ import type {
   ExtractedStyleItem,
 } from '../../builder/data';
 import type { TRACE_STYLE, TRACE_VALUE } from '../../builder/data/debug';
+import type { NamedSheetLayer } from '../../config/config/css';
 
 export type CssExtractStyleItem = ExtractedStyleItem;
 
@@ -27,7 +28,7 @@ export type CssExtractRule = {
   css: string;
   priority: LayerPriority;
   important?: boolean;
-  layer?: 'sheet' | false;
+  layer?: 'sheet' | false | NamedSheetLayer;
   trace?: {
     filePath: string;
     line: number;

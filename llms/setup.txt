@@ -1,6 +1,6 @@
 # Fluentic Style: installation and production
 
-Target: @fluentic/style 0.1.0-beta.12. Check the app's installed version before using these APIs; preserve its package manager and existing framework configuration.
+Target: @fluentic/style 0.1.0-beta.13. Check the app's installed version before using these APIs; preserve its package manager and existing framework configuration.
 
 Install with the project's package manager (choose one):
 

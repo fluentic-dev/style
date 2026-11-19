@@ -1,10 +1,12 @@
 ---
 title: createSheet
-description: Create reusable selector sheets for styling DOM you do not own.
+description: Create scoped selector sheets for third-party DOM and app resets with optional cascade layers.
 ---
 
 Use `createSheet(...)` for grouped selector styles, usually at boundaries with
 third-party components whose internal DOM has known class names or attributes.
+You can also attach a sheet to `body` or an app root for a scoped reset in a
+named cascade layer.
 
 Most component styles should use `style(...)`, `style.slot(...)`, and
 `style.scope(...)`. Reach for `createSheet(...)` when the style target is a DOM
@@ -75,7 +77,7 @@ site:
 
 | Option | Description |
 | --- | --- |
-| `layer` | Put this sheet in or out of the generated `<layerNamespace>.sheet` layer, overriding the global `css.layer.sheet` setting. |
+| `layer?: boolean \| string` | A boolean or layer name. `true` uses `<layerNamespace>.sheet`; `false` keeps the sheet unlayered. A string selects a custom layer, with a leading `.` making it relative to `css.layerNamespace`. Overrides the global `css.layer.sheet` setting. |
 | `weight` | Repeat the generated sheet anchor class to increase selector specificity. It must be a positive integer. |
 
 Sheets are unlayered by default because they commonly override third-party CSS
@@ -84,9 +86,111 @@ sheet when it should participate in your declared layer order:
 
 ```ts
 const integratedSheet = createSheet({ layer: true }, [
-  control({ color: 'red' }),
+  style.selector('.control', { color: 'red' }),
 ]);
 ```
+
+### Layer option
+
+The per-sheet option takes precedence over the global setting:
+
+| `layer` value | Result with `css.layerNamespace: 'fluentic'` |
+| --- | --- |
+| Omitted or `undefined` | Inherit `css.layer.sheet` (default `false`). |
+| `false` | Emit unlayered CSS, even if sheets are layered globally. |
+| `true` | Emit in `fluentic.sheet`. |
+| `'reset'` | Emit in `reset`, exactly as written. |
+| `'.reset'` | Emit in `fluentic.reset`. |
+| `'vendor.reset'` | Emit in `vendor.reset`, exactly as written. |
+| `'.reset.forms'` | Emit in `fluentic.reset.forms`. |
+
+The default namespace is `css`. Use a string to give an individual sheet its own layer:
+
+```ts
+createSheet({ layer: 'reset' }, items);  // @layer reset
+createSheet({ layer: '.reset' }, items); // @layer css.reset (default namespace)
+```
+
+Names without a leading dot are used as written, including nested names such as
+`vendor.reset`. A leading dot prepends `css.layerNamespace`: with namespace
+`fluentic`, `.reset` becomes `fluentic.reset`. Boolean behavior is unchanged, and
+named layers work even when global `css.layer` is `false`. The global
+`css.layer.sheet` option remains boolean. In particular, `css.layer: true`
+enables ordinary style layers but leaves sheets unlayered unless you opt them in.
+
+Pass a nonempty name with dot-separated identifier segments; do not include
+`@layer`, braces, commas, spaces, or a trailing dot. Invalid names throw at runtime.
+
+### Scoped app reset
+
+For a reset scoped to your app, include `&` to target the attached element and
+`*` to target its descendants:
+
+```tsx
+import { style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+export const resetSheet = createSheet({ layer: 'reset' }, [
+  style.selector(['&', '&::before', '&::after', '*', '*::before', '*::after'], {
+    boxSizing: 'border-box',
+  }),
+  style.selector('&', { margin: 0 }),
+  style.selector(['h1', 'h2', 'p'], { margin: 0 }),
+]);
+
+export function App() {
+  return <div css={resetSheet}>{/* app content */}</div>;
+}
+```
+
+When your framework renders `body`, attach the sheet there to include it in the
+reset:
+
+```tsx
+<body css={resetSheet}>{children}</body>
+```
+
+For an existing DOM element, use
+[`createStyleTarget`](create-style-target) to attach and clean up the sheet, or
+[`getClassName`](runtime-interop) at a class-name boundary.
+
+Selectors remain
+anchored to that element; naming a layer does not turn the sheet into unscoped
+global CSS. A sheet attached below `body` cannot reset `body` itself.
+
+### Ordering named layers
+
+Declare the reset's position in the plugin's CSS options:
+
+```ts
+stylePlugin({
+  css: {
+    layers: ['reset', '$layer', 'overrides'],
+  },
+});
+```
+
+`$layer` expands to generated layers. Explicitly listed named layers keep their
+specified position and are not duplicated at `$layer`. For `.reset`, list the
+resolved name, such as `css.reset` or `fluentic.reset`; the ordering list does not
+expand a leading dot. For example:
+
+```ts
+stylePlugin({
+  css: {
+    layerNamespace: 'fluentic',
+    layers: ['fluentic.reset', '$layer', 'overrides'],
+  },
+});
+// Pair this with createSheet({ layer: '.reset' }, items).
+```
+
+Later layers win over earlier layers for normal declarations. Normal unlayered
+CSS outranks all layered CSS; increasing a sheet's `weight` does not change that
+layer precedence. CSS reverses layer precedence for `!important` declarations.
+See [CSS options](plugin-options#css-options) for the global configuration.
+
+### Selector weight
 
 The default sheet anchor uses `:where(...)` and contributes no specificity.
 Use `weight` when an integration needs a stronger—but still overridable—anchor:
@@ -119,10 +223,26 @@ The items argument accepts selector-oriented style input:
 
 | Item | Description |
 | --- | --- |
-| `style.selector(selector)(style)` | Add rules for a selector below the element that receives the sheet class. |
+| `style.selector(selector, style)` | Preferred inline form: add rules for a selector under the attached sheet class. |
+| `style.selector(selector)(style)` | Valid curried form, supported by the runtime and compiler. |
 | `style.selector(selector).hover(style)` | Add selector rules under pseudo-classes, media queries, supports queries, and other selector chains. |
 | Token overrides | Include token overrides that should apply inside the sheet target. |
 | Arrays | Group items and conditionally include falsy values. |
+
+Prefer passing styles as the second argument when declaring an inline selector.
+The curried form is also supported, as is calling a reusable named target:
+
+```ts
+const h1 = style.selector('h1');
+
+// Each form is valid inside createSheet(...).
+style.selector('h1', { fontSize: '1.5rem' }); // Preferred inline form
+style.selector('h1')({ fontSize: '1.5rem' }); // Supported curried form
+h1({ fontSize: '1.5rem' });                  // Reusable named target
+```
+
+All three forms keep the sheet's scope and layer settings during extraction.
+Selector chains such as `.hover(...)` also work after the curried call.
 
 If an item is not a selector item or token override, `createSheet(...)` throws.
 Use `style(...)` for normal element styles.
@@ -172,6 +292,7 @@ visible to Fluentic.
 
 Use `createSheet(...)` for:
 
+- app or document resets scoped to the attached root in a named layer;
 - third-party component internals;
 - styling portal or overlay DOM with known selectors;
 - wrapper components that expose a controlled selector contract;

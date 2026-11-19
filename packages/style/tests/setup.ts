@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, URL } from 'node:url';
 import { getScopeClassName } from '../atomic/className';
 import { createScopeBuilder, createSelectorBuilder, createSlotBuilder, createStyleBuilder } from '../builder';
 import {
@@ -297,6 +297,9 @@ function assertCombineStyleTypes() {
     { layer: true, weight: 2 },
     [style.selector('.third-party', { color: 'red' })],
   );
+
+  const namedSheetInput: StyleProp = createSheet({ layer: '.reset' }, [style.selector('&', { margin: 0 })]);
+  resolveStyleProp(namedSheetInput);
 
   // @ts-expect-error createSheet options require an items argument
   createSheet({ layer: true });

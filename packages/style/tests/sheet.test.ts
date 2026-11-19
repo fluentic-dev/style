@@ -1487,3 +1487,39 @@ test('prod sheet does not create tags until used', () => {
 function getRuleLayerName(css: string) {
   return /^@layer\s+([^\s{]+)/.exec(css)?.[1] ?? '';
 }
+
+for (const mode of ['prod', 'layer', 'sort'] as const) {
+  test(mode + ' sheet emits named layers and respects their explicit position after the placeholder', () => {
+    configureTestRuntime({
+      dev: mode !== 'prod',
+      css: { layer: false },
+      priorityMode: mode === 'sort' ? 'sort' : 'layer',
+    });
+    const document = createFakeDocument();
+    const sheet = (mode === 'prod' ? createProdSheet : createDevSheet)({
+      document: document as unknown as Document,
+      sourcemap: false,
+    });
+    try {
+      sheet.updateLayers(['$layer', 'reset']);
+      for (const name of ['reset', 'css.reset', 'style', 'sheet']) {
+        sheet.insert({ key: name, css: '.test{margin:0}', layer: { name } });
+      }
+      sheet.flush();
+      equal(document.head.childNodes[0].textContent, '@layer css.reset, style, sheet, reset;');
+      const css = document.head.childNodes.slice(1).map((
+        tag: { sheet: { cssRules: string[]; }; textContent: string; },
+      ) =>
+        mode === 'prod'
+          ? Array.from(tag.sheet.cssRules).join('\n')
+          : tag.textContent
+      ).join('\n');
+      for (const name of ['reset', 'css.reset', 'style', 'sheet']) includes(css, '@layer ' + name + ' {');
+      sheet.updateLayers(['reset', '$layer']);
+      equal(document.head.childNodes[0].textContent, '@layer reset, css.reset, style, sheet;');
+    } finally {
+      sheet.destroy?.();
+      configureTestRuntime({ dev: false, css: { layer: true }, priorityMode: 'layer' });
+    }
+  });
+}

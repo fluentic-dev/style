@@ -2,7 +2,7 @@
 
 > @fluentic/style is a typed styling library for element styles, reusable component slots, scope-based overrides, themeable tokens and app values. Author in TypeScript; use a bundler plugin for production CSS extraction while retaining dynamic styles.
 
-Documentation target: 0.1.0-beta.12. Start with Setup and Core for new implementations. For migrations, also read the common migration contract and the matching source guide. Fetch only relevant guides; the complete guide is available for clients that need one file. These files focus on implementation and omit debugging workflows.
+Documentation target: 0.1.0-beta.13. Start with Setup and Core for new implementations. For migrations, also read the common migration contract and the matching source guide. Fetch only relevant guides; the complete guide is available for clients that need one file. These files focus on implementation and omit debugging workflows.
 
 Reading paths:
 - New app: Setup → your bundler → Core → Complete example when you need runnable code.

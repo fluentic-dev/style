@@ -26,9 +26,10 @@ function getExtractedCssItems(
   const css: CssExtractRule[] = [];
 
   for (const item of sortedItems) {
-    if (seen.has(item.css)) continue;
+    const key = JSON.stringify([item.layer, item.css]);
+    if (seen.has(key)) continue;
 
-    seen.add(item.css);
+    seen.add(key);
     css.push(item);
   }
 
@@ -41,13 +42,16 @@ function getExtractedCssItems(
   const styleLayer = isStyleLayerEnabled(args.layer ?? defaults.layer);
   const sheetLayerName = layerNamespace ? layerNamespace + '.sheet' : 'sheet';
   const styleItems: string[] = [];
-  const sheetItems: string[] = [];
+  const sheetItems = new Map<string, string[]>();
   const unlayeredItems: string[] = [];
 
   for (let i = 0, len = css.length; i < len; i++) {
     const item = css[i];
-    if (item.layer === 'sheet') {
-      sheetItems.push(item.css);
+    if (item.layer === 'sheet' || typeof item.layer === 'object') {
+      const name = typeof item.layer === 'object' ? item.layer.name : sheetLayerName;
+      const rules = sheetItems.get(name) ?? [];
+      rules.push(item.css);
+      sheetItems.set(name, rules);
     } else if (item.layer === false || !styleLayer) {
       unlayeredItems.push(item.css);
     } else {
@@ -55,13 +59,14 @@ function getExtractedCssItems(
     }
   }
 
-  const styleLayerName = sheetItems.length && layerNamespace
+  const hasNestedSheetLayer = [...sheetItems.keys()].some((name) => name.startsWith(layerNamespace + '.'));
+  const styleLayerName = hasNestedSheetLayer && layerNamespace
     ? layerNamespace + '.style'
     : layerNamespace;
 
   const layerNames = [
     styleItems.length ? styleLayerName : '',
-    sheetItems.length ? sheetLayerName : '',
+    ...sheetItems.keys(),
   ].filter(Boolean);
   const output: string[] = [];
   const layerOrder = getLayerOrderCss(layers, layerNames);
@@ -70,8 +75,8 @@ function getExtractedCssItems(
   if (styleItems.length) {
     output.push(getLayerBlockCss(styleLayerName, '\n' + styleItems.join('\n') + '\n'));
   }
-  if (sheetItems.length) {
-    output.push(getLayerBlockCss(sheetLayerName, '\n' + sheetItems.join('\n') + '\n'));
+  for (const [name, rules] of sheetItems) {
+    output.push(getLayerBlockCss(name, '\n' + rules.join('\n') + '\n'));
   }
   output.push(...unlayeredItems);
 

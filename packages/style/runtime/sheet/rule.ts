@@ -2,7 +2,7 @@ import { buildAtomicRule, getAtomicRuleLayerPriority } from '../../atomic/rule';
 import type { CreateSheetOptions } from '../../builder/data';
 import { BUILDER_TYPE_SCOPE } from '../../builder/data/const';
 import type { RuntimeItem, StateItem } from '../../builder/data/state';
-import { CSS_CONFIG, isSheetLayerEnabled } from '../../config/config/css';
+import { CSS_CONFIG, isSheetLayerEnabled, resolveSheetLayerOption } from '../../config/config/css';
 import type { SheetRule } from '../../sheet';
 import { isStyleTokenOverrideData } from '../../style/token';
 import { getStateItemAtRuleRef } from '../core/cache/stateItem';
@@ -77,5 +77,5 @@ export function createRuntimeSheetRule(item: StateItem): RuntimeSheetRule | null
 
 function getRuntimeRuleLayer(sheetOptions: CreateSheetOptions | null): SheetRule['layer'] {
   if (!sheetOptions) return 'style';
-  return (sheetOptions.layer ?? isSheetLayerEnabled()) ? 'sheet' : false;
+  return resolveSheetLayerOption(sheetOptions.layer ?? isSheetLayerEnabled(), CSS_CONFIG.layerNamespace || 'css');
 }

@@ -43,6 +43,7 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
   let active: DevRuleTag | null = null;
   let lastTag: HTMLStyleElement = layerTag;
   let hasSheetLayer = false;
+  const namedLayers = new Set<string>();
 
   if (options.top) {
     insertStyleTagAtTop(document, layerTag);
@@ -53,7 +54,7 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
   return {
     updateLayers(layers) {
       activeLayers = layers;
-      const next = getLayerOrderCss(layers, rootLayer ?? getSheetLayerNames(layerState, hasSheetLayer));
+      const next = getLayerOrderCss(layers, rootLayer ?? getSheetLayerNames(layerState, hasSheetLayer, namedLayers));
 
       if (next === layerText) return;
 
@@ -72,14 +73,17 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
         : getSheetRuleLayerPriority(rule.priority, rule.important);
       const ruleLayer = typeof rule === 'string' ? 'style' : rule.layer ?? 'style';
       if (ruleLayer === 'sheet') hasSheetLayer = true;
-      const layerName = rootLayer ?? (ruleLayer === 'sheet'
+      if (typeof ruleLayer === 'object') namedLayers.add(ruleLayer.name);
+      const layerName = rootLayer ?? (typeof ruleLayer === 'object'
+        ? ruleLayer.name
+        : ruleLayer === 'sheet'
         ? getSheetLayerName()
         : ruleLayer === false || !isStyleLayerEnabled()
         ? null
         : layerState.getName(priority));
       const nextLayerText = getLayerOrderCss(
         activeLayers,
-        rootLayer ?? getSheetLayerNames(layerState, hasSheetLayer),
+        rootLayer ?? getSheetLayerNames(layerState, hasSheetLayer, namedLayers),
       );
 
       if (nextLayerText !== layerText) {

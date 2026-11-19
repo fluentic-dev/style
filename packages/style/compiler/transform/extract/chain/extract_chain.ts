@@ -31,6 +31,20 @@ export function extractStyleChain(
 
   const callee = node.callee;
 
+  if (callee.type === 'CallExpression') {
+    const target = extractStyleChain(callee, styleNames, sheetNames);
+    if (
+      target?.kind !== 'selector' || target.baseArgs.length !== 1 ||
+      target.methods.length !== 0 || node.arguments.length > 1
+    ) return null;
+
+    // style.selector(selector)(styles) is the inline form of a selector target call.
+    return {
+      ...target,
+      baseArgs: [...target.baseArgs, ...(node.arguments as BabelTypes.Node[])],
+    };
+  }
+
   if (callee.type === 'Identifier' && styleNames.has(callee.name)) {
     return { kind: 'style', rootName: callee.name, baseArgs: node.arguments as BabelTypes.Node[], methods: [] };
   }

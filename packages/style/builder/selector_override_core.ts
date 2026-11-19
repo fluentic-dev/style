@@ -49,7 +49,13 @@ export function setSheetSelectorOptions(selector: ItemSelector, options: CreateS
 
   const text = Array.isArray(selector) ? selector[0] : selector;
   const optionMarker = ':' + (options.weight ?? '') + ':' + (
-    options.layer === undefined ? '' : options.layer ? '1' : '0'
+    typeof options.layer === 'string'
+      ? JSON.stringify(options.layer)
+      : options.layer === undefined
+      ? ''
+      : options.layer
+      ? '1'
+      : '0'
   );
   const weighted = SHEET_SELECTOR_ANCHOR + optionMarker + '\0' + text.slice(SHEET_SELECTOR_ANCHOR.length);
 

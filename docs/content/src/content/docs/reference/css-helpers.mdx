@@ -41,7 +41,7 @@ const card = style({
 | `createCounterStyle()` | `@counter-style` | `listStyleType` |
 | `createProperty()` | `@property` | custom property name, `transitionProperty` |
 | `createPositionTry()` | `@position-try` | `positionTryFallbacks` |
-| `createSheet()` | selector sheet | third-party DOM styling |
+| `createSheet()` | scoped selector sheet | third-party DOM styling and app resets |
 | `createStyleTarget()` | external style target | portal and ref styling |
 
 Each create helper returns the generated name for that CSS feature. Use the
@@ -63,6 +63,11 @@ Each helper also has its own reference page:
 
 `createSheet(...)` groups selector styles created with `style.selector(...)`.
 Use it for third-party component internals or other DOM you target by selector.
+It also supports scoped app resets: `createSheet({ layer: 'reset' }, items)`
+selects the root `reset` layer, while `layer: '.reset'` selects
+`<layerNamespace>.reset`. Attach the sheet to `body` or an app root, and set
+`css.layers` to order it alongside generated layers. See the
+[scoped reset example](create-sheet#scoped-app-reset).
 
 ```ts
 import { style } from '@fluentic/style';

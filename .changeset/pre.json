@@ -33,13 +33,15 @@
     "@example/extracted-runtime-contract": "0.0.1-beta.0",
     "@example/preact-basic": "0.0.1-beta.0",
     "@example/solid-basic": "0.0.1-beta.0",
-    "@example/third-party-selectors": "0.0.1-beta.0"
+    "@example/third-party-selectors": "0.0.1-beta.0",
+    "@example/llm-basic": "0.0.0"
   },
   "changesets": [
     "classname-tailwind-compiler",
     "css-prop-classname-next-beta",
     "first-public-beta-release-notes",
     "global-prod-classnames",
+    "named-sheet-layers",
     "optional-framework-jsx-types",
     "publish-generated-declarations",
     "resolve-tsconfig-path-aliases",

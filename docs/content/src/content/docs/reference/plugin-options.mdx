@@ -249,12 +249,47 @@ css: {
 }
 ```
 
-This produces the sheet layer name `fluentic.sheet`. Fluentic derives that
-name; there is no separate sheet-layer name option. When extracted style and
-sheet rules coexist, ordinary styles use the sibling `fluentic.style` layer so
-neither set is left unlayered inside their shared `fluentic` parent. A
-`createSheet({ layer }, items)` setting overrides the global sheet target for
-that sheet.
+This produces the default sheet layer `fluentic.sheet`. When extracted ordinary
+styles and sheet sublayers coexist under that namespace, ordinary styles use the
+sibling `fluentic.style` layer.
+
+### Individual sheet layers
+
+`createSheet({ layer }, items)` overrides `css.layer.sheet` for that sheet:
+
+- `true` uses `<layerNamespace>.sheet`; `false` emits unlayered CSS.
+- A string without a leading dot is an absolute name: `'reset'` stays `reset`,
+  and `'vendor.reset'` stays `vendor.reset`.
+- A string beginning with a dot is relative to `css.layerNamespace`: `'.reset'`
+  becomes `fluentic.reset` in the configuration above (`css.reset` by default).
+- Omitting the option inherits the global `css.layer.sheet` setting.
+
+String names are supported only by the individual sheet option. The global
+`css.layer.sheet` option remains boolean. An explicit per-sheet `true` or string
+also works when `css.layer` is `false`.
+
+Use `css.layers` to declare the order of named layers alongside generated layers:
+
+```ts
+stylePlugin({
+  css: {
+    layerNamespace: 'fluentic',
+    layers: ['reset', 'fluentic.reset', '$layer', 'overrides'],
+  },
+});
+```
+
+This configuration puts sheets named `'reset'` and `'.reset'` before the other
+generated layers, and a sheet named `'overrides'` after them. `$layer` expands to
+generated layer names; a name explicitly listed elsewhere keeps that position
+and is not duplicated at `$layer`. Use the resolved name in this list, never
+`'.reset'`. Dots in resolved names represent nested CSS layers.
+
+Later layers take precedence for normal declarations. Normal unlayered CSS still
+outranks layered CSS, and `!important` reverses layer precedence. Layer options
+do not change selector scoping or specificity. See
+[createSheet](create-sheet#scoped-app-reset) for a reset attached to `body` or an
+app root.
 
 Callsite-local class names are automatic in development and disabled for
 production builds. Production class names always include a stable hash, but the

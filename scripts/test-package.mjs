@@ -82,12 +82,19 @@ try {
     `
 import { style } from '@fluentic/style';
 import { plugin } from '@fluentic/style/plugin/vite';
+import { createSheet } from '@fluentic/style/css';
+const reset = createSheet({ layer: 'reset' }, [style.selector('&', { margin: 0 })]);
+const relative = createSheet({ layer: '.reset' }, [style.selector('*', { boxSizing: 'border-box' })]);
+const curried = createSheet({ layer: true }, [style.selector('h1')({ fontSize: '1.5rem' })]);
+const scopedReset = <div css={reset}><section css={relative}><h1 css={curried} /></section></div>;
+// @ts-expect-error Sheet layers accept booleans and strings, not numbers.
+createSheet({ layer: 1 }, []);
 const css = style({ color: 'red', padding: 4 });
 const element = <div css={css}>Packed consumer</div>;
 const vitePlugin = plugin();
 // @ts-expect-error A nonexistent API must still be rejected.
 style.notARealMethod();
-export { element, vitePlugin };
+export { element, scopedReset, vitePlugin };
 `,
   );
   for (

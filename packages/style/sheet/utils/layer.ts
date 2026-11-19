@@ -41,7 +41,8 @@ export function getSheetLayerName() {
 export function getSheetLayerNames(
   layerState: ReturnType<typeof createSheetLayerState>,
   hasSheetLayer: boolean,
+  namedLayers: ReadonlySet<string> = new Set(),
 ) {
   const names = layerState.getNames();
-  return hasSheetLayer ? names.concat(getSheetLayerName()) : names;
+  return [...new Set([...names, ...(hasSheetLayer ? [getSheetLayerName()] : []), ...namedLayers])];
 }

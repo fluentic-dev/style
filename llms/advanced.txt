@@ -74,7 +74,41 @@ getClassName returns an object, not a string. getToken(tokenOrValue) returns a C
 
 Use style.keyframes({from: {opacity: 0}, to: {opacity: 1}}) for animations. For named CSS at-rules, selector sheets, global rules, fonts and portal-owned vendor selectors, use the matching public API from @fluentic/style/css rather than inventing a style.global API. Keep existing reset/font CSS until deliberately ported.
 
+## Selector sheets and named layers (beta 13)
+
+Import createSheet from @fluentic/style/css and style from @fluentic/style. Only the individual createSheet option accepts boolean | string; global css.layer.sheet remains boolean.
+
+- Omitted/undefined: inherit css.layer.sheet (default false). css.layer: true alone does not enable sheet layers.
+- false: unlayered, overriding the global setting.
+- true: <layerNamespace>.sheet.
+- 'reset': absolute layer reset, unchanged by the namespace.
+- '.reset': relative layer <layerNamespace>.reset (css.reset by default).
+- 'vendor.reset': absolute nested layer vendor.reset; '.reset.forms' is relative.
+
+Prefer style.selector(selector, styles) for inline sheet items. The curried style.selector(selector)(styles) form and reusable targets such as const h1 = style.selector('h1'); h1(styles) are also valid and supported by compiler extraction, including chained conditions.
+
+Explicit true/string options still work when css.layer is false. Use nonempty dot-separated identifier names, not @layer syntax, comma lists, or whitespace.
+
+```tsx
+import { style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+const reset = createSheet({ layer: 'reset' }, [
+  style.selector(['&', '&::before', '&::after', '*', '*::before', '*::after'], {
+    boxSizing: 'border-box',
+  }),
+  style.selector('&', { margin: 0 }),
+]);
+const app = <div css={reset}>{/* app content */}</div>;
+```
+
+Attach to body when body itself must be reset, or use createStyleTarget for an existing DOM element. The generated class scopes every selector: '&' targets the attached element; plain selectors target descendants. Naming a layer does not make selectors global or reach ancestors or detached portals.
+
+Set the plugin's css.layers to ['reset', '$layer', 'overrides']. Explicit names keep their configured position and are not duplicated at $layer. For a relative name, list the resolved name, e.g. css.layers: ['fluentic.reset', '$layer'] with css.layerNamespace: 'fluentic' and sheet layer: '.reset'. The ordering list does not resolve leading dots. Later layers win for normal declarations; normal unlayered CSS outranks layered CSS regardless of sheet weight. Important declarations reverse layer order.
+
 Detailed references:
+- https://fluenticstack.com/style/docs/reference/create-sheet/
+- https://fluenticstack.com/style/docs/reference/plugin-options/
 - https://fluenticstack.com/style/docs/reference/css-helpers/
 - https://fluenticstack.com/style/docs/beyond-the-basics/styling-third-party-components/
 - https://fluenticstack.com/style/docs/reference/create-style-fn/

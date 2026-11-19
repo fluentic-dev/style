@@ -2249,3 +2249,27 @@ test('rsc dev style store wraps parent selector priority rules in layers', () =>
   includes(storeCss, 'background: red');
   before(storeCss.split('\n')[0], blueLayer, redLayer);
 });
+
+test('rsc named sheet layers survive serialization and server CSS generation', () => {
+  clearRscStyleStore();
+  configureTestRuntime({ dev: true, css: { layer: false, layerNamespace: 'fluentic', layers: ['reset', '$layer'] } });
+  setBuildMeta({ dev: true, extract: false, hoist: false, rsc: true, css: null });
+  try {
+    for (const layer of ['reset', '.reset', 'style', 'sheet']) {
+      const sheet = createSheet({ layer }, [style.selector('&', { margin: 0 })]);
+      getRscClassName(sheet);
+      const rules = getSheetRules(sheet);
+      const payload = createRscStylePayload(rules);
+      deepEqual(parseRscStylePayload(payload)[0]?.layer, {
+        name: layer.startsWith('.') ? 'fluentic' + layer : layer,
+      });
+    }
+    const css = getRscStyleCss();
+    includes(css, '@layer reset, fluentic.reset, style, sheet;');
+    for (const name of ['reset', 'fluentic.reset', 'style', 'sheet']) includes(css, '@layer ' + name + ' {');
+  } finally {
+    setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
+    configureTestRuntime({ dev: false, css: { layer: true, layerNamespace: 'css', layers: ['$layer'] } });
+    clearRscStyleStore();
+  }
+});

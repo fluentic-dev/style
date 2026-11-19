@@ -59,10 +59,14 @@ export function getRscStyleCss(): string {
   const layerState = createSheetLayerState();
 
   let hasSheetLayer = false;
+  const namedLayers = new Set<string>();
   const cssItems = store.rules.map((rule) => {
     const ruleLayer = rule.layer ?? 'style';
     if (ruleLayer === 'sheet') hasSheetLayer = true;
-    const layerName = ruleLayer === 'sheet'
+    if (typeof ruleLayer === 'object') namedLayers.add(ruleLayer.name);
+    const layerName = typeof ruleLayer === 'object'
+      ? ruleLayer.name
+      : ruleLayer === 'sheet'
       ? getSheetLayerName()
       : ruleLayer === false || !isStyleLayerEnabled()
       ? null
@@ -73,7 +77,7 @@ export function getRscStyleCss(): string {
 
   const layerOrderCss = getLayerOrderCss(
     CSS_CONFIG.layers ?? CSS_CONFIG_DEFAULT.layers ?? [],
-    getSheetLayerNames(layerState, hasSheetLayer),
+    getSheetLayerNames(layerState, hasSheetLayer, namedLayers),
   );
 
   return joinLayerCss(layerOrderCss, cssItems);

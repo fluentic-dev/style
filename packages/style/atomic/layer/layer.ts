@@ -89,7 +89,11 @@ export function flattenCssLayers(
     ? [layerNames]
     : layerNames;
 
-  return layers
-    .flatMap((layer) => layer === LayerPlaceholder ? names : layer)
-    .filter(Boolean);
+  return [
+    ...new Set(
+      layers
+        .flatMap((layer) => layer === LayerPlaceholder ? names.filter((name) => !layers.includes(name)) : layer)
+        .filter(Boolean),
+    ),
+  ];
 }

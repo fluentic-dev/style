@@ -36,7 +36,7 @@ import type {
   RuntimeStyleItem,
 } from '../../../../builder/data/state';
 import { normalizeManualSelectors, setSheetSelectorOptions } from '../../../../builder/selector_override';
-import { isSheetLayerEnabled } from '../../../../config/config/css';
+import { isSheetLayerEnabled, isSheetLayerOption, resolveSheetLayerOption } from '../../../../config/config/css';
 import type { ClassNameFormat, TokenNameFormat, TransformClassNameFormat } from '../../../../config/types';
 import type { Selector } from '../../../../selector/types';
 import { importantValue, isStyleImportantValue } from '../../../../style/important';
@@ -392,7 +392,10 @@ function compileSheetChain(
 
   const sheetLayer = sheetOptions.layer ?? isSheetLayerEnabled(options.css?.layer ?? DEFAULT_CONFIG.layer);
   for (let i = 0, len = rules.length; i < len; i++) {
-    rules[i].layer = sheetLayer ? 'sheet' : false;
+    rules[i].layer = resolveSheetLayerOption(
+      sheetLayer,
+      options.css?.layerNamespace ?? DEFAULT_CONFIG.layerNamespace ?? '',
+    );
   }
 
   return { type: 'sheet', items, rules, sheetOptions };
@@ -407,11 +410,11 @@ function evaluateCreateSheetOptions(
 
   const value = result.value as Record<string, unknown>;
   if (Object.keys(value).some((key) => key !== 'layer' && key !== 'weight')) return null;
-  if (value.layer !== undefined && typeof value.layer !== 'boolean') return null;
+  if (!isSheetLayerOption(value.layer)) return null;
   if (value.weight !== undefined && (!Number.isInteger(value.weight) || (value.weight as number) < 1)) return null;
 
   return {
-    layer: value.layer as boolean | undefined,
+    layer: value.layer as boolean | string | undefined,
     weight: value.weight as number | undefined,
   };
 }

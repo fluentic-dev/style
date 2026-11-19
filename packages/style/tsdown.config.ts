@@ -1,4 +1,4 @@
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'tsdown';
 
 const JSX_RUNTIME_RSC_ENTRY = 'jsx/rsc/jsx_runtime.ts';

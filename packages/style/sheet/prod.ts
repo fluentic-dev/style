@@ -27,12 +27,13 @@ export function createProdSheet(options: SheetOptions = {}): StyleSheet {
   let layerTag: HTMLStyleElement | null = null;
   let ruleTag: HTMLStyleElement | null = null;
   let hasSheetLayer = false;
+  const namedLayers = new Set<string>();
 
   return {
     updateLayers(layers) {
       activeLayers = layers;
 
-      const next = getLayerOrderCss(layers, getSheetLayerNames(layerState, hasSheetLayer));
+      const next = getLayerOrderCss(layers, getSheetLayerNames(layerState, hasSheetLayer, namedLayers));
       if (next === layerText) return;
 
       layerText = next;
@@ -51,7 +52,10 @@ export function createProdSheet(options: SheetOptions = {}): StyleSheet {
         : getSheetRuleLayerPriority(rule.priority, rule.important);
       const ruleLayer = typeof rule === 'string' ? 'style' : rule.layer ?? 'style';
       if (ruleLayer === 'sheet') hasSheetLayer = true;
-      const layerName = ruleLayer === 'sheet'
+      if (typeof ruleLayer === 'object') namedLayers.add(ruleLayer.name);
+      const layerName = typeof ruleLayer === 'object'
+        ? ruleLayer.name
+        : ruleLayer === 'sheet'
         ? getSheetLayerName()
         : ruleLayer === false || !isStyleLayerEnabled()
         ? null
@@ -59,7 +63,7 @@ export function createProdSheet(options: SheetOptions = {}): StyleSheet {
 
       const nextLayerText = getLayerOrderCss(
         activeLayers,
-        getSheetLayerNames(layerState, hasSheetLayer),
+        getSheetLayerNames(layerState, hasSheetLayer, namedLayers),
       );
 
       if (nextLayerText !== layerText) {

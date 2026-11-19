@@ -19,14 +19,14 @@ type QueuedRule = {
   css: string;
   rule: SheetRule | null;
   priority: LayerPriority;
-  layer: 'style' | 'sheet' | false;
+  layer: NonNullable<SheetRule['layer']>;
 };
 
 type SortGroup = {
   key: string;
   priority: LayerPriority;
   tags: DevRuleTag[];
-  layer: 'style' | 'sheet' | false;
+  layer: NonNullable<SheetRule['layer']>;
 };
 
 export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
@@ -46,6 +46,7 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
   let activeLayers: readonly string[] = CSS_CONFIG.layers ?? CSS_CONFIG_DEFAULT.layers ?? [];
   let layerText = '';
   let hasSheetLayer = false;
+  const namedLayers = new Set<string>();
 
   if (layerTag) {
     if (options.top) {
@@ -74,8 +75,9 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
 
       const requestedLayer = typeof rule === 'string' ? 'style' : rule.layer ?? 'style';
       const layer = requestedLayer === 'style' && !shouldLayer ? false : requestedLayer;
-      if (layer === 'sheet') {
-        hasSheetLayer = true;
+      if (layer === 'sheet' || typeof layer === 'object') {
+        if (layer === 'sheet') hasSheetLayer = true;
+        else namedLayers.add(layer.name);
         ensureLayerTag();
         updateLayerText();
       }
@@ -126,7 +128,9 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
             previous: layerTag,
             className: tagPrefix + 'rules ' + group.key,
             top: options.top,
-            layerName: group.layer === 'style'
+            layerName: typeof group.layer === 'object'
+              ? group.layer.name
+              : group.layer === 'style'
               ? layerName
               : group.layer === 'sheet'
               ? getSheetLayerName()
@@ -163,7 +167,9 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
   function updateLayerText() {
     if (!layerTag) return;
 
-    const names = [shouldLayer ? layerName : '', hasSheetLayer ? getSheetLayerName() : ''].filter(Boolean);
+    const names = [shouldLayer ? layerName : '', hasSheetLayer ? getSheetLayerName() : '', ...namedLayers].filter(
+      Boolean,
+    );
     const next = getLayerOrderCss(activeLayers, names);
 
     if (next === layerText) return;
@@ -187,15 +193,16 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
 function ensureGroup(
   groups: SortGroup[],
   priority: LayerPriority,
-  layer: 'style' | 'sheet' | false,
+  layer: NonNullable<SheetRule['layer']>,
 ) {
-  const key = (layer === 'sheet' ? 'sheet-' : '') + getPriorityKey(priority);
+  const key = (typeof layer === 'object' ? 'named-' + layer.name + '-' : layer === 'sheet' ? 'sheet-' : '') +
+    getPriorityKey(priority);
 
   for (let i = 0, len = groups.length; i < len; i++) {
     const group = groups[i];
     const order = getLayerRank(layer) - getLayerRank(group.layer) || compareLayerPriority(priority, group.priority);
 
-    if (order === 0 && layer === group.layer) return group;
+    if (order === 0 && key === group.key && (layer === false) === (group.layer === false)) return group;
 
     if (order < 0) {
       const next = { key, priority, tags: [], layer };
@@ -211,8 +218,8 @@ function ensureGroup(
   return group;
 }
 
-function getLayerRank(layer: 'style' | 'sheet' | false) {
-  return layer === 'style' ? 0 : layer === 'sheet' ? 1 : 2;
+function getLayerRank(layer: NonNullable<SheetRule['layer']>) {
+  return layer === 'style' ? 0 : layer === 'sheet' || typeof layer === 'object' ? 1 : 2;
 }
 
 function createGroupTag(

@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { URL } from 'node:url';
 import { formatClassName } from '../atomic/debug/className';
 import { compareLayerPriority, type LayerPriority } from '../atomic/layer';
 import { escapeCssIdent } from '../atomic/utils/cssIdent';
@@ -4800,4 +4801,105 @@ process.on('exit', () => {
     rmSync(root, { recursive: true, force: true });
     rmSync(root + '.test-cache', { recursive: true, force: true });
   }
+});
+
+test('compiler extracts absolute and relative sheet layers with explicit root ordering', () => {
+  const compiler = createCompiler({
+    css: {
+      layer: true,
+      layerNamespace: 'fluentic',
+      layers: ['reset', '$layer', 'overrides'],
+    },
+  });
+  const result = compiler.transform(
+    `
+    import { style } from '@fluentic/style';
+    import { createSheet } from '@fluentic/style/css';
+    export const regular = style({ display: 'block' });
+    export const reset = createSheet({ layer: 'reset' }, [style.selector('&', { margin: 0 })]);
+    export const relative = createSheet({ layer: '.reset' }, [style.selector('*', { boxSizing: 'border-box' })]);
+    export const overrides = createSheet({ layer: 'overrides', weight: 2 }, [style.selector('&', { margin: 0 })]);
+    export const reserved = createSheet({ layer: 'sheet' }, [style.selector('input', { color: 'red' })]);
+  `,
+    '/tmp/compiler-named-sheet-layers.ts',
+  );
+  if (!result) throw new Error('expected compiler output');
+  const css = result.css.join('\n');
+  includes(result.code, 'createExtractedSheet');
+  notIncludes(result.code, 'createSheet(');
+  includes(result.code, '".reset"');
+  includes(css, '@layer reset, fluentic.style, fluentic.reset, sheet, overrides;');
+  for (const name of ['reset', 'fluentic.reset', 'overrides', 'sheet']) includes(css, '@layer ' + name + ' {');
+  includes(css, ':where(.');
+  notIncludes(css, '@layer fluentic.sheet');
+});
+
+test('compiler keeps named sheet layers when ordinary style layers are disabled', () => {
+  const compiler = createCompiler({ css: { layer: false, layers: ['$layer', 'reset'] } });
+  const result = compiler.transform(
+    `
+    import { style } from '@fluentic/style';
+    import { createSheet } from '@fluentic/style/css';
+    export const reset = createSheet({ layer: 'reset' }, [style.selector('&', { margin: 0 })]);
+    export const relative = createSheet({ layer: '.reset' }, [style.selector('&', { padding: 0 })]);
+  `,
+    '/tmp/compiler-disabled-named-sheet-layers.ts',
+  );
+  if (!result) throw new Error('expected compiler output');
+  const css = result.css.join('\n');
+  includes(css, '@layer css.reset, reset;');
+  includes(css, '@layer reset {');
+  includes(css, '@layer css.reset {');
+});
+
+for (const layer of [true, false, 'reset', '.reset'] as const) {
+  test(`compiler extracts inline curried selectors like direct selector styles in layer ${layer}`, () => {
+    const compiler = createCompiler({ css: { layerNamespace: 'fluentic' } });
+    const compile = (selector: string) => {
+      const result = compiler.transform(
+        `
+        import { style } from '@fluentic/style';
+        import { createSheet } from '@fluentic/style/css';
+        export const appDefaults = createSheet({ layer: ${JSON.stringify(layer)} }, [${selector}]);
+      `,
+        '/tmp/compiler-inline-curried-selector.ts',
+      );
+      if (!result) throw new Error('expected compiler output');
+      includes(result.code, 'createExtractedSheet');
+      notIncludes(result.code, 'createSheet(');
+      includes(result.css.join('\n'), ' h1{font-size: 1.5rem}');
+      return result.css;
+    };
+    const direct = compile("style.selector('h1', { fontSize: '1.5rem' })");
+    const curried = compile("style.selector('h1')({ fontSize: '1.5rem' })");
+    deepEqual(curried, direct);
+  });
+}
+
+test('compiler extracts curried selector arrays with fragments and chained conditions', () => {
+  const compiler = createCompiler({ css: { layerNamespace: 'fluentic' } });
+  const result = compiler.transform(
+    `
+    import { style as ui } from '@fluentic/style';
+    import { createSheet } from '@fluentic/style/css';
+    const typography = ui({ fontSize: '1.5rem' });
+    export const appDefaults = createSheet({ layer: '.reset', weight: 2 }, [
+      ui.selector(['h1', 'h2'])(typography).hover({ color: 'red' }).media('(max-width: 700px)', { display: 'none' }),
+      ui.selector('&')({ margin: 0 }),
+    ]);
+  `,
+    '/tmp/compiler-curried-selector-chains.ts',
+  );
+  if (!result) throw new Error('expected compiler output');
+  includes(result.code, 'createExtractedSheet');
+  notIncludes(result.code, 'createSheet(');
+  const css = result.css.join('\n');
+  includes(css, '@layer fluentic.reset');
+  for (const selector of ['h1', 'h2']) {
+    includes(css, ` ${selector}{font-size: 1.5rem}`);
+    includes(css, ` ${selector}:hover{color: red}`);
+    includes(css, ` ${selector}{display: none}`);
+  }
+  includes(css, '@media (max-width: 700px)');
+  includes(css, '{margin: 0px}');
 });

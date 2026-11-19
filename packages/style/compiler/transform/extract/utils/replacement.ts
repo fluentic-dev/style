@@ -104,7 +104,12 @@ function buildSheetOptions(
   const properties: BabelTypes.ObjectProperty[] = [];
 
   if (options.layer !== undefined) {
-    properties.push(t.objectProperty(t.identifier('layer'), t.booleanLiteral(options.layer)));
+    properties.push(
+      t.objectProperty(
+        t.identifier('layer'),
+        typeof options.layer === 'string' ? t.stringLiteral(options.layer) : t.booleanLiteral(options.layer),
+      ),
+    );
   }
   if (options.weight !== undefined) {
     properties.push(t.objectProperty(t.identifier('weight'), t.numericLiteral(options.weight)));

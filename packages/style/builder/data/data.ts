@@ -65,7 +65,7 @@ export type SheetData<Style = unknown> =
   & { [BUILDER_SHEET_OPTIONS]: CreateSheetOptions; };
 
 export type CreateSheetOptions = {
-  layer?: boolean;
+  layer?: boolean | string;
   weight?: number;
 };
 

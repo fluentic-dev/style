@@ -44,6 +44,25 @@ export function isStyleLayerEnabled(layer: CssConfig['layer'] = CSS_CONFIG.layer
   return typeof layer === 'boolean' ? layer : layer.style ?? true;
 }
 
+// Named sheet layers are kept distinct from the internal style/sheet targets.
+export type NamedSheetLayer = { name: string; };
+
+export function isSheetLayerOption(value: unknown): value is boolean | string | undefined {
+  return value === undefined || typeof value === 'boolean' || (
+    typeof value === 'string' &&
+    /^\.?(?:--|-?[a-zA-Z_\u0080-\uFFFF])[\w\u0080-\uFFFF-]*(?:\.(?:--|-?[a-zA-Z_\u0080-\uFFFF])[\w\u0080-\uFFFF-]*)*$/
+      .test(value)
+  );
+}
+
+export function resolveSheetLayerOption(
+  layer: boolean | string,
+  namespace: string,
+): 'sheet' | false | NamedSheetLayer {
+  if (typeof layer !== 'string') return layer ? 'sheet' : false;
+  return { name: layer.startsWith('.') ? (namespace ? namespace + layer : layer.slice(1)) : layer };
+}
+
 export function isSheetLayerEnabled(layer: CssConfig['layer'] = CSS_CONFIG.layer) {
   return typeof layer === 'object' && (layer.sheet ?? false);
 }

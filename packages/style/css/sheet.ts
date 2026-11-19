@@ -18,6 +18,7 @@ import {
 import { setSheetSelectorOptions } from '../builder/selector_override_core';
 import { mergeSheetData } from '../builder/style_data';
 import { resolveCallsite } from '../builder/utils';
+import { isSheetLayerOption } from '../config/config/css';
 import { getStyleTokenId, isStyleTokenOverrideData, type StyleTokenOverride } from '../style/token';
 
 type SheetItem<Style = unknown> =
@@ -112,8 +113,8 @@ function isCreateSheetOptions(value: unknown): value is CreateSheetOptions {
 }
 
 function assertCreateSheetOptions(options: CreateSheetOptions) {
-  if (options.layer !== undefined && typeof options.layer !== 'boolean') {
-    throw new Error('createSheet options.layer must be a boolean');
+  if (!isSheetLayerOption(options.layer)) {
+    throw new Error('createSheet options.layer must be a boolean or a valid layer name');
   }
 
   if (options.weight !== undefined && (!Number.isInteger(options.weight) || options.weight < 1)) {

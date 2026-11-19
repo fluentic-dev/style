@@ -493,7 +493,16 @@ Selector sheets are emitted outside Fluentic's cascade layer by default. That
 is intentional: third-party CSS is commonly unlayered, and normal unlayered
 rules outrank normal layered rules. If the third-party stylesheet participates
 in your layer architecture, opt a sheet in with `createSheet({ layer: true },
-items)` or enable `css.layer.sheet` globally.
+items)` or enable `css.layer.sheet` globally. A particular sheet can instead
+choose its own layer with `createSheet({ layer: 'vendorOverrides' }, items)`.
+Use `'.vendorOverrides'` to put it under `css.layerNamespace` (for example,
+`css.vendorOverrides`). List the resolved name in `css.layers` to choose its
+position relative to other layers. A local `layer: false` opts back out.
+
+Named layers also support app-wide styles such as resets while preserving the
+sheet's class scope. See [the scoped reset example](../reference/create-sheet#scoped-app-reset)
+for attaching a reset to `body` or an app root. Layer selection does not scope a
+third-party stylesheet or pull its existing rules into your chosen layer.
 
 Some libraries also ship their own CSS with high specificity or load it after
 your app styles. Fluentic can order the rules it owns, but it cannot move a

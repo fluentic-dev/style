@@ -2335,3 +2335,35 @@ function createFakeStyleTarget() {
     style: typeof style;
   };
 }
+
+test('createSheet named layers resolve relative names and keep distinct sheet identities', () => {
+  try {
+    configureTestRuntime({ css: { layer: false, layerNamespace: 'fluentic' } });
+    const names = ['reset', '.reset', 'style', 'sheet', 'vendor.reset'];
+    const classes = new Set<string>();
+    for (const layer of names) {
+      const sheet = createSheet({ layer }, [style.selector('&', { margin: 0 })]);
+      const rule = getSheetRules(sheet)[0];
+      deepEqual(rule?.layer, { name: layer.startsWith('.') ? 'fluentic' + layer : layer });
+      const className = getClassName(sheet).className;
+      if (!className) throw new Error('expected sheet class');
+      classes.add(className);
+      includes(rule.css, ':where(.' + className + ')');
+    }
+    equal(classes.size, names.length);
+  } finally {
+    configureTestRuntime({ css: { layer: true, layerNamespace: 'css' } });
+  }
+});
+
+test('createSheet rejects malformed named layers', () => {
+  for (const layer of ['', '.', 'reset..base', 'reset,other', 'reset{}', 'reset;body', ' reset']) {
+    let error = '';
+    try {
+      createSheet({ layer }, []);
+    } catch (value) {
+      error = String(value);
+    }
+    includes(error, 'valid layer name');
+  }
+});
