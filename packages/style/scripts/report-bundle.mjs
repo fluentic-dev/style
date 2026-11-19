@@ -64,9 +64,16 @@ const entries = [
           'createExtractedStyle',
           'createExtractedTheme',
           'createExtractedToken',
+          'createExtractedValues',
           'withTokens',
         ],
       ],
+    ],
+  },
+  {
+    name: 'optional named tokens',
+    imports: [
+      ['dialect/index.js', ['createNamedToken', 'createNamedTokens', 'getNamedToken']],
     ],
   },
   {
@@ -354,5 +361,5 @@ function formatBytes(value) {
     return `${value} B`;
   }
 
-  return `${(value / 1024).toFixed(2)} KB`;
+  return `${(value / 1024).toFixed(2)} KiB`;
 }

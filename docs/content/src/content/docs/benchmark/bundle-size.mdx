@@ -13,32 +13,44 @@ pnpm --filter @fluentic/style build
 pnpm --filter @fluentic/style report:bundle
 ```
 
-The report builds the package, follows the compiled dependency graph for each
+After building the package, the report follows the compiled dependency graph for each
 entry, then creates a small minified bundle for the imported public surface.
 
 ## Current Report
 
-This is the latest local report for `@fluentic/style`, generated on
-2026-07-31.
+This is the local report for `@fluentic/style@0.1.0-beta.14`, generated on
+2026-11-19. Sizes use KiB (1,024 bytes) and gzip level 9.
 
 The extracted production runtime is the important static-extraction budget:
-`4.92 KB` min+gzip. The extracted JSX runtime is `2.73 KB` min+gzip, and the
-generated extracted helpers are `778 B` min+gzip.
+`4.98 KiB` min+gzip. The extracted JSX runtime is `2.78 KiB` min+gzip, and the
+generated extracted helpers are `878 B` min+gzip.
 
 | Entry | Graph raw | Graph gzip | Min raw | Min gzip |
 | --- | ---: | ---: | ---: | ---: |
-| dev runtime | 204.46 KB | 42.54 KB | 88.78 KB | 30.19 KB |
-| extracted production runtime | 37.40 KB | 8.13 KB | 14.01 KB | 4.92 KB |
-| extracted jsx runtime | 20.25 KB | 4.82 KB | 7.13 KB | 2.73 KB |
-| extracted generated helpers | 6.78 KB | 1.73 KB | 1.62 KB | 778 B |
-| production runtime | 203.89 KB | 42.36 KB | 88.71 KB | 30.15 KB |
-| server dev rsc runtime | 202.19 KB | 43.04 KB | 90.19 KB | 30.68 KB |
-| server production runtime | 205.78 KB | 43.33 KB | 65.64 KB | 21.68 KB |
-| server extracted production runtime | 37.48 KB | 8.13 KB | 14.23 KB | 4.99 KB |
+| dev runtime | 211.63 KiB | 44.32 KiB | 81.30 KiB | 26.95 KiB |
+| extracted production runtime | 37.75 KiB | 8.21 KiB | 14.16 KiB | 4.98 KiB |
+| extracted jsx runtime | 20.60 KiB | 4.90 KiB | 7.28 KiB | 2.78 KiB |
+| extracted generated helpers | 7.28 KiB | 1.93 KiB | 1.81 KiB | 878 B |
+| optional named tokens | 8.07 KiB | 2.23 KiB | 2.70 KiB | 1.20 KiB |
+| production runtime | 211.06 KiB | 44.14 KiB | 81.23 KiB | 26.93 KiB |
+| server dev rsc runtime | 209.73 KiB | 44.85 KiB | 82.67 KiB | 27.40 KiB |
+| server production runtime | 213.29 KiB | 45.16 KiB | 66.06 KiB | 21.83 KiB |
+| server extracted production runtime | 37.83 KiB | 8.22 KiB | 14.38 KiB | 5.04 KiB |
 
 The exact numbers can change as dependencies, build output, and minifier
 versions change. Treat this page as a recent snapshot and rerun the command when
 you need exact numbers for a release.
+
+The generated-helper measurement includes `createExtractedValues`. The optional
+named-token row retains `createNamedToken`, `createNamedTokens`, and
+`getNamedToken` from `@fluentic/style/dialect`; these are not automatically
+included by the main entry.
+
+Each row is an independent bundle, not an additive cost: shared code is deduplicated
+when an app bundles these imports together. The extracted production runtime row
+retains `getClassName`, `combineStyle`, `mergeClassName`, and `mergeStyle`; it does
+not measure every export, such as standalone `getToken`. The report excludes
+React externals, extracted CSS, and application-specific token/style definitions.
 
 ## Reading The Columns
 

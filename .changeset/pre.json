@@ -39,6 +39,7 @@
   "changesets": [
     "classname-tailwind-compiler",
     "css-prop-classname-next-beta",
+    "extracted-token-factories",
     "first-public-beta-release-notes",
     "global-prod-classnames",
     "named-sheet-layers",

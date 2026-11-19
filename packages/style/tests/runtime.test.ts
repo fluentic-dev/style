@@ -1607,7 +1607,7 @@ test('style prop resolver wires token-bound extracted style variables to named t
     equal(result.className, 'bound-style-named-class');
     includes(
       String((result.style as Record<string, unknown>)['--bound-style-named-value']),
-      'var(--token-runtime-bound-color-blue-600-',
+      'var(--token-runtime-bound-color-blue-600',
     );
   } finally {
     setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });

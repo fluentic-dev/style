@@ -22,6 +22,30 @@ The source API can accept `'$name'` strings, the transform converts those string
 to named tokens or literals, and the compiler/runtime use the same regular
 token machinery as hand-written Fluentic tokens.
 
+## Global Names and Runtime Metadata (beta.14)
+
+Named tokens come from the optional `@fluentic/style/dialect` subpath. A token
+such as `createNamedTokens('app.color', { accent: '#2563eb' }).accent` carries
+`--token-app-color-accent` as its CSS variable metadata immediately. No hashing
+or `tokenNameFormat` configuration is involved, including at runtime. Its
+fallback remains the default value of that particular token.
+
+Namespace dots delimit segments. Property keys are whole segments; a literal
+dot in a key is escaped. Segments join with `-`, and every non-ASCII-alphanumeric
+character within a segment becomes `_hex_` using its Unicode code point. This
+keeps `tokens['a-b'].c` distinct from `tokens.a['b-c']`. Identical explicit
+namespace/path combinations intentionally address the same global CSS variable.
+
+Named groups retain their lazy proxy/cache behavior. Dynamic property access
+can return a token carrying the metadata needed by extracted `getToken()`.
+Static dialect string transforms can instead emit CSS variable strings during
+compilation. A transform-produced token with no usable source binding may still
+be serialized as an extracted token; ordinary factory bindings follow
+[`token-factories.md`](./token-factories.md).
+
+Rebuild shared style packages and consumers together when upgrading from beta.13;
+manual CSS references to the old hashed named variables must be updated.
+
 ## Userland Transform Shape
 
 A dialect can expose custom properties such as `bg`, `px`, or `rounded`, then
@@ -165,8 +189,8 @@ const style = createExtractedStyle([
 withTokens(style, [
   token(
     featured
-      ? 'var(--token-app-color-accentSoft-..., #d9f4ee)'
-      : 'var(--token-app-color-panel-..., #ffffff)',
+      ? 'var(--token-app-color-accentSoft, #d9f4ee)'
+      : 'var(--token-app-color-panel, #ffffff)',
   ),
 ]);
 ```
@@ -205,8 +229,8 @@ export const card = createExtractedStyle([
       1,
       '--var-bg',
       featured
-        ? 'var(--token-app-color-blue-600-..., #2563eb)'
-        : 'var(--token-app-color-emerald-600-..., #059669)',
+        ? 'var(--token-app-color-blue-600, #2563eb)'
+        : 'var(--token-app-color-emerald-600, #059669)',
       1,
     ],
   ],

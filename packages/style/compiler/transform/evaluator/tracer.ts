@@ -245,10 +245,13 @@ function parseAndExtractModule(
 
         if (stmt.source) {
           imports.set(exported, { source: stmt.source.value, name: local });
+          rawBindings.set(exported, t.identifier(exported));
         } else if (rawBindings.has(local)) {
           rawBindings.set(exported, rawBindings.get(local)!);
         } else if (bindings.has(local)) {
           bindings.set(exported, bindings.get(local)!);
+        } else if (imports.has(local)) {
+          rawBindings.set(exported, t.identifier(local));
         }
       }
 
@@ -270,6 +273,7 @@ function parseAndExtractModule(
   }
 
   const scope: EvalScope = {
+    tokenNameFormat: options.css?.tokenNameFormat ?? null,
     bindings,
     imports,
     styleNames,

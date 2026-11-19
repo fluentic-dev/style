@@ -1,6 +1,3 @@
-import { getTokenVarName } from '../atomic/token';
-import { sanitizeCssIdentName } from '../atomic/utils/cssIdent';
-import { CSS_CONFIG } from '../config/config/css';
 import {
   createStyleToken,
   type StyleToken,
@@ -29,8 +26,9 @@ type NamedTokenRoot = {
 const ROOT = Symbol('fluentic.namedTokens.root');
 
 export function createNamedToken<T>(id: string, value?: T): NamedToken<T> {
-  const token = createStyleToken(value, createNamedTokenId(id)) as NamedToken<T>;
-  token[TOKEN_VAR_NAME] = getTokenVarName(token, CSS_CONFIG.tokenNameFormat ?? null);
+  const tokenId = createNamedTokenId(id);
+  const token = createStyleToken(value, tokenId) as NamedToken<T>;
+  token[TOKEN_VAR_NAME] = '--token-' + tokenId;
   return token;
 }
 
@@ -63,7 +61,12 @@ export function getNamedToken<T = unknown>(
 }
 
 export function createNamedTokenId(id: string) {
-  return sanitizeCssIdentName(id.replace(/\./g, '-'), 'named-token');
+  return id.split('.').map(encodeNamedTokenSegment).join('-');
+}
+
+// Escape separators and the escape marker itself so distinct paths cannot collide.
+function encodeNamedTokenSegment(segment: string) {
+  return segment.replace(/[^a-zA-Z0-9]/gu, (char) => '_' + char.codePointAt(0)!.toString(16) + '_');
 }
 
 function createNamedTokenProxy(
@@ -103,12 +106,14 @@ function getNamedTokenAtPath(
   root: NamedTokenRoot,
   path: string[],
 ) {
-  const key = path.join('.');
+  const key = JSON.stringify(path);
   const cached = root.cache.get(key);
   if (cached) return cached;
 
   const value = getValueAtPath(root.values, path);
-  const token = createNamedToken(root.namespace + '.' + key, value);
+  const id = root.namespace.split('.').concat(path).map(encodeNamedTokenSegment).join('-');
+  const token = createStyleToken(value, id);
+  token[TOKEN_VAR_NAME] = '--token-' + id;
   root.cache.set(key, token);
   return token;
 }

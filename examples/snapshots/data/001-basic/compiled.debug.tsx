@@ -1,10 +1,9 @@
 /* eslint-disable */
-import { bindScope, combineStyle, createToken, style } from '@fluentic/style';
+import { bindScope, combineStyle, style } from '@fluentic/style';
 import {
   createExtractedScope,
   createExtractedSlot,
   createExtractedStyle,
-  createExtractedStyleMerge,
   createExtractedToken,
   withTokens,
 } from '@fluentic/style/entry/prod/extract';
@@ -20,17 +19,19 @@ const dynamicStyle = createExtractedStyle([['1phh07j', 'gap--bm8z8e7', [1, '--va
   'padding--l9tsy00',
   [1, '--var-ba7b46t', density * 2, 1],
 ]]);
-const _fluenticStyle2 = createExtractedStyleMerge([
+const _fluenticStyle2 = createExtractedStyle([
   ['18q1j80', 'color--b7lpaos', [1, '--var-jg49df0', _fluenticToken, 1]],
   ['mwx9540', 'background-color-white--h44xih0'],
   ['1omoamz', 'border-color-hover--bh7gltt', [1, '--var-bjwbpju', _fluenticToken2, 1]],
-], dynamicStyle);
+  ['1phh07j', 'gap--bm8z8e7', [1, '--var-iafi210', density, 1]],
+  ['1ffb9qm', 'padding--l9tsy00', [1, '--var-ba7b46t', density * 2, 1]],
+]);
 enum TextTone {
   Danger = 'red',
   Hover = 'blue',
   Mobile = 'green',
 }
-const token = createToken('blue', 'token-1jb1zmc');
+const token = /*#__PURE__*/ createExtractedToken('token-1jb1zmc', 'blue', null, null, '--token-v95nzv0');
 const containerHover = style.raw({
   gap: density * 3,
   backgroundColor: token,
@@ -43,12 +44,7 @@ const styles = {
     ['1phh07j', 'gap--bn5yexc', [1, '--var-lh6v6q0', density * 4, 1]],
     ['dz1dcy0', 'width-hover--bkx1zo2'],
     ['1tysl6a', 'gap-hover--p8rx110', [1, '--var-cap3zp0', density * 3, 1]],
-    ['d1c10h0', 'background-color-hover--bevm3we', [
-      1,
-      '--var-cap3zp0',
-      createExtractedToken('token-1jb1zmc', 'blue', null, null, '--token-v95nzv0'),
-      1,
-    ]],
+    ['d1c10h0', 'background-color-hover--bevm3we', [1, '--var-cap3zp0', token, 1]],
   ]),
   container2: createExtractedSlot('ho4zce0', [['1hznesf', 'width--bil4cl0'], ['1nca60l', 'display-none--bf72i63'], [
     'dz1dcy0',

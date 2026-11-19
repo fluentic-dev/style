@@ -67,6 +67,7 @@ export const FN_CREATE_EXTRACTED_SHEET = 'createExtractedSheet';
 export const FN_CREATE_EXTRACTED_SLOT = 'createExtractedSlot';
 export const FN_CREATE_EXTRACTED_SCOPE = 'createExtractedScope';
 export const FN_CREATE_EXTRACTED_TOKEN = 'createExtractedToken';
+export const FN_CREATE_EXTRACTED_VALUES = 'createExtractedValues';
 export const FN_CREATE_EXTRACTED_THEME = 'createExtractedTheme';
 export const FN_GET_EXTRACTED_STYLE_ITEMS = 'getExtractedStyleItems';
 export const FN_CREATE_EXTRACTED_STYLE_MERGE = 'createExtractedStyleMerge';

@@ -27,11 +27,13 @@ import {
   getStyleTokenId,
   getStyleTokenName,
   isStyleTokenData,
+  isStyleTokenOverrideData,
   type StyleTokenData,
   type StyleTokenOverride,
   TOKEN_ID,
   TOKEN_NAME,
   TOKEN_OVERRIDE,
+  TOKEN_VAR_NAME,
 } from '../../../style/token';
 import type { StyleTransform } from '../../../style/transform';
 import { exposeStyle } from '../../../style/utils';
@@ -70,12 +72,16 @@ import {
   IMPORT_PATHS,
   STYLE_UTILS_IMPORT_PATH,
 } from '../../utils/constants';
-import type { BabelTypes } from '../utils/babel';
+import { BabelCore, type BabelTypes } from '../utils/babel';
 import type { EvalFail, EvalModuleBindings, EvalOk, EvalResult, ImportMap, ResolveImportFn } from './types';
 
 const STYLE_IMPORT_PATHS = new Set(IMPORT_PATHS);
 
 export const COMPILED_RUNTIME_VALUE = Symbol();
+export const COMPILED_TOKEN_REFERENCE = Symbol();
+export type CompiledTokenReference = {
+  [COMPILED_TOKEN_REFERENCE]?: { expression: BabelTypes.Expression; filePath: string; };
+};
 export const COMPILED_STYLE_OBJECT_LOCATIONS = Symbol();
 const COMPILED_TOKEN_FACTORY = Symbol();
 
@@ -123,6 +129,7 @@ export type EvalScope = {
   styleTransform?: StyleTransform | null;
   sourcemapTrace?: 'style' | 'value';
   runtimeMode?: CompilerRuntimeMode | null;
+  tokenNameFormat?: TokenNameFormat | null;
 };
 
 export function evaluateNode(
@@ -148,10 +155,10 @@ export function evaluateNode(
       return evaluateTemplate(node, scope);
 
     case 'Identifier':
-      return evaluateIdentifier(node, scope);
+      return referenceResult(evaluateIdentifier(node, scope), node, scope);
 
     case 'MemberExpression':
-      return evaluateMember(node as BabelTypes.MemberExpression, scope);
+      return referenceResult(evaluateMember(node as BabelTypes.MemberExpression, scope), node, scope);
 
     case 'ObjectExpression':
       return evaluateObject(node as BabelTypes.ObjectExpression, scope);
@@ -160,7 +167,7 @@ export function evaluateNode(
       return evaluateArray(node as BabelTypes.ArrayExpression, scope);
 
     case 'CallExpression':
-      return evaluateCall(node as BabelTypes.CallExpression, scope);
+      return referenceCallResult(evaluateCall(node as BabelTypes.CallExpression, scope), node, scope);
 
     case 'BinaryExpression':
       return evaluateBinary(node as BabelTypes.BinaryExpression, scope);
@@ -679,7 +686,12 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
       if (!value.ok) return value;
 
       if (isStyleTokenData(value.value)) {
-        return evalOk(getTokenVar(value.value, CSS_CONFIG.tokenNameFormat || null));
+        return evalOk(
+          getTokenVar(
+            value.value,
+            scope.tokenNameFormat === undefined ? CSS_CONFIG.tokenNameFormat || null : scope.tokenNameFormat,
+          ),
+        );
       }
 
       return evalOk(value.value);
@@ -740,7 +752,7 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
         return evalOk(createCompiledTokenOverride(target, provide.value, node));
       }
 
-      return evalOk(withRuntimeValue(node, target));
+      return referenceResult(evalOk(withRuntimeValue(node, target)), node, scope);
     }
   }
 
@@ -941,6 +953,7 @@ function createCompiledTokenOverride(
       [TOKEN_ID]: getStyleTokenId(token),
       [TOKEN_OVERRIDE]: true,
       [TOKEN_NAME]: getStyleTokenName(token),
+      [TOKEN_VAR_NAME]: token[TOKEN_VAR_NAME] ?? null,
       value: value.value,
       ref: value,
     });
@@ -950,6 +963,7 @@ function createCompiledTokenOverride(
     [TOKEN_ID]: getStyleTokenId(token),
     [TOKEN_OVERRIDE]: true,
     [TOKEN_NAME]: getStyleTokenName(token),
+    [TOKEN_VAR_NAME]: token[TOKEN_VAR_NAME] ?? null,
     value,
     ref: null,
   });
@@ -1108,6 +1122,7 @@ function createCompiledValues(
   stableId: string | undefined,
   isNumber: boolean,
 ): CompiledTokenFactory {
+  if (!values.length) throw new Error('[Style.values] NO_VALUES');
   const tokens = new Map<unknown, StyleTokenData>();
   const groupName = getStyleTokenNameFromId(stableId);
 
@@ -1138,12 +1153,12 @@ function parseCompiledValue(value: unknown, isNumber: boolean) {
   if (!isNumber) return value;
 
   const number = Number(value);
-  if (!Number.isFinite(number)) return value;
+  if (!Number.isFinite(number)) throw new Error(`[Style.values] INVALID_NUMBER_VALUE: ${String(value)}`);
 
   return number;
 }
 
-function isCompiledTokenFactory(value: unknown): value is CompiledTokenFactory {
+export function isCompiledTokenFactory(value: unknown): value is CompiledTokenFactory {
   return !!value && typeof value === 'object' && (value as CompiledTokenFactory)[COMPILED_TOKEN_FACTORY] === true;
 }
 
@@ -1224,9 +1239,18 @@ function withRuntimeValue<T extends StyleTokenData | StyleTokenOverride>(
   runtimeValue: BabelTypes.Expression,
   token: T,
 ): T {
+  if (typeof token === 'function') {
+    return new Proxy(token, {
+      get(target, key) {
+        if (key === COMPILED_RUNTIME_VALUE) return runtimeValue;
+        return Reflect.get(target, key);
+      },
+    });
+  }
   return Object.assign({}, token, {
     [TOKEN_ID]: token[TOKEN_ID],
     [TOKEN_NAME]: token[TOKEN_NAME] ?? null,
+    [TOKEN_VAR_NAME]: token[TOKEN_VAR_NAME] ?? null,
     [COMPILED_RUNTIME_VALUE]: runtimeValue,
   });
 }
@@ -1276,4 +1300,54 @@ function evaluateUnary(node: BabelTypes.UnaryExpression, scope: EvalScope): Eval
     default:
       return evalFail(`Unsupported unary operator: ${node.operator}`);
   }
+}
+
+function referenceResult(result: EvalResult, expression: BabelTypes.Expression, scope: EvalScope): EvalResult {
+  if (!result.ok) return result;
+  return evalOk(referenceValue(result.value, expression, scope));
+}
+
+function referenceValue(value: unknown, expression: BabelTypes.Expression, scope: EvalScope, nested = false): unknown {
+  if (isStyleTokenData(value) || isStyleTokenOverrideData(value)) {
+    if (nested && (value as CompiledTokenReference)[COMPILED_TOKEN_REFERENCE]?.filePath === scope.filePath) {
+      return value;
+    }
+    const reference = { expression, filePath: scope.filePath };
+    if (typeof value === 'function') {
+      return new Proxy(value, {
+        get(target, key) {
+          if (key === COMPILED_TOKEN_REFERENCE) return reference;
+          return Reflect.get(target, key);
+        },
+      });
+    }
+    return Object.assign(
+      withRuntimeValue((value as CompiledRuntimeValue)[COMPILED_RUNTIME_VALUE] ?? expression, value),
+      {
+        [COMPILED_TOKEN_REFERENCE]: reference,
+      },
+    );
+  }
+  if (!value || typeof value !== 'object' || isCompiledTokenFactory(value)) return value;
+  // Only recurse through ordinary data records; compiled styles and other tagged data stay intact.
+  if (Object.getOwnPropertySymbols(value).some((key) => key !== COMPILED_STYLE_OBJECT_LOCATIONS)) return value;
+  const result = Object.defineProperties(Array.isArray(value) ? [] : {}, Object.getOwnPropertyDescriptors(value));
+  for (const key of Object.keys(value)) {
+    (result as Record<string, unknown>)[key] = referenceValue(
+      (value as Record<string, unknown>)[key],
+      BabelCore.types.memberExpression(expression, BabelCore.types.stringLiteral(key), true),
+      scope,
+      true,
+    );
+  }
+  return result;
+}
+
+function referenceCallResult(result: EvalResult, node: BabelTypes.CallExpression, scope: EvalScope): EvalResult {
+  // Factory calls are rewritten separately. Ordinary token/value calls retain their expression.
+  const imp = node.callee.type === 'Identifier' ? scope.imports.get(node.callee.name) : undefined;
+  if (imp && STYLE_IMPORT_PATHS.has(imp.source)) return result;
+  return result.ok && (isStyleTokenData(result.value) || isStyleTokenOverrideData(result.value))
+    ? referenceResult(result, node, scope)
+    : result;
 }

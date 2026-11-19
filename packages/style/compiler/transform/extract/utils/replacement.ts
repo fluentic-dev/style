@@ -27,6 +27,7 @@ import {
   FN_CREATE_EXTRACTED_STYLE_MERGE,
   FN_CREATE_EXTRACTED_TOKEN,
 } from '../../../utils/constants';
+import { COMPILED_TOKEN_REFERENCE, type CompiledTokenReference } from '../../evaluator/evaluator';
 import type { BabelTypes } from '../../utils/babel';
 import type {
   CompiledChainData,
@@ -352,7 +353,11 @@ function buildVariableValueExpression(
   options: BuildReplacementOptions,
 ): BabelTypes.Expression {
   if (isStyleTokenData(value)) {
-    state.usedHelpers.add(FN_CREATE_EXTRACTED_TOKEN);
+    const reference = (value as CompiledTokenReference)[COMPILED_TOKEN_REFERENCE];
+    if (reference?.filePath === state.filePath) {
+      const runtimeToken = options.getRuntimeToken?.(item, reference.expression);
+      if (runtimeToken) return runtimeToken;
+    }
     return buildExtractedTokenExpression(t, value, state);
   }
 
@@ -363,11 +368,16 @@ function buildVariableValueExpression(
   return valueNode ? t.cloneNode(valueNode) : literalExpression(t, value);
 }
 
-function buildExtractedTokenExpression(
+export function buildExtractedTokenExpression(
   t: typeof BabelTypes,
   token: StyleTokenData,
   state: ExtractPluginState,
+  preserveReference = true,
 ): BabelTypes.Expression {
+  const reference = (token as CompiledTokenReference)[COMPILED_TOKEN_REFERENCE];
+  if (preserveReference && reference?.filePath === state.filePath) {
+    return t.cloneNode(reference.expression, true);
+  }
   state.usedHelpers.add(FN_CREATE_EXTRACTED_TOKEN);
   const tokenNameFormat = state.options.css?.tokenNameFormat ?? DEFAULT_CONFIG.tokenNameFormat ?? null;
 
@@ -388,6 +398,8 @@ function buildExtractedTokenOverrideExpression(
   token: StyleTokenOverride,
   state: ExtractPluginState,
 ): BabelTypes.Expression {
+  const reference = (token as CompiledTokenReference)[COMPILED_TOKEN_REFERENCE];
+  if (reference?.filePath === state.filePath) return t.cloneNode(reference.expression, true);
   state.usedHelpers.add(FN_CREATE_EXTRACTED_TOKEN);
   const tokenNameFormat = state.options.css?.tokenNameFormat ?? DEFAULT_CONFIG.tokenNameFormat ?? null;
   const extractedToken = t.callExpression(
@@ -420,5 +432,5 @@ function literalExpression(
   if (typeof value === 'boolean') return t.booleanLiteral(value);
   if (value === null || value === undefined) return t.nullLiteral();
 
-  return t.stringLiteral(String(value));
+  return t.valueToNode(value) as BabelTypes.Expression;
 }

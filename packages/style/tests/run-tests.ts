@@ -1,3 +1,4 @@
+import './extracted-tokens.test';
 import './core.test';
 import './compiler.test';
 import './runtime.test';

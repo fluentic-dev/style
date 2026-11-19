@@ -168,7 +168,7 @@ async function verify004() {
     {
       description: 'nested token tree is compiled',
       pass: (s) =>
-        /createExtractedToken\(['"]tokens-/.test(s) &&
+        /createExtractedToken\(\s*['"]tokens-/.test(s) &&
         s.includes('--color--bg') &&
         s.includes('--color--accentText') &&
         s.includes('--shadow--card'),
@@ -271,18 +271,18 @@ async function verify006() {
     {
       description: 'top-level inline Tailwind branches are compiled to token var strings',
       pass: (s) =>
-        /topLevelFeatured\s*\?\s*['"]var\(--token-snapshot-tailwind-color-blue-600-/.test(s) &&
-        /:\s*['"]var\(--token-snapshot-tailwind-color-emerald-600-/.test(s) &&
-        /topLevelFeatured\s*\?\s*['"]var\(--token-snapshot-tailwind-color-accent-/.test(s) &&
-        /:\s*['"]var\(--token-snapshot-tailwind-color-border-/.test(s),
+        /topLevelFeatured\s*\?\s*['"]var\(--token-snapshot-tailwind-color-blue-600,/.test(s) &&
+        /:\s*['"]var\(--token-snapshot-tailwind-color-emerald-600,/.test(s) &&
+        /topLevelFeatured\s*\?\s*['"]var\(--token-snapshot-tailwind-color-accent,/.test(s) &&
+        /:\s*['"]var\(--token-snapshot-tailwind-color-border,/.test(s),
     },
     {
       description: 'component-local inline Tailwind branches keep hoisted token binding with compiled values',
       pass: (s) =>
-        /withTokens\(_fluenticStyle\d*, \[[\s\S]*_fluenticToken3\(\s*featured\s*\?\s*['"]var\(--token-snapshot-tailwind-color-accentSoft-/
+        /withTokens\(_fluenticStyle\d*, \[[\s\S]*_fluenticToken3\(\s*featured\s*\?\s*['"]var\(--token-snapshot-tailwind-color-accentSoft,/
           .test(s) &&
-        /_fluenticToken4\(\s*featured\s*\?\s*['"]var\(--token-snapshot-tailwind-color-accent-/.test(s) &&
-        /_fluenticToken5\(\s*featured\s*\?\s*['"]var\(--token-snapshot-tailwind-color-panelRaised-/.test(s),
+        /_fluenticToken4\(\s*featured\s*\?\s*['"]var\(--token-snapshot-tailwind-color-accent,/.test(s) &&
+        /_fluenticToken5\(\s*featured\s*\?\s*['"]var\(--token-snapshot-tailwind-color-panelRaised,/.test(s),
     },
     {
       description: 'dynamic named token values use the regular extracted token path',
@@ -323,8 +323,8 @@ async function verify007() {
 
   const cssChecks: Check[] = [
     {
-      description: 'createTheme names strip generic theme prefixes',
-      pass: (s) => s.includes('.theme-light-') && s.includes('.theme-brand-'),
+      description: 'createTheme emits distinct classes with the default theme format',
+      pass: (s) => new Set(s.match(/\.theme-[a-z0-9]+(?=\{)/g)).size === 2,
     },
     {
       description: 'createToken names are readable',
@@ -361,8 +361,8 @@ async function verify007() {
       description: 'compiled output records extracted theme class names',
       pass: (s) =>
         s.includes('createExtractedTheme') &&
-        s.includes('theme-light-') &&
-        s.includes('theme-brand-'),
+        [...s.matchAll(/createExtractedTheme\(['"][^'"]+['"], ['"]([^'"]+)['"]\)/g)]
+            .filter((match) => css.includes('.' + match[1] + '{')).length === 2,
     },
     {
       description: 'compiled extracted tokens keep readable name metadata',
@@ -426,7 +426,6 @@ async function verify008() {
       description: 'keeps public extracted runtime APIs in compiled output',
       pass: (s) =>
         s.includes('combineStyle') &&
-        s.includes('combineScope') &&
         s.includes('bindScope') &&
         s.includes('getClassName') &&
         s.includes('getToken') &&

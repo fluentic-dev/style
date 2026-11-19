@@ -1,18 +1,17 @@
-import { createExtractedTheme, createExtractedStyle, createExtractedToken } from "@fluentic/style/entry/prod/extract";
-import { createToken, createTokens, createValues } from '@fluentic/style';
-const accent = createToken('#2563eb', "accent-1aa1amz");
-const anonymous = createToken('#f8fafc', "anonymous-1xh1kuq");
-const theme = createTokens({
-  background: {
-    page: '#ffffff',
-    panel: '#f8fafc'
+import { createExtractedToken, createExtractedValues, createExtractedTheme, createExtractedStyle } from "@fluentic/style/entry/prod/extract";
+const accent = /*#__PURE__*/createExtractedToken("accent-1aa1amz", '#2563eb', null, "accent", "--token-accent-fgi48a0");
+const anonymous = /*#__PURE__*/createExtractedToken("anonymous-1xh1kuq", '#f8fafc', null, "anonymous", "--token-anonymous-rwi1ju0");
+const theme = {
+  "background": {
+    "page": /*#__PURE__*/createExtractedToken("theme-bk42mu0--background--page", '#ffffff', null, "theme--background--page", "--token-theme--background--page-e1i47t0"),
+    "panel": /*#__PURE__*/createExtractedToken("theme-bk42mu0--background--panel", '#f8fafc', null, "theme--background--panel", "--token-theme--background--panel-dos1680")
   },
-  text: {
-    body: '#111827'
+  "text": {
+    "body": /*#__PURE__*/createExtractedToken("theme-bk42mu0--text--body", '#111827', null, "theme--text--body", "--token-theme--text--body-bynybyh")
   }
-}, "theme-bk42mu0");
-const space = createValues(Number, ['8 | sm', '16 | lg'], "space-fhhayp0");
-const tone = createValues(['#ffffff | Surface', '#111827; Text'], "tone-1fbxbq5");
+};
+const space = /*#__PURE__*/createExtractedValues([["8 | sm", createExtractedToken("space-fhhayp0--1npztr5", 8, null, "space--sm", "--token-space--sm-abkyyw0")], ["16 | lg", createExtractedToken("space-fhhayp0--18lwlij", 16, null, "space--lg", "--token-space--lg-b5tt13t")]]);
+const tone = /*#__PURE__*/createExtractedValues([["#ffffff | Surface", createExtractedToken("tone-1fbxbq5--l5s9j10", "#ffffff", null, "tone--Surface", "--token-tone--Surface-zw6mvl0")], ["#111827; Text", createExtractedToken("tone-1fbxbq5--yj3jwy0", "#111827", null, "tone--Text", "--token-tone--Text-b2x1kh5")]]);
 export const lightTheme = createExtractedTheme("theme-light", "theme-light-i66w530");
 export const brandTheme = createExtractedTheme("themes--brand", "theme-brand-eno7nq0");
-export const card = createExtractedStyle([["mwx9540", "background-color--z7qj3j0", [1, "--var-bhj8q9c", createExtractedToken("theme-bk42mu0--background--page", "#ffffff", null, "theme--background--page", "--token-theme--background--page-e1i47t0"), 1]], ["109h4xq", "border-color--bo01j9h", [1, "--var-qv6lvd0", createExtractedToken("accent-1aa1amz", "#2563eb", null, "accent", "--token-accent-fgi48a0"), 1]], ["1qi6vb6", "box-shadow--hs3sjc0", [1, "--var-bn86woy", createExtractedToken("anonymous-1xh1kuq", "#f8fafc", null, "anonymous", "--token-anonymous-rwi1ju0"), 1]], ["18q1j80", "color--b4s6gsg", [1, "--var-b64ooej", createExtractedToken("theme-bk42mu0--text--body", "#111827", null, "theme--text--body", "--token-theme--text--body-bynybyh"), 1]], ["1r0p66z", "margin--bho9clm", [1, "--var-yiirqk0", createExtractedToken("space-fhhayp0--1npztr5", 8, null, "space--sm", "--token-space--sm-abkyyw0"), 1]], ["1ffb9qm", "padding--bxmgc3b", [1, "--var-luznnp0", createExtractedToken("space-fhhayp0--18lwlij", 16, null, "space--lg", "--token-space--lg-b5tt13t"), 1]], ["d1c10h0", "background-color-hover--cu8ijf0", [1, "--var-bm1icrq", createExtractedToken("tone-1fbxbq5--l5s9j10", "#ffffff", null, "tone--Surface", "--token-tone--Surface-zw6mvl0"), 1]], ["1qmb2bt", "color-hover--guie3f0", [1, "--var-y9cujx0", createExtractedToken("tone-1fbxbq5--yj3jwy0", "#111827", null, "tone--Text", "--token-tone--Text-b2x1kh5"), 1]]]);
+export const card = createExtractedStyle([["mwx9540", "background-color--z7qj3j0", [1, "--var-bhj8q9c", theme.background.page, 1]], ["109h4xq", "border-color--bo01j9h", [1, "--var-qv6lvd0", accent, 1]], ["1qi6vb6", "box-shadow--hs3sjc0", [1, "--var-bn86woy", anonymous, 1]], ["18q1j80", "color--b4s6gsg", [1, "--var-b64ooej", theme.text.body, 1]], ["1r0p66z", "margin--bho9clm", [1, "--var-yiirqk0", space('8 | sm'), 1]], ["1ffb9qm", "padding--bxmgc3b", [1, "--var-luznnp0", space('16 | lg'), 1]], ["d1c10h0", "background-color-hover--cu8ijf0", [1, "--var-bm1icrq", tone('#ffffff | Surface'), 1]], ["1qmb2bt", "color-hover--guie3f0", [1, "--var-y9cujx0", tone('#111827; Text'), 1]]]);

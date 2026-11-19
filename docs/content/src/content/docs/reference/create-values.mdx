@@ -89,3 +89,22 @@ labeledSpace('12 | md', 16);
 
 This keeps a readable label in source while the actual style value is the
 number before the label separator.
+
+
+## String Interpolation and Production Extraction
+
+Use `getToken` when embedding a value token in a CSS string, including a shared
+constant outside a style call:
+
+```ts
+import { createValues, getToken, style } from '@fluentic/style';
+
+const color = createValues(['#e8eaf0 | border']);
+const border = `1px solid ${getToken(color('#e8eaf0 | border'))}`;
+const card = style({ border });
+```
+
+Production extraction compiles the value scale at its definition. The lookup
+function returns tokens with their CSS variable names already attached, so
+`getToken` also works when this code runs in the browser. The scale entries must
+be statically resolvable; the selected key and override value can vary at runtime.

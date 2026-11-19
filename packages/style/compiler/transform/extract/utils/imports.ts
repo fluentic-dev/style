@@ -3,6 +3,9 @@ import {
   FN_COMBINE_SCOPE,
   FN_COMBINE_STYLE,
   FN_CREATE_THEME,
+  FN_CREATE_TOKEN,
+  FN_CREATE_TOKENS,
+  FN_CREATE_VALUES,
   FN_GET_CLASS_NAME,
   FN_GET_TOKEN,
   IMPORT_PATHS,
@@ -128,5 +131,6 @@ function isCompilerHandledImport(
   source: string,
   name: string,
 ) {
-  return IMPORT_PATHS.includes(source) && name === FN_CREATE_THEME;
+  return IMPORT_PATHS.includes(source) &&
+    [FN_CREATE_THEME, FN_CREATE_TOKEN, FN_CREATE_TOKENS, FN_CREATE_VALUES].includes(name);
 }

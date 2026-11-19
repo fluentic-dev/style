@@ -1,10 +1,9 @@
 /* eslint-disable */
-import { bindScope, combineStyle, createToken, style } from '@fluentic/style';
+import { bindScope, combineStyle, style } from '@fluentic/style';
 import {
   createExtractedScope,
   createExtractedSlot,
   createExtractedStyle,
-  createExtractedStyleMerge,
   createExtractedToken,
   withTokens,
 } from '@fluentic/style/entry/prod/extract';
@@ -20,16 +19,19 @@ const dynamicStyle = createExtractedStyle([['1phh07j', 'bm8z8e7', [1, '--var-iaf
   'l9tsy00',
   [1, '--var-ba7b46t', density * 2, 1],
 ]]);
-const _fluenticStyle2 = createExtractedStyleMerge([['18q1j80', 'b7lpaos', [1, '--var-jg49df0', _fluenticToken, 1]], [
-  'mwx9540',
-  'h44xih0',
-], ['1omoamz', 'bh7gltt', [1, '--var-bjwbpju', _fluenticToken2, 1]]], dynamicStyle);
+const _fluenticStyle2 = createExtractedStyle([
+  ['18q1j80', 'b7lpaos', [1, '--var-jg49df0', _fluenticToken, 1]],
+  ['mwx9540', 'h44xih0'],
+  ['1omoamz', 'bh7gltt', [1, '--var-bjwbpju', _fluenticToken2, 1]],
+  ['1phh07j', 'bm8z8e7', [1, '--var-iafi210', density, 1]],
+  ['1ffb9qm', 'l9tsy00', [1, '--var-ba7b46t', density * 2, 1]],
+]);
 enum TextTone {
   Danger = 'red',
   Hover = 'blue',
   Mobile = 'green',
 }
-const token = createToken('blue', 'token-1jb1zmc');
+const token = /*#__PURE__*/ createExtractedToken('token-1jb1zmc', 'blue', null, null, '--token-v95nzv0');
 const containerHover = style.raw({
   gap: density * 3,
   backgroundColor: token,
@@ -42,12 +44,7 @@ const styles = {
     ['1phh07j', 'bn5yexc', [1, '--var-lh6v6q0', density * 4, 1]],
     ['dz1dcy0', 'bkx1zo2'],
     ['1tysl6a', 'p8rx110', [1, '--var-cap3zp0', density * 3, 1]],
-    ['d1c10h0', 'bevm3we', [
-      1,
-      '--var-cap3zp0',
-      createExtractedToken('token-1jb1zmc', 'blue', null, null, '--token-v95nzv0'),
-      1,
-    ]],
+    ['d1c10h0', 'bevm3we', [1, '--var-cap3zp0', token, 1]],
   ]),
   container2: createExtractedSlot('ho4zce0', [['1hznesf', 'bil4cl0'], ['1nca60l', 'bf72i63'], ['dz1dcy0', 'bej6r0o']]),
   text: createExtractedSlot('nmrp0v0', [['18q1j80', 'g21wjn0']]),

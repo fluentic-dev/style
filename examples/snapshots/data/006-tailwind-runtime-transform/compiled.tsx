@@ -36,8 +36,8 @@ export const topLevelDynamic = createExtractedStyle([
     1,
     '--var-gcu4580',
     topLevelFeatured
-      ? 'var(--token-snapshot-tailwind-color-blue-600-a6vq1y0, #2563eb)'
-      : 'var(--token-snapshot-tailwind-color-emerald-600-bkbhka4, #059669)',
+      ? 'var(--token-snapshot-tailwind-color-blue-600, #2563eb)'
+      : 'var(--token-snapshot-tailwind-color-emerald-600, #059669)',
     1,
   ]],
   ['rykr7b0', 'b3cpjgx'],
@@ -45,8 +45,8 @@ export const topLevelDynamic = createExtractedStyle([
     1,
     '--var-i7awe00',
     topLevelFeatured
-      ? 'var(--token-snapshot-tailwind-color-accent-b7ev0p7, #0f766e)'
-      : 'var(--token-snapshot-tailwind-color-border-bai0r5n, #d8e5e0)',
+      ? 'var(--token-snapshot-tailwind-color-accent, #0f766e)'
+      : 'var(--token-snapshot-tailwind-color-border, #d8e5e0)',
     1,
   ]],
   ['1ffb9qm', 'o7dkd70'],
@@ -69,23 +69,23 @@ export function TailwindRuntimeTransform({
               withTokens(_fluenticStyle3, [
                 _fluenticToken3(
                   featured
-                    ? 'var(--token-snapshot-tailwind-color-accentSoft-b30u4on, #d9f4ee)'
-                    : 'var(--token-snapshot-tailwind-color-panel-bweossh, #ffffff)',
+                    ? 'var(--token-snapshot-tailwind-color-accentSoft, #d9f4ee)'
+                    : 'var(--token-snapshot-tailwind-color-panel, #ffffff)',
                 ),
                 _fluenticToken4(
                   featured
-                    ? 'var(--token-snapshot-tailwind-color-accent-b7ev0p7, #0f766e)'
-                    : 'var(--token-snapshot-tailwind-color-border-bai0r5n, #d8e5e0)',
+                    ? 'var(--token-snapshot-tailwind-color-accent, #0f766e)'
+                    : 'var(--token-snapshot-tailwind-color-border, #d8e5e0)',
                 ),
                 _fluenticToken5(
                   featured
-                    ? 'var(--token-snapshot-tailwind-color-panelRaised-b0vvzg1, #eef7f4)'
-                    : 'var(--token-snapshot-tailwind-color-panel-bweossh, #ffffff)',
+                    ? 'var(--token-snapshot-tailwind-color-panelRaised, #eef7f4)'
+                    : 'var(--token-snapshot-tailwind-color-panel, #ffffff)',
                 ),
                 _fluenticToken6(
                   featured
-                    ? 'var(--token-snapshot-tailwind-color-accentHover-kgd6ob0, #115e59)'
-                    : 'var(--token-snapshot-tailwind-color-accent-b7ev0p7, #0f766e)',
+                    ? 'var(--token-snapshot-tailwind-color-accentHover, #115e59)'
+                    : 'var(--token-snapshot-tailwind-color-accent, #0f766e)',
                 ),
               ]),
             ]}

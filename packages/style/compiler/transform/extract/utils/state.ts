@@ -13,6 +13,7 @@ export type HoistedDeclaration = {
 };
 
 export type ExtractPluginState = {
+  tokenFactoryReplacements: Map<BabelTypes.CallExpression, BabelTypes.Expression>;
   fileId: string;
   filePath: string;
   styleFilePath: string;
@@ -47,5 +48,6 @@ export function getEvalScope(state: ExtractPluginState): EvalScope {
     styleMetas: state.styleMetas,
     bindingNodes: state.bindingNodes,
     runtimeMode: state.runtimeMode,
+    tokenNameFormat: state.options.css?.tokenNameFormat ?? null,
   };
 }

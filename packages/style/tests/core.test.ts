@@ -1082,7 +1082,7 @@ test('named tokens use stable ids for theme overrides', () => {
   const rule = createThemeRule(themed);
 
   includes(result.className ?? '', 'color');
-  includes(rule, '--token-test-named-color-accent-');
+  includes(rule, '--token-test-named-color-accent');
   includes(rule, ':#60a5fa');
 
   configureTestRuntime({ dev: false });

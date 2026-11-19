@@ -77,6 +77,7 @@ export function createStyleTokenOverride<T>(
       [TOKEN_ID]: getStyleTokenId(token),
       [TOKEN_OVERRIDE]: true,
       [TOKEN_NAME]: getStyleTokenName(token),
+      [TOKEN_VAR_NAME]: token[TOKEN_VAR_NAME] ?? null,
       value: value.value,
       ref: value,
     }
@@ -84,6 +85,7 @@ export function createStyleTokenOverride<T>(
       [TOKEN_ID]: getStyleTokenId(token),
       [TOKEN_OVERRIDE]: true,
       [TOKEN_NAME]: getStyleTokenName(token),
+      [TOKEN_VAR_NAME]: token[TOKEN_VAR_NAME] ?? null,
       value: value as T,
       ref: null,
     };

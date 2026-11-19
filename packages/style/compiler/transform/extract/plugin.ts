@@ -15,7 +15,12 @@ import {
 } from '../../utils/constants';
 import { createImportSourceMatcher } from '../../utils/import_source';
 import { normalizePath } from '../../utils/path';
-import { evaluateEnumDeclaration, evaluateNode } from '../evaluator/evaluator';
+import {
+  COMPILED_TOKEN_REFERENCE,
+  type CompiledTokenReference,
+  evaluateEnumDeclaration,
+  evaluateNode,
+} from '../evaluator/evaluator';
 import { getImportedName } from '../syntax';
 import { annotateAtRuleDeclaration } from '../syntax/static_ids';
 import { BabelCore } from '../utils/babel';
@@ -28,7 +33,7 @@ import { buildReplacement } from './utils/replacement';
 import { recordCompiledBinding } from './utils/slot';
 import { type ExtractPluginState, getEvalScope, type HoistedDeclaration } from './utils/state';
 import { compileThemeCall } from './utils/theme';
-import { annotateTokenDeclaration } from './utils/token';
+import { annotateTokenDeclaration, compileTokenFactory } from './utils/token';
 
 export type PluginState = BabelCore.PluginPass & ExtractPluginState;
 
@@ -59,6 +64,7 @@ export function createExtractPlugin(args: PluginArgs) {
 
     return {
       pre(this) {
+        this.tokenFactoryReplacements = new Map();
         this.styleNames = new Set();
         this.sheetNames = new Set();
         this.styleMetas = new Map();
@@ -161,6 +167,14 @@ export function createExtractPlugin(args: PluginArgs) {
         },
 
         CallExpression(path, state) {
+          if (mode === 'extract') {
+            try {
+              const tokenFactory = compileTokenFactory(path.node, state, t);
+              if (tokenFactory) state.tokenFactoryReplacements.set(path.node, tokenFactory);
+            } catch (error) {
+              throw path.buildCodeFrameError(error instanceof Error ? error.message : String(error));
+            }
+          }
           if (
             path.parent.type === 'MemberExpression' &&
             !(path.parent.computed)
@@ -270,6 +284,15 @@ export function createExtractPlugin(args: PluginArgs) {
           exit(path, state) {
             if (mode === 'collect') return;
 
+            path.traverse({
+              CallExpression(factoryPath) {
+                const replacement = state.tokenFactoryReplacements.get(factoryPath.node);
+                if (!replacement) return;
+                factoryPath.replaceWith(replacement);
+                factoryPath.skip();
+                state.needsExtractImport = true;
+              },
+            });
             pruneUnusedStyleInputDeclarations(path, state);
             pruneUnusedStyleImports(path, state);
 
@@ -466,8 +489,11 @@ function createRuntimeTokenCollector(
 
   return {
     overrides,
-    addOverride(item: { valueNode: BabelTypes.Expression; }) {
-      overrides.push(args.t.cloneNode(item.valueNode));
+    addOverride(item: { valueNode: BabelTypes.Expression; value: unknown; }) {
+      const reference = (item.value as CompiledTokenReference)[COMPILED_TOKEN_REFERENCE];
+      overrides.push(
+        args.t.cloneNode(reference?.filePath === args.state.filePath ? reference.expression : item.valueNode, true),
+      );
     },
     add(item: object, valueNode: BabelTypes.Expression) {
       if (canHoistRuntimeValue(args.path, valueNode)) {

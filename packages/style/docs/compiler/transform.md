@@ -15,6 +15,10 @@ The compiler may use the style function transform while compiling. The compiled
 program should contain extracted style helpers, extracted token bindings, and
 remaining runtime values only.
 
+Ordinary token factory lowering, reference preservation, and the extracted
+`getToken()` contract are documented in
+[`token-factories.md`](./token-factories.md).
+
 ## Static Style Objects
 
 Static style objects are transformed at compile time.

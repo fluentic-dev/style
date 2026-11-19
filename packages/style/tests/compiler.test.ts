@@ -2272,7 +2272,7 @@ export const sheet = createSheet([
 
   includes(result.code, 'createExtractedSheet');
   includes(result.code, 'createExtractedToken');
-  includes(result.code, ')("red")');
+  includes(result.code, "color('red')");
   includes(result.css.join('\n'), ' .third-party-label{color:');
 });
 
@@ -2321,7 +2321,8 @@ export const roseSheet = createSheet([
   if (!themesResult) throw new Error('expected themes compiler transform result');
 
   const styleTokenVar = stylesResult.css.join('\n').match(/var\((--token-selectTokens--accent-[^,)]+)/)?.[1];
-  const themeTokenVar = themesResult.code.match(/(--token-selectTokens--accent-[^"`]+)/)?.[1];
+  const themeTokenVar = stylesResult.code.match(/(--token-selectTokens--accent-[^"`]+)/)?.[1];
+  includes(themesResult.code, "selectTokens.accent('#c0265a')");
 
   if (!styleTokenVar) {
     throw new Error(`expected selector CSS to use the named select token in ${stylesResult.css.join('\n')}`);
@@ -2500,7 +2501,7 @@ const scope = style.scope([
   includes(result.code, 'createExtractedScope');
   includes(result.code, 'const scope = createExtractedScope');
   includes(result.code, 'createExtractedToken');
-  includes(result.code, ')("green")');
+  includes(result.code, "token('green')");
   notIncludes(result.code, '("red")');
   notIncludes(result.code, 'withTokens');
   notIncludes(result.code, "createExtractedScope([token('red')");
@@ -2564,7 +2565,7 @@ const styles = {
 
   if (!match) throw new Error('expected property-local token variable');
 
-  includes(result.code, `[1, "${match[1]}", createExtractedToken(`);
+  includes(result.code, `[1, "${match[1]}", token`);
 });
 
 test('compiler extracts static siblings when a style object has a dynamic value', () => {
@@ -3321,7 +3322,7 @@ export const page = cx('bg-paper');
   const rule = result?.rules.find((item) => item.className.startsWith('bg-paper--'));
 
   if (!rule) throw new Error('expected bg-paper rule');
-  includes(rule.css, 'var(--token-test-color-paper-');
+  includes(rule.css, 'var(--token-test-color-paper');
   notIncludes(rule.css, 'var(--var-');
 });
 
@@ -3426,8 +3427,8 @@ export const card = style({ backgroundColor: color('#ffffff | Canvas') });
   });
 
   if (!result) throw new Error('expected extracted transform result');
-  includes(result.code, 'createExtractedToken(');
-  notIncludes(result.code, `color('#ffffff | Canvas')`);
+  notIncludes(result.code, 'createExtractedToken(');
+  includes(result.code, `color('#ffffff | Canvas')`);
 });
 
 test('rsc dev css precollect includes imported createValues from theme modules with named tokens', () => {
@@ -3502,7 +3503,7 @@ export const priceCard = style({
   includes(css, 'border: 1px solid');
   includes(css, 'background-color: var(--var-');
   includes(css, 'border-color: var(--var-');
-  includes(css, 'background: linear-gradient(180deg, var(--token-sympl-theme-color-wave2-');
+  includes(css, 'background: linear-gradient(180deg, var(--token-sympl-theme-color-wave2');
 });
 
 test('next turbopack dev loader uses rsc runtime for explicit getClassName calls', async () => {
@@ -4540,8 +4541,8 @@ export const Themes = {
 
   includes(result.code, 'createExtractedTheme');
   includes(css, '.theme-');
-  includes(css, '--token-app-color-accent-');
-  includes(css, '--token-app-color-accentHover-');
+  includes(css, '--token-app-color-accent');
+  includes(css, '--token-app-color-accentHover');
   includes(css, ':#60a5fa');
   includes(css, ':#2563eb');
   notIncludes(result.code, 'createTheme,');
@@ -4576,8 +4577,8 @@ export const Themes = {
 
   includes(result.code, 'createExtractedTheme');
   includes(css, '.theme-');
-  includes(css, '--token-app-color-accent-');
-  includes(css, '--token-app-color-blue-600-');
+  includes(css, '--token-app-color-accent');
+  includes(css, '--token-app-color-blue-600');
   includes(css, ':#60a5fa');
   includes(css, ':#2563eb');
   notIncludes(result.code, 'createTheme,');

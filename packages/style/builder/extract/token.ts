@@ -55,3 +55,13 @@ function isExtractedTokenRef(value: unknown): value is StyleTokenData {
     typeof (value as StyleTokenData)[TOKEN_ID] === 'string' &&
     (value as { [TOKEN_OVERRIDE]?: true; })[TOKEN_OVERRIDE] !== true;
 }
+
+/** A compiled value scale: parsing and CSS variable naming happen in the compiler. */
+export function createExtractedValues(entries: readonly (readonly [string | number, StyleToken<unknown>])[]) {
+  const tokens = new Map(entries);
+  return function(key: string | number, value?: unknown) {
+    const token = tokens.get(key);
+    if (!token) throw new Error(`[Style.values] VALUE_NOT_FOUND: ${String(key)}`);
+    return arguments.length >= 2 ? token(value) : token;
+  };
+}

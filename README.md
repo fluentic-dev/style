@@ -455,8 +455,9 @@ production builds. Current benchmark snapshots:
 The main production checks are runtime cost and bundle size. In the production
 path most apps use, Fluentic extracts CSS at build time and ships the extracted
 production runtime for `css` prop composition, dynamic values, class-name
-merging, and token resolution. That runtime entry currently reports `4.92 KB`
-min+gzip.
+merging, and token resolution. The measured runtime surface reports `4.98 KiB`
+min+gzip in beta.14; generated helpers and the optional JSX/dialect surfaces are
+reported separately.
 Browser and SSR benchmarks track whether style resolution stays fast in
 app-shaped renders. See the
 [Bundle Size](https://fluenticstack.com/style/docs/benchmark/bundle-size/),
