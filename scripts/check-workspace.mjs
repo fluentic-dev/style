@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process';
 
-const checks = ['lintcheck', 'formatcheck', 'typecheck'];
+const checks = ['lintcheck', 'formatcheck', 'llms:check', 'typecheck'];
 const failures = [];
 
 for (const check of checks) {

@@ -2,7 +2,13 @@
 
 > @fluentic/style is a typed styling library for element styles, reusable component slots, scope-based overrides, themeable tokens and app values. Author in TypeScript; use a bundler plugin for production CSS extraction while retaining dynamic styles.
 
-Documentation target: 0.1.0-beta.11. Start with Setup and Core for new implementations. For migrations, also read the common migration contract and the matching source guide. Fetch only relevant guides; the complete guide is available for clients that need one file. These files focus on implementation and omit debugging workflows.
+Documentation target: 0.1.0-beta.12. Start with Setup and Core for new implementations. For migrations, also read the common migration contract and the matching source guide. Fetch only relevant guides; the complete guide is available for clients that need one file. These files focus on implementation and omit debugging workflows.
+
+Reading paths:
+- New app: Setup → your bundler → Core → Complete example when you need runnable code.
+- Migration: also read Migration contract → only your source library guide.
+- Read Extensions and interop only for custom builders or third-party boundaries.
+- Fetch each guide once. Use the complete file instead of individual guides, not in addition to them.
 
 Quick install (choose the project's package manager):
 
@@ -21,6 +27,7 @@ Use style() for one element; style.slot() for public component parts; style.scop
 
 - [Setup](https://fluenticstack.com/style/llms/setup.txt): Installation, framework/JSX choices, integration selection and shared production requirements. Read first.
 - [Core](https://fluenticstack.com/style/llms/core.txt): Styles, composition, selectors, slots, scopes, component contracts, tokens, values, themes and priority. Read for every implementation.
+- [Complete example](https://fluenticstack.com/style/llms/example.txt): Runnable React/Vite project generated from checked source; tokens, slots, variants, app themes and consumer overrides.
 - [Extensions and interop](https://fluenticstack.com/style/llms/advanced.txt): Custom builders, compiler registration, className/style boundaries and CSS at-rules. Read only when needed.
 
 ## Bundler setup

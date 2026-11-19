@@ -1,6 +1,6 @@
 # Fluentic Style: core authoring
 
-Read setup.txt first. Examples use public imports from `@fluentic/style` unless stated otherwise. Define referenced style maps before using them; snippets illustrate independent patterns.
+Read [setup](https://fluenticstack.com/style/llms/setup.txt) first. For a complete runnable project, use the [generated example](https://fluenticstack.com/style/llms/example.txt). Examples use public imports from `@fluentic/style` unless stated otherwise. Define referenced style maps before using them; snippets illustrate independent patterns.
 
 ## 1. Start With `style`
 

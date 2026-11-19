@@ -82,6 +82,15 @@ Do not edit the generated copies in `docs/app/public`. The sidebar links directl
 to `/style/llms.txt` after Playground. After deployment, verify the entry URL,
 complete guide and migration URLs return plain text.
 
+The `@example/llm-basic` workspace supplies the runnable `/style/llms/example.txt`
+guide. Its source/config files are copied verbatim; the generated package manifest
+uses the public Fluentic version and omits repository browser-test tooling.
+The normal `pnpm check` includes `llms:check`. Run `pnpm llms:check` to validate guide links/version targets, report approximate
+token sizes, and typecheck/build the example. Run
+`pnpm --filter @example/llm-basic test:browser` afterward for production browser
+checks (installed Chrome, or `CHROME_PATH`). See the example README for fresh-agent
+evaluation tasks; browser checks do not substitute for independent agent trials.
+
 ## Benchmark Commands
 
 The benchmark suite lives in [`benchmark`](./benchmark/README.md). Run commands

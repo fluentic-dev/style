@@ -19,6 +19,43 @@ async function collect(relative) {
   }
 }
 await collect('llms');
+const packageInfo = JSON.parse(await readFile(path.join(root, 'packages/style/package.json'), 'utf8'));
+for (const name of ['llms.txt', 'llms/setup.txt']) {
+  if (!files.get(name).includes(packageInfo.version)) {
+    throw new Error(`${name}: update documentation target to ${packageInfo.version}`);
+  }
+}
+const exampleRoot = path.join(root, 'examples/llm-basic');
+const examplePackage = JSON.parse(await readFile(path.join(exampleRoot, 'package.json'), 'utf8'));
+examplePackage.dependencies['@fluentic/style'] = packageInfo.version;
+delete examplePackage.scripts['test:browser'];
+delete examplePackage.devDependencies['playwright-core'];
+const exampleFiles = [
+  'package.json',
+  'index.html',
+  'tsconfig.json',
+  'vite.config.ts',
+  'src/button.styles.ts',
+  'src/Button.tsx',
+  'src/theme.ts',
+  'src/App.tsx',
+  'src/main.tsx',
+];
+const exampleParts = [
+  '# Fluentic Style: complete React + Vite example',
+  `Generated from @example/llm-basic, validated against @fluentic/style ${packageInfo.version}.`,
+  'Create the files below in an empty directory. Run npm install, npm run typecheck, and npm run build; use npm run dev to open the app. Other package managers work too. For an existing app, merge configuration and keep its installed framework versions.',
+  'Read setup and core for API semantics. Button owns its tokens and slots; theme.ts connects them to app values. The app switches token themes, selects variants, overrides public parts, and puts consumer root css last. Native button props and event handlers are preserved.',
+  'The package manifest is generated from the workspace example with a public dependency version and without repository-only browser test tooling. All other files are copied verbatim. File order below is for reading, not execution.',
+];
+for (const name of exampleFiles) {
+  const content = name === 'package.json'
+    ? JSON.stringify(examplePackage, null, 2) + '\n'
+    : await readFile(path.join(exampleRoot, name), 'utf8');
+  const language = path.extname(name).slice(1);
+  exampleParts.push(`## ${name}\n\n\`\`\`${language}\n${content.trimEnd()}\n\`\`\``);
+}
+files.set('llms/example.txt', exampleParts.join('\n\n') + '\n');
 files.set(
   'llms-full.txt',
   [
@@ -28,6 +65,7 @@ files.set(
       'llms/setup.txt',
       ...[...files.keys()].filter((name) => name.startsWith('llms/integrations/')),
       'llms/core.txt',
+      'llms/example.txt',
       'llms/advanced.txt',
       'llms/migrations/common.txt',
       ...[...files.keys()].filter((name) => name.startsWith('llms/migrations/') && !name.endsWith('/common.txt')),
@@ -41,6 +79,14 @@ for (const [name, content] of files) {
   for (const match of content.matchAll(/https:\/\/fluenticstack\.com\/style\/(llms[^\s)\]]*\.txt)/g)) {
     if (!files.has(match[1])) throw new Error(`${name}: missing guide ${match[1]}`);
   }
+}
+// Estimates are character-based, not model-specific tokenizer measurements.
+for (const [name, content] of files) {
+  console.log(`${name}: ${content.length} characters, ~${Math.ceil(content.length / 4)} tokens (estimate)`);
+}
+if (process.argv.includes('--check')) {
+  console.log(`Validated ${files.size} guides and generated the example in memory.`);
+  process.exit(0);
 }
 await mkdir(publicDir, { recursive: true });
 await rm(path.join(publicDir, 'llms'), { recursive: true, force: true });

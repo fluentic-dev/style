@@ -29,7 +29,8 @@
     "lintcheck": "pnpm run lint",
     "lint:fix": "oxlint . --fix",
     "test:package": "node scripts/test-package.mjs",
-    "release:check": "pnpm --filter @fluentic/style build && pnpm check && pnpm test && pnpm build && pnpm --filter @example/nextjs test:prod && pnpm test:package"
+    "release:check": "pnpm --filter @fluentic/style build && pnpm check && pnpm test && pnpm build && pnpm --filter @example/nextjs test:prod && pnpm test:package",
+    "llms:check": "node scripts/sync-llms.mjs --check && pnpm --filter @fluentic/style build && pnpm --filter @example/llm-basic typecheck && pnpm --filter @example/llm-basic build"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",
