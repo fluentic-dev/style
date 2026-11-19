@@ -19,11 +19,22 @@ entry, then creates a small minified bundle for the imported public surface.
 ## Current Report
 
 This is the local report for `@fluentic/style@0.1.0-beta.14`, generated on
-2026-11-19. Sizes use KiB (1,024 bytes) and gzip level 9.
+2026-11-19 from implementation commit `02de0f50`, including the `_x<hex>_`
+named-token escape format. Sizes use KiB (1,024 bytes) and gzip level 9.
 
 The extracted production runtime is the important static-extraction budget:
 `4.98 KiB` min+gzip. The extracted JSX runtime is `2.78 KiB` min+gzip, and the
-generated extracted helpers are `878 B` min+gzip.
+generated extracted helpers are `878 B` min+gzip. The exact gzip sizes are:
+
+| Measured surface | Gzip bytes |
+| --- | ---: |
+| Extracted production runtime | 5,097 B |
+| Extracted JSX runtime | 2,849 B |
+| Generated helpers | 878 B |
+| Optional named tokens | 1,225 B |
+
+The refreshed measurements retain the same rounded KiB values as the previous
+beta.14 report.
 
 | Entry | Graph raw | Graph gzip | Min raw | Min gzip |
 | --- | ---: | ---: | ---: | ---: |
