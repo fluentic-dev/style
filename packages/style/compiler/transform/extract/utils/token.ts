@@ -85,7 +85,8 @@ export function compileTokenFactory(
   }
   function member(source: BabelTypes.Expression, key: string): BabelTypes.Expression {
     if (source.type === 'ObjectExpression') {
-      for (const property of [...source.properties].reverse()) {
+      for (let index = source.properties.length - 1; index >= 0; index--) {
+        const property = source.properties[index]!;
         if (property.type !== 'ObjectProperty' || property.computed) break;
         if (getObjectPropertyKey(property) === key) return property.value as BabelTypes.Expression;
       }
