@@ -1,10 +1,10 @@
 ---
 title: Tailwind Style Object Preset
-description: Use Tailwind-like utility object fields with Fluentic chains.
+description: Use Tailwind-like utility object fields with style chains.
 ---
 
 The Tailwind style object preset provides a Tailwind-like utility dialect as a
-normal Fluentic style transform.
+normal style transform.
 
 It keeps the Fluentic split:
 
@@ -20,7 +20,7 @@ So instead of Tailwind variant prefixes:
 className="px-4 py-2 hover:bg-blue-700 md:px-6"
 ```
 
-you write utility props and Fluentic chains:
+you write utility props and style chains:
 
 ```tsx
 css={tw({ px: '$4', py: '$2', bg: '$accent' })
@@ -31,7 +31,7 @@ css={tw({ px: '$4', py: '$2', bg: '$accent' })
 The preset is an extension utility, not a separate styling model. It gives teams
 Tailwind's familiar vocabulary with a small syntax shift: utility names become
 object fields, theme scale segments become `$...` refs, and variants become
-Fluentic chains.
+style chains.
 
 The tradeoff is that object syntax is a bit more verbose than class strings.
 What it gives back is normal TypeScript: checked fields, native autocomplete,
@@ -141,14 +141,14 @@ For Next.js, pass the same option as the second argument to
 `stylePlugin(nextConfig, options)`.
 
 Without `importSources`, `tw(...)` may work at runtime but production extraction
-cannot reliably recognize it as a Fluentic style function.
+cannot reliably recognize it as a style function.
 
 `createTailwindStyleTransform(...)` is strict: it exposes the Tailwind dialect
 fields, not every CSS property. For raw CSS properties, compose with your normal
-Fluentic style function through `.merge(...)`, or opt into
+style function through `.merge(...)`, or opt into
 `createTailwindExtendedStyleTransform(...)`.
 
-Use it like any other Fluentic style function:
+Use it like any other style function:
 
 ```tsx
 const button = tw({
@@ -233,12 +233,12 @@ tw({
 
 That `$` convention is not Fluentic core. It is the syntax this preset chooses
 for the Tailwind dialect so scale lookups are visually obvious and literal CSS
-values remain literal. Bare numbers follow the default Fluentic numeric value
+values remain literal. Bare numbers follow the default numeric value
 rule: length-like properties receive `px`, and unitless CSS properties stay
 unitless. See [Numeric Values](../../../reference/numeric-values).
 
 The Tailwind style object preset is also not a lock-in layer. It is built from normal
-Fluentic primitives: `createStyleFn(...)`, `styleTransform(...)`, selectors, and
+primitives: `createStyleFn(...)`, `styleTransform(...)`, selectors, and
 named tokens. You can define a different Tailwind dialect, a Panda-like dialect,
 or your own product-specific utility language in userland.
 
@@ -378,7 +378,7 @@ tw({
 });
 ```
 
-Fluentic tokens can still be used directly as values. The `$...` syntax is only
+Tokens can still be used directly as values. The `$...` syntax is only
 for Tailwind-like theme refs:
 
 ```ts
@@ -454,7 +454,7 @@ export const brandTheme = createTheme([
 ]);
 ```
 
-Then apply the theme as normal Fluentic style data:
+Then apply the theme as normal style data:
 
 ```tsx
 <section css={brandTheme}>
@@ -914,7 +914,7 @@ tw({
 
 ## Selectors
 
-`TailwindSelectors` includes the default Fluentic priority selectors plus
+`TailwindSelectors` includes the default priority selectors plus
 responsive helpers:
 
 ```ts
@@ -950,7 +950,7 @@ These Tailwind features intentionally remain outside the first preset surface:
 | Tailwind feature | Fluentic path |
 | --- | --- |
 | Variant prefixes like `hover:` and `md:` | Chain methods like `.hover(...)` and `.md(...)` |
-| Arbitrary selector variants | Custom Fluentic selectors |
+| Arbitrary selector variants | Custom selectors |
 | Arbitrary class values like `bg-[...]` | Literal object values |
 | Slash opacity shorthand like `bg-blue-600/50` | Explicit color value or token |
 | `group-*` and `peer-*` variants | Add project selectors with `createSelector(...)` |

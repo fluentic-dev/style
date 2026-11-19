@@ -104,7 +104,7 @@ of every component.
 ## Responsive Methods
 
 Selector methods can also wrap CSS at-rules such as media and container queries.
-When a selector template starts with `@`, Fluentic treats it as an at-rule
+When a selector template starts with `@`, the builder treats it as an at-rule
 selector. At-rule methods get a different chain signature from normal selector
 methods: their style argument can be a style object or a whole `style()` chain.
 
@@ -369,7 +369,7 @@ const selectors = {
 };
 ```
 
-You can also provide the value type. Fluentic uses that type for the chain
+You can also provide the value type. The builder uses that type for the chain
 method argument:
 
 ```ts

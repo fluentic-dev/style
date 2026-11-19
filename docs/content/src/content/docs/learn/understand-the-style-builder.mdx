@@ -1,12 +1,12 @@
 ---
 title: Understand The Style Builder
-description: Learn why Fluentic uses chained builder methods for selectors, media queries, and custom style vocabulary.
+description: Learn how chained builder methods work for selectors, media queries, and custom style vocabulary.
 ---
 
 The chained builder style may feel unfamiliar at first.
 
 Many CSS-in-JS APIs put selectors and media queries inside one large nested
-object. Fluentic keeps the first object as normal CSS declarations, then uses
+object. The builder keeps the first object as normal CSS declarations, then uses
 builder methods for conditions around those declarations.
 
 Read it as:
@@ -16,7 +16,7 @@ object -> what the element looks like
 method -> which state, selector, or media query changes that style
 ```
 
-That gives Fluentic useful structure:
+That gives the builder useful structure:
 
 - the base style object stays lean;
 - each condition has its own typed method;
@@ -71,7 +71,7 @@ const button = ui({
 });
 ```
 
-The default `style` function is just Fluentic's predefined common selector
+The default `style` function is just the predefined common selector
 vocabulary. Custom style functions use the same model with your own method
 names.
 

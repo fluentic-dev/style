@@ -3,7 +3,7 @@ title: style
 description: Default style builder for one rendered element.
 ---
 
-`style(...)` creates Fluentic style data for one rendered element.
+`style(...)` creates style data for one rendered element.
 
 ```ts
 import { style } from '@fluentic/style';
@@ -38,7 +38,7 @@ const panel = style({
 });
 ```
 
-Numbers are converted using Fluentic's numeric value rules. See
+Numbers are converted using the numeric value rules. See
 [Numeric Values](numeric-values).
 
 ## Chain Methods
@@ -54,7 +54,7 @@ const item = style({
   .media('(max-width: 640px)', { padding: 12 });
 ```
 
-The default `style` export uses Fluentic's priority selector set, so common
+The default `style` export uses the priority selector set, so common
 states such as hover, focus, active, and disabled resolve predictably.
 
 ## Helpers
@@ -68,7 +68,7 @@ states such as hover, focus, active, and disabled resolve predictably.
 | `style.selector(...)` | Target descendant or external DOM selectors for sheets. |
 | `style.weight(value, weight)` | Give one declaration value explicit priority over another. |
 | `style.important(value)` | Emit a declaration as important. |
-| `style.raw(...)` | Create a reusable Fluentic style object fragment. |
+| `style.raw(...)` | Create a reusable style object fragment. |
 | `style.plain(...)` | Create a reusable plain object fragment for object spreads. |
 | `style.keyframes(...)` | Create keyframes that use the same style shape. |
 | `style.merge(target, style)` | Merge another style chain into an existing chain. |

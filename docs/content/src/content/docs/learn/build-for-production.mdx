@@ -1,9 +1,9 @@
 ---
 title: Build For Production
-description: Add the right production integration without changing how you author Fluentic styles.
+description: Add the right production integration without changing how you author styles.
 ---
 
-You have learned the Fluentic authoring model:
+You have learned the authoring model:
 
 ```txt
 style() -> css arrays -> builder methods
@@ -14,14 +14,14 @@ debug metadata -> source-aware CSS
 
 Production should not ask you to learn a second styling model.
 
-You keep writing the same Fluentic style code in runtime-only setup and in a
+You keep writing the same style code in runtime-only setup and in a
 bundler plugin setup. The difference is the delivery path: runtime-only creates
 CSS while the app runs, while the plugin can prepare and optimize CSS during the
 build.
 
 ## Runtime First, Plugin Recommended
 
-Fluentic is runtime-first. That means you can install the package, enable the
+The styling API is runtime-first. That means you can install the package, enable the
 JSX runtime, and start using `style(...)` with the `css` prop before choosing a
 bundler integration.
 
@@ -40,11 +40,11 @@ build system. The plugin keeps the same source model while adding:
 Static extraction is a build optimization. It does not change how you write
 style code.
 
-When the plugin recognizes a Fluentic style shape, it extracts the style
+When the plugin recognizes a style shape, it extracts the style
 structure. That is not an all-or-nothing pass that stops just because one
 property value is not known at build time.
 
-In these cases, Fluentic still emits CSS. The difference is what value the
+In these cases, CSS is still emitted. The difference is what value the
 generated CSS declaration uses.
 
 When a property value is known at build time, the generated CSS can include the
@@ -73,10 +73,10 @@ const title = style({
 
 The compiler still recognizes the `style(...)` call. `fontWeight` can be
 emitted with a literal value. `color` is emitted as CSS too, but its CSS value
-is a CSS variable that Fluentic fills from the runtime value.
+is a CSS variable that the runtime fills from the runtime value.
 
 Inline style chains can sometimes be defined inside components where they are
-needed. When they keep the same Fluentic shape, the compiler can still handle
+needed. When they keep the same call shape, the compiler can still handle
 them. The compiler can hoist the inline chain to the module top level, as if it
 had been defined outside the component. Static values become literal CSS values;
 dynamic values become runtime data connected to prepared CSS variables:
@@ -95,13 +95,13 @@ function Button(props: { color: string }) {
 ```
 
 In that example, `borderRadius` is emitted with a literal value. `color` is also
-emitted as CSS, but its CSS value is a prepared CSS variable that Fluentic fills
+emitted as CSS, but its CSS value is a prepared CSS variable that the runtime fills
 from `props.color` wherever that prepared style is applied.
 
 For the details of how hoisting works, see
 [Compiler Hoisting](/docs/design/compiler-hoisting/).
 
-The key is the Fluentic call shape. The compiler recognizes `style(...)`,
+The key is the style call shape. The compiler recognizes `style(...)`,
 `style.slot(...)`, and `style.scope(...)` patterns, so it can emit CSS for that
 structure. Build-known values become literal CSS values. Dynamic values become
 prepared CSS variables. The original style chains are replaced with prepared style
@@ -120,9 +120,9 @@ Runtime still handles the parts that are naturally render-time:
 So the split is:
 
 ```txt
-recognized Fluentic style shape -> extracted CSS and prepared style data
+recognized style shape         -> extracted CSS and prepared style data
 dynamic property values         -> CSS variables resolved at runtime
-render-time composition         -> resolved by Fluentic while React renders
+render-time composition         -> resolved by the runtime while React renders
 ```
 
 ## Keep The Extractable Shape
@@ -206,7 +206,7 @@ function createPrimaryButtonTheme(color: string) {
 ```
 
 That gives the compiler the full scope shape: the scope call, the slot targets,
-and the provided styles. If a provided value is dynamic, Fluentic can keep that
+and the provided styles. If a provided value is dynamic, the compiler can keep that
 value on the runtime path while still extracting the recognized structure.
 
 ## Choose The Integration
@@ -235,28 +235,27 @@ decide on the integration path.
 
 ## App Plugin, Library Source
 
-You may notice that Fluentic currently focuses on app bundler plugins. That is
-intentional.
+The production integrations focus on app bundler plugins.
 
-The Fluentic plugin is meant to run in the final app build, where the app knows
+The plugin runs in the final app build, where the app knows
 the target bundler, CSS output, routes, and runtime mode. A UI library package
-usually does not need to run Fluentic extraction before publishing.
+usually does not need to run extraction before publishing.
 
-Instead, publish the UI package so the consuming app can import its Fluentic
-components and style definitions. Then configure the app's Fluentic plugin to
+Instead, publish the UI package so the consuming app can import its
+components and style definitions. Then configure the app's plugin to
 include that package in the files it can transform.
 
 That lets one app build collect and extract styles from both places:
 
 ```txt
-app source files       -> transformed by the app Fluentic plugin
+app source files       -> transformed by the app plugin
 UI package source      -> included in the app plugin transform
 final app build        -> extracted CSS and runtime wiring
 ```
 
-This keeps library packages simpler. They can publish Fluentic components
+This keeps library packages simpler. They can publish components
 without choosing the consuming app's bundler strategy. The app remains the place
-that decides how Fluentic CSS is extracted, optimized, and served.
+that decides how CSS is extracted, optimized, and served.
 
 ## What To Check Before Shipping
 
@@ -273,7 +272,7 @@ Before shipping a production app, check these things:
 - runtime-only setup is intentional when no production plugin is available.
 
 The important part is that production does not change how you write app styles
-or component code. It changes how Fluentic prepares CSS for the browser.
+or component code. It changes how the compiler prepares CSS for the browser.
 
 Next, [Recap](/docs/learn/recap/) ties the Learn path together with a compact
 decision map.

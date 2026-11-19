@@ -1,6 +1,6 @@
 # Fluentic Style: installation and production
 
-Target: @fluentic/style 0.1.0-beta.13. Check the app's installed version before using these APIs; preserve its package manager and existing framework configuration.
+Preserve the app's package manager and existing framework configuration.
 
 Install with the project's package manager (choose one):
 
@@ -15,7 +15,7 @@ Production integrations support Vite, Webpack, Rspack, Parcel 2, Farm, and Next.
 
 ## Other integrations
 
-For React without a Fluentic plugin, use @fluentic/style/jsx in both TypeScript and the automatic JSX transform. Runtime-only inserts CSS at render time; prefer the bundler plugin for supported production apps. Do not mix plain and plugin JSX entries accidentally.
+For React without a bundler plugin, use @fluentic/style/jsx in both TypeScript and the automatic JSX transform. Runtime-only inserts CSS at render time; prefer the bundler plugin for supported production apps. Do not mix plain and plugin JSX entries accidentally.
 
 When retaining React's default JSX runtime (for example during a migration), use the plugin option cssProp: CssPropPresets.React, imported from the bundler adapter, instead of a Fluentic jsxImportSource. Keep React's normal JSX settings. Existing libraries with their own css prop still need explicit boundary planning.
 

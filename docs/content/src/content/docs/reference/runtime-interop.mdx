@@ -5,7 +5,7 @@ description: Low-level helpers for className, style, and token interop outside t
 
 Prefer the `css` prop when you own the element.
 
-Use these helpers at boundaries with non-Fluentic APIs.
+Use these helpers at boundaries with external APIs.
 
 ## getClassName
 
@@ -61,7 +61,7 @@ getToken('red');
 // red
 ```
 
-Use it when a non-Fluentic API needs a CSS value.
+Use it when an external API needs a CSS value.
 
 ## mergeClassName
 
@@ -99,4 +99,4 @@ const style = mergeStyle([
 
 Later style objects override earlier objects.
 
-For guide-level examples, see [Interop With Non-Fluentic APIs](../beyond-the-basics/interop-with-non-fluentic-apis).
+For guide-level examples, see [Interop With External APIs](../beyond-the-basics/interop-with-non-fluentic-apis).

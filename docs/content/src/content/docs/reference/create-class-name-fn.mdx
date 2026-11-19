@@ -3,12 +3,12 @@ title: createClassNameFn
 description: Create a custom class-name style builder.
 ---
 
-Use `createClassNameFn(...)` when you want Fluentic style chains to start from
+Use `createClassNameFn(...)` when you want style chains to start from
 class-name tokens instead of style objects.
 
 The class names are not global CSS classes by themselves. They are vocabulary
 items that your transform maps to CSS declarations. The result is still
-Fluentic style data, so it works with the `css` prop, selector chains,
+style data, so it works with the `css` prop, selector chains,
 `combineStyle(...)`, slots, scopes, extraction, and debug CSS.
 
 ```ts
@@ -118,7 +118,7 @@ const transform = classNameTransform<'bg-accent'>({
 });
 ```
 
-With debug class names enabled, Fluentic keeps the label and appends its hash so
+With debug class names enabled, the builder keeps the label and appends its hash so
 the CSS remains isolated by callsite.
 
 ## When To Use It
@@ -127,7 +127,7 @@ Use `createClassNameFn(...)` for:
 
 - design systems with a controlled utility vocabulary;
 - Tailwind-like class-name presets;
-- component libraries that want class-name authoring but Fluentic extraction;
+- component libraries that want class-name authoring with compiler extraction;
 - migration paths where authors know class names better than object fields.
 
 Use `style(...)` or `createStyleFn(...)` when authors should write object

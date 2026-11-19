@@ -29,4 +29,4 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 }
 ```
 
-Do not add 'use client' solely for static Fluentic styles. Preserve server/client boundaries for behavior. Run the normal Next production build; check SSR and hydration as well as client navigation.
+Do not add 'use client' solely for static styles. Preserve server/client boundaries for behavior. Run the normal Next production build; check SSR and hydration as well as client navigation.

@@ -8,7 +8,7 @@ Presets are optional dialect helpers.
 They do not replace Fluentic's style model.
 
 They package common transform and selector conventions so a project can start
-from a familiar vocabulary, then keep using the same Fluentic primitives:
+from a familiar vocabulary, then keep using the same primitives:
 
 ```txt
 utility props -> transform -> CSS declarations
@@ -40,7 +40,7 @@ cx('px-4', 'py-2', 'bg-accent', 'rounded-md')
 
 The utility fields and class names are preset vocabulary.
 
-The `.hover(...)` and `.md(...)` calls are normal Fluentic chains.
+The `.hover(...)` and `.md(...)` calls are normal style chains.
 
 ## Why Presets Exist
 
@@ -59,7 +59,7 @@ They are not required for plain Fluentic usage.
 
 | Preset | Import | Use |
 | --- | --- | --- |
-| Tailwind | `@fluentic/style/presets/tailwind` | Tailwind-like object fields or class names with Fluentic chains and tokens. |
+| Tailwind | `@fluentic/style/presets/tailwind` | Tailwind-like object fields or class names with style chains and tokens. |
 
 ## When To Use A Preset
 

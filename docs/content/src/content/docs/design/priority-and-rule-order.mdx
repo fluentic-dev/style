@@ -1,6 +1,6 @@
 ---
 title: Priority And Rule Order
-description: Why Fluentic uses ordered buckets instead of relying only on source order.
+description: Why rule ordering uses buckets instead of relying only on source order.
 ---
 
 Source order alone is not enough once these meet:
@@ -12,7 +12,7 @@ Source order alone is not enough once these meet:
 - token/value overrides;
 - root `css` overrides.
 
-Fluentic orders generated rules through buckets:
+Generated rules are ordered through buckets:
 
 ```txt
 selector context

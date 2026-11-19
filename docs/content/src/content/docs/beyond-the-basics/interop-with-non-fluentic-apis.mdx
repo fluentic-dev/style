@@ -1,5 +1,5 @@
 ---
-title: Interop With Non-Fluentic APIs
+title: Interop With External APIs
 description: Use runtime interop helpers when an API accepts className, style, or raw CSS values instead of the css prop.
 ---
 
@@ -9,7 +9,7 @@ Prefer the `css` prop when you own the element:
 <button css={[button, props.css]} />
 ```
 
-Use interop helpers at boundaries where the API is not Fluentic-aware.
+Use interop helpers at boundaries where the API accepts class names or CSS values instead of style data.
 
 ## Token Values
 

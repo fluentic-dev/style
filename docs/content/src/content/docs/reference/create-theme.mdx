@@ -50,9 +50,9 @@ const appTheme = createTheme([
 ## Return Value
 
 The return value is a `TokenTheme`. It carries generated theme class data and
-can be passed wherever Fluentic accepts theme input.
+can be passed wherever theme input is accepted.
 
-When a style reads a token, Fluentic resolves that token from the nearest theme
+When a style reads a token, the runtime resolves that token from the nearest theme
 in the composed style input and falls back to the token's default value when no
 override is present.
 

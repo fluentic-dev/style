@@ -27,7 +27,7 @@ That is enough when the style belongs to this element.
 
 That is it: define a style, then pass it to the `css` prop.
 
-If your team prefers class-name syntax, Fluentic supports that too. The call
+You can also use class-name syntax if your team prefers it. The call
 arguments look different from an object style chain, but selector chains like
 `.hover(...)` and `.md(...)` stay familiar, and both forms produce a style value
 for the same `css` prop:
@@ -83,7 +83,7 @@ The benefit is in your editor: TypeScript checks the object against the style
 type used by `style(...)`, and autocomplete can suggest valid fields.
 
 Use `style.raw(...)` when the reusable object mixes normal CSS values with
-Fluentic values such as tokens. More details on tokens come later in
+tokens and other style values. More details on tokens come later in
 [Theming With Tokens](/docs/learn/theming-with-tokens/).
 
 ```ts

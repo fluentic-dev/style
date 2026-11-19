@@ -1,6 +1,6 @@
 ---
 title: Tailwind Presets
-description: Use Tailwind's familiar utility vocabulary through Fluentic style chains.
+description: Use Tailwind's familiar utility vocabulary through style chains.
 ---
 
 The Tailwind presets are for teams that already think in Tailwind naming:
@@ -8,13 +8,13 @@ The Tailwind presets are for teams that already think in Tailwind naming:
 hover states, and theme scales.
 
 Fluentic keeps that familiar vocabulary, but does not copy Tailwind's whole
-syntax model. Conditions stay as Fluentic chains, values can still be tokens,
+syntax model. Conditions stay as style chains, values can still be tokens,
 styles can still flow through slots and scopes, and static declarations can
 still be extracted by the compiler.
 
 ```txt
 Tailwind names -> Fluentic transform -> CSS declarations
-states/media   -> Fluentic chains
+states/media   -> style chains
 theme scales   -> plain values or named tokens
 ```
 
@@ -23,7 +23,7 @@ There are two Tailwind surfaces.
 | Surface | Use when |
 | --- | --- |
 | [Style Object](/docs/presets/tailwind/style-object/) | You want TypeScript object fields, checked values, and grouped dynamic branches. |
-| [Class Name](/docs/presets/tailwind/class-name/) | You want Tailwind-like class strings while keeping Fluentic chains and debugging. |
+| [Class Name](/docs/presets/tailwind/class-name/) | You want Tailwind-like class strings while keeping style chains and debugging. |
 
 Both surfaces use the same Tailwind config shape, selectors, named tokens, and
 compiler/runtime split. The difference is only the input syntax.
@@ -88,7 +88,7 @@ Some Tailwind features are intentionally different:
 | --- | --- |
 | `hover:` and `md:` prefixes | `.hover(...)` and `.md(...)` chain calls |
 | `2xl:` prefix | `.xxl(...)`, because method names cannot start with a number |
-| Project-specific variants | Add custom Fluentic selectors |
+| Project-specific variants | Add custom selectors |
 | Theme values | Plain scales, named tokens, or explicit default palette opt-in |
 
 The goal is practical Tailwind familiarity, not a byte-for-byte clone of the
@@ -184,7 +184,7 @@ export default stylePlugin(nextConfig, {
 
 Without this registration, the runtime can still call the function in
 development, but extracted production builds do not know that imported `tw` or
-`cx` is a Fluentic style function and may miss its CSS.
+`cx` is a style function and may miss its CSS.
 
 Next:
 

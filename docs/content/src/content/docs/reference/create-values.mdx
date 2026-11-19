@@ -4,7 +4,7 @@ description: createValues creates app-facing scales with token identity.
 ---
 
 Use `createValues(...)` when app code should keep reading literal values while
-Fluentic still tracks themeable identity underneath.
+the values retain their themeable identity.
 
 ```ts
 import { createValues } from '@fluentic/style';
@@ -72,7 +72,7 @@ const darkTheme = createTheme(
 );
 ```
 
-Labels after `|` or `;` are optional. Fluentic parses the CSS value before the
+Labels after `|` or `;` are optional. The parser reads the CSS value before the
 label separator, but tracks the full string as the value identity.
 
 ## Numeric Labels

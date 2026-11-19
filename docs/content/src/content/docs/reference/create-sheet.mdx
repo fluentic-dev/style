@@ -10,7 +10,7 @@ named cascade layer.
 
 Most component styles should use `style(...)`, `style.slot(...)`, and
 `style.scope(...)`. Reach for `createSheet(...)` when the style target is a DOM
-selector such as `.react-select__control` rather than a Fluentic slot.
+selector such as `.react-select__control` rather than a slot.
 
 ```ts
 import { createTokens, style } from '@fluentic/style';
@@ -81,7 +81,7 @@ site:
 | `weight` | Repeat the generated sheet anchor class to increase selector specificity. It must be a positive integer. |
 
 Sheets are unlayered by default because they commonly override third-party CSS
-that is not inside Fluentic's layer system. Enable a layer for a particular
+that is not inside the configured layer system. Enable a layer for a particular
 sheet when it should participate in your declared layer order:
 
 ```ts
@@ -207,14 +207,14 @@ when specificity alone is enough.
 
 Use this order when choosing an override mechanism:
 
-1. For priority between ordinary Fluentic styles, use composition or
+1. For priority between ordinary styles, use composition or
    `style.weight(...)`.
 2. For a selector sheet that only needs more specificity, use the sheet's
    `weight` option.
 3. Use `style.important(...)` when a sheet must override third-party CSS that
    already uses `!important` or cannot otherwise be ordered.
 
-Do not put `!important` inside a raw string value because it bypasses Fluentic's
+Do not put `!important` inside a raw string value because it bypasses the
 important-value metadata. Write `style.important(value)` instead. Projects can
 enforce these recommendations with the opt-in
 [`check.important` plugin options](plugin-options#check-options).
@@ -249,7 +249,7 @@ Use `style(...)` for normal element styles.
 
 ## Return Value
 
-`createSheet(...)` returns a Fluentic sheet style item. It can be passed directly
+`createSheet(...)` returns a sheet style item. It can be passed directly
 to the `css` prop, or through `combineStyle(...)` when it needs themes,
 variants, or token overrides:
 
@@ -286,7 +286,7 @@ const field = style.selector([
 ```
 
 Avoid comma-separated selector strings. Arrays keep the selector structure
-visible to Fluentic.
+visible to the selector parser.
 
 ## When To Use It
 

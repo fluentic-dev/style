@@ -4,7 +4,7 @@ description: CSS helper APIs for named at-rules and low-level CSS constructs.
 ---
 
 Use `@fluentic/style/css` for named CSS at-rules that need to be referenced
-from a style value, and for low-level helpers that apply Fluentic style data to
+from a style value, and for low-level helpers that apply style data to
 selector sheets or external DOM elements.
 
 Most component styles should import from `@fluentic/style`. Reach for this entry
@@ -85,7 +85,7 @@ const selectSheet = createSheet([
 ]);
 ```
 
-`createStyleTarget()` applies a resolved Fluentic style prop to an element
+`createStyleTarget()` applies a resolved style prop to an element
 outside your render tree, such as a portal target.
 
 ```ts
@@ -198,7 +198,7 @@ export const list = style({
 ```
 
 Use it for reusable list marker styles that should be generated with the rest of
-the Fluentic CSS output.
+the generated CSS output.
 
 ## createProperty
 
@@ -224,7 +224,7 @@ export const icon = style({
 } as never);
 ```
 
-The first argument can be the custom property name. If you omit it, Fluentic
+The first argument can be the custom property name. If you omit it, the helper
 generates a stable custom property name for the registration.
 
 ```ts
@@ -278,7 +278,7 @@ const enter = createKeyframes(
 
 `name` is used by the configured at-rule name format when the format includes a
 name placeholder. `id` participates in hashing. Most app code can omit this and
-let Fluentic generate names.
+generate names automatically.
 
 ## Types
 

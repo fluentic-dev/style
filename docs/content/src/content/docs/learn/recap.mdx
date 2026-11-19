@@ -1,9 +1,9 @@
 ---
 title: Recap
-description: A practical review of the Fluentic styling approach.
+description: A practical review of the styling approach.
 ---
 
-This recap walks back through the Fluentic styling approach from the smallest
+This recap walks back through the styling approach from the smallest
 building block to production extraction. Each step shows the API to reach for,
 the problem it solves, and a small reminder of the shape to write.
 
@@ -92,7 +92,7 @@ const card = style({
   padding: 16,
 });
 
-// ✅ For Fluentic values in reusable objects, use style.raw(...).
+// ✅ For tokens and other style values in reusable objects, use style.raw(...).
 const tone = createToken('#2563eb');
 const accentText = style.raw({
   color: tone,
@@ -391,7 +391,7 @@ export default defineConfig({
 ```
 
 Production does not change how you write app styles or component code. It
-changes how Fluentic prepares CSS for the browser.
+changes how the compiler prepares CSS for the browser.
 
 ## 18. Keep The Extractable Shape
 

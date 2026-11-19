@@ -3,7 +3,7 @@ title: Styling Third-Party Components
 description: Style third-party component internals with selector sheets.
 ---
 
-Most Fluentic component styles start with an element the component owns. The
+Most component styles start with an element the component owns. The
 style is attached directly to that element:
 
 ```tsx
@@ -29,8 +29,8 @@ style is hidden behind fixed library classes:
 </div>
 ```
 
-At that point, `getClassName(...)` is only a partial answer. It can resolve a
-Fluentic style into a class name, which is useful for low-level interop, but the
+At that point, `getClassName(...)` is only a partial answer. It can resolve
+style data into a class name, which is useful for low-level interop, but the
 real question is one level higher: the wrapper needs a way to name the library
 parts it wants to style.
 
@@ -42,7 +42,7 @@ owned by your wrapper.
 
 React Select is a good example because the outer component is yours, but the
 control, value, menu, and option elements are rendered by the library. The
-wrapper still has one stable place where Fluentic can attach styles:
+wrapper still has one stable place to attach styles:
 
 ```tsx
 export function Select() {
@@ -90,7 +90,7 @@ code.
 
 ## Selector Sheets
 
-After the parts are named, the sheet looks like ordinary Fluentic style data:
+After the parts are named, the sheet looks like ordinary style data:
 
 ```ts
 const selectSheet = createSheet([
@@ -123,7 +123,7 @@ const compactSheet = createSheet([
 ```
 
 Only the selector string is tied to the third-party library. Everything inside
-the style object is ordinary Fluentic: tokens, selector chains, ordering,
+the style object is ordinary style data: tokens, selector chains, ordering,
 extraction, debug names, and sourcemaps.
 
 At render time, the wrapper composes the sheet with its local variants and sends
@@ -225,7 +225,7 @@ tokens -> selector parts -> sheets -> combineStyle(...) -> css prop
 
 That matters as soon as the wrapper grows. A small border override can become
 compact mode, danger tone, brand theme, disabled state, portal menu styles, and
-consumer overrides. With selector sheets, those pieces remain Fluentic style
+consumer overrides. With selector sheets, those pieces remain style
 data. They can use tokens, compose through `combineStyle(...)`, participate in
 extraction, and show up in the same debugging tools as your own components.
 
@@ -265,7 +265,7 @@ Append incoming `StyleProp` values at the final attachment point:
 <div css={[css, props.css]} />
 ```
 
-The selectors still read the same token values as ordinary Fluentic styles. You
+The selectors still read the same token values as ordinary styles. You
 get a local component theme without introducing global CSS variables by hand or
 forcing every app theme to know about React Select.
 
@@ -398,7 +398,7 @@ const field = style.selector([
 const field = style.selector('.a, .b');
 ```
 
-`createStyleTarget()` applies a resolved Fluentic style prop to an element you
+`createStyleTarget()` applies a resolved style prop to an element you
 do not render directly.
 
 ```tsx
@@ -487,9 +487,9 @@ direct `className` or `style` prop for the exact element you want.
 
 Selector sheets sit between those worlds. They acknowledge that the DOM belongs
 to someone else, while keeping your styling language, tokens, extraction, and
-debugging inside Fluentic.
+debugging in the same authoring model.
 
-Selector sheets are emitted outside Fluentic's cascade layer by default. That
+Selector sheets are emitted outside the generated cascade layers by default. That
 is intentional: third-party CSS is commonly unlayered, and normal unlayered
 rules outrank normal layered rules. If the third-party stylesheet participates
 in your layer architecture, opt a sheet in with `createSheet({ layer: true },
@@ -505,7 +505,7 @@ for attaching a reset to `body` or an app root. Layer selection does not scope a
 third-party stylesheet or pull its existing rules into your chosen layer.
 
 Some libraries also ship their own CSS with high specificity or load it after
-your app styles. Fluentic can order the rules it owns, but it cannot move a
+your app styles. The runtime can order the rules it owns, but it cannot move a
 third-party stylesheet into your layer system. Try a sheet `weight` first when
 increased selector specificity is enough:
 
@@ -531,19 +531,19 @@ const selectSheet = createSheet([
 
 `style.important(...)` emits the final declaration with `!important`. It is an
 interop tool, mostly useful in selector sheets and component wrappers that need
-to beat library CSS. Ordinary Fluentic styles usually should not need it,
+to beat library CSS. Ordinary styles usually should not need it,
 because composition, variants, scopes, and sheet order already describe the
-priority inside the styles Fluentic controls. Prefer `style.weight(...)` when
-you need to adjust priority between ordinary Fluentic styles.
+priority inside the generated styles. Prefer `style.weight(...)` when
+you need to adjust priority between ordinary styles.
 
 Always use the wrapper form. Do not write raw strings such as
-`'red !important'`; raw values bypass Fluentic's important-value metadata. The
+`'red !important'`; raw values bypass the important-value metadata. The
 opt-in `check.important.rawValue` and `check.important.outsideSheet` plugin
 options can warn or fail when these recommendations are violated.
 
-CSS reverses cascade-layer order for important declarations. Fluentic accounts
+CSS reverses cascade-layer order for important declarations. The runtime accounts
 for that reversal in its generated priority layers, so `style.important(...)`
-keeps the intended Fluentic priority instead of accidentally becoming weaker
+keeps the intended priority instead of accidentally becoming weaker
 inside the layer system.
 
 ## Debugging

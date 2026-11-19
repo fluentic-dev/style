@@ -1,6 +1,6 @@
 ---
 title: Debug Styles
-description: Enable Fluentic dev utilities and trace generated CSS back to the source that authored it.
+description: Enable development utilities and trace generated CSS back to the source that authored it.
 ---
 
 You have now worked with styles, slots, scopes, tokens, values, and themes.
@@ -15,7 +15,7 @@ Which style, slot, or scope produced this rule?
 Did the value come from a token, app value, spread, merge, or theme?
 ```
 
-Fluentic keeps debug information close to the same model you used while
+The development tools keep debug information close to the same model you used while
 authoring:
 
 ```txt
@@ -26,7 +26,7 @@ token/value   -> shared value source
 css prop      -> rendered JSX element
 ```
 
-The browser still shows normal CSS. Fluentic adds development metadata and
+The browser still shows normal CSS. The development tools add metadata and
 utilities so that CSS can lead back to the TypeScript decision that produced it.
 
 ## Enable The Dev Utilities
@@ -61,7 +61,7 @@ it into your own app.
 
 ## Check The Active Debug Setup
 
-After enabling the helper, open the browser console and check what Fluentic
+After enabling the helper, open the browser console and check what the runtime
 debug features are active:
 
 ```ts
@@ -120,7 +120,7 @@ StyleDevUtils.setSourcemapMode.toValue();
 ```
 
 `toValue()` points the same generated `color` rule at `sharedText` when
-Fluentic has that source information. That is useful when the reusable value
+that source information is available. That is useful when the reusable value
 itself is the thing you need to change.
 
 For priority debugging, switch between layer and sorted output:
@@ -130,12 +130,12 @@ StyleDevUtils.setPriorityMode.toLayer();
 StyleDevUtils.setPriorityMode.toSort();
 ```
 
-Layer mode makes Fluentic priority buckets easier to inspect. Sort mode shows
+Layer mode makes priority buckets easier to inspect. Sort mode shows
 output closer to compact generated CSS.
 
 ## Trace Runtime Sourcemaps
 
-Runtime-only development can also ask Fluentic to trace served JavaScript
+Runtime-only development can also ask the development tools to trace served JavaScript
 sourcemaps:
 
 ```ts
@@ -143,7 +143,7 @@ StyleDevUtils.traceSourcemap();
 ```
 
 Use this when CSS comments or runtime callsites still point at generated files
-and you want Fluentic to remap them closer to the original TypeScript source.
+and you want the development tools to remap them closer to the original TypeScript source.
 
 Bundler plugin setups can provide richer build-time source information, so this
 command is most useful when you are working without extraction or when you need

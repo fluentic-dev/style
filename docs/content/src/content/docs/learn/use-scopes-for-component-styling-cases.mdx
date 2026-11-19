@@ -190,7 +190,7 @@ bindScope(
 );
 ```
 
-The target slot is where Fluentic anchors the parent state. If the target is
+The target slot is where the runtime anchors the parent state. If the target is
 `buttonStyles.root`, root styles apply to the root itself and child slot styles
 apply to their own slots under that root state.
 
@@ -211,7 +211,7 @@ outside styles to follow DOM selectors.
 Resolve these cases once inside the component, then render with the resolved
 styles.
 
-Fluentic understands the structure of styles, slots, and scopes, so the
+The runtime understands the structure of styles, slots, and scopes, so the
 component can compose the inputs in one place with less manual wiring. JSX stays
 focused on attaching styles to elements.
 

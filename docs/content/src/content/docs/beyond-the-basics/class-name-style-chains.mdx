@@ -1,9 +1,9 @@
 ---
 title: Class Name Style Chains
-description: Use class-name syntax when a transform can map class names to Fluentic styles.
+description: Use class-name syntax when a transform can map class names to styles.
 ---
 
-Fluentic's built-in `style(...)` function uses object syntax:
+The built-in `style(...)` function uses object syntax:
 
 ```tsx
 const saveButton = style({
@@ -17,7 +17,7 @@ That is why most core examples start with objects: the fields are direct CSS,
 easy to type, and do not need a separate utility vocabulary.
 
 Some teams prefer class-name syntax, especially when they already know a utility
-language like Tailwind. Fluentic supports that too. A class name only means
+language like Tailwind. Custom builders support that too. A class name only means
 something after a transform decides what it maps to:
 
 ```txt
@@ -27,12 +27,12 @@ something after a transform decides what it maps to:
 ```
 
 That mapping is project or preset vocabulary. You can write it yourself, or use
-a Fluentic preset for a popular dialect so you do not have to start from
+a preset for a popular dialect so you do not have to start from
 scratch.
 
 Notice: to use class-name syntax, create your own function with
 `createClassNameFn(...)` and provide the transform logic for your class names.
-Fluentic also provides presets out of the box for popular dialects, such as the
+Presets are also available for popular dialects, such as the
 [Tailwind Class Name Preset](/docs/presets/tailwind/class-name/). See that page
 for Tailwind-specific setup and customization, or see
 [Create A Class Name Function](#create-a-class-name-function) below for the
@@ -41,7 +41,7 @@ basic `createClassNameFn(...)` shape.
 In extracted production builds, static classname chains are transformed during
 the build and emitted as CSS. For those extracted styles, the class-name
 transform is not bundled into your built app and does not run in the browser.
-This lets you keep a familiar class-name syntax while still getting Fluentic's
+This lets you keep a familiar class-name syntax while still getting the
 compiled CSS output and a small runtime.
 
 ## Same Result, Different Input
@@ -61,7 +61,7 @@ const saveButton = cx(
 <button css={saveButton}>Save changes</button>;
 ```
 
-That looks different from `style(...)`, but the result is still Fluentic style
+That looks different from `style(...)`, but the result is still style
 data. It can go into the same `css` prop, merge with other styles, flow through
 slots and scopes, use the same selector chains, and participate in the same
 debugging and extraction path.
@@ -83,17 +83,17 @@ The difference is only the input syntax:
 | `tw({ px: '$4' })` | Tailwind-like object fields. |
 | `cx('px-4')` | Tailwind-like class names. |
 
-All three produce style chains that Fluentic can use in the same places.
+All three produce style chains that work in the same places.
 
 ## Create A Class Name Function
 
-Fluentic does not know what class names should mean in your app.
+Class-name meanings depend on your app.
 
 `flex` and `items-center` might be Tailwind utilities. `button` might be a CSS
 module class. `surface-raised` might be your design system. Those are different
 languages.
 
-So Fluentic keeps the core builder generic. You provide selectors and a
+The core builder stays generic. You provide selectors and a
 class-name transform:
 
 ```ts
@@ -155,12 +155,12 @@ const transform = classNameTransform<UiClassName>({
 });
 ```
 
-Fluentic still appends its hash to keep callsites isolated, but DevTools can
+The builder still appends a hash to keep callsites isolated, but DevTools can
 show a readable name such as `bg-accent--abc` instead of a generic atomic label.
 
 ## Is It Type-Safe?
 
-It can be. Class-name type safety is user-land TypeScript: Fluentic does not
+It can be. Class-name type safety is user-land TypeScript: the builder does not
 ship one global list of valid class names, because the class-name language is
 defined by your app, preset, or design system.
 
@@ -194,7 +194,7 @@ template literal types, branded strings, or helper functions that validate and
 convert class names into style object data.
 
 Larger dialects can use TypeScript template string types instead of writing one
-giant union by hand. Fluentic's built-in
+giant union by hand. The built-in
 [Tailwind Class Name Preset](/docs/presets/tailwind/class-name/) does this for
 Tailwind-like utilities, so names such as `px-4`, `bg-accent`, and `text-sm`
 can be checked from the configured theme scales. When the class-name function is

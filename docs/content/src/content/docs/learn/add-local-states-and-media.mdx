@@ -7,7 +7,7 @@ You are probably familiar with CSS selectors such as `:hover`, `:active`, and
 `:focus-visible`. These are self selectors: they affect the element being
 styled.
 
-With Fluentic, you add those states using builder methods instead of nested
+Add those states using builder methods instead of nested
 fields inside the style object.
 
 The first object is the normal style. Each method after it adds the style for a
@@ -50,9 +50,9 @@ const expandedButton = style({
 
 The selector must be a self selector. It can describe the element's own state or
 attributes, but it should not target nested elements or other elements.
-Fluentic validates `.select(...)` selectors and throws when they violate this
+The builder validates `.select(...)` selectors and throws when they violate this
 rule.
-For cross-element styling, Fluentic uses a different component-aware approach
+For cross-element styling, use the component-aware approach
 covered in [Style Reusable Component](/docs/learn/style-reusable-component/).
 
 ## Compose Conditions

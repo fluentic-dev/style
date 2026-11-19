@@ -3,7 +3,7 @@ title: Plugin Options
 description: Shared compiler and transform options.
 ---
 
-Fluentic integrations share one option shape.
+The integrations share one option shape.
 
 Use the integration page for the adapter-specific wrapper, then use this page
 for the option names:
@@ -69,7 +69,7 @@ stylePlugin({
 ### CSS Prop
 
 `cssProp` enables compiler lowering for intrinsic JSX `css` props. This lets a
-framework keep its normal JSX runtime while Fluentic compiles `css={...}` into
+framework keep its normal JSX runtime while the plugin compiles `css={...}` into
 framework props before JSX is transformed.
 
 ```ts
@@ -194,15 +194,15 @@ stylePlugin({
 
 | Option | Recommendation |
 | --- | --- |
-| `important.rawValue` | Reject or warn about string values containing raw `!important`. Use `style.important(value)` so Fluentic can preserve its priority rules. |
-| `important.outsideSheet` | Reject or warn about `style.important(...)` in ordinary Fluentic styles. Prefer `style.weight(...)` for priority between Fluentic styles. |
+| `important.rawValue` | Reject or warn about string values containing raw `!important`. Use `style.important(value)` to preserve declaration priority. |
+| `important.outsideSheet` | Reject or warn about `style.important(...)` in ordinary styles. Prefer `style.weight(...)` for priority between styles. |
 
 `warn` reports during compilation. Runtime warnings are development-only so
 they do not add production console noise. `error` fails both compilation and
 runtime-authored styles, including dynamic styles the compiler cannot extract.
 
 The recommended strict setup is `rawValue: 'error'` and
-`outsideSheet: 'warn'`. Raw `!important` bypasses Fluentic's value metadata and
+`outsideSheet: 'warn'`. Raw `!important` bypasses the value metadata and
 should be replaced directly. `style.important(...)` outside a sheet is valid,
 but warning first makes migrations less disruptive. Both settings remain off
 by default.
@@ -214,7 +214,7 @@ by default.
 | Option | Purpose |
 | --- | --- |
 | `layer` | Enable style layers with a boolean, or select targets with `{ style?: boolean, sheet?: boolean }`. Sheets default to `false`. |
-| `layers` | Configure layer order. Use `$layer` where Fluentic priority layers should be inserted. |
+| `layers` | Configure layer order. Use `$layer` where generated priority layers should be inserted. |
 | `layerNamespace` | Prefix generated priority layer names. |
 | `classNameFormat` | Format atomic class names. Supports strings or functions. |
 | `sheetClassNameFormat` | Format selector sheet class names when `debugClassName` is enabled. |
@@ -227,14 +227,14 @@ by default.
 | `debugClassName` | Include readable property/value parts in class names. Defaults to `true` in development and `false` in production builds. |
 
 Most apps only change `layer`, `layers`, `layerNamespace`, or naming formats.
-Leave the rest at defaults unless you are aligning Fluentic with existing CSS
+Leave the rest at defaults unless you are aligning the generated output with existing CSS
 infrastructure.
 
-The boolean form remains shorthand for ordinary Fluentic styles:
+The boolean form remains shorthand for ordinary styles:
 
 ```ts
 css: { layer: true }  // styles layered, sheets unlayered
-css: { layer: false } // styles and sheets unlayered
+css: { layer: false } // styles and sheets unlayered by default
 ```
 
 Use the target form to opt selector sheets into a separate generated layer:
@@ -318,7 +318,7 @@ For a rule like `style({ display: 'flex' }).hover(...)`, the formatter can use:
 | --- | --- |
 | `$hash` | The stable hash for this exact generated rule. |
 | `(property)` | The CSS property, such as `display` or `background-color`. |
-| `(value)` | A readable value when Fluentic can safely name it, such as `flex` or `center`. |
+| `(value)` | A readable value when it can be named safely, such as `flex` or `center`. |
 | `(selector)` | The selector segment, such as `hover` or `focus-visible`. |
 | `(scopeSelector)` | The parent scope selector segment when a scoped rule is generated. |
 | `(atRule)` | The at-rule segment, such as a media or container marker. |
@@ -345,7 +345,7 @@ classNameFormat: '[(property:16!)][-(value:10)]-$hash'
 `(property:16!)` truncates to 16 characters. `(value:10)` only appears when the
 value is 10 characters or shorter.
 
-If `$hash` is not present, Fluentic appends the hash to the formatted name. Keep
+If `$hash` is not present, the name formatter appends the hash to the formatted name. Keep
 `$hash` somewhere in production-facing formats unless you intentionally want to
 own uniqueness yourself.
 
@@ -422,7 +422,7 @@ stylePlugin({
 ```
 
 The returned string becomes the source URL used by CSS sourcemaps. Return
-`sourceUrl`, `null`, or `undefined` when you want to keep Fluentic's default for
+`sourceUrl`, `null`, or `undefined` when you want to keep the default for
 that file.
 
 Adapter-specific behavior may differ. Start with your integration page, such as

@@ -74,7 +74,7 @@ getClassName returns an object, not a string. getToken(tokenOrValue) returns a C
 
 Use style.keyframes({from: {opacity: 0}, to: {opacity: 1}}) for animations. For named CSS at-rules, selector sheets, global rules, fonts and portal-owned vendor selectors, use the matching public API from @fluentic/style/css rather than inventing a style.global API. Keep existing reset/font CSS until deliberately ported.
 
-## Selector sheets and named layers (beta 13)
+## Selector sheets and named layers
 
 Import createSheet from @fluentic/style/css and style from @fluentic/style. Only the individual createSheet option accepts boolean | string; global css.layer.sheet remains boolean.
 

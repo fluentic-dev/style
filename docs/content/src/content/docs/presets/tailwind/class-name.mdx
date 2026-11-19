@@ -1,10 +1,10 @@
 ---
 title: Tailwind Class Name Preset
-description: Use Tailwind-like class names with Fluentic chain methods.
+description: Use Tailwind-like class names with chain methods.
 ---
 
 The Tailwind classname preset lets you write familiar utility class names while
-keeping Fluentic's chain model.
+keeping the chain model.
 
 ```tsx
 css={cx(
@@ -23,7 +23,7 @@ css={cx(
 ```
 
 The important difference from Tailwind is that variants are not prefixes inside
-the string. They are Fluentic chains. That keeps conditions grouped, source
+the string. They are style chains. That keeps conditions grouped, source
 traceable, and compatible with the same selector customization used by object
 styles.
 
@@ -95,7 +95,7 @@ cannot reliably recognize it as a Fluentic classname function. That registration
 is what lets extracted builds resolve static expressions, run the Tailwind
 classname transform, and emit CSS.
 
-Use it like any other Fluentic style value:
+Use it like any other style value:
 
 ```tsx
 const button = cx(

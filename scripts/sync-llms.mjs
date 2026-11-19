@@ -19,15 +19,9 @@ async function collect(relative) {
   }
 }
 await collect('llms');
-const packageInfo = JSON.parse(await readFile(path.join(root, 'packages/style/package.json'), 'utf8'));
-for (const name of ['llms.txt', 'llms/setup.txt']) {
-  if (!files.get(name).includes(packageInfo.version)) {
-    throw new Error(`${name}: update documentation target to ${packageInfo.version}`);
-  }
-}
 const exampleRoot = path.join(root, 'examples/llm-basic');
 const examplePackage = JSON.parse(await readFile(path.join(exampleRoot, 'package.json'), 'utf8'));
-examplePackage.dependencies['@fluentic/style'] = packageInfo.version;
+examplePackage.dependencies['@fluentic/style'] = 'beta';
 delete examplePackage.scripts['test:browser'];
 delete examplePackage.devDependencies['playwright-core'];
 const exampleFiles = [
@@ -43,7 +37,7 @@ const exampleFiles = [
 ];
 const exampleParts = [
   '# Fluentic Style: complete React + Vite example',
-  `Generated from @example/llm-basic, validated against @fluentic/style ${packageInfo.version}.`,
+  'Generated from the validated @example/llm-basic workspace example.',
   'Create the files below in an empty directory. Run npm install, npm run typecheck, and npm run build; use npm run dev to open the app. Other package managers work too. For an existing app, merge configuration and keep its installed framework versions.',
   'Read setup and core for API semantics. Button owns its tokens and slots; theme.ts connects them to app values. The app switches token themes, selects variants, overrides public parts, and puts consumer root css last. Native button props and event handlers are preserved.',
   'The package manifest is generated from the workspace example with a public dependency version and without repository-only browser test tooling. All other files are copied verbatim. File order below is for reading, not execution.',

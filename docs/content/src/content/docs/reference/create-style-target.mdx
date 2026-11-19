@@ -1,9 +1,9 @@
 ---
 title: createStyleTarget
-description: Apply Fluentic styles to an element outside your render tree.
+description: Apply styles to an element outside your render tree.
 ---
 
-Use `createStyleTarget()` when a Fluentic style prop needs to be applied to a
+Use `createStyleTarget()` when a style prop needs to be applied to a
 DOM element you do not render directly.
 
 The common case is a portal target. Your wrapper can render normal in-tree
@@ -66,7 +66,7 @@ target.destroy();
 
 | Argument | Description |
 | --- | --- |
-| `element` | The `Element` to receive resolved Fluentic classes and inline style values. `null` and `undefined` are ignored. |
+| `element` | The `Element` to receive generated classes and inline style values. `null` and `undefined` are ignored. |
 | `css` | Any `StyleProp`, including styles, sheets, scopes, themes, arrays, and conditional values. |
 | `options.enabled` | When `false`, remove this target's previously applied classes and style values from the element. |
 
@@ -75,7 +75,7 @@ instance applied.
 
 ## Shared Elements
 
-Multiple style targets can apply styles to the same element. Fluentic reference
+Multiple style targets can apply styles to the same element. The runtime reference
 counts class names and tracks the initial inline style value for each property,
 so destroying one target does not remove another target's styles.
 
