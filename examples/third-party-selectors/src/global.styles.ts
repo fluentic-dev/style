@@ -1,5 +1,6 @@
 import { style } from '@fluentic/style';
 import { createGlobalSheet } from '@fluentic/style/css';
+import { selectTokens } from './Select.style';
 
 // Imported once by the client entry. No class or css prop is attached to the DOM.
 // Development injects these rules immediately; production extracts them to CSS.
@@ -21,7 +22,7 @@ export function highlightGlobalHeadings() {
   createGlobalSheet({ order: 1 }, [
     style.selector('[data-global-heading]', {
       textDecorationLine: 'underline',
-      textDecorationColor: '#8b5cf6',
+      textDecorationColor: selectTokens.accent,
       textDecorationThickness: '3px',
       textUnderlineOffset: '6px',
     }),

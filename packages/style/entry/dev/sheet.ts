@@ -1,7 +1,6 @@
-import { getRuntimeDocument } from '../../config/document';
-import { setGlobalSheet } from '../../runtime/sheet/global';
+import { getDocumentSheet } from '../../runtime/sheet/document';
 import { createDevSheet } from '../../sheet/dev';
-import { createNoopSheet } from '../../sheet/utils/noop';
 
-const document = getRuntimeDocument();
-setGlobalSheet(document ? createDevSheet({ document }) : createNoopSheet());
+// Vite can evaluate this entry through both source imports and optimized dependencies.
+// Reuse the document sheet so previously injected global rules remain registered.
+getDocumentSheet(createDevSheet);

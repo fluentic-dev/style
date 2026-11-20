@@ -2,6 +2,7 @@ import { BUILD_CONFIG } from '../config/build';
 import { configureStyleRuntime } from '../config/configure';
 import { getRuntimeDocument } from '../config/document';
 import { createStyleTarget } from '../css/styleTarget';
+import { createGlobalSheet } from '../css/globalSheet';
 import { insertElementMarkerSheetRule } from '../runtime/core/elementMarker';
 import {
   configureTestRuntime,
@@ -16,6 +17,25 @@ import {
   style,
   test,
 } from './setup';
+
+test('development entry preserves global rules injected before initialization', async () => {
+  const previousSheet = getGlobalSheet();
+  const document = createFakeDocument();
+  try {
+    configureTestRuntime({ dev: true });
+    configureStyleRuntime({ document: document as unknown as Document });
+    createGlobalSheet([style.selector('body', { fontFamily: 'Inter, sans-serif' })]);
+    const sheet = getGlobalSheet();
+
+    await import('../entry/dev/sheet');
+
+    equal(getGlobalSheet(), sheet);
+  } finally {
+    configureStyleRuntime({ document: true });
+    configureTestRuntime();
+    setGlobalSheet(previousSheet);
+  }
+});
 
 test('disabled injection preserves explicit style target updates and cleanup with plugin configuration', () => {
   const previousBuild = BUILD_CONFIG.current;
