@@ -74,6 +74,7 @@ export function mergeBuilderData<Data extends BuilderData>(
   let value: string;
   let weight: number | null;
   let important: boolean;
+  let importantNative: boolean;
   let itemCallsite: BuilderCallsite | null;
   let className: string;
   let dedupe: string;
@@ -132,7 +133,7 @@ export function mergeBuilderData<Data extends BuilderData>(
   } else {
     for (const property in style) {
       valueRaw = style[property as keyof typeof style];
-      [valueRaw, weight, important] = unwrapAuthoredStyleValue(valueRaw);
+      [valueRaw, weight, important, importantNative] = unwrapAuthoredStyleValue(valueRaw);
       const sourceType = source[BUILDER_TYPE];
       checkImportantUsage(
         valueRaw,
@@ -169,6 +170,7 @@ export function mergeBuilderData<Data extends BuilderData>(
         property,
         weight,
         important,
+        importantNative,
         value,
         transformClassName,
         variable: ref
@@ -235,6 +237,7 @@ export function mergeBuilderData<Data extends BuilderData>(
       runtimeItem.selector,
       null,
       runtimeItem.atRule,
+      runtimeItem.importantNative,
     );
 
     className = getAtomicClassName(
@@ -252,6 +255,8 @@ export function mergeBuilderData<Data extends BuilderData>(
       runtimeItem.transformClassName ?? null,
       CSS_CONFIG.transformClassNameFormat ?? null,
       CSS_CONFIG.sheetClassNameFormat ?? null,
+      null,
+      runtimeItem.importantNative,
     );
 
     runtimeItem.dedupe = dedupe;
@@ -269,13 +274,17 @@ export function mergeBuilderData<Data extends BuilderData>(
   return data;
 }
 
-function unwrapAuthoredStyleValue(value: unknown): [value: unknown, weight: number | null, important: boolean] {
+function unwrapAuthoredStyleValue(
+  value: unknown,
+): [value: unknown, weight: number | null, important: boolean, native: boolean] {
   let weight: number | null = null;
   let important = false;
+  let native = false;
 
   while (true) {
     if (isStyleImportantValue(value)) {
       important = true;
+      native ||= value.native === true;
       value = value.value;
       continue;
     }
@@ -289,7 +298,7 @@ function unwrapAuthoredStyleValue(value: unknown): [value: unknown, weight: numb
     break;
   }
 
-  return [value, weight, important];
+  return [value, weight, important, native];
 }
 
 function checkImportantUsage(value: unknown, important: boolean, isSheet: boolean) {

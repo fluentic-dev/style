@@ -7,7 +7,7 @@ import { escapeCssIdent } from './utils/cssIdent';
 import {
   getSelectorPriority,
   getSelectorText,
-  getSheetSelectorWeight,
+  getSheetSelectorSpecificity,
   hasGlobalSheetSelectorAnchor,
   hasSheetSelectorAnchor,
 } from './utils/selector';
@@ -27,13 +27,11 @@ export function buildAtomicRule(
   const cssValue = getCssPropertyValue(property, value) + (important ? ' !important' : '');
   const escapedClass = escapeCssIdent(className);
 
-  const sheetWeight = getSheetSelectorWeight(selector);
+  const specificity = hasSheetSelectorAnchor(selector) ? getSheetSelectorSpecificity(selector) ?? 1 : 1;
 
-  const classSelector = sheetWeight
-    ? Array(sheetWeight).fill('.' + escapedClass).join('')
-    : hasSheetSelectorAnchor(selector)
+  const classSelector = specificity === 0
     ? `:where(.${escapedClass})`
-    : '.' + escapedClass;
+    : Array(specificity).fill('.' + escapedClass).join('');
 
   const itemSelector = selector ? getSelectorText(selector) : '';
 

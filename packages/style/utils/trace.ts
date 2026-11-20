@@ -151,6 +151,7 @@ function isInternalCallsite(filePath: string) {
     normalized.includes('/node_modules/') ||
     normalized.includes('/packages/style/dist/') ||
     normalized.includes('/packages/style/builder/') ||
+    normalized.includes('/packages/style/css/') ||
     normalized.includes('/packages/style/runtime/') ||
     normalized.includes('/packages/style/utils/trace.');
 }

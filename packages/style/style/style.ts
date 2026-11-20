@@ -64,7 +64,7 @@ export function createStyleFn<
   const fnWeight: Types['ValueFn'] = (value, weight) => {
     return weightValue(value, weight);
   };
-  const fnImportant: Types['ImportantFn'] = (value) => importantValue(value);
+  const fnImportant: Types['ImportantFn'] = (value, native) => importantValue(value, native);
   const fnRaw: Types['RawFn'] = (style) => style;
   const fnPlain: Types['PlainFn'] = (style) => style;
   const fnKeyframes: Types['KeyframesFn'] =

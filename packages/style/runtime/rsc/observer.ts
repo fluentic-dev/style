@@ -10,7 +10,14 @@ import {
   isElementMarkerRule,
 } from '../core/elementMarker';
 import { getGlobalSheet } from '../sheet';
-import { ELEMENT_CSS_DATA_ATTR, PRECOLLECT_LINK_TAG_ATTR, SEED_STYLE_TAG_ATTR, SEED_STYLE_TAG_HREF } from './constants';
+import {
+  ELEMENT_CSS_DATA_ATTR,
+  GLOBAL_RULES_ATTR,
+  GLOBAL_SEED_ATTR,
+  PRECOLLECT_LINK_TAG_ATTR,
+  SEED_STYLE_TAG_ATTR,
+  SEED_STYLE_TAG_HREF,
+} from './constants';
 import type { RscStylePayloadRule } from './getClassName';
 
 let observer: MutationObserver | null = null;
@@ -21,6 +28,8 @@ let flushId = 0;
 
 const pending = new Set<Element>();
 const inserted = new Set<string>();
+const globalRevisions = new Map<string, string>();
+const globalPayloads = new Set<Element>();
 
 export function startRscDevObserver(root?: ParentNode) {
   observerRequested = true;
@@ -46,9 +55,10 @@ export function startRscDevObserver(root?: ParentNode) {
 
         if (
           target.nodeType === 1 &&
-          (target as Element).hasAttribute(ELEMENT_CSS_DATA_ATTR)
+          ((target as Element).hasAttribute(ELEMENT_CSS_DATA_ATTR) ||
+            (target as Element).hasAttribute(GLOBAL_RULES_ATTR))
         ) {
-          pending.add(target as Element);
+          collectPending(target as Element);
           changed = true;
         }
 
@@ -56,7 +66,14 @@ export function startRscDevObserver(root?: ParentNode) {
       }
 
       mutation.addedNodes.forEach((node) => {
-        if (node.nodeType !== 1) return;
+        if (node.nodeType !== 1) {
+          const target = mutation.target;
+          if (target.nodeType === 1 && (target as Element).hasAttribute(GLOBAL_RULES_ATTR)) {
+            globalPayloads.add(target as Element);
+            changed = true;
+          }
+          return;
+        }
 
         if (collectPending(node as Element)) {
           changed = true;
@@ -71,7 +88,7 @@ export function startRscDevObserver(root?: ParentNode) {
     childList: true,
     attributes: true,
     subtree: true,
-    attributeFilter: [ELEMENT_CSS_DATA_ATTR],
+    attributeFilter: [ELEMENT_CSS_DATA_ATTR, GLOBAL_RULES_ATTR],
   });
 
   collectPending(targetRoot);
@@ -86,6 +103,8 @@ export function stopRscDevObserver() {
 
   pending.clear();
   inserted.clear();
+  globalRevisions.clear();
+  globalPayloads.clear();
   scheduled = false;
 }
 
@@ -96,9 +115,10 @@ onRuntimeDocumentChange(() => {
 });
 
 function collectPending(root: ParentNode | Element): boolean {
-  const before = pending.size;
+  const before = pending.size + globalPayloads.size;
 
   const collectElement = (element: Element) => {
+    if (element.hasAttribute(GLOBAL_RULES_ATTR)) globalPayloads.add(element);
     if (!element.hasAttribute(ELEMENT_CSS_DATA_ATTR)) return;
 
     pending.add(element);
@@ -108,11 +128,11 @@ function collectPending(root: ParentNode | Element): boolean {
     collectElement(root as Element);
   }
 
-  root.querySelectorAll?.(`[${ELEMENT_CSS_DATA_ATTR}]`).forEach((element) => {
+  root.querySelectorAll?.(`[${ELEMENT_CSS_DATA_ATTR}], [${GLOBAL_RULES_ATTR}]`).forEach((element) => {
     collectElement(element);
   });
 
-  return pending.size !== before;
+  return pending.size + globalPayloads.size !== before;
 }
 
 function scheduleFlush() {
@@ -132,10 +152,24 @@ function flush() {
     return;
   }
 
-  if (!pending.size) return;
+  if (!pending.size && !globalPayloads.size) return;
 
   const sheet = getGlobalSheet();
   sheet.updateLayers(CSS_CONFIG.layers || LayerDefaultLayers);
+
+  const adopted: Element[] = [];
+  for (const element of globalPayloads) {
+    const batches = parseGlobalRulePayload(element.textContent);
+    if (!batches) continue;
+    if (!sheet.replaceRules) continue;
+    for (const batch of batches) {
+      if (globalRevisions.get(batch.owner) === batch.revision) continue;
+      sheet.replaceRules('rsc-global:' + batch.owner, batch.rules);
+      globalRevisions.set(batch.owner, batch.revision);
+    }
+    adopted.push(element);
+  }
+  globalPayloads.clear();
 
   const elements = Array.from(pending);
   pending.clear();
@@ -164,6 +198,18 @@ function flush() {
   }
 
   sheet.flush();
+  for (const payload of adopted) {
+    const id = payload.getAttribute(GLOBAL_RULES_ATTR);
+    observerDocument.querySelectorAll(`[${GLOBAL_SEED_ATTR}]`).forEach((seed) => {
+      if (seed.getAttribute(GLOBAL_SEED_ATTR) === id) {
+        seed.removeAttribute(GLOBAL_SEED_ATTR);
+        seed.textContent = '';
+      }
+    });
+    // React owns these nodes in Flight. Keep the empty shells for reconciliation.
+    payload.removeAttribute(GLOBAL_RULES_ATTR);
+    payload.textContent = '';
+  }
   cleanupInitialStyle();
 
   void id;
@@ -211,6 +257,12 @@ function normalizePayloadItem(value: unknown): SheetRule | null {
   const rule = value as RscStylePayloadRule;
 
   if (typeof rule.key !== 'string' || typeof rule.css !== 'string') return null;
+  if (rule.importantNative !== undefined && typeof rule.importantNative !== 'boolean') return null;
+  if (rule.sheet !== undefined && typeof rule.sheet !== 'boolean') return null;
+  if (
+    rule.globalSheet !== undefined &&
+    (!rule.globalSheet || typeof rule.globalSheet.id !== 'string' || !Number.isFinite(rule.globalSheet.order))
+  ) return null;
   if (rule.important !== undefined && typeof rule.important !== 'boolean') return null;
   if (
     rule.layer !== undefined && rule.layer !== false && rule.layer !== 'style' && rule.layer !== 'sheet' &&
@@ -224,6 +276,9 @@ function normalizePayloadItem(value: unknown): SheetRule | null {
     css: rule.css,
     priority: rule.priority,
     important: rule.important,
+    importantNative: rule.importantNative,
+    sheet: rule.sheet,
+    globalSheet: rule.globalSheet,
     layer: rule.layer,
     callsite: normalizePayloadCallsite(rule.callsite),
     debug: rule.debug,
@@ -268,5 +323,26 @@ function removeElementMarkerClass(element: Element, rule: SheetRule) {
     element.setAttribute('class', next);
   } else {
     element.removeAttribute('class');
+  }
+}
+
+export function parseGlobalRulePayload(
+  value: string | null,
+): Array<{ owner: string; revision: string; rules: SheetRule[]; }> | null {
+  try {
+    const batches: unknown = JSON.parse(value ?? '');
+    if (!Array.isArray(batches)) return null;
+    const result: Array<{ owner: string; revision: string; rules: SheetRule[]; }> = [];
+    for (const batch of batches) {
+      if (
+        !batch || typeof batch.owner !== 'string' || typeof batch.revision !== 'string' || !Array.isArray(batch.rules)
+      ) return null;
+      const rules = batch.rules.map(normalizePayloadItem);
+      if (rules.some((rule: SheetRule | null) => !rule)) return null;
+      result.push({ owner: batch.owner, revision: batch.revision, rules });
+    }
+    return result;
+  } catch {
+    return null;
   }
 }

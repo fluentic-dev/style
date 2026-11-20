@@ -213,7 +213,7 @@ by default.
 
 | Option | Purpose |
 | --- | --- |
-| `layer` | Enable style layers with a boolean, or select targets with `{ style?: boolean, sheet?: boolean }`. Sheets default to `false`. |
+| `layer` | Enable ordinary style layers with a boolean or `{ style?: boolean }`. Choose each sheet’s layer on the sheet itself. |
 | `layers` | Configure layer order. Use `$layer` where generated priority layers should be inserted. |
 | `layerNamespace` | Prefix generated priority layer names. |
 | `classNameFormat` | Format atomic class names. Supports strings or functions. |
@@ -237,36 +237,20 @@ css: { layer: true }  // styles layered, sheets unlayered
 css: { layer: false } // styles and sheets unlayered by default
 ```
 
-Use the target form to opt selector sheets into a separate generated layer:
-
-```ts
-css: {
-  layer: {
-    style: true,
-    sheet: true,
-  },
-  layerNamespace: 'fluentic',
-}
-```
-
-This produces the default sheet layer `fluentic.sheet`. When extracted ordinary
-styles and sheet sublayers coexist under that namespace, ordinary styles use the
-sibling `fluentic.style` layer.
-
 ### Individual sheet layers
 
-`createSheet({ layer }, items)` overrides `css.layer.sheet` for that sheet:
+Both `createSheet` and `createGlobalSheet` default to unlayered CSS:
 
-- `true` uses `<layerNamespace>.sheet`; `false` emits unlayered CSS.
-- A string without a leading dot is an absolute name: `'reset'` stays `reset`,
-  and `'vendor.reset'` stays `vendor.reset`.
-- A string beginning with a dot is relative to `css.layerNamespace`: `'.reset'`
-  becomes `fluentic.reset` in the configuration above (`css.reset` by default).
-- Omitting the option inherits the global `css.layer.sheet` setting.
+- `layer: true` uses the same layer system as regular styles, or stays unlayered
+  when the main layer is disabled. It never appends `.sheet`.
+- `layer: false` or omission emits unlayered CSS.
+- `'reset'` and `'vendor.reset'` are absolute layer names.
+- `'.reset'` resolves to `<layerNamespace>.reset` when the main layer is enabled,
+  or `reset` when it is disabled.
 
-String names are supported only by the individual sheet option. The global
-`css.layer.sheet` option remains boolean. An explicit per-sheet `true` or string
-also works when `css.layer` is `false`.
+The legacy `css.layer.sheet` setting no longer enables local sheet layers.
+Choose the layer on each sheet. See [Style ordering and the cascade](style-ordering)
+for global `order`, local `specificity`, and managed important declarations.
 
 Use `css.layers` to declare the order of named layers alongside generated layers:
 

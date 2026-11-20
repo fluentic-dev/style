@@ -92,6 +92,7 @@ export type RuntimeItemData = {
   property: string;
   weight: number | null;
   important: boolean;
+  importantNative?: boolean;
   value: ItemValue;
   transformClassName?: string | null;
   variable?: ExtractedItemValue;

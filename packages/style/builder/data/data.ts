@@ -66,7 +66,7 @@ export type SheetData<Style = unknown> =
 
 export type CreateSheetOptions = {
   layer?: boolean | string;
-  weight?: number;
+  specificity?: number;
 };
 
 export type ScopeData =

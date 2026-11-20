@@ -11,6 +11,7 @@ import {
   DEBUG_SOURCE_CONTENT_VAR,
   DEBUG_SOURCE_URL_VAR,
   DEFAULT_CONFIG,
+  FN_CREATE_GLOBAL_SHEET,
   FN_CREATE_THEME,
   FN_STYLE_KEYFRAMES,
   FN_STYLE_MERGE,
@@ -19,6 +20,7 @@ import {
   FN_STYLE_SCOPE,
   FN_STYLE_SELECTOR,
   IMPORT_PATHS,
+  STYLE_CSS_IMPORT_PATH,
 } from '../../utils/constants';
 import { createImportSourceMatcher, type ImportSourceMatcher } from '../../utils/import_source';
 import {
@@ -160,6 +162,26 @@ export function createDebugPlugin(args: PluginArgs) {
           path: NodePath<BabelTypes.CallExpression>,
           state: PluginState,
         ) {
+          if (path.node.callee.type === 'Identifier') {
+            const imported = state.imports.get(path.node.callee.name);
+            if (
+              imported?.source === STYLE_CSS_IMPORT_PATH && imported.name === FN_CREATE_GLOBAL_SHEET &&
+              !hasDebugArgument(path.node.arguments)
+            ) {
+              const debug = buildDebugDataObject(
+                t,
+                path.node,
+                state.fileId,
+                getSourceUrlId(t, state),
+                sourceContent ? getSourceContentId(t, state) : null,
+              );
+              if (!path.getFunctionParent()) {
+                debug.properties.push(t.objectProperty(t.identifier('globalModule'), t.stringLiteral(state.filePath)));
+              }
+              if (!path.node.arguments.length) path.node.arguments.push(t.arrayExpression([]));
+              path.node.arguments.push(debug);
+            }
+          }
           annotateThemeCall(path.node, state, t);
           annotateThemeCallsite(t, path, state, sourceContent);
 

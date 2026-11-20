@@ -828,7 +828,10 @@ function evaluateCall(node: BabelTypes.CallExpression, scope: EvalScope): EvalRe
     const value = evaluateNode(node.arguments[0] as BabelTypes.Node, scope);
     if (!value.ok) return value;
 
-    return evalOk(importantValue(value.value));
+    const native = node.arguments[1] ? evaluateNode(node.arguments[1] as BabelTypes.Node, scope) : evalOk(false);
+    if (!native.ok) return native;
+    if (typeof native.value !== 'boolean') return evalFail('style.important second argument must be a boolean');
+    return evalOk(importantValue(value.value, native.value));
   }
 
   if (

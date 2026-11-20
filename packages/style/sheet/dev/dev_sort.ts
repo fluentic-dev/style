@@ -219,7 +219,11 @@ function ensureGroup(
 }
 
 function getLayerRank(layer: NonNullable<SheetRule['layer']>) {
-  return layer === 'style' ? 0 : layer === 'sheet' || typeof layer === 'object' ? 1 : 2;
+  return layer === 'style' || (typeof layer === 'object' && layer.name === getStyleLayerName())
+    ? 0
+    : layer === 'sheet' || typeof layer === 'object'
+    ? 1
+    : 2;
 }
 
 function createGroupTag(

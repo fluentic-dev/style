@@ -81,3 +81,27 @@ The verifiers check that:
 - `out` contains exported CSS in static mode.
 - the virtual CSS marker was replaced.
 - `/`, `/ssg`, `/ssr`, `/rsc`, and `/client` return HTML with class attributes.
+
+## Global styles
+
+`app/globals.ts` replaces the CSS reset with `createGlobalSheet({ layer: 'reset' }, ...)`.
+The RSC page also declares a global border for its explanatory note. In development,
+server globals arrive as seed CSS and JSON rule metadata, then join the same Fluentic
+stylesheet as component styles. This works on initial load, streamed content, and
+client navigation. Module edits replace old rules; deleting a declaration removes them.
+Production extracts these static declarations into the existing CSS assets.
+
+Run the transport regression check with no other Next dev server running:
+
+```sh
+pnpm --filter @example/nextjs test:global-dev
+NEXT_GLOBAL_TEST_WEBPACK=1 pnpm --filter @example/nextjs test:global-dev
+```
+
+It checks repeated requests, RSC navigation payloads, streaming, and request isolation.
+To reuse an existing dev server, set `NEXT_GLOBAL_TEST_URL=http://127.0.0.1:4180`.
+
+The global reset uses `order: -1`; the RSC route note uses `order: 1`. These
+whole-sheet positions survive server seeding, client adoption, and extraction.
+Both examples explicitly select the `reset` layer; source order does not change
+that layer’s cascade precedence.

@@ -382,7 +382,7 @@ function decorateClassNameValue<ClassName extends string>(
   if (isClassNameValue(value)) return value;
 
   if (isStyleImportantValue(value)) {
-    return importantValue(decorateClassNameValue(value.value, className));
+    return importantValue(decorateClassNameValue(value.value, className), value.native);
   }
 
   if (isStyleWeightValue(value)) {

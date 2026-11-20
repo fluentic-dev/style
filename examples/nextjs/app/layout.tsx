@@ -2,7 +2,7 @@ import { StyleDev } from '@fluentic/style/dev/rsc';
 import type { Metadata } from 'next';
 import { type ReactNode } from 'react';
 
-import './globals.css';
+import './globals';
 
 export const metadata: Metadata = {
   title: 'Fluentic Style + Next.js',

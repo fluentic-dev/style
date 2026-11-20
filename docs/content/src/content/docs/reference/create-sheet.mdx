@@ -77,46 +77,22 @@ site:
 
 | Option | Description |
 | --- | --- |
-| `layer?: boolean \| string` | A boolean or layer name. `true` uses `<layerNamespace>.sheet`; `false` keeps the sheet unlayered. A string selects a custom layer, with a leading `.` making it relative to `css.layerNamespace`. Overrides the global `css.layer.sheet` setting. |
-| `weight` | Repeat the generated sheet anchor class to increase selector specificity. It must be a positive integer. |
-
-Sheets are unlayered by default because they commonly override third-party CSS
-that is not inside the configured layer system. Enable a layer for a particular
-sheet when it should participate in your declared layer order:
-
-```ts
-const integratedSheet = createSheet({ layer: true }, [
-  style.selector('.control', { color: 'red' }),
-]);
-```
+| `layer?: boolean \| string` | Defaults to `false`. `true` shares the regular-style layer; an absolute name stays literal; a leading dot is relative to the enabled main namespace. |
+| `specificity?: number` | Non-negative integer; defaults to `1`. `0` uses `:where(.class)`, `1` uses `.class`, and `2` repeats `.class` twice. |
 
 ### Layer option
 
-The per-sheet option takes precedence over the global setting:
+| `layer` value | Main namespace `fluentic` enabled | Main layer disabled |
+| --- | --- | --- |
+| Omitted / `false` | Unlayered | Unlayered |
+| `true` | Regular-style layer system (`fluentic`) | Unlayered |
+| `'reset'` | `reset` | `reset` |
+| `'.reset'` | `fluentic.reset` | `reset` |
+| `'vendor.reset'` | `vendor.reset` | `vendor.reset` |
 
-| `layer` value | Result with `css.layerNamespace: 'fluentic'` |
-| --- | --- |
-| Omitted or `undefined` | Inherit `css.layer.sheet` (default `false`). |
-| `false` | Emit unlayered CSS, even if sheets are layered globally. |
-| `true` | Emit in `fluentic.sheet`. |
-| `'reset'` | Emit in `reset`, exactly as written. |
-| `'.reset'` | Emit in `fluentic.reset`. |
-| `'vendor.reset'` | Emit in `vendor.reset`, exactly as written. |
-| `'.reset.forms'` | Emit in `fluentic.reset.forms`. |
-
-The default namespace is `css`. Use a string to give an individual sheet its own layer:
-
-```ts
-createSheet({ layer: 'reset' }, items);  // @layer reset
-createSheet({ layer: '.reset' }, items); // @layer css.reset (default namespace)
-```
-
-Names without a leading dot are used as written, including nested names such as
-`vendor.reset`. A leading dot prepends `css.layerNamespace`: with namespace
-`fluentic`, `.reset` becomes `fluentic.reset`. Boolean behavior is unchanged, and
-named layers work even when global `css.layer` is `false`. The global
-`css.layer.sheet` option remains boolean. In particular, `css.layer: true`
-enables ordinary style layers but leaves sheets unlayered unless you opt them in.
+Sheets do not inherit `css.layer.sheet`, and `true` does not append `.sheet`.
+For source order, priority, layer precedence, and important handling, see
+[Style ordering and the cascade](style-ordering).
 
 Pass a nonempty name with dot-separated identifier segments; do not include
 `@layer`, braces, commas, spaces, or a trailing dot. Invalid names throw at runtime.
@@ -190,34 +166,25 @@ CSS outranks all layered CSS; increasing a sheet's `weight` does not change that
 layer precedence. CSS reverses layer precedence for `!important` declarations.
 See [CSS options](plugin-options#css-options) for the global configuration.
 
-### Selector weight
+### Selector specificity
 
-The default sheet anchor uses `:where(...)` and contributes no specificity.
-Use `weight` when an integration needs a stronger—but still overridable—anchor:
+The default anchor is `.generated`. Use `specificity: 0` to contribute no anchor
+specificity, or a larger integer to repeat the anchor:
 
 ```ts
-const strongerSheet = createSheet({ weight: 2 }, [
-  control({ color: 'red' }),
+const strongerSheet = createSheet({ specificity: 2 }, [
+  style.selector('.control', { color: 'red' }),
 ]);
 ```
 
-For a generated class named `sheet-x`, `weight: 2` emits an anchor equivalent
-to `.sheet-x.sheet-x`. This is often preferable to `style.important(...)`
-when specificity alone is enough.
+The former sheet `weight` option is now `specificity`. Declaration priority still
+uses `style.weight(value, number)`.
 
-Use this order when choosing an override mechanism:
-
-1. For priority between ordinary styles, use composition or
-   `style.weight(...)`.
-2. For a selector sheet that only needs more specificity, use the sheet's
-   `weight` option.
-3. Use `style.important(...)` when a sheet must override third-party CSS that
-   already uses `!important` or cannot otherwise be ordered.
-
-Do not put `!important` inside a raw string value because it bypasses the
-important-value metadata. Write `style.important(value)` instead. Projects can
-enforce these recommendations with the opt-in
-[`check.important` plugin options](plugin-options#check-options).
+For layered sheets, `style.important(value)` places the declaration in the first
+`<resolved-layer>.important` child. `style.important(value, true)` keeps native
+layer placement. Unlayered sheets keep ordinary unlayered important declarations.
+See [the ordering guide](style-ordering#important-declarations-managed-or-native)
+for examples and interaction with regular styles.
 
 The items argument accepts selector-oriented style input:
 

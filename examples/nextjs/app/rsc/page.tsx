@@ -1,8 +1,13 @@
 import { combineStyle, createTokens, style } from '@fluentic/style';
+import { createGlobalSheet } from '@fluentic/style/css';
 import { Card } from '../../lib/Card';
 import { Chrome } from '../../lib/Chrome';
 import { page } from '../../lib/styles';
 import { ClientTokenPanel } from './ClientTokenPanel';
+
+createGlobalSheet({ layer: 'reset', order: 1 }, [
+  style.selector('[data-global-rsc-note]', { borderLeft: '3px solid #0f766e', paddingLeft: 12 }),
+]);
 
 const tokenDefaults = {
   tone: '#7c2d12',
@@ -63,6 +68,10 @@ async function ServerOnlyPanel() {
     <article css={[pageCss.card, css.detail]}>
       <div css={pageCss.cardAccent} />
       <h2 css={pageCss.cardTitle}>server token override</h2>
+      <p data-global-rsc-note>
+        This border comes from a server-only <code>createGlobalSheet</code>{' '}
+        declaration, including after client navigation.
+      </p>
       <div css={css.row}>
         <span css={css.swatch} />
         <p css={css.value}>RSC</p>

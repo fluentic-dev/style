@@ -1,16 +1,15 @@
 @layer css;
-@layer css {
-.theme-bcmdhyx{--token-color--bg-gsgl540:#f8fafc;--token-color--fg-cc84fw0:#0f172a}
-.padding--bdgz721{padding: 12px}
-.color--ha2v6h0{color: #111827}
-.box-shadow--jlvme90{box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12)}
-.border-color--bkojgu0{border-color: var(--var-vfnc6k0, var(--token-color--accent-cu25p10, #2563eb))}
-.background-color--swvf9p0{background-color: #f8fafc}
-.font-size--ukgzgk0{font-size: 14px}
-.background-color--xn8dux0{background-color: var(--var-ixn6uy0, var(--token-color--bg-gsgl540, #ffffff))}
-.box-shadow--bgoxg5v{box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08)}
-.color--blb8sdu{color: #334155}
-@media (max-width: 700px){.max-700px-padding--brihkx1{padding: 8px}}
-.hover-border-color--kcoo2h0:where(.-hover-border-color--kcoo2h0:hover),:where(.-hover-border-color--kcoo2h0:hover) .hover-border-color--kcoo2h0{border-color: #94a3b8}
-.color-hover--eeydj60:hover{color: var(--var-d2bnon0, var(--token-color--accent-cu25p10, #2563eb))}
-}
+@layer css.important;
+@layer css {.theme-bcmdhyx{--token-color--bg-gsgl540:#f8fafc;--token-color--fg-cc84fw0:#0f172a}}
+@layer css {.padding--bdgz721{padding: 12px}}
+@layer css {.color--ha2v6h0{color: #111827}}
+@layer css {.box-shadow--jlvme90{box-shadow: 0 16px 36px rgba(15, 23, 42, 0.12)}}
+@layer css {.border-color--bkojgu0{border-color: var(--var-vfnc6k0, var(--token-color--accent-cu25p10, #2563eb))}}
+@layer css {.background-color--swvf9p0{background-color: #f8fafc}}
+@layer css {.font-size--ukgzgk0{font-size: 14px}}
+@layer css {.background-color--xn8dux0{background-color: var(--var-ixn6uy0, var(--token-color--bg-gsgl540, #ffffff))}}
+@layer css {.box-shadow--bgoxg5v{box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08)}}
+@layer css {.color--blb8sdu{color: #334155}}
+@layer css {@media (max-width: 700px){.max-700px-padding--brihkx1{padding: 8px}}}
+@layer css {.hover-border-color--kcoo2h0:where(.-hover-border-color--kcoo2h0:hover),:where(.-hover-border-color--kcoo2h0:hover) .hover-border-color--kcoo2h0{border-color: #94a3b8}}
+@layer css {.color-hover--eeydj60:hover{color: var(--var-d2bnon0, var(--token-color--accent-cu25p10, #2563eb))}}

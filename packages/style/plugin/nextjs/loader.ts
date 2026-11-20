@@ -10,7 +10,7 @@ import {
   EXTRACTED_CSS_MARKER,
   type FileCssCache,
 } from '../utils';
-import { injectModuleImport } from '../utils/injection';
+import { injectCodeAfterDirectivePrologue, injectModuleImport } from '../utils/injection';
 import { getStyleRuntimeMode } from '../utils/runtimeEntry';
 import { injectDevCssLink } from './html';
 import {
@@ -35,6 +35,8 @@ type NextTurbopackLoaderOptions = WebpackLoaderOptions & {
   projectDir: string;
 };
 
+const globalSheetFiles = new Set<string>();
+
 const loader = createWebpackLoader<NextLoaderState>({
   missingCompilerMessage: 'Next.js compiler is not registered.',
   getEntry(compilerId, options) {
@@ -47,6 +49,9 @@ const loader = createWebpackLoader<NextLoaderState>({
   transform({ code, entry, filePath, inputMap, options }) {
     if (entry.dev) {
       const isServer = getNextLoaderIsServer(entry, options);
+      if (/from\s*['"]@fluentic\/style\/css['"]/.test(code) && code.includes('createGlobalSheet')) {
+        globalSheetFiles.add(filePath);
+      }
 
       const result = entry.compiler.compileDebugRSC({
         code,
@@ -67,7 +72,18 @@ const loader = createWebpackLoader<NextLoaderState>({
 
       return {
         code: injectNextRuntimeCode(
-          result.code,
+          globalSheetFiles.has(filePath)
+            ? injectCodeAfterDirectivePrologue(
+              result.code,
+              `${
+                isServer
+                  ? "import { StyleDev as __fluenticGlobalSeed } from '@fluentic/style/entry/rsc-dev/dev';\nimport { setGlobalSheetSeedComponent as __fluenticSetGlobalSeed } from '@fluentic/style/entry/rsc-dev/css';\n__fluenticSetGlobalSeed(__fluenticGlobalSeed);\n"
+                  : ''
+              }import { resetGlobalSheetModule as __fluenticResetGlobals } from '@fluentic/style/entry/rsc-dev/css';\n__fluenticResetGlobals(${
+                JSON.stringify(filePath)
+              });\n`,
+            )
+            : result.code,
           entry,
           filePath,
         ),

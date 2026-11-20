@@ -20,6 +20,9 @@ export type RscStylePayloadRule = {
   css: string;
   priority?: LayerPriority | null;
   important?: boolean;
+  importantNative?: boolean;
+  sheet?: boolean;
+  globalSheet?: SheetRule['globalSheet'];
   layer?: SheetRule['layer'];
   callsite?: SheetRule['callsite'];
   debug?: DebugData | null;
@@ -76,6 +79,9 @@ function createRscStylePayloadRule(rule: SheetRule): RscStylePayloadRule {
     css: rule.css,
     priority: rule.priority,
     important: rule.important,
+    importantNative: rule.importantNative,
+    sheet: rule.sheet,
+    globalSheet: rule.globalSheet,
     layer: rule.layer,
     callsite: isElementMarkerRule(rule) ? rule.callsite : undefined,
     debug: rule.debug ? createRscDebugPayload(rule.debug, rule.debugField) : undefined,

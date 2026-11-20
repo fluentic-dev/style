@@ -1276,7 +1276,7 @@ test('createSheet anchors plain selectors under an attached generated class', ()
   const className = result.className;
   if (!className) throw new Error('expected sheet class name');
 
-  includes(css, `:where(.${className}) .third-party-label{color: red}`);
+  includes(css, `.${className} .third-party-label{color: red}`);
 });
 
 test('createSheet supports selector arrays and bare selector targets', () => {
@@ -1328,7 +1328,7 @@ test('createSheet supports leading ampersand as the attached class anchor', () =
   const className = result.className;
   if (!className) throw new Error('expected sheet class name');
 
-  includes(css, `:where(.${className}):has(.third-party-button){color: green}`);
+  includes(css, `.${className}:has(.third-party-button){color: green}`);
 });
 
 test('createSheet supports optional ampersand selectors as self or descendant anchors', () => {
@@ -1342,8 +1342,8 @@ test('createSheet supports optional ampersand selectors as self or descendant an
   const [selfClassName, descendantClassName] = result.className?.split(' ') ?? [];
   if (!selfClassName || !descendantClassName) throw new Error('expected sheet class names');
 
-  includes(css, `:where(.${selfClassName}).third-party-menu{color: red}`);
-  includes(css, `:where(.${descendantClassName}) .third-party-menu{color: red}`);
+  includes(css, `.${selfClassName}.third-party-menu{color: red}`);
+  includes(css, `.${descendantClassName} .third-party-menu{color: red}`);
 });
 
 test('createSheet supports ampersand-only selector anchors', () => {
@@ -1358,12 +1358,12 @@ test('createSheet supports ampersand-only selector anchors', () => {
   const [colorClassName, backgroundClassName] = result.className?.split(' ') ?? [];
   if (!colorClassName || !backgroundClassName) throw new Error('expected sheet class names');
 
-  includes(css, `:where(.${colorClassName}){color: red}`);
-  includes(css, `:where(.${backgroundClassName}){background-color: blue}`);
+  includes(css, `.${colorClassName}{color: red}`);
+  includes(css, `.${backgroundClassName}{background-color: blue}`);
 });
 
-test('createSheet options weight repeats the specificity-bearing anchor', () => {
-  const sheet = createSheet({ weight: 2 }, [
+test('createSheet options specificity repeats the specificity-bearing anchor', () => {
+  const sheet = createSheet({ specificity: 2 }, [
     style.selector('.third-party-label', { color: 'red' }),
   ]);
   const result = getClassName(sheet);
@@ -1391,7 +1391,7 @@ test('createSheet is unlayered by default and supports global and local layer en
       style.selector('.local', { color: 'red' }),
     ]);
 
-    equal(getSheetRules(globalSheet)[0]?.layer, 'sheet');
+    equal(getSheetRules(globalSheet)[0]?.layer, false);
     equal(getSheetRules(localSheet)[0]?.layer, false);
   } finally {
     configureTestRuntime({ css: { layer: true } });
@@ -1402,12 +1402,12 @@ test('createSheet validates options', () => {
   let error = '';
 
   try {
-    createSheet({ weight: 0 }, []);
+    createSheet({ specificity: -1 }, []);
   } catch (value) {
     error = String(value);
   }
 
-  includes(error, 'positive integer');
+  includes(error, 'non-negative integer');
 });
 
 test('style important values emit important declarations for styles, sheets, and class names', () => {
@@ -2344,11 +2344,11 @@ test('createSheet named layers resolve relative names and keep distinct sheet id
     for (const layer of names) {
       const sheet = createSheet({ layer }, [style.selector('&', { margin: 0 })]);
       const rule = getSheetRules(sheet)[0];
-      deepEqual(rule?.layer, { name: layer.startsWith('.') ? 'fluentic' + layer : layer });
+      deepEqual(rule?.layer, { name: layer.startsWith('.') ? layer.slice(1) : layer });
       const className = getClassName(sheet).className;
       if (!className) throw new Error('expected sheet class');
       classes.add(className);
-      includes(rule.css, ':where(.' + className + ')');
+      includes(rule.css, '.' + className);
     }
     equal(classes.size, names.length);
   } finally {

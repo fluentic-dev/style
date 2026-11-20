@@ -2061,7 +2061,7 @@ export const sheet = createSheet([
   includes(css, ':has(.third-party-button){color: green}');
 });
 
-test('compiler extracts createSheet options for layer and selector weight', () => {
+test('compiler extracts createSheet options for layer and selector specificity', () => {
   const compiler = createCompiler({
     css: {
       debugClassName: true,
@@ -2075,7 +2075,7 @@ import { style } from '@fluentic/style';
 import { createSheet } from '@fluentic/style/css';
 
 export const regular = style({ display: 'block' });
-export const weighted = createSheet({ layer: true, weight: 2 }, [
+export const weighted = createSheet({ layer: true, specificity: 2 }, [
   style.selector('.third-party-label', { color: 'red' }),
 ]);
 export const plain = createSheet([
@@ -2090,9 +2090,9 @@ export const plain = createSheet([
   const css = result.css.join('\n');
 
   includes(result.code, 'createExtractedSheet');
-  includes(result.code, 'weight: 2');
-  includes(css, '@layer fluentic.style');
-  includes(css, '@layer fluentic.sheet');
+  includes(result.code, 'specificity: 2');
+  includes(css, '@layer fluentic {');
+  notIncludes(css, '@layer fluentic.sheet');
   includes(css, '.sheet-color-red--');
   includes(css, ' .third-party-copy{color: blue}');
   const weightedRule = css.split('\n').find((line) => line.includes('.third-party-label')) ?? '';
@@ -2125,10 +2125,11 @@ export const unlayered = createSheet({ layer: false }, [
   if (!result) throw new Error('expected compiler transform result');
 
   const css = result.css.join('\n');
-  const sheetBlock = css.slice(css.indexOf('@layer css.sheet {'));
+  const sheetBlock = css;
+  notIncludes(css, '@layer css.sheet');
 
   includes(sheetBlock, '.layered');
-  notIncludes(sheetBlock.split('\n}')[0] ?? '', '.unlayered');
+  includes(css, '.unlayered');
   includes(css, '.unlayered');
 });
 
@@ -2156,7 +2157,7 @@ export const sheet = createSheet([
 
   const css = result.css.join('\n');
 
-  includes(css, ':where(.sheet-third-party-label-color-red--');
+  includes(css, '.sheet-third-party-label-color-red--');
 });
 
 test('compiler extracts createSheet selector arrays under the attached class', () => {
@@ -2935,7 +2936,7 @@ const rule = style({ color: 'red' });
 
   includes(css, '@layer css;');
   includes(css, '@layer css {');
-  notIncludes(css, '@layer css.');
+  includes(css, '@layer css.important;');
   equal(countOccurrences(css, '@layer css {'), 1);
   includes(css, 'color: red');
 });
@@ -4175,7 +4176,7 @@ const rule = style({ color: 'red' });
   includes(css, '@layer reset, app, overrides;');
   includes(css, ', overrides;');
   includes(css, '@layer app {');
-  notIncludes(css, '@layer app.');
+  includes(css, '@layer app.important;');
   equal(countOccurrences(css, '@layer app {'), 1);
 });
 
@@ -4819,7 +4820,7 @@ test('compiler extracts absolute and relative sheet layers with explicit root or
     export const regular = style({ display: 'block' });
     export const reset = createSheet({ layer: 'reset' }, [style.selector('&', { margin: 0 })]);
     export const relative = createSheet({ layer: '.reset' }, [style.selector('*', { boxSizing: 'border-box' })]);
-    export const overrides = createSheet({ layer: 'overrides', weight: 2 }, [style.selector('&', { margin: 0 })]);
+    export const overrides = createSheet({ layer: 'overrides', specificity: 2 }, [style.selector('&', { margin: 0 })]);
     export const reserved = createSheet({ layer: 'sheet' }, [style.selector('input', { color: 'red' })]);
   `,
     '/tmp/compiler-named-sheet-layers.ts',
@@ -4829,9 +4830,9 @@ test('compiler extracts absolute and relative sheet layers with explicit root or
   includes(result.code, 'createExtractedSheet');
   notIncludes(result.code, 'createSheet(');
   includes(result.code, '".reset"');
-  includes(css, '@layer reset, fluentic.style, fluentic.reset, sheet, overrides;');
+  includes(css, '@layer reset, fluentic, sheet, overrides;');
   for (const name of ['reset', 'fluentic.reset', 'overrides', 'sheet']) includes(css, '@layer ' + name + ' {');
-  includes(css, ':where(.');
+  notIncludes(css, ':where(.');
   notIncludes(css, '@layer fluentic.sheet');
 });
 
@@ -4848,9 +4849,9 @@ test('compiler keeps named sheet layers when ordinary style layers are disabled'
   );
   if (!result) throw new Error('expected compiler output');
   const css = result.css.join('\n');
-  includes(css, '@layer css.reset, reset;');
+  includes(css, '@layer reset;');
   includes(css, '@layer reset {');
-  includes(css, '@layer css.reset {');
+  notIncludes(css, '@layer css.reset {');
 });
 
 for (const layer of [true, false, 'reset', '.reset'] as const) {
@@ -4884,7 +4885,7 @@ test('compiler extracts curried selector arrays with fragments and chained condi
     import { style as ui } from '@fluentic/style';
     import { createSheet } from '@fluentic/style/css';
     const typography = ui({ fontSize: '1.5rem' });
-    export const appDefaults = createSheet({ layer: '.reset', weight: 2 }, [
+    export const appDefaults = createSheet({ layer: '.reset', specificity: 2 }, [
       ui.selector(['h1', 'h2'])(typography).hover({ color: 'red' }).media('(max-width: 700px)', { display: 'none' }),
       ui.selector('&')({ margin: 0 }),
     ]);
@@ -4967,14 +4968,14 @@ for (const layer of [false, true, 'reset', '.reset'] as const) {
     const css = result.css.join('\n');
     includes(css, 'body{color: red}');
     if (layer) {
-      includes(css, '@layer ' + (layer === true ? 'fluentic.sheet' : layer === '.reset' ? 'fluentic.reset' : layer));
+      includes(css, '@layer ' + (layer === true ? 'fluentic' : layer === '.reset' ? 'fluentic.reset' : layer));
     } else notIncludes(css, '@layer');
   });
 }
 
 for (
   const [input, message] of [
-    ["{ weight: 2 }, [style.selector('body', { color: 'red' })]", 'does not support weight'],
+    ["{ weight: 2 }, [style.selector('body', { color: 'red' })]", 'only supports layer and order'],
     ["[style.selector('&', { color: 'red' })]", 'explicit selectors'],
   ]
 ) {
@@ -5032,4 +5033,19 @@ test('compiler retains global calls with dynamic inputs and unrelated side effec
   includes(result.code, 'aside');
   includes(result.css.join('\n'), 'body{margin: 0px}');
   notIncludes(result.css.join('\n'), 'aside');
+});
+
+test('debug global sheets annotate module ownership without promoting render-time calls', () => {
+  const result = injectStyleDebugData(
+    `
+    import { style } from '@fluentic/style';
+    import { createGlobalSheet as globals } from '@fluentic/style/css';
+    globals([style.selector('body', { margin: 0 })]);
+    export function install(tone) { globals([style.selector('aside', { color: tone })]); }
+  `,
+    '/tmp/rsc-global-debug.ts',
+  );
+  if (!result) throw new Error('expected debug transform');
+  equal(countOccurrences(result.code, 'globalModule:'), 1);
+  includes(result.code, 'globalModule: "/tmp/rsc-global-debug.ts"');
 });

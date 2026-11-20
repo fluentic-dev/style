@@ -66,7 +66,7 @@ export function typeAliases<Style, Selectors>() {
 
   type ValueFn = <const T>(value: T, weight: number) => StyleWeightValue<T>;
 
-  type ImportantFn = <const T>(value: T) => StyleImportantValue<T>;
+  type ImportantFn = <const T>(value: T, native?: boolean) => StyleImportantValue<T>;
 
   type RawFn<Style> = <T extends StyleObject<Style>>(style: T) => T;
 

@@ -157,7 +157,7 @@ The selectors above are plain descendant selectors. They match the DOM shape
 React Select renders under the wrapper:
 
 ```css
-:where(.sheetClass) .react-select__control { ... }
+.sheetClass .react-select__control { ... }
 ```
 
 This is the usual case for third-party wrappers: the generated class is on the
@@ -189,7 +189,7 @@ const selectTarget = {
 Here, `&` means the element that receives the generated sheet class:
 
 ```css
-:where(.sheetClass).react-select { ... }
+.sheetClass.react-select { ... }
 ```
 
 The difference is the DOM relationship:
@@ -304,14 +304,14 @@ const selectPortalPart = {
 The descendant selector matches a menu rendered under the wrapper:
 
 ```css
-:where(.sheetClass) .react-select__menu { ... }
+.sheetClass .react-select__menu { ... }
 ```
 
 The `&` selector matches a portal menu when the sheet class is attached to the
 menu element itself:
 
 ```css
-:where(.sheetClass).react-select__menu { ... }
+.sheetClass.react-select__menu { ... }
 ```
 
 The option does not need the same duplication here. It is still a child under
@@ -493,7 +493,7 @@ Selector sheets are emitted outside the generated cascade layers by default. Tha
 is intentional: third-party CSS is commonly unlayered, and normal unlayered
 rules outrank normal layered rules. If the third-party stylesheet participates
 in your layer architecture, opt a sheet in with `createSheet({ layer: true },
-items)` or enable `css.layer.sheet` globally. A particular sheet can instead
+items)` to share the regular-style layer. A particular sheet can instead
 choose its own layer with `createSheet({ layer: 'vendorOverrides' }, items)`.
 Use `'.vendorOverrides'` to put it under `css.layerNamespace` (for example,
 `css.vendorOverrides`). List the resolved name in `css.layers` to choose its
@@ -506,11 +506,11 @@ third-party stylesheet or pull its existing rules into your chosen layer.
 
 Some libraries also ship their own CSS with high specificity or load it after
 your app styles. The runtime can order the rules it owns, but it cannot move a
-third-party stylesheet into your layer system. Try a sheet `weight` first when
+third-party stylesheet into your layer system. Try a sheet `specificity` first when
 increased selector specificity is enough:
 
 ```ts
-const selectSheet = createSheet({ weight: 2 }, [
+const selectSheet = createSheet({ specificity: 2 }, [
   selectPart.control({
     borderColor: selectTokens.accent,
   }),
@@ -555,7 +555,7 @@ In debug mode, sheet selector classes use a shorter default format than ordinary
 atomic classes:
 
 ```css
-:where(.sheet-color-red--abc) .react-select__single-value { color: red }
+.sheet-color-red--abc .react-select__single-value { color: red }
 ```
 
 The full selector is omitted by default because third-party selectors can get
@@ -569,3 +569,6 @@ configureStyleRuntime({
   },
 });
 ```
+
+See [Style ordering and the cascade](../reference/style-ordering) for global sheets,
+local specificity, layer ordering, and managed/native important declarations.

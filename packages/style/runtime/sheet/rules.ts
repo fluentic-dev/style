@@ -131,6 +131,9 @@ function createSheetRulePayload(rule: RuntimeSheetRule): SheetRule {
     debugField: rule.debugField || null,
     priority: rule.priority,
     important: rule.important,
+    importantNative: rule.importantNative,
+    sheet: rule.sheet,
+    globalSheet: rule.globalSheet,
     layer: rule.layer,
   };
 }

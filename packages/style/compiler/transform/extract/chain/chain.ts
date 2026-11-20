@@ -40,7 +40,7 @@ import {
   setGlobalSheetSelectorOptions,
   setSheetSelectorOptions,
 } from '../../../../builder/selector_override';
-import { isSheetLayerEnabled, isSheetLayerOption, resolveSheetLayerOption } from '../../../../config/config/css';
+import { isSheetLayerOption, isStyleLayerEnabled, resolveSheetLayerOption } from '../../../../config/config/css';
 import type { ClassNameFormat, TokenNameFormat, TransformClassNameFormat } from '../../../../config/types';
 import type { Selector } from '../../../../selector/types';
 import { importantValue, isStyleImportantValue } from '../../../../style/important';
@@ -380,12 +380,12 @@ function compileSheetChain(
   const items: CompiledItem[] = [];
   const rules: CssExtractRule[] = [];
   const hasOptions = chain.baseArgs.length === 2;
-  const sheetOptions: (CreateSheetOptions & { global?: boolean; }) | null = hasOptions
-    ? evaluateCreateSheetOptions(chain.baseArgs[0], scope)
+  const sheetOptions: (CreateSheetOptions & { global?: boolean; order?: number; }) | null = hasOptions
+    ? evaluateCreateSheetOptions(chain.baseArgs[0], scope, chain.global)
     : {};
   if (!sheetOptions) return null;
   if (chain.global) {
-    if (sheetOptions.weight !== undefined) throw new Error('createGlobalSheet does not support weight');
+    if (sheetOptions.specificity !== undefined) throw new Error('createGlobalSheet does not support specificity');
     sheetOptions.global = true;
   }
 
@@ -398,12 +398,15 @@ function compileSheetChain(
     return null;
   }
 
-  const sheetLayer = sheetOptions.layer ?? isSheetLayerEnabled(options.css?.layer ?? DEFAULT_CONFIG.layer);
+  const sheetLayer = sheetOptions.layer ?? false;
   for (let i = 0, len = rules.length; i < len; i++) {
     rules[i].layer = resolveSheetLayerOption(
       sheetLayer,
       options.css?.layerNamespace ?? DEFAULT_CONFIG.layerNamespace ?? '',
+      isStyleLayerEnabled(options.css?.layer ?? DEFAULT_CONFIG.layer),
     );
+    rules[i].sheet = true;
+    if (chain.global) rules[i].globalSheet = { id: chain.sheetId ?? fileId, order: sheetOptions.order ?? 0 };
   }
 
   return { type: 'sheet', items, rules, sheetOptions };
@@ -412,19 +415,26 @@ function compileSheetChain(
 function evaluateCreateSheetOptions(
   node: BabelTypes.Node,
   scope: EvalScope,
-): CreateSheetOptions | null {
+  global = false,
+): (CreateSheetOptions & { order?: number; }) | null {
   const result = evaluateNode(node, scope);
   if (!result.ok || !result.value || typeof result.value !== 'object' || Array.isArray(result.value)) return null;
-
   const value = result.value as Record<string, unknown>;
-  if (Object.keys(value).some((key) => key !== 'layer' && key !== 'weight')) return null;
-  if (!isSheetLayerOption(value.layer)) return null;
-  if (value.weight !== undefined && (!Number.isInteger(value.weight) || (value.weight as number) < 1)) return null;
-
-  return {
-    layer: value.layer as boolean | string | undefined,
-    weight: value.weight as number | undefined,
-  };
+  if (hasGlobalRuntimeValue(value)) return null;
+  const allowed = global ? ['layer', 'order'] : ['layer', 'specificity'];
+  if (Object.keys(value).some((key) => !allowed.includes(key))) {
+    throw new Error(
+      global ? 'createGlobalSheet only supports layer and order' : 'createSheet only supports layer and specificity',
+    );
+  }
+  if (!isSheetLayerOption(value.layer)) throw new Error('invalid sheet layer');
+  if (value.specificity !== undefined && (!Number.isInteger(value.specificity) || (value.specificity as number) < 0)) {
+    throw new Error('specificity must be a non-negative integer');
+  }
+  if (value.order !== undefined && (typeof value.order !== 'number' || !Number.isFinite(value.order))) {
+    throw new Error('order must be a finite number');
+  }
+  return value as CreateSheetOptions & { order?: number; };
 }
 
 function compileSheetItemsArg(
@@ -435,7 +445,7 @@ function compileSheetItemsArg(
   options: CompilerOptions,
   items: CompiledItem[],
   rules: CssExtractRule[],
-  sheetOptions: CreateSheetOptions & { global?: boolean; },
+  sheetOptions: CreateSheetOptions & { global?: boolean; order?: number; },
 ): boolean {
   if (node.type === 'ArrayExpression') {
     for (const element of node.elements) {
@@ -518,7 +528,7 @@ function compileSelectorOverrideChain(
   options: CompilerOptions,
   items: CompiledItem[],
   rules: CssExtractRule[],
-  sheetOptions: CreateSheetOptions & { global?: boolean; },
+  sheetOptions: CreateSheetOptions & { global?: boolean; order?: number; },
 ): boolean {
   if (chain.baseArgs.length === 0 || chain.baseArgs.length > 2) return false;
 
@@ -1200,7 +1210,7 @@ function decorateClassNameValue(
   if (isClassNameValue(value)) return value;
 
   if (isStyleImportantValue(value)) {
-    return importantValue(decorateClassNameValue(value.value, className));
+    return importantValue(decorateClassNameValue(value.value, className), value.native);
   }
 
   if (isStyleWeightValue(value)) {
@@ -2778,6 +2788,7 @@ function addSlotOverrideDataItems(
         property: overrideItem.property,
         weight: overrideItem.weight,
         important: overrideItem.important,
+        importantNative: overrideItem.importantNative,
         value: overrideItem.value,
         variable: overrideItem.variable,
         token: overrideItem.token,
@@ -2881,6 +2892,7 @@ function addRuntimeScopeItem(
     sourceItem.selector,
     itemParentSelector,
     itemAtRules,
+    sourceItem.importantNative,
   );
 
   const className = getAtomicClassName(
@@ -2899,6 +2911,7 @@ function addRuntimeScopeItem(
     cssConfig.transformClassNameFormat,
     cssConfig.sheetClassNameFormat,
     cssConfig.hashLength,
+    sourceItem.importantNative,
   );
 
   const item: CompiledItem = createCompiledItem(
@@ -2937,6 +2950,7 @@ function addRuntimeScopeItem(
     css,
     priority: layerPriority,
     important,
+    importantNative: sourceItem.importantNative,
     trace: traceCallsite
       ? {
         filePath: traceCallsite.filePath ?? fileId,
@@ -3121,6 +3135,7 @@ function addRuntimeStyleItem(
     itemSelector,
     parentSelector,
     itemAtRules,
+    sourceItem.importantNative,
   );
 
   const traceCallsite = callsiteOverride ?? sourceItem.callsite;
@@ -3141,6 +3156,7 @@ function addRuntimeStyleItem(
     cssConfig.transformClassNameFormat,
     cssConfig.sheetClassNameFormat,
     cssConfig.hashLength,
+    sourceItem.importantNative,
   );
 
   const item: CompiledItem = createCompiledItem(
@@ -3185,6 +3201,7 @@ function addRuntimeStyleItem(
     css,
     priority: layerPriority,
     important,
+    importantNative: sourceItem.importantNative,
     trace: traceCallsite
       ? {
         filePath: traceCallsite.filePath ?? fileId,
@@ -3298,10 +3315,11 @@ function addStyleItems(
 
     let weight: number | null = null;
     let important = false;
+    let importantNative = false;
     let value: unknown = rawValue;
     let transformClassName: string | null = null;
 
-    [value, weight, important] = unwrapStaticStyleValue(value);
+    [value, weight, important, importantNative] = unwrapStaticStyleValue(value);
 
     if (isClassNameValue(value)) {
       transformClassName = value.className;
@@ -3363,6 +3381,7 @@ function addStyleItems(
       selector,
       parentSelector,
       atRules,
+      importantNative,
     );
 
     const className = getAtomicClassName(
@@ -3381,6 +3400,7 @@ function addStyleItems(
       cssConfig.transformClassNameFormat,
       cssConfig.sheetClassNameFormat,
       cssConfig.hashLength,
+      importantNative,
     );
 
     const item: CompiledItem = createCompiledItem(
@@ -3449,6 +3469,7 @@ function addStyleItems(
       css,
       priority: layerPriority,
       important,
+      importantNative,
       trace: propertyCallsite
         ? {
           filePath: propertyCallsite.filePath ?? fileId,
@@ -3481,13 +3502,17 @@ function addStyleItems(
   return true;
 }
 
-function unwrapStaticStyleValue(value: unknown): [value: unknown, weight: number | null, important: boolean] {
+function unwrapStaticStyleValue(
+  value: unknown,
+): [value: unknown, weight: number | null, important: boolean, native: boolean] {
   let weight: number | null = null;
   let important = false;
+  let native = false;
 
   while (true) {
     if (isStyleImportantValue(value)) {
       important = true;
+      native ||= value.native === true;
       value = value.value;
       continue;
     }
@@ -3501,7 +3526,7 @@ function unwrapStaticStyleValue(value: unknown): [value: unknown, weight: number
     break;
   }
 
-  return [value, weight, important];
+  return [value, weight, important, native];
 }
 
 function throwIfRequiredStaticStyleValue(result: EvalResult) {

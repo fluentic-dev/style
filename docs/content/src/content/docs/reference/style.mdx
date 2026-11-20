@@ -67,7 +67,7 @@ states such as hover, focus, active, and disabled resolve predictably.
 | `style.scope(...)` | Group slot overrides into a reusable component theme. |
 | `style.selector(...)` | Target descendant or external DOM selectors for sheets. |
 | `style.weight(value, weight)` | Give one declaration value explicit priority over another. |
-| `style.important(value)` | Emit a declaration as important. |
+| `style.important(value, native?)` | Emit an important declaration. Layered sheets use a first `.important` child by default; pass `true` to keep native layer placement. See [ordering](style-ordering#important-declarations-managed-or-native). |
 | `style.raw(...)` | Create a reusable style object fragment. |
 | `style.plain(...)` | Create a reusable plain object fragment for object spreads. |
 | `style.keyframes(...)` | Create keyframes that use the same style shape. |

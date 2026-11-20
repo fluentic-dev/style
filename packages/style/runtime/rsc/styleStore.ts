@@ -1,13 +1,8 @@
-import { getLayerBlockCss, getLayerOrderCss, joinLayerCss } from '../../atomic/layer';
-import { CSS_CONFIG, CSS_CONFIG_DEFAULT, isStyleLayerEnabled } from '../../config/config/css';
+import { CSS_CONFIG } from '../../config/config/css';
+import { DEV_CONFIG } from '../../config/config/dev';
 import { RUNTIME_CONFIG } from '../../config/config/runtime';
 import type { SheetRule } from '../../sheet';
-import {
-  createSheetLayerState,
-  getSheetLayerName,
-  getSheetLayerNames,
-  getSheetRuleLayerPriority,
-} from '../../sheet/utils';
+import { serializeOrderedRules } from '../../sheet/ordering';
 import { clearGlobalData, getGlobalData, globalData } from '../../utils/global';
 import { IS_SERVER_RUNTIME } from '../env';
 
@@ -53,34 +48,15 @@ export function getRscStyleCss(): string {
   if (!RUNTIME_CONFIG.isRSC) return '';
   if (!IS_SERVER_RUNTIME) return '';
 
-  const store = getGlobalData<RscStyleStore>(GLOBAL_KEY);
-  if (!store?.rules.length) return '';
+  return serializeRscRules(getRscStyleRules());
+}
 
-  const layerState = createSheetLayerState();
+export function getRscStyleRules(): readonly SheetRule[] {
+  return getGlobalData<RscStyleStore>(GLOBAL_KEY)?.rules ?? [];
+}
 
-  let hasSheetLayer = false;
-  const namedLayers = new Set<string>();
-  const cssItems = store.rules.map((rule) => {
-    const ruleLayer = rule.layer ?? 'style';
-    if (ruleLayer === 'sheet') hasSheetLayer = true;
-    if (typeof ruleLayer === 'object') namedLayers.add(ruleLayer.name);
-    const layerName = typeof ruleLayer === 'object'
-      ? ruleLayer.name
-      : ruleLayer === 'sheet'
-      ? getSheetLayerName()
-      : ruleLayer === false || !isStyleLayerEnabled()
-      ? null
-      : layerState.getName(getSheetRuleLayerPriority(rule.priority, rule.important));
-
-    return layerName ? getLayerBlockCss(layerName, rule.css) : rule.css;
-  });
-
-  const layerOrderCss = getLayerOrderCss(
-    CSS_CONFIG.layers ?? CSS_CONFIG_DEFAULT.layers ?? [],
-    getSheetLayerNames(layerState, hasSheetLayer, namedLayers),
-  );
-
-  return joinLayerCss(layerOrderCss, cssItems);
+export function serializeRscRules(rules: readonly SheetRule[]): string {
+  return serializeOrderedRules(rules, CSS_CONFIG, DEV_CONFIG.stylePriorityMode);
 }
 
 function getRscStyleStore(): RscStyleStore {

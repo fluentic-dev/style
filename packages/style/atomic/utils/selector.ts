@@ -23,7 +23,7 @@ export function hasSheetSelectorAnchor(selector: ItemSelector | null): boolean {
   return text.startsWith(SHEET_SELECTOR_ANCHOR);
 }
 
-export function getSheetSelectorWeight(selector: ItemSelector | null): number | null {
+export function getSheetSelectorSpecificity(selector: ItemSelector | null): number | null {
   const text = selector ? Array.isArray(selector) ? selector[0] : selector : '';
   if (!text.startsWith(SHEET_SELECTOR_ANCHOR + ':')) return null;
 
@@ -31,8 +31,9 @@ export function getSheetSelectorWeight(selector: ItemSelector | null): number | 
   if (end < 0) return null;
 
   const [weightValue] = text.slice(SHEET_SELECTOR_ANCHOR.length + 1, end).split(':');
+  if (!weightValue) return null;
   const weight = Number(weightValue);
-  return Number.isInteger(weight) && weight > 0 ? weight : null;
+  return Number.isInteger(weight) && weight >= 0 ? weight : null;
 }
 
 function stripSheetSelectorAnchor(selector: string) {

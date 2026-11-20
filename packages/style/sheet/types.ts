@@ -10,6 +10,9 @@ export type SheetRule = {
   key?: string | null;
   priority?: LayerPriority | null;
   important?: boolean;
+  importantNative?: boolean;
+  sheet?: boolean;
+  globalSheet?: { id: string; order: number; };
   layer?: 'style' | 'sheet' | false | NamedSheetLayer;
   callsite?: SheetCallsite | null;
   debug?: DebugData | null;
@@ -30,5 +33,6 @@ export type StyleSheet = {
   updateLayers(layers: readonly string[]): void;
   insert(rule: SheetRule | string): void;
   flush(): void;
+  replaceRules?(owner: string, rules: SheetRule[]): void;
   destroy?(): void;
 };

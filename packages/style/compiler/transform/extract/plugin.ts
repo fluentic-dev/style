@@ -213,6 +213,7 @@ export function createExtractPlugin(args: PluginArgs) {
           const chain = extractStyleChain(path.node, state.styleNames, state.sheetNames);
           if (!chain) return;
           chain.global = chain.kind === 'sheet' && state.imports.get(chain.rootName)?.name === FN_CREATE_GLOBAL_SHEET;
+          if (chain.global) chain.sheetId = state.fileId + ':' + path.node.start;
 
           if (
             chain.kind === 'slot' &&

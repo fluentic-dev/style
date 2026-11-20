@@ -104,6 +104,7 @@ export function mergeScopeData(
           scopeItem.selector,
           scopeItem.parentSelector,
           scopeItem.atRule,
+          scopeItem.importantNative,
         );
 
         className = getAtomicClassName(
@@ -121,6 +122,8 @@ export function mergeScopeData(
           scopeItem.transformClassName ?? null,
           CSS_CONFIG.transformClassNameFormat ?? null,
           CSS_CONFIG.sheetClassNameFormat ?? null,
+          null,
+          scopeItem.importantNative,
         );
 
         scopeItem.dedupe = dedupe;
@@ -173,6 +176,7 @@ export function mergeScopeData(
         property: overrideItem.property,
         weight: overrideItem.weight,
         important: overrideItem.important,
+        importantNative: overrideItem.importantNative,
         value: overrideItem.value,
         transformClassName: overrideItem.transformClassName,
         token: overrideItem.token,
@@ -195,6 +199,7 @@ export function mergeScopeData(
         scopeItem.selector,
         parentSelector,
         scopeItem.atRule,
+        scopeItem.importantNative,
       );
 
       className = getAtomicClassName(
@@ -212,6 +217,8 @@ export function mergeScopeData(
         scopeItem.transformClassName ?? null,
         CSS_CONFIG.transformClassNameFormat ?? null,
         CSS_CONFIG.sheetClassNameFormat ?? null,
+        null,
+        scopeItem.importantNative,
       );
 
       scopeItem.dedupe = dedupe;

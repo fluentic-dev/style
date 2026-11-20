@@ -45,10 +45,10 @@ export function assertManualSelectorSyntax(selector: string) {
 }
 
 export function setSheetSelectorOptions(selector: ItemSelector, options: CreateSheetOptions): ItemSelector {
-  if (options.weight === undefined && options.layer === undefined) return selector;
+  if (options.specificity === undefined && options.layer === undefined) return selector;
 
   const text = Array.isArray(selector) ? selector[0] : selector;
-  const optionMarker = ':' + (options.weight ?? '') + ':' + (
+  const optionMarker = ':' + (options.specificity ?? '') + ':' + (
     typeof options.layer === 'string'
       ? JSON.stringify(options.layer)
       : options.layer === undefined

@@ -23,10 +23,11 @@ export const App = () => {
             selector sheets to the wrapper and to portal targets mounted under document.body.
           </p>
           <p css={pageStyles.copy}>
-            The page reset uses{' '}
-            <code>createGlobalSheet</code>. In development, click below to inject the heading underline immediately.
-            This example uses the Fluentic Vite plugin: a production build extracts the global CSS, including the
-            underline inside the click handler, so headings are already underlined when the page loads.
+            The page reset uses <code>createGlobalSheet</code> with{' '}
+            <code>order: 1</code>, after the default style groups. In development, click below to inject the heading
+            underline immediately. This example uses the Fluentic Vite plugin: a production build extracts the global
+            CSS, including the underline inside the click handler, so headings are already underlined when the page
+            loads.
           </p>
           <button
             css={pageStyles.themeButton}

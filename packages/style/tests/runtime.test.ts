@@ -5,6 +5,14 @@ import { createMergeJsxProps } from '../runtime/adapter/utils';
 import { clearElementMarkers } from '../runtime/core/elementMarker';
 import { getClassName as getExtractedClassName } from '../runtime/extract/getClassName';
 import { transformElement as transformExtractedElement } from '../runtime/extract/jsx';
+import {
+  createGlobalSheet as createServerGlobalSheet,
+  getGlobalRuleBatches,
+  resetGlobalSheetModule,
+  serializeGlobalRuleBatches,
+} from '../runtime/rsc/globalSheet';
+import { parseGlobalRulePayload } from '../runtime/rsc/observer';
+import { serializeRscRules } from '../runtime/rsc/styleStore';
 import { ArgSelectors } from '../selector/presets';
 import { createStyleSheet } from '../sheet';
 import { style as publicStyle } from '../style';
@@ -340,7 +348,7 @@ test('static combineStyle preserves selector target fields', () => {
   if (!result.className) throw new Error('expected sheet class name');
   includes(
     getSheetRules(sheet).map((rule) => rule.css).join('\n'),
-    `:where(.${result.className}) .third-party-control{color: red}`,
+    `.${result.className} .third-party-control{color: red}`,
   );
 });
 
@@ -1967,7 +1975,7 @@ test('rsc dev payload is emitted by getClassName', () => {
   equal(props.id, 'target');
   equal(typeof manual.className, 'string');
   equal(typeof manualProps[ELEMENT_CSS_DATA_ATTR], 'string');
-  includes(storeCss, '@layer css.');
+  includes(storeCss, '@layer css {');
   includes(storeCss, 'color');
   equal(typeof props.className, 'string');
   equal(typeof props[ELEMENT_CSS_DATA_ATTR], 'string');
@@ -2214,6 +2222,7 @@ test('rsc dev cleanup selector includes next managed seed style', () => {
 });
 
 test('rsc dev style store wraps parent selector priority rules in layers', () => {
+  configureTestRuntime({ dev: true, priorityMode: 'layer' });
   clearRscStyleStore();
   setBuildMeta({ dev: true, extract: false, hoist: false, rsc: true, css: null });
 
@@ -2249,7 +2258,7 @@ test('rsc dev style store wraps parent selector priority rules in layers', () =>
   includes(storeCss, ':hover');
   includes(storeCss, 'background: blue');
   includes(storeCss, 'background: red');
-  before(storeCss.split('\n')[0], blueLayer, redLayer);
+  before(storeCss.split('\n').filter((line) => /^@layer [^{}]+;$/.test(line)).join('\n'), blueLayer, redLayer);
 });
 
 test('rsc named sheet layers survive serialization and server CSS generation', () => {
@@ -2263,12 +2272,12 @@ test('rsc named sheet layers survive serialization and server CSS generation', (
       const rules = getSheetRules(sheet);
       const payload = createRscStylePayload(rules);
       deepEqual(parseRscStylePayload(payload)[0]?.layer, {
-        name: layer.startsWith('.') ? 'fluentic' + layer : layer,
+        name: layer.startsWith('.') ? layer.slice(1) : layer,
       });
     }
     const css = getRscStyleCss();
-    includes(css, '@layer reset, fluentic.reset, style, sheet;');
-    for (const name of ['reset', 'fluentic.reset', 'style', 'sheet']) includes(css, '@layer ' + name + ' {');
+    includes(css, '@layer reset, style, sheet;');
+    for (const name of ['reset', 'style', 'sheet']) includes(css, '@layer ' + name + ' {');
   } finally {
     setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });
     configureTestRuntime({ dev: false, css: { layer: true, layerNamespace: 'css', layers: ['$layer'] } });
@@ -2312,13 +2321,14 @@ for (const mode of ['prod', 'layer', 'sort'] as const) {
       createGlobalSheet({ layer: '.reset' }, [style.selector('article', { color: 'purple' })]);
       includes(readCss(), '@layer css.reset');
       createGlobalSheet({ layer: true }, [style.selector('footer', { color: 'green' })]);
-      includes(readCss(), '@layer css.sheet');
+      includes(readCss(), '@layer css');
+      notIncludes(readCss(), '@layer css.sheet');
       createGlobalSheet({ layer: false }, [style.selector('nav', { color: 'orange' })]);
       includes(readCss(), 'nav{color: orange}');
       const scoped = createSheet([style.selector('body', { margin: 0 })]);
       for (const rule of getSheetRules(scoped)) sheet.insert(rule);
       sheet.flush();
-      includes(readCss(), ':where(');
+      includes(readCss(), '.' + getClassName(scoped).className);
       includes(readCss(), 'body{margin: 0px}');
     } finally {
       sheet.destroy?.();
@@ -2358,3 +2368,92 @@ function assertGlobalSheetTypes() {
   getClassName(createGlobalSheet([]));
 }
 void assertGlobalSheetTypes;
+
+test('RSC global payloads preserve rule metadata and escape HTML delimiters', () => {
+  const batches = [{
+    owner: 'test',
+    revision: '1',
+    rules: [{
+      key: 'global-test',
+      css: 'body{content:"</script><script>alert(1)</script>"}',
+      layer: { name: 'reset' },
+      priority: [0, 0, 0, 0, 0, 0, 0] as [number, number, number, number, number, number, number],
+      callsite: { filePath: '/app/globals.ts', sourceUrl: '/globals.ts', line: 2, column: 1 },
+    }],
+  }];
+  const json = serializeGlobalRuleBatches(batches);
+  notIncludes(json, '</script>');
+  const decoded = parseGlobalRulePayload(json);
+  equal(decoded?.[0].rules[0].css, batches[0].rules[0].css);
+  deepEqual(decoded?.[0].rules[0].layer, { name: 'reset' });
+  deepEqual(decoded?.[0].rules[0].callsite, batches[0].rules[0].callsite);
+  equal(parseGlobalRulePayload('incomplete'), null);
+  equal(parseGlobalRulePayload('[{"owner":"x","revision":"1","rules":[{}]}]'), null);
+  deepEqual(parseGlobalRulePayload('[{"owner":"x","revision":"2","rules":[]}]'), [{
+    owner: 'x',
+    revision: '2',
+    rules: [],
+  }]);
+});
+
+test('RSC module globals survive reads and reset on module replacement', () => {
+  const owner = '/test/rsc-global-module.ts';
+  const debug = {
+    $$debug: true,
+    globalModule: owner,
+    loc: [1, 1],
+    label: ['global', 'global', owner],
+    sourceUrl: owner,
+  };
+  const register = createServerGlobalSheet as (...args: unknown[]) => void;
+  register([style.selector('body', { color: 'red' })], debug);
+  const first = getGlobalRuleBatches().find((batch) => batch.owner === owner)!;
+  includes(first.rules[0].css, 'body{color: red}');
+  equal(getGlobalRuleBatches().find((batch) => batch.owner === owner)?.revision, first.revision);
+  resetGlobalSheetModule(owner);
+  equal(getGlobalRuleBatches().find((batch) => batch.owner === owner)?.rules.length, 0);
+  register([style.selector('body', { color: 'blue' })], debug);
+  const next = getGlobalRuleBatches().find((batch) => batch.owner === owner)!;
+  equal(next.rules.length, 1);
+  includes(next.rules[0].css, 'body{color: blue}');
+  notEqual(first.revision, next.revision);
+  resetGlobalSheetModule(owner);
+});
+
+for (const mode of ['layer', 'sort'] as const) {
+  test(`RSC seed serialization matches the dev sheet engine (${mode})`, () => {
+    configureTestRuntime({ dev: true, priorityMode: mode });
+    const document = createFakeDocument();
+    const sheet = createDevSheet({ document: document as unknown as Document, sourcemap: false });
+    const rules = [
+      {
+        key: 'high',
+        css: '.high{color:red}',
+        priority: [0, 0, 0, 0, 0, 0, 2] as [number, number, number, number, number, number, number],
+      },
+      {
+        key: 'low',
+        css: '.low{color:blue}',
+        priority: [0, 0, 0, 0, 0, 0, 1] as [number, number, number, number, number, number, number],
+      },
+      { key: 'reset', css: 'body{margin:0}', layer: { name: 'reset' } },
+    ];
+    try {
+      for (const rule of rules) sheet.insert(rule);
+      sheet.flush();
+      const actual = document.head.childNodes.map((tag: { textContent: string; }) => tag.textContent).join('');
+      const seed = serializeRscRules(rules);
+      const compact = (css: string) => css.replace(/\s+/g, '');
+      for (const rule of rules) {
+        includes(compact(seed), compact(rule.css));
+        includes(compact(actual), compact(rule.css));
+      }
+      // Layer mode encodes priority in sublayers; sort mode encodes it in source order.
+      before(seed, '.low{', '.high{');
+      if (mode === 'sort') before(actual, '.low{', '.high{');
+    } finally {
+      sheet.destroy?.();
+      configureTestRuntime();
+    }
+  });
+}

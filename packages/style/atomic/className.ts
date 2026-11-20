@@ -26,11 +26,13 @@ export function getAtomicClassName(
   transformClassNameFormat: TransformClassNameFormat | null,
   sheetClassNameFormat: ClassNameFormat | null = null,
   hashLength: number | null = null,
+  importantNative = false,
 ) {
   let hash = property;
 
   hash += '\n' + (priority || '');
   if (important) hash += '\nimportant';
+  if (importantNative) hash += '\nnative-important';
   hash += '\n' + value;
   hash += '\n' + (selector ? getSelectorHash(selector) : '');
   hash += '\n' + (parentSelector ? getSelectorHash(parentSelector) : '');
@@ -109,11 +111,13 @@ export function getClassNameDedupe(
   selector: ItemSelector | null,
   parentSelector: ItemSelector | null,
   atRule: ItemSelector[] | null,
+  importantNative = false,
 ) {
   let hash = property;
 
   hash += '\n' + (priority || '');
   if (important) hash += '\nimportant';
+  if (importantNative) hash += '\nnative-important';
   hash += '\n' + (selector ? getSelectorHash(selector) : '');
   hash += '\n' + (parentSelector ? getSelectorHash(parentSelector) : '');
   hash += '\n' + (atRule ? atRule.map(getSelectorHash).join('\n') : '');

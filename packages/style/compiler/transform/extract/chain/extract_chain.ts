@@ -11,6 +11,7 @@ export type StyleChainMethod = {
 
 export type StyleChainParseResult = {
   global?: boolean;
+  sheetId?: string;
   kind: 'style' | 'slot' | 'scope' | 'sheet' | 'selector';
   rootName: string;
   baseArgs: BabelTypes.Node[];

@@ -27,3 +27,7 @@ To try the production build, with the underline available immediately:
 pnpm --filter @example/third-party-selectors build
 pnpm --filter @example/third-party-selectors serve
 ```
+
+Global reset rules use `order: -1` in the `reset` layer; the heading underline uses
+`order: 1`. Order places whole sheets before or after the regular/local groups,
+while layers still control CSS cascade precedence.

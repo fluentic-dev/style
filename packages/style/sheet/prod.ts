@@ -1,5 +1,6 @@
 import { getLayerBlockCss, getLayerOrderCss } from '../atomic/layer';
 import { CSS_CONFIG, CSS_CONFIG_DEFAULT, isStyleLayerEnabled } from '../config/config/css';
+import { createOrderedSheet } from './ordered';
 import type { SheetOptions, StyleSheet } from './types';
 import {
   createNoopSheet,
@@ -14,10 +15,15 @@ import {
 } from './utils';
 
 export function createProdSheet(options: SheetOptions = {}): StyleSheet {
+  return createOrderedSheet(createProdSheetBase, options, false);
+}
+
+function createProdSheetBase(options: SheetOptions = {}): StyleSheet {
   const document = resolveDocument(options.document);
 
   if (!document) return createNoopSheet();
 
+  const tagPrefix = options.tagName ? options.tagName + ' ' : '';
   const inserted = new Set<string>();
   const layerState = createSheetLayerState();
 
@@ -37,7 +43,7 @@ export function createProdSheet(options: SheetOptions = {}): StyleSheet {
       if (next === layerText) return;
 
       layerText = next;
-      layerTag = ensureLayerTag(document, layerTag, options.nonce);
+      layerTag = ensureLayerTag(document, layerTag, options.nonce, tagPrefix);
       layerTag.textContent = next;
     },
 
@@ -68,7 +74,7 @@ export function createProdSheet(options: SheetOptions = {}): StyleSheet {
 
       if (nextLayerText !== layerText) {
         layerText = nextLayerText;
-        layerTag = ensureLayerTag(document, layerTag, options.nonce);
+        layerTag = ensureLayerTag(document, layerTag, options.nonce, tagPrefix);
         layerTag.textContent = nextLayerText;
       }
 
@@ -78,12 +84,12 @@ export function createProdSheet(options: SheetOptions = {}): StyleSheet {
       if (key && inserted.has(key)) return;
       if (key) inserted.add(key);
 
-      const activeLayerTag = ensureLayerTag(document, layerTag, options.nonce);
+      const activeLayerTag = ensureLayerTag(document, layerTag, options.nonce, tagPrefix);
 
       layerTag = activeLayerTag;
 
       if (!ruleTag) {
-        ruleTag = createStyleTag(document, 'rules', options.nonce);
+        ruleTag = createStyleTag(document, tagPrefix + 'rules', options.nonce);
         insertStyleTagAfter(document, ruleTag, activeLayerTag);
       }
 
@@ -103,10 +109,11 @@ function ensureLayerTag(
   document: Document,
   tag: HTMLStyleElement | null,
   nonce?: string | null,
+  prefix = '',
 ) {
   if (tag) return tag;
 
-  const next = createStyleTag(document, 'layers', nonce);
+  const next = createStyleTag(document, prefix + 'layers', nonce);
 
   insertStyleTagAfter(document, next, null);
 

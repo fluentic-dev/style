@@ -11,6 +11,7 @@ import type {
 
 export type CssLayerTargets = {
   style?: boolean;
+  /** @deprecated Set layer on each sheet; this legacy field is ignored. */
   sheet?: boolean;
 };
 
@@ -58,9 +59,10 @@ export function isSheetLayerOption(value: unknown): value is boolean | string | 
 export function resolveSheetLayerOption(
   layer: boolean | string,
   namespace: string,
-): 'sheet' | false | NamedSheetLayer {
-  if (typeof layer !== 'string') return layer ? 'sheet' : false;
-  return { name: layer.startsWith('.') ? (namespace ? namespace + layer : layer.slice(1)) : layer };
+  mainLayerEnabled = isStyleLayerEnabled(),
+): 'style' | false | NamedSheetLayer {
+  if (typeof layer !== 'string') return layer && mainLayerEnabled ? 'style' : false;
+  return { name: layer.startsWith('.') ? (mainLayerEnabled && namespace ? namespace + layer : layer.slice(1)) : layer };
 }
 
 export function isSheetLayerEnabled(layer: CssConfig['layer'] = CSS_CONFIG.layer) {

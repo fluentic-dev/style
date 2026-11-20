@@ -294,7 +294,7 @@ function assertCombineStyleTypes() {
   const combineInput: CombinedStyleFor<typeof combine> = combine();
   const directSheetInput: StyleProp = combineStyle(createSheet());
   const configuredSheetInput: StyleProp = createSheet(
-    { layer: true, weight: 2 },
+    { layer: true, specificity: 2 },
     [style.selector('.third-party', { color: 'red' })],
   );
 
@@ -678,6 +678,7 @@ export class FakeText {
 }
 
 export class FakeElement {
+  nodeType = 1;
   parentNode: FakeElement | null = null;
   childNodes: any[] = [];
   attributes: Record<string, string> = Object.create(null);
@@ -726,6 +727,7 @@ export class FakeElement {
       return child;
     }
 
+    if (child.parentNode) child.parentNode.removeChild(child);
     child.parentNode = this;
     this.childNodes.push(child);
     return child;
@@ -741,6 +743,8 @@ export class FakeElement {
       return child;
     }
 
+    if (child === before) return child;
+    if (child.parentNode) child.parentNode.removeChild(child);
     child.parentNode = this;
 
     const index = before ? this.childNodes.indexOf(before) : -1;

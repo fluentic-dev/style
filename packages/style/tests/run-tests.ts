@@ -4,6 +4,7 @@ import './compiler.test';
 import './runtime.test';
 import './invariants.test';
 import './sheet.test';
+import './ordering.test';
 import './snapshot.test';
 import './document.test';
 import { runTests } from './setup';

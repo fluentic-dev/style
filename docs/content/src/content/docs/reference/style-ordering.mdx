@@ -1,0 +1,201 @@
+---
+title: Style ordering and the cascade
+description: Control regular styles, local sheets, and global sheets with source order, specificity, value weight, layers, and important declarations.
+---
+
+Fluentic controls where rules are emitted. The browser then applies the CSS
+cascade. Choose the control that matches the relationship you want to change:
+
+| Control | Changes | Applies to |
+| --- | --- | --- |
+| `order` | Position of a **whole global sheet** | `createGlobalSheet` |
+| `specificity` | Number of generated anchor classes in each selector | `createSheet` |
+| `style.weight(value, number)` | Fluentic declaration priority | Regular styles and sheet declarations |
+| `layer` | CSS cascade layer membership | Both sheet helpers; ordinary styles use `css.layer` |
+| `css.layers` | Declared cascade layer order | Plugin/runtime configuration |
+| `style.important(value)` | Importance, with managed placement for layered sheets | Any declaration |
+| `style.important(value, true)` | Importance with native layer placement | Any declaration |
+
+## Source order of the three kinds of rules
+
+The output has these regions, in order:
+
+1. Global sheets with `order <= 0`, in ascending numeric order.
+2. Regular styles and layered local sheets, using Fluentic priority within their
+   layer groups.
+3. Unlayered local sheets, after regular styles.
+4. Global sheets with `order > 0`, in ascending numeric order.
+
+A global sheet defaults to `order: 0`. Equal orders keep the **first-discovered
+sheet first**. Every sheet stays together: its rules are not interleaved with
+another global sheet. The declarations inside a sheet still use Fluentic priority.
+Discovery means runtime call/payload discovery in runtime mode and compiler graph
+collection in extracted mode. If two sheets need a fixed relationship regardless
+of module loading, give them different orders.
+
+```ts
+import { style } from '@fluentic/style';
+import { createGlobalSheet, createSheet } from '@fluentic/style/css';
+
+createGlobalSheet({ order: -2 }, [style.selector('body', { margin: 0 })]);
+createGlobalSheet([style.selector('a', { textDecoration: 'underline' })]);
+const component = style({ color: 'navy' });
+const integration = createSheet([style.selector('.vendor-label', { color: 'teal' })]);
+createGlobalSheet({ order: 2 }, [style.selector('.campaign', { color: 'purple' })]);
+```
+
+`order` is a source-order escape hatch, not a stronger CSS specificity or a new
+cascade layer. A late global rule can still lose to an earlier rule with stronger
+layer precedence or specificity. Local sheets have no `order` option.
+
+The same grouping is used for client-only dev, production runtime, compiler CSS,
+Next.js dev precollection, server seed CSS, and client adoption of streamed rules.
+Late global payloads move their group into the correct position. Replacing a
+module's global rules rebuilds affected groups; unrelated rule groups stay intact.
+
+## Specificity of a local sheet
+
+`createSheet` anchors each selector under its generated class. `specificity`
+controls only that anchor, leaving the authored selector unchanged:
+
+| Setting | Example for selector `.item` |
+| --- | --- |
+| `specificity: 0` | `:where(.generated) .item` |
+| Omitted or `specificity: 1` | `.generated .item` |
+| `specificity: 2` | `.generated.generated .item` |
+
+The value must be a non-negative integer. This option was previously named
+`weight`; use `specificity` now. `style.weight(...)` keeps its existing name and
+meaning. Global sheets have no generated anchor and accept neither option.
+
+With `specificity: 0`, a sheet selector `.item` has the same specificity as a
+regular atomic class. A selector such as `.item:hover` still has its own extra
+specificity; `:where(.generated)` does not erase it.
+
+## Declaration priority and competing regular styles
+
+Within an ordering group, Fluentic compares this tuple from left to right:
+
+1. Value weight (`style.weight`).
+2. Direct selector bucket.
+3. Parent/scope selector bucket.
+4. Media bucket, including explicit media priority.
+5. At-rule depth.
+6. Scope-origin priority.
+7. Property bucket (including shorthand/longhand ordering).
+
+Lower priorities come first. A higher value weight takes precedence over later
+parts of this tuple. Equal priorities preserve discovery order. The order of
+class names in an element's `class` attribute does not control the cascade.
+See [Priority](priority) for selector and media bucket details.
+
+To let a local sheet compete with regular styles by declaration priority, put
+it in the **same layer** and use selectors with matching specificity:
+
+```ts
+const sheet = createSheet({ layer: true, specificity: 0 }, [
+  style.selector('.item', { color: style.weight('teal', 1) }),
+]);
+const regular = style({ color: style.weight('navy', 2) });
+// Attach sheet to an ancestor; attach regular and class="item" to the target.
+```
+
+In sorted CSS, equal importance, layer precedence, and selector specificity let
+weight decide through source order. Raising the regular value to weight `2`
+places it after the sheet's weight `1`. Raising the sheet's weight reverses that.
+An **unlayered** local sheet occupies its separate later group, so value weight
+does not move it into the regular group. With layering disabled, both are
+unlayered, but local sheets still come after regular rules.
+
+Production runtime and dev's optional `priorityMode: 'layer'` mode encode
+ordinary-style priorities as ordered sublayers. In that mode, the priority
+sublayer is compared before selector specificity. The default dev sort mode and
+extracted CSS encode priority by sorted source order. Equal-specificity rules in
+the same priority system have the same intended result; do not use weight as a
+portable substitute for arbitrary selector specificity.
+
+## Choosing and ordering layers
+
+Both sheet helpers default to `layer: false`, independently of ordinary styles.
+With namespace `app`:
+
+| Sheet option | Main layer enabled | Main layer disabled |
+| --- | --- | --- |
+| Omitted / `false` | Unlayered | Unlayered |
+| `true` | Same layer system as regular styles (`app`) | Unlayered |
+| `'.forms'` | `app.forms` | `forms` |
+| `'forms'` | `forms` | `forms` |
+| `'vendor.forms'` | `vendor.forms` | `vendor.forms` |
+
+`true` never appends `.sheet`. Absolute names are always literal. Relative names
+only receive the main namespace when the main layer is enabled.
+
+```ts
+// Plugin configuration
+css: {
+  layer: true,
+  layerNamespace: 'app',
+  layers: ['reset', '$layer', 'overrides'],
+}
+```
+
+```ts
+createGlobalSheet({ layer: 'reset', order: -1 }, [
+  style.selector(['html', 'body'], { margin: 0 }),
+]);
+const integrated = createSheet({ layer: true, specificity: 0 }, [
+  style.selector('.item', { color: 'teal' }),
+]);
+createGlobalSheet({ layer: 'overrides', order: 1 }, [
+  style.selector('.item', { color: 'purple' }),
+]);
+```
+
+For normal declarations, later layers win; unlayered declarations outrank all
+layered declarations. `order` controls placement, while `css.layers` controls
+layer precedence. Combining them makes both choices explicit. `$layer` expands
+to discovered generated layers; explicitly named layers keep their configured
+position. Use resolved names in `css.layers`, not a leading-dot shorthand.
+
+Nested layers remain children of their parent. Normal declarations directly in
+a parent layer outrank its child layers. Naming `app.forms` therefore does not
+make it an override of normal rules directly in `app`.
+
+## Important declarations: managed or native
+
+```ts
+const sheet = createSheet({ layer: 'app.forms' }, [
+  style.selector('.item', {
+    color: style.important('red'),
+    backgroundColor: style.important('white', true),
+  }),
+]);
+```
+
+For a layered sheet, the default/`false` form moves important declarations to
+`<resolved layer>.important`. Fluentic declares that child **first**:
+
+```css
+@layer app;
+@layer app.important, app.forms;
+@layer app.forms.important;
+@layer app.forms.important { /* color: red !important */ }
+@layer app.forms { /* background-color: white !important */ }
+```
+
+CSS reverses layer precedence for important declarations. The first child wins
+over later children and important declarations directly in its parent. When a
+local sheet uses `layer: true`, its managed important rules share this reserved
+child of the regular-style namespace and can beat ordinary important rules in
+that same namespace. Specificity and source order still resolve competing rules
+inside the same important child.
+
+Passing `true` keeps the declaration in its original layer, following native
+CSS layer placement. Without a layer, both forms emit ordinary unlayered
+`!important` declarations. The flag does not remove `!important`.
+
+This is a choice within the selected layer, not a promise to defeat every rule
+on the page. Earlier external layers can win for important declarations, and
+layered important declarations outrank unlayered important declarations. Use
+`style.important(...)` rather than embedding `!important` in a string so Fluentic
+can retain this metadata through extraction and RSC transport.

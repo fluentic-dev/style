@@ -8,6 +8,7 @@ import {
   type CreateSheetOptions,
   type DebugData,
   getSelectorSelectors,
+  isDebugData,
   isSelectorData,
   isSelectorOverrideData,
   type SelectorData,
@@ -44,8 +45,8 @@ export function createSheet<Style = unknown>(
   itemsOrDebug?: SheetItem<Style> | DebugData,
   debug?: DebugData,
 ): SheetBuilder<Style> {
-  const hasOptions = isCreateSheetOptions(optionsOrItems) && arguments.length >= 2;
-  const options = hasOptions ? optionsOrItems : {};
+  const hasOptions = arguments.length >= 2 && !isDebugData(itemsOrDebug);
+  const options = hasOptions ? optionsOrItems as CreateSheetOptions : {};
   const items = (hasOptions ? itemsOrDebug : optionsOrItems) as SheetItem<Style> | undefined;
   const resolvedDebug = hasOptions ? debug : itemsOrDebug as DebugData | undefined;
 
@@ -125,18 +126,19 @@ function mergeSheetItems<Style>(
   return next;
 }
 
-function isCreateSheetOptions(value: unknown): value is CreateSheetOptions {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
-  return 'layer' in value || 'weight' in value || Object.keys(value).length === 0;
-}
-
 function assertCreateSheetOptions(options: CreateSheetOptions) {
+  if (
+    !options || typeof options !== 'object' ||
+    Object.keys(options).some((key) => key !== 'layer' && key !== 'specificity')
+  ) {
+    throw new Error('createSheet only supports layer and specificity options');
+  }
   if (!isSheetLayerOption(options.layer)) {
     throw new Error('createSheet options.layer must be a boolean or a valid layer name');
   }
 
-  if (options.weight !== undefined && (!Number.isInteger(options.weight) || options.weight < 1)) {
-    throw new Error('createSheet options.weight must be a positive integer');
+  if (options.specificity !== undefined && (!Number.isInteger(options.specificity) || options.specificity < 0)) {
+    throw new Error('createSheet options.specificity must be a non-negative integer');
   }
 }
 

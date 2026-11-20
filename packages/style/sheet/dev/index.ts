@@ -1,6 +1,7 @@
 import { CSS_CONFIG, CSS_CONFIG_DEFAULT } from '../../config/config/css';
 import { DEV_CONFIG } from '../../config/config/dev';
 import { globalData } from '../../utils/global';
+import { createOrderedSheet, refreshOrderedSheets } from '../ordered';
 import type { SheetOptions, SheetRule, StyleSheet } from '../types';
 import { createDevLayerSheet } from './dev_layer';
 import { createDevSortSheet } from './dev_sort';
@@ -22,10 +23,14 @@ export { createDevLayerSheet, getDevSourcemapTags, refreshDevSourcemapTags } fro
 export { createDevSortSheet } from './dev_sort';
 
 export function createDevSheet(options: SheetOptions = {}): StyleSheet {
+  return createOrderedSheet(createDevSheetBase, options, true);
+}
+
+function createDevSheetBase(options: SheetOptions = {}): StyleSheet {
   let activeMode = DEV_CONFIG.stylePriorityMode;
   let active = createDevSheetForMode(activeMode, options);
   let activeLayers: readonly string[] = CSS_CONFIG.layers ?? CSS_CONFIG_DEFAULT.layers ?? [];
-  const rules: Array<SheetRule | string> = [];
+  const rules: Array<SheetRule | string | { owner: string; rules: SheetRule[]; }> = [];
   const inserted = new Set<string>();
   const state: DevSheetState = {
     rebuild,
@@ -47,6 +52,13 @@ export function createDevSheet(options: SheetOptions = {}): StyleSheet {
 
       rules.push(rule);
       active.insert(rule);
+    },
+
+    replaceRules(owner: string, next: SheetRule[]) {
+      const group = rules.find((rule) => typeof rule === 'object' && 'owner' in rule && rule.owner === owner);
+      if (group && typeof group === 'object' && 'owner' in group) group.rules = next;
+      else rules.push({ owner, rules: next });
+      rebuild();
     },
 
     flush() {
@@ -74,7 +86,10 @@ export function createDevSheet(options: SheetOptions = {}): StyleSheet {
     active.updateLayers(activeLayers);
 
     for (let i = 0, len = rules.length; i < len; i++) {
-      active.insert(rules[i]);
+      const rule = rules[i];
+      if (typeof rule === 'object' && 'owner' in rule) {
+        for (const item of rule.rules) active.insert(item);
+      } else active.insert(rule);
     }
 
     active.flush();
@@ -83,6 +98,7 @@ export function createDevSheet(options: SheetOptions = {}): StyleSheet {
 
 export function refreshDevStyleTags() {
   DEV_SHEETS.forEach((sheet) => sheet.rebuild());
+  refreshOrderedSheets();
 }
 
 function createDevSheetForMode(mode: DevPriorityMode, options: SheetOptions) {
@@ -123,7 +139,11 @@ function removeDevSheetTags(documentOverride?: Document | null, tagName?: string
 }
 
 function matchesDevSheetTag(sheetName: string, tagName?: string) {
-  if (tagName) return sheetName === tagName || sheetName.startsWith(tagName + ' ');
+  if (tagName) {
+    if (sheetName === tagName) return true;
+    if (!sheetName.startsWith(tagName + ' ')) return false;
+    sheetName = sheetName.slice(tagName.length + 1);
+  }
 
   return sheetName === 'layers' || sheetName === 'rules' || sheetName.startsWith('rules ');
 }

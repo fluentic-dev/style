@@ -15,7 +15,8 @@
     "test:prod": "pnpm run build:turbo && pnpm run verify:prod",
     "test:ssg": "pnpm run ssg:turbo && node ./scripts/verify-static.mjs",
     "verify:prod": "node ./scripts/verify-prod.mjs",
-    "test:css-fingerprint": "node ./scripts/verify-css-fingerprint.mjs"
+    "test:css-fingerprint": "node ./scripts/verify-css-fingerprint.mjs",
+    "test:global-dev": "node ./scripts/verify-global-dev.mjs"
   },
   "dependencies": {
     "@fluentic/style": "workspace:*",

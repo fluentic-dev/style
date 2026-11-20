@@ -12,6 +12,8 @@ assert(cssFiles.length > 0, 'expected extracted CSS assets in .next/static');
 
 const css = cssFiles.map((file) => readFileSync(file, 'utf8')).join('\n');
 assert(css.includes('font-size') || css.includes('fontSize'), 'extracted CSS did not include expected rules');
+assert(/body\s*\{[^}]*margin:\s*0/.test(css), 'missing extracted global body reset');
+assert(/@layer reset/.test(css), 'missing global reset layer');
 assert(!css.includes('__style_runtime_css_virtual_marker__'), 'virtual CSS marker was not replaced');
 assert(!css.includes('.__style_runtime_css_virtual_marker__'), 'virtual CSS marker class was not replaced');
 

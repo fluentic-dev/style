@@ -1523,3 +1523,29 @@ for (const mode of ['prod', 'layer', 'sort'] as const) {
     }
   });
 }
+
+for (const mode of ['layer', 'sort'] as const) {
+  test(`global rule group replacement preserves ordinary rules (${mode})`, () => {
+    configureTestRuntime({ dev: true, priorityMode: mode });
+    const document = createFakeDocument();
+    const sheet = createDevSheet({ document: document as unknown as Document, sourcemap: false });
+    const css = () => document.head.childNodes.map((tag: { textContent: string; }) => tag.textContent).join('\n');
+    try {
+      sheet.insert({ key: 'ordinary', css: '.ordinary{color:green}' });
+      sheet.replaceRules?.('global', [{ key: 'global-red', css: 'body{color:red}', layer: false }]);
+      sheet.flush();
+      includes(css(), '.ordinary{color:green}');
+      includes(css(), 'body{color:red}');
+      sheet.replaceRules?.('global', [{ key: 'global-blue', css: 'body{color:blue}', layer: { name: 'reset' } }]);
+      includes(css(), '.ordinary{color:green}');
+      includes(css(), 'body{color:blue}');
+      notIncludes(css(), 'body{color:red}');
+      sheet.replaceRules?.('global', []);
+      notIncludes(css(), 'body{color:blue}');
+      includes(css(), '.ordinary{color:green}');
+    } finally {
+      sheet.destroy?.();
+      configureTestRuntime();
+    }
+  });
+}

@@ -112,8 +112,8 @@ function buildSheetOptions(
       ),
     );
   }
-  if (options.weight !== undefined) {
-    properties.push(t.objectProperty(t.identifier('weight'), t.numericLiteral(options.weight)));
+  if (options.specificity !== undefined) {
+    properties.push(t.objectProperty(t.identifier('specificity'), t.numericLiteral(options.specificity)));
   }
 
   return t.objectExpression(properties);

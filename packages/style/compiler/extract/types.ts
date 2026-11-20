@@ -28,7 +28,10 @@ export type CssExtractRule = {
   css: string;
   priority: LayerPriority;
   important?: boolean;
-  layer?: 'sheet' | false | NamedSheetLayer;
+  importantNative?: boolean;
+  sheet?: boolean;
+  globalSheet?: { id: string; order: number; };
+  layer?: 'style' | 'sheet' | false | NamedSheetLayer;
   trace?: {
     filePath: string;
     line: number;
