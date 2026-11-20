@@ -29,4 +29,6 @@ export const ITEM_VALUE_TYPE_STYLE_DATA = 2;
 export const ITEM_VALUE_NUMBER_PX = 1;
 export const ITEM_VALUE_TYPE_AT_RULE_REF = 3;
 
+export const GLOBAL_SHEET_SELECTOR_ANCHOR = '\0global';
+
 export const SHEET_SELECTOR_ANCHOR = '\0sheet';

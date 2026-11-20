@@ -35,7 +35,11 @@ import type {
   RuntimeSlotOverrideItem,
   RuntimeStyleItem,
 } from '../../../../builder/data/state';
-import { normalizeManualSelectors, setSheetSelectorOptions } from '../../../../builder/selector_override';
+import {
+  normalizeManualSelectors,
+  setGlobalSheetSelectorOptions,
+  setSheetSelectorOptions,
+} from '../../../../builder/selector_override';
 import { isSheetLayerEnabled, isSheetLayerOption, resolveSheetLayerOption } from '../../../../config/config/css';
 import type { ClassNameFormat, TokenNameFormat, TransformClassNameFormat } from '../../../../config/types';
 import type { Selector } from '../../../../selector/types';
@@ -376,10 +380,14 @@ function compileSheetChain(
   const items: CompiledItem[] = [];
   const rules: CssExtractRule[] = [];
   const hasOptions = chain.baseArgs.length === 2;
-  const sheetOptions = hasOptions
+  const sheetOptions: (CreateSheetOptions & { global?: boolean; }) | null = hasOptions
     ? evaluateCreateSheetOptions(chain.baseArgs[0], scope)
     : {};
   if (!sheetOptions) return null;
+  if (chain.global) {
+    if (sheetOptions.weight !== undefined) throw new Error('createGlobalSheet does not support weight');
+    sheetOptions.global = true;
+  }
 
   const sheetItems = chain.baseArgs[hasOptions ? 1 : 0];
 
@@ -427,7 +435,7 @@ function compileSheetItemsArg(
   options: CompilerOptions,
   items: CompiledItem[],
   rules: CssExtractRule[],
-  sheetOptions: CreateSheetOptions,
+  sheetOptions: CreateSheetOptions & { global?: boolean; },
 ): boolean {
   if (node.type === 'ArrayExpression') {
     for (const element of node.elements) {
@@ -440,7 +448,9 @@ function compileSheetItemsArg(
   }
 
   const tokenOverride = evaluateNode(node, scope);
+  if (tokenOverride.ok && !tokenOverride.value) return true;
   if (tokenOverride.ok && isStyleTokenOverrideData(tokenOverride.value)) {
+    if (sheetOptions.global) throw new Error('createGlobalSheet requires token overrides inside an explicit selector');
     addCompiledTokenItem(
       getStyleTokenId(tokenOverride.value),
       tokenOverride.value,
@@ -455,6 +465,9 @@ function compileSheetItemsArg(
       const item = tokenOverride.value[i];
       if (!item) continue;
       if (!isStyleTokenOverrideData(item)) return false;
+      if (sheetOptions.global) {
+        throw new Error('createGlobalSheet requires token overrides inside an explicit selector');
+      }
 
       addCompiledTokenItem(
         getStyleTokenId(item),
@@ -505,9 +518,21 @@ function compileSelectorOverrideChain(
   options: CompilerOptions,
   items: CompiledItem[],
   rules: CssExtractRule[],
-  sheetOptions: CreateSheetOptions,
+  sheetOptions: CreateSheetOptions & { global?: boolean; },
 ): boolean {
   if (chain.baseArgs.length === 0 || chain.baseArgs.length > 2) return false;
+
+  // Unlike attached sheets, globals have no runtime replacement to supply dynamic values.
+  // Only erase the call when every selector/style argument is statically evaluable.
+  if (sheetOptions.global) {
+    const args = [...chain.baseArgs, ...chain.methods.flatMap((method) => method.args)];
+    if (
+      args.some((arg) => {
+        const result = evaluateNode(arg, scope);
+        return !result.ok || hasGlobalRuntimeValue(result.value);
+      })
+    ) return false;
+  }
 
   const selectorArg = evaluateNode(chain.baseArgs[0], scope);
   if (!selectorArg.ok) return false;
@@ -531,7 +556,9 @@ function compileSelectorOverrideChain(
         options,
         items,
         rules,
-        setSheetSelectorOptions(manualSelectors[i], sheetOptions),
+        sheetOptions.global
+          ? setGlobalSheetSelectorOptions(manualSelectors[i], sheetOptions)
+          : setSheetSelectorOptions(manualSelectors[i], sheetOptions),
       )
     ) {
       return false;
@@ -3551,4 +3578,12 @@ function setCompiledItemValue(
 function getCompiledRuntimeValue(value: unknown): BabelTypes.Expression | undefined {
   if (!value || typeof value !== 'object') return undefined;
   return (value as CompiledRuntimeValue)[COMPILED_RUNTIME_VALUE];
+}
+
+function hasGlobalRuntimeValue(value: unknown, seen = new Set<object>()): boolean {
+  if (!value || typeof value !== 'object' || isStyleTokenData(value) || isAtRuleRef(value)) return false;
+  if (getCompiledRuntimeValue(value)) return true;
+  if (seen.has(value)) return false;
+  seen.add(value);
+  return Object.values(value).some((item) => hasGlobalRuntimeValue(item, seen));
 }

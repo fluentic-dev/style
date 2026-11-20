@@ -4904,3 +4904,132 @@ test('compiler extracts curried selector arrays with fragments and chained condi
   includes(css, '@media (max-width: 700px)');
   includes(css, '{margin: 0px}');
 });
+
+test('compiler extracts and erases global sheets and unused selector inputs', () => {
+  const compiler = createCompiler({ layer: false });
+  const result = compiler.transform(
+    `
+    import { style } from '@fluentic/style';
+    import { createGlobalSheet as globalSheet } from '@fluentic/style/css';
+    const margin = 0;
+    const body = style.selector('body', { margin });
+    globalSheet([body, style.selector(['h1', 'h2']).hover({ color: 'red' }),
+      style.selector('main').media('(max-width: 700px)', { display: 'none' })]);
+    globalSheet({ layer: 'reset' }, [style.selector('html', { padding: 0 })]);
+  `,
+    '/tmp/global-sheet.ts',
+  );
+  if (!result) throw new Error('expected extraction');
+  const css = result.css.join('\n');
+  includes(css, 'body{margin: 0px}');
+  includes(css, 'h1:hover{color: red}');
+  includes(css, 'h2:hover{color: red}');
+  includes(css, 'main{display: none}');
+  includes(css, '@layer reset');
+  notIncludes(css, ':where(');
+  notIncludes(result.code, 'globalSheet');
+  notIncludes(result.code, 'style.selector');
+  notIncludes(result.code, 'const body');
+  notIncludes(result.code, 'const margin');
+});
+
+test('compiler extracts function globals and preserves shared selector inputs', () => {
+  const compiler = createCompiler({ layer: false });
+  const result = compiler.transform(
+    `
+    import { style } from '@fluentic/style';
+    import { createGlobalSheet } from '@fluentic/style/css';
+    export const shared = style.selector('body', { color: 'red' });
+    createGlobalSheet([shared]);
+    export function install() { createGlobalSheet([style.selector('aside', { color: 'blue' })]); }
+  `,
+    '/tmp/global-sheet-conditional.ts',
+  );
+  if (!result) throw new Error('expected extraction');
+  notIncludes(result.code, 'createGlobalSheet');
+  includes(result.code, 'shared');
+  includes(result.css.join('\n'), 'aside{color: blue}');
+});
+
+for (const layer of [false, true, 'reset', '.reset'] as const) {
+  test(`compiler extracts global layer ${layer} without a runtime helper`, () => {
+    const compiler = createCompiler({ css: { layerNamespace: 'fluentic' } });
+    const result = compiler.transform(
+      `
+      import { style } from '@fluentic/style';
+      import { createGlobalSheet } from '@fluentic/style/css';
+      createGlobalSheet({ layer: ${JSON.stringify(layer)} }, [style.selector('body', { color: 'red' })]);
+    `,
+      '/tmp/global-sheet-layer.ts',
+    );
+    if (!result) throw new Error('expected extraction');
+    equal(result.code.trim(), '');
+    const css = result.css.join('\n');
+    includes(css, 'body{color: red}');
+    if (layer) {
+      includes(css, '@layer ' + (layer === true ? 'fluentic.sheet' : layer === '.reset' ? 'fluentic.reset' : layer));
+    } else notIncludes(css, '@layer');
+  });
+}
+
+for (
+  const [input, message] of [
+    ["{ weight: 2 }, [style.selector('body', { color: 'red' })]", 'does not support weight'],
+    ["[style.selector('&', { color: 'red' })]", 'explicit selectors'],
+  ]
+) {
+  test(`compiler rejects invalid global sheet: ${message}`, () => {
+    let error: unknown;
+    try {
+      createCompiler().transform(
+        `
+        import { style } from '@fluentic/style';
+        import { createGlobalSheet } from '@fluentic/style/css';
+        createGlobalSheet(${input});
+      `,
+        '/tmp/global-sheet-invalid.ts',
+      );
+    } catch (caught) {
+      error = caught;
+    }
+    assertCompileError(error, message);
+  });
+}
+
+test('compiler extracts global sheets inside callbacks without requiring invocation', () => {
+  const result = createCompiler({ layer: false }).transform(
+    `
+    import { style } from '@fluentic/style';
+    import { createGlobalSheet } from '@fluentic/style/css';
+    export const onClick = () => {
+      createGlobalSheet([style.selector('[data-heading]', { textDecorationLine: 'underline' })]);
+    };
+  `,
+    '/tmp/global-sheet-callback.ts',
+  );
+  if (!result) throw new Error('expected extraction');
+  includes(result.css.join('\n'), '[data-heading]{text-decoration-line: underline}');
+  notIncludes(result.code, 'createGlobalSheet');
+  notIncludes(result.code, 'style.selector');
+});
+
+test('compiler retains global calls with dynamic inputs and unrelated side effects', () => {
+  const result = createCompiler({ layer: false }).transform(
+    `
+    import { style } from '@fluentic/style';
+    import { createGlobalSheet } from '@fluentic/style/css';
+    const unrelated = logInitialization();
+    createGlobalSheet([style.selector('body', { margin: 0 })]);
+    export function install(color) {
+      createGlobalSheet([style.selector('aside', { color })]);
+    }
+  `,
+    '/tmp/global-sheet-dynamic.ts',
+  );
+  if (!result) throw new Error('expected extraction');
+  includes(result.code, 'logInitialization()');
+  includes(result.code, 'createGlobalSheet');
+  includes(result.code, 'aside');
+  includes(result.css.join('\n'), 'body{margin: 0px}');
+  notIncludes(result.css.join('\n'), 'aside');
+});

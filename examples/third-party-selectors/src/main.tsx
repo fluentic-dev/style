@@ -3,7 +3,7 @@ import React, { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
 
-import './reset.css';
+import './global.styles';
 
 if (import.meta.env.DEV) {
   enableStyleDevUtils();

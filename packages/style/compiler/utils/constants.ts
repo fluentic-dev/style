@@ -61,6 +61,7 @@ export const FN_CREATE_COUNTER_STYLE = 'createCounterStyle';
 export const FN_CREATE_PROPERTY = 'createProperty';
 export const FN_FONT_SRC = 'fontSrc';
 export const FN_CREATE_SHEET = 'createSheet';
+export const FN_CREATE_GLOBAL_SHEET = 'createGlobalSheet';
 
 export const FN_CREATE_EXTRACTED_STYLE = 'createExtractedStyle';
 export const FN_CREATE_EXTRACTED_SHEET = 'createExtractedSheet';

@@ -15,13 +15,13 @@ import {
   type SheetData,
   type StyleData,
 } from '../builder/data';
-import { setSheetSelectorOptions } from '../builder/selector_override_core';
+import { setGlobalSheetSelectorOptions, setSheetSelectorOptions } from '../builder/selector_override_core';
 import { mergeSheetData } from '../builder/style_data';
 import { resolveCallsite } from '../builder/utils';
 import { isSheetLayerOption } from '../config/config/css';
 import { getStyleTokenId, isStyleTokenOverrideData, type StyleTokenOverride } from '../style/token';
 
-type SheetItem<Style = unknown> =
+export type SheetItem<Style = unknown> =
   | false
   | null
   | undefined
@@ -49,12 +49,21 @@ export function createSheet<Style = unknown>(
   const items = (hasOptions ? itemsOrDebug : optionsOrItems) as SheetItem<Style> | undefined;
   const resolvedDebug = hasOptions ? debug : itemsOrDebug as DebugData | undefined;
 
+  return buildSheet(options, items, resolvedDebug);
+}
+
+export function buildSheet<Style>(
+  options: CreateSheetOptions,
+  items: SheetItem<Style> | undefined,
+  resolvedDebug?: DebugData,
+  global = false,
+): SheetBuilder<Style> {
   assertCreateSheetOptions(options);
   const callsite = resolveCallsite(resolvedDebug);
   let data = createSheetData<Style>(callsite, options);
 
   if (items) {
-    data = mergeSheetItems(data, callsite, items);
+    data = mergeSheetItems(data, callsite, items, global);
   }
 
   return data;
@@ -64,6 +73,7 @@ function mergeSheetItems<Style>(
   data: SheetData<Style>,
   callsite: ReturnType<typeof resolveCallsite>,
   items: SheetItem<Style>,
+  global = false,
 ): SheetData<Style> {
   if (!items) return data;
 
@@ -71,13 +81,14 @@ function mergeSheetItems<Style>(
     let next = data;
 
     for (let i = 0, len = items.length; i < len; i++) {
-      next = mergeSheetItems(next, callsite, items[i]);
+      next = mergeSheetItems(next, callsite, items[i], global);
     }
 
     return next;
   }
 
   if (isStyleTokenOverrideData(items)) {
+    if (global) throw new Error('createGlobalSheet requires token overrides inside an explicit selector');
     addSheetTokenOverride(data, items);
     return data;
   }
@@ -89,7 +100,14 @@ function mergeSheetItems<Style>(
   const selectorItem = items as SelectorData<Style> | SelectorOverrideData<Style>;
   const selectors = getSelectorSelectors(selectorItem);
   const options = data[BUILDER_SHEET_OPTIONS];
+
   let next = data;
+
+  const sheetSelectors = selectors.map((selector) =>
+    global
+      ? setGlobalSheetSelectorOptions(selector, options)
+      : setSheetSelectorOptions(selector, options)
+  );
 
   if (isSelectorData(selectorItem)) return next;
 
@@ -99,7 +117,7 @@ function mergeSheetItems<Style>(
       callsite,
       getSelectorItemStyleData(selectorItem),
       null,
-      setSheetSelectorOptions(selectors[i], options),
+      sheetSelectors[i],
       null,
     ) as SheetData<Style>;
   }

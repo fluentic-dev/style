@@ -10,6 +10,7 @@ export type StyleChainMethod = {
 };
 
 export type StyleChainParseResult = {
+  global?: boolean;
   kind: 'style' | 'slot' | 'scope' | 'sheet' | 'selector';
   rootName: string;
   baseArgs: BabelTypes.Node[];

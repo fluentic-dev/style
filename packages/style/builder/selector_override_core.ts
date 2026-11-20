@@ -1,6 +1,6 @@
 import type { ItemSelector } from './data';
 import type { CreateSheetOptions } from './data';
-import { SHEET_SELECTOR_ANCHOR } from './data';
+import { GLOBAL_SHEET_SELECTOR_ANCHOR, SHEET_SELECTOR_ANCHOR } from './data';
 
 export type ManualSelectorInput = string | readonly string[];
 
@@ -82,4 +82,18 @@ function normalizeManualSelector(
   return [
     SHEET_SELECTOR_ANCHOR + (value.startsWith('&') ? value.slice(1) : ' ' + value),
   ];
+}
+
+/** Convert a normalized explicit selector into an unscoped sheet selector. */
+export function setGlobalSheetSelectorOptions(
+  selector: ItemSelector,
+  options: Pick<CreateSheetOptions, 'layer'>,
+): ItemSelector {
+  const text = Array.isArray(selector) ? selector[0] : selector;
+  const suffix = text.slice(SHEET_SELECTOR_ANCHOR.length);
+  if (!suffix.startsWith(' ') || !suffix.trim()) {
+    throw new Error('createGlobalSheet requires explicit selectors without an ampersand anchor');
+  }
+  const global = GLOBAL_SHEET_SELECTOR_ANCHOR + JSON.stringify(options.layer ?? null) + '\0' + suffix.trimStart();
+  return Array.isArray(selector) ? [global, selector[1]] : global;
 }

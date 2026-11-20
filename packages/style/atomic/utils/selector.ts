@@ -1,8 +1,11 @@
-import { SHEET_SELECTOR_ANCHOR } from '../../builder/data/const';
+import { GLOBAL_SHEET_SELECTOR_ANCHOR, SHEET_SELECTOR_ANCHOR } from '../../builder/data/const';
 import type { ItemSelector } from '../../builder/data/state';
 
 export function getSelectorText(selector: ItemSelector): string {
   const text = Array.isArray(selector) ? selector[0] : selector;
+  if (text.startsWith(GLOBAL_SHEET_SELECTOR_ANCHOR)) {
+    return text.slice(text.indexOf('\0', GLOBAL_SHEET_SELECTOR_ANCHOR.length) + 1);
+  }
   return stripSheetSelectorAnchor(text);
 }
 
@@ -41,4 +44,9 @@ function stripSheetSelectorAnchor(selector: string) {
   }
 
   return selector.slice(SHEET_SELECTOR_ANCHOR.length);
+}
+
+export function hasGlobalSheetSelectorAnchor(selector: ItemSelector | null): boolean {
+  const text = selector ? Array.isArray(selector) ? selector[0] : selector : '';
+  return text.startsWith(GLOBAL_SHEET_SELECTOR_ANCHOR);
 }

@@ -60,7 +60,7 @@ export function babelTransform(args: BabelTransformArgs): BabelTransformResult |
     throw error;
   }
 
-  if (!result || !result.code) return null;
+  if (!result || result.code == null) return null;
 
   return {
     code: result.code,

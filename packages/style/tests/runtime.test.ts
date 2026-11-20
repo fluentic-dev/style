@@ -1,10 +1,12 @@
 import { getIdentifierSafeHash } from '../atomic/utils/hash';
 import { DEV_CONFIG } from '../config/config/dev';
+import { createGlobalSheet } from '../css/globalSheet';
 import { createMergeJsxProps } from '../runtime/adapter/utils';
 import { clearElementMarkers } from '../runtime/core/elementMarker';
 import { getClassName as getExtractedClassName } from '../runtime/extract/getClassName';
 import { transformElement as transformExtractedElement } from '../runtime/extract/jsx';
 import { ArgSelectors } from '../selector/presets';
+import { createStyleSheet } from '../sheet';
 import { style as publicStyle } from '../style';
 import { getStyleTokenId, getStyleTokenOverrideDebug } from '../style/token';
 import { exposeStyle } from '../style/utils';
@@ -2273,3 +2275,86 @@ test('rsc named sheet layers survive serialization and server CSS generation', (
     clearRscStyleStore();
   }
 });
+
+for (const mode of ['prod', 'layer', 'sort'] as const) {
+  const dev = mode !== 'prod';
+  test(`createGlobalSheet flushes global rules immediately (${mode})`, () => {
+    configureTestRuntime({ dev, priorityMode: mode === 'prod' ? undefined : mode });
+    const document = createFakeDocument();
+    const previous = getGlobalSheet();
+    const sheet = createStyleSheet({ document: document as never, dev });
+    setGlobalSheet(sheet);
+    const readCss = () =>
+      document.head.childNodes.map((tag: { textContent: string; sheet?: { cssRules: string[]; }; }) =>
+        dev ? tag.textContent : Array.from(tag.sheet?.cssRules ?? []).join('\n') + tag.textContent
+      ).join('\n');
+    try {
+      const result = createGlobalSheet([
+        style.selector('body', { margin: 0 }),
+        style.selector(['h1', 'h2']).hover({ color: 'red' }),
+        publicStyle.selector('main').media('(max-width: 700px)', { display: 'none' }),
+      ]);
+      equal(result, undefined);
+      const css = readCss();
+      includes(css, 'body{margin: 0px}');
+      includes(css, 'h1:hover{color: red}');
+      includes(css, 'h2:hover{color: red}');
+      includes(css, 'main{display: none}');
+      notIncludes(css, ':where(');
+      if (dev) includes(css, 'sourceMappingURL=');
+      const insert = () => createGlobalSheet([style.selector('aside', { color: 'blue' })]);
+      insert();
+      const before = readCss();
+      insert();
+      equal(readCss(), before);
+      createGlobalSheet({ layer: 'reset' }, [style.selector('html', { padding: 0 })]);
+      includes(readCss(), '@layer reset');
+      createGlobalSheet({ layer: '.reset' }, [style.selector('article', { color: 'purple' })]);
+      includes(readCss(), '@layer css.reset');
+      createGlobalSheet({ layer: true }, [style.selector('footer', { color: 'green' })]);
+      includes(readCss(), '@layer css.sheet');
+      createGlobalSheet({ layer: false }, [style.selector('nav', { color: 'orange' })]);
+      includes(readCss(), 'nav{color: orange}');
+      const scoped = createSheet([style.selector('body', { margin: 0 })]);
+      for (const rule of getSheetRules(scoped)) sheet.insert(rule);
+      sheet.flush();
+      includes(readCss(), ':where(');
+      includes(readCss(), 'body{margin: 0px}');
+    } finally {
+      sheet.destroy?.();
+      setGlobalSheet(previous);
+      configureTestRuntime();
+    }
+  });
+}
+
+test('createGlobalSheet rejects weight, anchored selectors, and targetless tokens', () => {
+  const invalidCalls = [
+    () => createGlobalSheet({ weight: 2 } as never, []),
+    () => createGlobalSheet({ layer: 'bad,layer' }, []),
+    () => createGlobalSheet([style.selector('&', { color: 'red' })]),
+    () => createGlobalSheet([style.selector('&?body', { color: 'red' })]),
+    () => createGlobalSheet([createToken('red')('blue')] as never),
+  ];
+  for (const call of invalidCalls) {
+    let error: unknown;
+    try {
+      call();
+    } catch (caught) {
+      error = caught;
+    }
+    equal(error instanceof Error, true);
+  }
+});
+
+function assertGlobalSheetTypes() {
+  const result: void = createGlobalSheet({ layer: '.reset' }, [style.selector('body', { margin: 0 })]);
+  void result;
+  // @ts-expect-error global sheets do not accept a weight
+  createGlobalSheet({ weight: 2 }, []);
+  // @ts-expect-error options require an items argument
+  createGlobalSheet({ layer: true });
+  // @ts-expect-error global sheets cannot be attached to an element
+  getClassName(createGlobalSheet([]));
+}
+void assertGlobalSheetTypes;

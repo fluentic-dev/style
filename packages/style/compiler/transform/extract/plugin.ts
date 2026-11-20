@@ -6,6 +6,7 @@ import type { CompilerCssCollector } from '../../extract/collector';
 import {
   FN_CREATE_EXTRACTED_THEME,
   FN_CREATE_EXTRACTED_TOKEN,
+  FN_CREATE_GLOBAL_SHEET,
   FN_CREATE_SHEET,
   FN_STYLE_PLAIN,
   FN_STYLE_RAW,
@@ -117,7 +118,10 @@ export function createExtractPlugin(args: PluginArgs) {
               state.styleMetas.set(spec.local.name, meta);
             }
 
-            if (sourceName === STYLE_CSS_IMPORT_PATH && imported === FN_CREATE_SHEET) {
+            if (
+              sourceName === STYLE_CSS_IMPORT_PATH &&
+              (imported === FN_CREATE_SHEET || imported === FN_CREATE_GLOBAL_SHEET)
+            ) {
               state.sheetNames.add(spec.local.name);
             }
           });
@@ -208,6 +212,7 @@ export function createExtractPlugin(args: PluginArgs) {
 
           const chain = extractStyleChain(path.node, state.styleNames, state.sheetNames);
           if (!chain) return;
+          chain.global = chain.kind === 'sheet' && state.imports.get(chain.rootName)?.name === FN_CREATE_GLOBAL_SHEET;
 
           if (
             chain.kind === 'slot' &&
@@ -253,6 +258,13 @@ export function createExtractPlugin(args: PluginArgs) {
           });
 
           if (mode === 'collect') {
+            return;
+          }
+
+          if (chain.global) {
+            if (path.parentPath.isExpressionStatement()) path.parentPath.remove();
+            else path.replaceWith(t.unaryExpression('void', t.numericLiteral(0)));
+            path.skip();
             return;
           }
 
@@ -350,30 +362,37 @@ function pruneUnusedStyleInputDeclarations(
   path: BabelCore.NodePath<BabelTypes.Program>,
   state: PluginState,
 ) {
-  path.scope.crawl();
+  const dependencies = new Set<BabelTypes.VariableDeclarator>();
+  let changed: boolean;
+  do {
+    changed = false;
+    path.scope.crawl();
+    path.traverse({
+      VariableDeclarator(declaratorPath) {
+        const node = declaratorPath.node;
+        if (declaratorPath.parentPath?.parentPath?.isExportNamedDeclaration()) return;
+        if (node.id.type !== 'Identifier') return;
+        const binding = declaratorPath.scope.getBinding(node.id.name);
+        if (!binding || !binding.constant || binding.referencePaths.length) return;
+        if (
+          !isStyleInputCall(node.init, state) &&
+          !(dependencies.has(node) && declaratorPath.get('init').isPure())
+        ) return;
 
-  path.traverse({
-    VariableDeclarator(declaratorPath) {
-      const node = declaratorPath.node;
-
-      if (declaratorPath.parentPath?.parentPath?.isExportNamedDeclaration()) return;
-      if (node.id.type !== 'Identifier') return;
-      if (!isStyleInputCall(node.init, state)) return;
-
-      const binding = declaratorPath.scope.getBinding(node.id.name);
-      if (!binding || binding.referencePaths.length) return;
-
-      const declarationPath = declaratorPath.parentPath;
-      if (!declarationPath?.isVariableDeclaration()) return;
-
-      if (declarationPath.node.declarations.length > 1) {
-        declaratorPath.remove();
-      } else {
-        declarationPath.remove();
-      }
-    },
-  });
-
+        declaratorPath.get('init').traverse({
+          ReferencedIdentifier(reference) {
+            const dependency = reference.scope.getBinding(reference.node.name);
+            if (dependency?.path.isVariableDeclarator()) dependencies.add(dependency.path.node);
+          },
+        });
+        const declarationPath = declaratorPath.parentPath;
+        if (!declarationPath?.isVariableDeclaration()) return;
+        if (declarationPath.node.declarations.length > 1) declaratorPath.remove();
+        else declarationPath.remove();
+        changed = true;
+      },
+    });
+  } while (changed);
   path.scope.crawl();
 }
 
@@ -382,6 +401,12 @@ function isStyleInputCall(
   state: PluginState,
 ) {
   if (!node || node.type !== 'CallExpression') return false;
+
+  const selectorChain = extractStyleChain(node, state.styleNames, state.sheetNames);
+  if (selectorChain?.kind === 'selector') {
+    return selectorChain.baseArgs.every((arg) => evaluateNode(arg, getEvalScope(state)).ok) &&
+      selectorChain.methods.every((method) => method.args.every((arg) => evaluateNode(arg, getEvalScope(state)).ok));
+  }
 
   const callee = node.callee;
   if (callee.type !== 'MemberExpression' || callee.computed) return false;

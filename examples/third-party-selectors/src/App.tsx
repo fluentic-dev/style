@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { pageStyles } from './App.style';
+import { highlightGlobalHeadings } from './global.styles';
 import { teamOptions, workspaceOptions } from './options';
 import { Select } from './Select';
 import { selectThemes } from './themes';
 
 export const App = () => {
   const [themeIndex, setThemeIndex] = useState(0);
+  const [headingsHighlighted, setHeadingsHighlighted] = useState(import.meta.env.PROD);
   const selectedTheme = selectThemes[themeIndex];
 
   return (
@@ -13,11 +15,34 @@ export const App = () => {
       <div css={pageStyles.content}>
         <section css={pageStyles.intro}>
           <p css={pageStyles.eyebrow}>third-party selectors</p>
-          <h1 css={pageStyles.title}>Attachable selector sheets for fixed third-party class names.</h1>
+          <h1 data-global-heading css={pageStyles.title}>
+            Attachable selector sheets for fixed third-party class names.
+          </h1>
           <p css={pageStyles.copy}>
             React Select owns the internal markup and generated prefix classes. Fluentic owns the styling by attaching
             selector sheets to the wrapper and to portal targets mounted under document.body.
           </p>
+          <p css={pageStyles.copy}>
+            The page reset uses{' '}
+            <code>createGlobalSheet</code>. In development, click below to inject the heading underline immediately.
+            This example uses the Fluentic Vite plugin: a production build extracts the global CSS, including the
+            underline inside the click handler, so headings are already underlined when the page loads.
+          </p>
+          <button
+            css={pageStyles.themeButton}
+            type='button'
+            disabled={headingsHighlighted}
+            onClick={() => {
+              highlightGlobalHeadings();
+              setHeadingsHighlighted(true);
+            }}
+          >
+            {import.meta.env.PROD
+              ? 'Global underline extracted at build time'
+              : headingsHighlighted
+              ? 'Global heading style applied'
+              : 'Underline all page headings'}
+          </button>
           <div css={pageStyles.themeReadout}>
             <span css={pageStyles.themeReadoutDot} />
             <span>
@@ -48,7 +73,7 @@ export const App = () => {
           <div css={pageStyles.panel}>
             <div css={pageStyles.panelHeader}>
               <div>
-                <h2 css={pageStyles.panelTitle}>Component attached</h2>
+                <h2 data-global-heading css={pageStyles.panelTitle}>Component attached</h2>
                 <p css={pageStyles.panelNote}>
                   The attached sheet styles React Select control, value, and indicator classes with local tokens.
                 </p>
@@ -66,7 +91,7 @@ export const App = () => {
           <div css={pageStyles.panel}>
             <div css={pageStyles.panelHeader}>
               <div>
-                <h2 css={pageStyles.panelTitle}>Same component, different sheet</h2>
+                <h2 data-global-heading css={pageStyles.panelTitle}>Same component, different sheet</h2>
                 <p css={pageStyles.panelNote}>
                   The compact sheet reuses the same selector contract, then overrides size, radius, and spacing.
                 </p>
@@ -85,7 +110,7 @@ export const App = () => {
           <div css={pageStyles.panel}>
             <div css={pageStyles.panelHeader}>
               <div>
-                <h2 css={pageStyles.panelTitle}>Portal dropdown</h2>
+                <h2 data-global-heading css={pageStyles.panelTitle}>Portal dropdown</h2>
                 <p css={pageStyles.panelNote}>
                   Open either select: React Select renders the menu outside the component, and Fluentic attaches the
                   menu sheet to that portal target.
