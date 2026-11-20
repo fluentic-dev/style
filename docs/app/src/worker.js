@@ -12,6 +12,14 @@ export default {
       return Response.redirect(url.toString(), 308);
     }
 
+    if (
+      url.pathname === `${prefix}/docs/learn/add-global-styles` ||
+      url.pathname === `${prefix}/docs/learn/add-global-styles/`
+    ) {
+      url.pathname = `${prefix}/docs/beyond-the-basics/add-global-styles/`;
+      return Response.redirect(url.toString(), 308);
+    }
+
     if (url.pathname !== prefix && !url.pathname.startsWith(`${prefix}/`)) {
       return new Response('Not found', { status: 404 });
     }

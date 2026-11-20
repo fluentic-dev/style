@@ -10,7 +10,7 @@ needs to be attached to the DOM, and the call returns `void`.
 import { style } from '@fluentic/style';
 import { createGlobalSheet } from '@fluentic/style/css';
 
-createGlobalSheet({ layer: 'reset', order: -1 }, [
+createGlobalSheet([
   style.selector('*', { boxSizing: 'border-box' }),
   style.selector('body', { margin: 0 }),
 ]);

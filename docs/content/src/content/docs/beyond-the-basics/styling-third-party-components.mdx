@@ -474,6 +474,44 @@ If different select instances need different menu themes, give each one a
 separate portal target. Attaching conflicting themed selector sheets to
 `document.body` means both sheets can match the same third-party class names.
 
+## When A Global Override Fits
+
+Prefer `createSheet(...)` attached to your wrapper or portal root. Its generated
+parent class keeps the override local, so two instances can use different themes
+without changing every matching component on the page.
+
+A global sheet is useful when you deliberately want one rule for every instance,
+or the integration exposes selectors but no suitable element on which to attach
+a sheet. For example, an app-wide policy for a library's toast containers:
+
+```ts title="global.styles.ts"
+import { style } from '@fluentic/style';
+import { createGlobalSheet } from '@fluentic/style/css';
+
+createGlobalSheet([
+  style.selector('.vendor-toast__container', {
+    fontFamily: 'inherit',
+  }),
+]);
+```
+
+Import this module from your application entry. The rule reaches every matching
+container, including those rendered through portals; it is not scoped to the
+component that imported the module. If the library accepts a portal class or
+container element, prefer attaching a local sheet there first.
+
+Global styles come before regular styles by default. You can change this with
+`order`, or put the rules in a CSS layer with `layer`. These are optional; see
+[global style options](/docs/beyond-the-basics/add-global-styles/#options) when you need them.
+
+With extraction, the global CSS exists in the built stylesheet even if the call
+was written inside a component or event handler. For conditional behavior, declare
+a selector based on a class or data attribute and toggle that on the target.
+
+Follow [Add Global Styles](/docs/beyond-the-basics/add-global-styles/) for document defaults
+and conditional selectors, and [Style ordering and the cascade](/docs/reference/style-ordering/)
+for the full precedence rules.
+
 ## Choosing The Pattern
 
 Selector sheets fit the case where a library exposes stable class names,
