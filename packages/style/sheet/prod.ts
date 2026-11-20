@@ -91,6 +91,11 @@ export function createProdSheet(options: SheetOptions = {}): StyleSheet {
     },
 
     flush() {},
+    destroy() {
+      layerTag?.parentNode?.removeChild(layerTag);
+      ruleTag?.parentNode?.removeChild(ruleTag);
+      inserted.clear();
+    },
   };
 }
 

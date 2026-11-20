@@ -3,6 +3,7 @@ import { setStyleCheckOptions, type StyleCheckOptions } from './config/check';
 import { CSS_CONFIG, type CssConfig } from './config/css';
 import { setDebugClassNameEnabled } from './config/debug';
 import { RUNTIME_CONFIG } from './config/runtime';
+import { setRuntimeDocument } from './document';
 import { getCacheTTL } from './utils';
 
 export type { CheckImportantOptions, StyleCheckLevel, StyleCheckOptions } from './config/check';
@@ -12,12 +13,15 @@ export type RuntimeCssOptions = Partial<CssConfig> & {
 };
 
 export type ConfigureStyleRuntimeOptions = {
+  /** false disables stylesheet injection; true uses the global document (default). */
+  document?: boolean | Document;
   css?: RuntimeCssOptions;
   check?: StyleCheckOptions;
   cacheTTL?: boolean | number;
 };
 
 export function configureStyleRuntime(options: ConfigureStyleRuntimeOptions = {}) {
+  if (options.document !== undefined) setRuntimeDocument(options.document);
   if (options.css) {
     checkBuildConfig('css');
     const { debugClassName, ...css } = options.css;

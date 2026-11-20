@@ -1,6 +1,7 @@
 import { getElementClassName } from '../../atomic/element';
 import { CSS_CONFIG } from '../../config/config/css';
 import { DEV_CONFIG } from '../../config/config/dev';
+import { getRuntimeDocument, onRuntimeDocumentChange } from '../../config/document';
 import type { ElementClassNameFormat } from '../../config/types';
 import type { SheetCallsite, SheetRule } from '../../sheet';
 import { createDevSheet } from '../../sheet';
@@ -37,9 +38,7 @@ export function insertElementMarkerSheetRule(
   rule: SheetRule,
   documentOverride?: Document,
 ) {
-  const document = documentOverride ?? (
-    typeof globalThis.document === 'undefined' ? null : globalThis.document
-  );
+  const document = getRuntimeDocument(documentOverride);
   if (!document) return;
 
   const className = getElementMarkerClassNameFromRule(rule);
@@ -83,6 +82,7 @@ export function getElementMarkerClassNameFromRule(rule: SheetRule) {
 function getElementMarkerSheet(document: Document) {
   const current = ELEMENT_MARKER_SHEET.sheet;
   if (current?.document === document) return current;
+  current?.sheet.destroy?.();
 
   const sheet: ElementMarkerSheet = {
     document,
@@ -115,6 +115,12 @@ export function clearElementMarkers(documentOverride?: Document | null) {
   sheet.classNames.clear();
   ELEMENT_MARKER_SHEET.sheet = null;
 }
+
+onRuntimeDocumentChange(() => {
+  const current = ELEMENT_MARKER_SHEET.sheet;
+  current?.sheet.destroy?.();
+  ELEMENT_MARKER_SHEET.sheet = null;
+});
 
 function removeElementMarkerTags(document: Document | null | undefined) {
   if (!document) return;

@@ -41,6 +41,38 @@ When a bundler plugin is installed, configure `check` on the plugin instead so
 the compiler can report static cases and pass the same settings to the runtime.
 See [Plugin Options](plugin-options#check-options).
 
+### Stylesheet injection
+
+Use `document` to control where the runtime injects stylesheets:
+
+```ts
+configureStyleRuntime({ document: false }); // Disable stylesheet injection.
+configureStyleRuntime({ document: true }); // Use globalThis.document when available.
+configureStyleRuntime({ document: dom.window.document }); // Use a supplied document, e.g. jsdom.
+```
+
+Automatic document selection is the default. Without a document, injection is
+skipped safely. Omitting `document` in a later configuration call preserves the
+existing setting. This option is also available when using a bundler plugin.
+
+Configure the destination before rendering. Changing it disposes of the previous
+runtime sheets; subsequent renders insert styles into the new destination.
+Previously rendered styles are not automatically replayed. Reapplying the same
+setting does not reset sheets. Do not manually delete style tags while retaining
+the same runtime sheet: its insertion tracking still remembers those rules.
+
+Disabling injection preserves resolved classes and inline variables.
+`createStyleTarget` still applies those values to its explicit element; your hook
+owns its lifecycle and calls `destroy()` for cleanup. The option does not suppress
+CSS loaded separately by a bundler or collect server CSS.
+
+For component tests, `document: false` avoids stylesheet side effects. The `css`
+prop still requires the Fluentic JSX runtime. For CSS inspection, provide a DOM
+document and inspect its stylesheets; production insertion can use `cssRules`
+instead of style-tag text. Development CSS may include debug metadata. Use a real
+browser to verify cascade and layout. This configuration is global within the
+runtime environment, so concurrent tests cannot select independent destinations.
+
 ## configureStyleDev
 
 Import from `@fluentic/style/dev`:

@@ -2,6 +2,7 @@ import { LayerDefaultLayers } from '../../atomic/layer';
 import { isDebugData } from '../../builder/data/debug';
 import { CSS_CONFIG } from '../../config/config/css';
 import { DEV_CONFIG } from '../../config/config/dev';
+import { getRuntimeDocument, onRuntimeDocumentChange } from '../../config/document';
 import type { SheetCallsite, SheetRule } from '../../sheet';
 import {
   getElementMarkerClassNameFromRule,
@@ -13,6 +14,8 @@ import { ELEMENT_CSS_DATA_ATTR, PRECOLLECT_LINK_TAG_ATTR, SEED_STYLE_TAG_ATTR, S
 import type { RscStylePayloadRule } from './getClassName';
 
 let observer: MutationObserver | null = null;
+let observerDocument: Document | null = null;
+let observerRequested = false;
 let scheduled = false;
 let flushId = 0;
 
@@ -20,12 +23,21 @@ const pending = new Set<Element>();
 const inserted = new Set<string>();
 
 export function startRscDevObserver(root?: ParentNode) {
-  if (typeof document === 'undefined') return;
+  observerRequested = true;
+  const document = getRuntimeDocument();
+  if (!document) return;
+  if (observerDocument !== document) {
+    stopRscDevObserver();
+    observerRequested = true;
+  }
   if (observer) return;
+  const Observer = document.defaultView?.MutationObserver;
+  if (!Observer) return;
+  observerDocument = document;
 
   const targetRoot = root ?? document;
 
-  observer = new MutationObserver((mutations) => {
+  observer = new Observer((mutations) => {
     let changed = false;
 
     for (const mutation of mutations) {
@@ -33,10 +45,10 @@ export function startRscDevObserver(root?: ParentNode) {
         const target = mutation.target;
 
         if (
-          target instanceof Element &&
-          target.hasAttribute(ELEMENT_CSS_DATA_ATTR)
+          target.nodeType === 1 &&
+          (target as Element).hasAttribute(ELEMENT_CSS_DATA_ATTR)
         ) {
-          pending.add(target);
+          pending.add(target as Element);
           changed = true;
         }
 
@@ -44,7 +56,7 @@ export function startRscDevObserver(root?: ParentNode) {
       }
 
       mutation.addedNodes.forEach((node) => {
-        if (node.nodeType !== Node.ELEMENT_NODE) return;
+        if (node.nodeType !== 1) return;
 
         if (collectPending(node as Element)) {
           changed = true;
@@ -67,12 +79,21 @@ export function startRscDevObserver(root?: ParentNode) {
 }
 
 export function stopRscDevObserver() {
+  observerRequested = false;
   observer?.disconnect();
   observer = null;
+  observerDocument = null;
 
   pending.clear();
+  inserted.clear();
   scheduled = false;
 }
+
+onRuntimeDocumentChange(() => {
+  const active = observerRequested;
+  stopRscDevObserver();
+  if (active) startRscDevObserver();
+});
 
 function collectPending(root: ParentNode | Element): boolean {
   const before = pending.size;
@@ -83,8 +104,8 @@ function collectPending(root: ParentNode | Element): boolean {
     pending.add(element);
   };
 
-  if (root instanceof Element) {
-    collectElement(root);
+  if (root.nodeType === 1) {
+    collectElement(root as Element);
   }
 
   root.querySelectorAll?.(`[${ELEMENT_CSS_DATA_ATTR}]`).forEach((element) => {
@@ -105,6 +126,11 @@ function flush() {
   const id = ++flushId;
 
   scheduled = false;
+
+  if (!observerDocument || observerDocument !== getRuntimeDocument()) {
+    pending.clear();
+    return;
+  }
 
   if (!pending.size) return;
 
@@ -144,7 +170,8 @@ function flush() {
 }
 
 function cleanupInitialStyle() {
-  if (typeof document === 'undefined') return;
+  const document = getRuntimeDocument();
+  if (!document) return;
   if (document.querySelector(`[${ELEMENT_CSS_DATA_ATTR}]`)) return;
 
   document.querySelectorAll(getRscDevInitialStyleSelector()).forEach(

@@ -1,13 +1,11 @@
 import { createStyleSheet } from '../../sheet';
 import type { StyleSheet } from '../../sheet';
-import { globalData, setGlobalData } from '../../utils/global';
-
-const GLOBAL_KEY = 'runtime.sheet.global';
+import { getDocumentSheet, setDocumentSheet } from './document';
 
 export function getGlobalSheet(): StyleSheet {
-  return globalData(GLOBAL_KEY, () => createStyleSheet());
+  return getDocumentSheet(createStyleSheet);
 }
 
 export function setGlobalSheet(sheet: StyleSheet): void {
-  setGlobalData(GLOBAL_KEY, sheet);
+  setDocumentSheet(sheet);
 }
