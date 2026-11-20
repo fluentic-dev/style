@@ -15,7 +15,7 @@
     "bench:compiler": "pnpm --filter @fluentic/style build && pnpm --filter @benchmark/main bench:compiler",
     "bench:autocomplete": "pnpm --filter @benchmark/main bench:autocomplete",
     "sync:package-readme": "node scripts/sync-package-readme.mjs copy",
-    "test": "pnpm --filter @fluentic/style test",
+    "test": "pnpm --filter @fluentic/style test && pnpm test:bundle-report",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm release:check && node scripts/sync-package-readme.mjs run pnpm exec changeset publish --no-git-tag",
@@ -29,8 +29,12 @@
     "lintcheck": "pnpm run lint",
     "lint:fix": "oxlint . --fix",
     "test:package": "node scripts/test-package.mjs",
-    "release:check": "pnpm --filter @fluentic/style build && pnpm check && pnpm test && pnpm build && pnpm --filter @example/nextjs test:prod && pnpm test:package",
-    "llms:check": "node scripts/sync-llms.mjs --check && pnpm --filter @fluentic/style build && pnpm --filter @example/llm-basic typecheck && pnpm --filter @example/llm-basic build"
+    "release:check": "pnpm --filter @fluentic/style build && pnpm report:bundle:check && pnpm check && pnpm test && pnpm build && pnpm --filter @example/nextjs test:prod && pnpm test:package",
+    "llms:check": "node scripts/sync-llms.mjs --check && pnpm --filter @fluentic/style build && pnpm --filter @example/llm-basic typecheck && pnpm --filter @example/llm-basic build",
+    "report:bundle": "pnpm --filter @fluentic/style report:bundle",
+    "report:bundle:update": "pnpm --filter @fluentic/style report:bundle --write",
+    "report:bundle:check": "pnpm --filter @fluentic/style report:bundle --check",
+    "test:bundle-report": "node --test packages/style/scripts/bundle-report.test.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "^2.31.0",

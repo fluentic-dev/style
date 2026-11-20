@@ -1,0 +1,349 @@
+{
+  "schemaVersion": 1,
+  "package": "@fluentic/style",
+  "version": "0.1.0-beta.14",
+  "tools": {
+    "vite": "8.0.16",
+    "gzipLevel": 9
+  },
+  "entries": [
+    {
+      "name": "dev runtime",
+      "imports": [
+        [
+          "jsx/jsx-dev-runtime.js",
+          [
+            "Fragment",
+            "createElement",
+            "jsxDEV"
+          ]
+        ],
+        [
+          "index.js",
+          [
+            "bindScope",
+            "combineScope",
+            "combineStyle",
+            "createClassNameFn",
+            "createStyleFn",
+            "createTheme",
+            "createToken",
+            "createTokens",
+            "createValues",
+            "getClassName",
+            "getToken",
+            "style"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "extracted production runtime",
+      "imports": [
+        [
+          "entry/prod/runtime.js",
+          [
+            "getClassName",
+            "combineStyle",
+            "mergeClassName",
+            "mergeStyle"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "extracted jsx runtime",
+      "imports": [
+        [
+          "entry/prod/jsx-runtime.js",
+          [
+            "Fragment",
+            "createElement",
+            "jsx",
+            "jsxs"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "extracted generated helpers",
+      "imports": [
+        [
+          "entry/prod/extract.js",
+          [
+            "createExtractedScope",
+            "createExtractedSlot",
+            "createExtractedSlotOverride",
+            "createExtractedStyle",
+            "createExtractedTheme",
+            "createExtractedToken",
+            "createExtractedValues",
+            "withTokens"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "optional named tokens",
+      "imports": [
+        [
+          "dialect/index.js",
+          [
+            "createNamedToken",
+            "createNamedTokens",
+            "getNamedToken"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "production runtime",
+      "imports": [
+        [
+          "jsx/jsx-runtime.js",
+          [
+            "Fragment",
+            "createElement",
+            "jsx",
+            "jsxs"
+          ]
+        ],
+        [
+          "index.js",
+          [
+            "bindScope",
+            "combineScope",
+            "combineStyle",
+            "createClassNameFn",
+            "createStyleFn",
+            "createTheme",
+            "createToken",
+            "createTokens",
+            "createValues",
+            "getClassName",
+            "getToken",
+            "style"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "server dev rsc runtime",
+      "imports": [
+        [
+          "entry/rsc-dev/jsx-runtime.js",
+          [
+            "Fragment",
+            "createElement",
+            "jsx",
+            "jsxs"
+          ]
+        ],
+        [
+          "entry/rsc-dev.js",
+          [
+            "bindScope",
+            "combineScope",
+            "combineStyle",
+            "createClassNameFn",
+            "createStyleFn",
+            "createTheme",
+            "createToken",
+            "createTokens",
+            "createValues",
+            "getClassName",
+            "getToken",
+            "style"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "server production runtime",
+      "imports": [
+        [
+          "entry/rsc-prod.js",
+          [
+            "bindScope",
+            "combineScope",
+            "combineStyle",
+            "createClassNameFn",
+            "createStyleFn",
+            "createTheme",
+            "createToken",
+            "createTokens",
+            "createValues",
+            "getClassName",
+            "getToken",
+            "style"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "server extracted production runtime",
+      "imports": [
+        [
+          "entry/rsc-prod/runtime.js",
+          [
+            "getClassName",
+            "combineStyle",
+            "bindScope"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "optional extracted sheet helper",
+      "imports": [
+        [
+          "entry/prod/extract.js",
+          [
+            "createExtractedSheet"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "optional client sheet helpers",
+      "imports": [
+        [
+          "entry/prod/css.js",
+          [
+            "createSheet",
+            "createGlobalSheet"
+          ]
+        ]
+      ]
+    },
+    {
+      "name": "nextjs dev client support",
+      "imports": [
+        [
+          "dev/rsc.js",
+          [
+            "StyleDev"
+          ]
+        ]
+      ]
+    }
+  ],
+  "externalized": [
+    "next/navigation",
+    "next/navigation.js",
+    "react",
+    "react-dom",
+    "react/jsx-dev-runtime",
+    "react/jsx-runtime"
+  ],
+  "rows": [
+    {
+      "name": "dev runtime",
+      "graphRaw": 234278,
+      "graphGzip": 49398,
+      "minRaw": 89586,
+      "minGzip": 29617,
+      "files": 21,
+      "deps": "css-what, react, react/jsx-dev-runtime, react/jsx-runtime"
+    },
+    {
+      "name": "extracted production runtime",
+      "graphRaw": 38658,
+      "graphGzip": 8410,
+      "minRaw": 14501,
+      "minGzip": 5097,
+      "files": 4,
+      "deps": "-"
+    },
+    {
+      "name": "extracted jsx runtime",
+      "graphRaw": 21095,
+      "graphGzip": 5016,
+      "minRaw": 7453,
+      "minGzip": 2849,
+      "files": 5,
+      "deps": "react, react/jsx-runtime"
+    },
+    {
+      "name": "extracted generated helpers",
+      "graphRaw": 7453,
+      "graphGzip": 1976,
+      "minRaw": 1850,
+      "minGzip": 878,
+      "files": 1,
+      "deps": "-"
+    },
+    {
+      "name": "optional named tokens",
+      "graphRaw": 8356,
+      "graphGzip": 2303,
+      "minRaw": 2763,
+      "minGzip": 1225,
+      "files": 4,
+      "deps": "-"
+    },
+    {
+      "name": "production runtime",
+      "graphRaw": 233685,
+      "graphGzip": 49211,
+      "minRaw": 89519,
+      "minGzip": 29590,
+      "files": 20,
+      "deps": "css-what, react, react/jsx-runtime"
+    },
+    {
+      "name": "server dev rsc runtime",
+      "graphRaw": 235349,
+      "graphGzip": 50856,
+      "minRaw": 92805,
+      "minGzip": 30745,
+      "files": 11,
+      "deps": "css-what, react, react/jsx-runtime"
+    },
+    {
+      "name": "server production runtime",
+      "graphRaw": 235575,
+      "graphGzip": 50537,
+      "minRaw": 69588,
+      "minGzip": 23094,
+      "files": 5,
+      "deps": "css-what"
+    },
+    {
+      "name": "server extracted production runtime",
+      "graphRaw": 38742,
+      "graphGzip": 8414,
+      "minRaw": 14723,
+      "minGzip": 5163,
+      "files": 4,
+      "deps": "-"
+    },
+    {
+      "name": "optional extracted sheet helper",
+      "graphRaw": 7453,
+      "graphGzip": 1976,
+      "minRaw": 792,
+      "minGzip": 430,
+      "files": 1,
+      "deps": "-"
+    },
+    {
+      "name": "optional client sheet helpers",
+      "graphRaw": 167774,
+      "graphGzip": 37773,
+      "minRaw": 51547,
+      "minGzip": 17860,
+      "files": 4,
+      "deps": "-"
+    },
+    {
+      "name": "nextjs dev client support",
+      "graphRaw": 156249,
+      "graphGzip": 35447,
+      "minRaw": 54318,
+      "minGzip": 18982,
+      "files": 14,
+      "deps": "@jridgewell/trace-mapping, next/navigation.js, react"
+    }
+  ]
+}

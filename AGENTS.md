@@ -12,3 +12,7 @@ Read [RELEASING.md](RELEASING.md) before preparing, versioning, tagging, or publ
 any release. Run `pnpm release:check` and verify the packed declarations and consumer
 examples before tagging. Public type exports must use generated declarations, never
 implementation sources. Keep copy-ready GitHub notes in `releases/v<VERSION>.md`.
+
+Before every release, build the package, run `pnpm report:bundle:update`, and review
+the generated reports and bundle-size docs. `pnpm release:check` must confirm that
+these measurements match the release version and current build.

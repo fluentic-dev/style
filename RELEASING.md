@@ -20,6 +20,14 @@ Preparing a release does not itself publish to npm.
 4. Review `packages/style/package.json`, `packages/style/CHANGELOG.md`, and
    `.changeset/pre.json`. Private examples and benchmarks are not versioned or
    tagged. Refresh the lockfile if dependency metadata changed.
+5. Build the versioned package, then run `pnpm report:bundle:update`. Review
+   `reports/bundle-size.json`, `reports/bundle-size.md`, and the generated table in
+   `docs/content/src/content/docs/benchmark/bundle-size.mdx`. Include significant
+   changes and exact gzip byte counts in the release notes. These reports must
+   be refreshed for **every** prepared release, even when code size is unchanged.
+   Never copy older measurements or edit measured values manually.
+   `pnpm report:bundle:check` independently rebuilds the measured entry bundles
+   and fails if report data, docs, package version, or recorded tooling is stale.
 
 ## TypeScript toolchain
 
@@ -62,9 +70,10 @@ Bundler, Node16, and NodeNext resolution.
 
 Run `pnpm release:check` before any release commit/tag. It performs:
 
-1. Package build (declarations must exist before workspace consumers type-check).
+1. Package build (declarations must exist before workspace consumers type-check),
+   followed by `pnpm report:bundle:check` against the committed reports and docs.
 2. `pnpm check`: lint, formatting, and all workspace TypeScript projects.
-3. `pnpm test`: library/compiler/runtime tests.
+3. `pnpm test`: library/compiler/runtime tests and bundle-report generation/staleness tests.
 4. `pnpm build`: package, examples with build scripts, and benchmark app builds.
 5. `pnpm --filter @example/nextjs test:prod`: Next.js production build and verification
    (Next.js has no generic `build` script, so the workspace build does not cover it).

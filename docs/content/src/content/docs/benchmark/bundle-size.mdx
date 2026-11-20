@@ -18,39 +18,35 @@ entry, then creates a small minified bundle for the imported public surface.
 
 ## Current Report
 
-This is the local report for `@fluentic/style@0.1.0-beta.14`, generated on
-2026-11-19 from implementation commit `02de0f50`, including the `_x<hex>_`
-named-token escape format. Sizes use KiB (1,024 bytes) and gzip level 9.
+The following table is generated from the current package build. Run
+`pnpm report:bundle:update` to refresh this page, `reports/bundle-size.md`, and
+`reports/bundle-size.json`. Run `pnpm report:bundle:check` to fail on stale values
+or mismatched package/tool versions. Release preparation requires both commands;
+`pnpm release:check` runs the check automatically after building the package.
 
-The extracted production runtime is the important static-extraction budget:
-`4.98 KiB` min+gzip. The extracted JSX runtime is `2.78 KiB` min+gzip, and the
-generated extracted helpers are `878 B` min+gzip. The exact gzip sizes are:
+{/* bundle-report:start */}
 
-| Measured surface | Gzip bytes |
-| --- | ---: |
-| Extracted production runtime | 5,097 B |
-| Extracted JSX runtime | 2,849 B |
-| Generated helpers | 878 B |
-| Optional named tokens | 1,225 B |
+Measured package: **@fluentic/style@0.1.0-beta.14**.
 
-The refreshed measurements retain the same rounded KiB values as the previous
-beta.14 report.
+Vite 8.0.16; gzip level 9; KiB = 1,024 bytes.
+Each row is an independent bundle; rows are not additive.
 
-| Entry | Graph raw | Graph gzip | Min raw | Min gzip |
-| --- | ---: | ---: | ---: | ---: |
-| dev runtime | 211.63 KiB | 44.32 KiB | 81.30 KiB | 26.95 KiB |
-| extracted production runtime | 37.75 KiB | 8.21 KiB | 14.16 KiB | 4.98 KiB |
-| extracted jsx runtime | 20.60 KiB | 4.90 KiB | 7.28 KiB | 2.78 KiB |
-| extracted generated helpers | 7.28 KiB | 1.93 KiB | 1.81 KiB | 878 B |
-| optional named tokens | 8.07 KiB | 2.23 KiB | 2.70 KiB | 1.20 KiB |
-| production runtime | 211.06 KiB | 44.14 KiB | 81.23 KiB | 26.93 KiB |
-| server dev rsc runtime | 209.73 KiB | 44.85 KiB | 82.67 KiB | 27.40 KiB |
-| server production runtime | 213.29 KiB | 45.16 KiB | 66.06 KiB | 21.83 KiB |
-| server extracted production runtime | 37.83 KiB | 8.22 KiB | 14.38 KiB | 5.04 KiB |
+| Entry | Graph raw | Graph gzip | Min raw | Min gzip | Exact min gzip (bytes) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| dev runtime | 228.79 KiB | 48.24 KiB | 87.49 KiB | 28.92 KiB | 29617 |
+| extracted production runtime | 37.75 KiB | 8.21 KiB | 14.16 KiB | 4.98 KiB | 5097 |
+| extracted jsx runtime | 20.60 KiB | 4.90 KiB | 7.28 KiB | 2.78 KiB | 2849 |
+| extracted generated helpers | 7.28 KiB | 1.93 KiB | 1.81 KiB | 878 B | 878 |
+| optional named tokens | 8.16 KiB | 2.25 KiB | 2.70 KiB | 1.20 KiB | 1225 |
+| production runtime | 228.21 KiB | 48.06 KiB | 87.42 KiB | 28.90 KiB | 29590 |
+| server dev rsc runtime | 229.83 KiB | 49.66 KiB | 90.63 KiB | 30.02 KiB | 30745 |
+| server production runtime | 230.05 KiB | 49.35 KiB | 67.96 KiB | 22.55 KiB | 23094 |
+| server extracted production runtime | 37.83 KiB | 8.22 KiB | 14.38 KiB | 5.04 KiB | 5163 |
+| optional extracted sheet helper | 7.28 KiB | 1.93 KiB | 792 B | 430 B | 430 |
+| optional client sheet helpers | 163.84 KiB | 36.89 KiB | 50.34 KiB | 17.44 KiB | 17860 |
+| nextjs dev client support | 152.59 KiB | 34.62 KiB | 53.04 KiB | 18.54 KiB | 18982 |
 
-The exact numbers can change as dependencies, build output, and minifier
-versions change. Treat this page as a recent snapshot and rerun the command when
-you need exact numbers for a release.
+{/* bundle-report:end */}
 
 The generated-helper measurement includes `createExtractedValues`. The optional
 named-token row retains `createNamedToken`, `createNamedTokens`, and
@@ -61,7 +57,22 @@ Each row is an independent bundle, not an additive cost: shared code is deduplic
 when an app bundles these imports together. The extracted production runtime row
 retains `getClassName`, `combineStyle`, `mergeClassName`, and `mergeStyle`; it does
 not measure every export, such as standalone `getToken`. The report excludes
-React externals, extracted CSS, and application-specific token/style definitions.
+React and Next.js host externals, extracted CSS, and application-specific token/style definitions.
+
+The optional extracted sheet row retains `createExtractedSheet` separately from
+the historical generated-helper surface, making the local-sheet helper visible
+without changing the earlier comparison surface.
+
+The optional client sheet row retains `createSheet` and `createGlobalSheet` from
+the production CSS entry. The Next.js dev client row retains `StyleDev`, including
+seed adoption, rule ordering, and devtools. These optional rows overlap with the
+full runtime; adding their numbers to other rows would double-count shared code.
+Global sheets disappear from extracted JavaScript and become CSS during builds.
+
+The `externals` field in the JSON report lists bare imports in the unbundled graph.
+Only the `externalized` host imports are excluded from the minified measurements;
+other dependencies, including `css-what`, are bundled. This distinguishes graph
+imports from dependencies actually omitted from the measured bundle.
 
 ## Reading The Columns
 
