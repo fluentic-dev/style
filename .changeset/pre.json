@@ -42,6 +42,7 @@
     "extracted-token-factories",
     "first-public-beta-release-notes",
     "global-prod-classnames",
+    "global-sheet-ordering",
     "named-sheet-layers",
     "optional-framework-jsx-types",
     "publish-generated-declarations",
