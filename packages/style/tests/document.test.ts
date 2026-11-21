@@ -1,8 +1,8 @@
 import { BUILD_CONFIG } from '../config/build';
 import { configureStyleRuntime } from '../config/configure';
 import { getRuntimeDocument } from '../config/document';
-import { createStyleTarget } from '../css/styleTarget';
 import { createGlobalSheet } from '../css/globalSheet';
+import { createStyleTarget } from '../css/styleTarget';
 import { insertElementMarkerSheetRule } from '../runtime/core/elementMarker';
 import {
   configureTestRuntime,

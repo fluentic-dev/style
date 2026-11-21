@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "package": "@fluentic/style",
-  "version": "0.1.0-beta.15",
+  "version": "0.1.0-beta.16",
   "tools": {
     "vite": "8.0.16",
     "gzipLevel": 9
@@ -239,8 +239,8 @@
   "rows": [
     {
       "name": "dev runtime",
-      "graphRaw": 234278,
-      "graphGzip": 49398,
+      "graphRaw": 233905,
+      "graphGzip": 49352,
       "minRaw": 89586,
       "minGzip": 29617,
       "files": 21,
@@ -275,8 +275,8 @@
     },
     {
       "name": "optional named tokens",
-      "graphRaw": 8356,
-      "graphGzip": 2303,
+      "graphRaw": 8174,
+      "graphGzip": 2287,
       "minRaw": 2763,
       "minGzip": 1225,
       "files": 4,
@@ -284,8 +284,8 @@
     },
     {
       "name": "production runtime",
-      "graphRaw": 233685,
-      "graphGzip": 49211,
+      "graphRaw": 233312,
+      "graphGzip": 49163,
       "minRaw": 89519,
       "minGzip": 29590,
       "files": 20,
@@ -338,8 +338,8 @@
     },
     {
       "name": "nextjs dev client support",
-      "graphRaw": 156249,
-      "graphGzip": 35447,
+      "graphRaw": 155876,
+      "graphGzip": 35401,
       "minRaw": 54318,
       "minGzip": 18982,
       "files": 14,

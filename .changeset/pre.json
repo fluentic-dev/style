@@ -43,6 +43,7 @@
     "first-public-beta-release-notes",
     "global-prod-classnames",
     "global-sheet-ordering",
+    "jsx-create-element-fallback",
     "named-sheet-layers",
     "optional-framework-jsx-types",
     "publish-generated-declarations",

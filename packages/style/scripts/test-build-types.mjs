@@ -64,6 +64,9 @@ try {
   const completed = () => (output.match(/Generated declarations/g) ?? []).length;
   await waitFor(() => completed() >= 1);
   writeFileSync(join(fixture, 'index.ts'), source + "export const watched = 'updated';\n");
+  // Finalization replaces the output directory before writing declarations.
+  // Wait for its completion message before reading the rebuilt file.
+  await waitFor(() => completed() >= 2);
   await waitFor(() => declaration().includes('updated'));
   assert.match(declaration(), /updated/);
   console.log('Native declaration emit, specifier rewriting, error handling, and watch checks passed.');

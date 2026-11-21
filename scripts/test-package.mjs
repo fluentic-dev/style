@@ -82,6 +82,8 @@ try {
     join(temp, 'consumer.tsx'),
     `
 import { style } from '@fluentic/style';
+import { createElement as pluginCreateElement } from '@fluentic/style/plugin/jsx';
+import { createElement as runtimeCreateElement } from '@fluentic/style/jsx';
 import { plugin } from '@fluentic/style/plugin/vite';
 import { createSheet } from '@fluentic/style/css';
 const reset = createSheet({ layer: 'reset' }, [style.selector('&', { margin: 0 })]);
@@ -92,6 +94,10 @@ const scopedReset = <div css={reset}><section css={relative}><h1 css={curried} /
 createSheet({ layer: 1 }, []);
 const css = style({ color: 'red', padding: 4 });
 const element = <div css={css}>Packed consumer</div>;
+const spreadProps = { key: 'spread', css };
+const fallback = <div {...spreadProps} key="explicit">Fallback</div>;
+pluginCreateElement('div', null, fallback);
+runtimeCreateElement('div', null, fallback);
 const vitePlugin = plugin();
 // @ts-expect-error A nonexistent API must still be rejected.
 style.notARealMethod();
@@ -189,12 +195,68 @@ export { element, scopedReset, vitePlugin };
     if (typeof style !== 'function' || plugin().name !== 'fluentic-style') throw new Error('Invalid runtime exports');
   `,
   ]);
+  // Exercise the compiler-generated base import from the installed tarball.
+  for (const source of ['@fluentic/style/plugin/jsx', '@fluentic/style/jsx']) {
+    for (const dev of [false, true]) {
+      const compiled = ts.transpileModule(
+        `
+        const props = { key: 'spread', css: false, className: 'existing' };
+        export const element = <div {...props} key="explicit"><span />child</div>;
+      `,
+        {
+          compilerOptions: {
+            module: ts.ModuleKind.ESNext,
+            target: ts.ScriptTarget.ES2020,
+            jsx: dev ? ts.JsxEmit.ReactJSXDev : ts.JsxEmit.ReactJSX,
+            jsxImportSource: source,
+          },
+          fileName: 'fallback.tsx',
+        },
+      ).outputText;
+      assert.match(compiled, /import.*createElement.*from/);
+      assert(compiled.includes(`from "${source}"`), 'Fallback must import the base path');
+      writeFileSync(join(temp, 'fallback.mjs'), compiled);
+      const conditions = dev ? ['--conditions=development'] : [];
+      for (const server of source.endsWith('/plugin/jsx') ? [false, true] : [false]) {
+        run('node', [
+          ...conditions,
+          ...(server ? ['--conditions=react-server'] : []),
+          '--input-type=module',
+          '-e',
+          `
+          import assert from 'node:assert/strict';
+          // Match the configuration normally supplied by the bundler plugin.
+          globalThis.FLUENTIC_STYLE_BUILD_CONFIG = JSON.stringify({ hoist: false, css: {} });
+          const { element } = await import('./fallback.mjs');
+          const { createElement } = await import('${source}');
+          const { createElement: expected } = await import('${packageRoot}/dist/${
+            source.endsWith('/plugin/jsx')
+              ? `entry/${server ? 'rsc-' : ''}${dev ? 'dev' : 'prod'}/jsx-runtime`
+              : 'jsx/jsx-runtime'
+          }.js');
+          assert.equal(createElement, expected);
+          assert.equal(element.key, 'explicit');
+          assert.equal(element.props.className, 'existing');
+          assert.equal('css' in element.props, false);
+          assert.equal(element.props.children.length, 2);
+          assert.equal(element.props.children[1], 'child');
+          `,
+        ]);
+      }
+    }
+  }
   for (const example of ['basic', 'preact-basic', 'solid-basic', 'tailwind']) {
     const dest = join(temp, example);
     cpSync(join(root, 'examples', example), dest, {
       recursive: true,
       filter: (file) => !['node_modules', 'dist', '.cache'].includes(file.split('/').at(-1)),
     });
+    if (example === 'basic') {
+      const main = join(dest, 'src/main.tsx');
+      const original = readFileSync(main, 'utf8');
+      assert(original.includes('<Page />'), 'React fixture must contain the page render');
+      writeFileSync(main, original.replace('<Page />', `<Page {...{ key: 'spread' }} key='explicit' />`));
+    }
     rmSync(join(dest, 'package.json'));
     writeFileSync(
       join(dest, 'tsconfig.json'),

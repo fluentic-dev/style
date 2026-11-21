@@ -1,6 +1,6 @@
 {
   "name": "@fluentic/style",
-  "version": "0.1.0-beta.15",
+  "version": "0.1.0-beta.16",
   "description": "Type-safe styles that scale with your components.",
   "homepage": "https://fluenticstack.com/style",
   "repository": {
@@ -105,6 +105,16 @@
       "import": "./dist/plugin/nextjs/loader.mjs",
       "default": "./dist/plugin/nextjs/loader.mjs"
     },
+    "./plugin/jsx": {
+      "types": "./dist/types/entry/prod/jsx_runtime.d.ts",
+      "react-server": {
+        "development": "./dist/entry/rsc-dev/jsx-runtime.js",
+        "default": "./dist/entry/rsc-prod/jsx-runtime.js"
+      },
+      "development": "./dist/entry/dev/jsx-runtime.js",
+      "import": "./dist/entry/prod/jsx-runtime.js",
+      "default": "./dist/entry/prod/jsx-runtime.js"
+    },
     "./plugin/jsx/jsx-runtime": {
       "types": "./dist/types/entry/prod/jsx_runtime.d.ts",
       "react-server": "./dist/entry/rsc-prod/jsx-runtime.js",
@@ -198,6 +208,11 @@
     "./jsx-runtime/server/extracted": {
       "types": "./dist/types/entry/rsc_prod/jsx_runtime.d.ts",
       "import": "./dist/entry/rsc-prod/jsx-runtime.js"
+    },
+    "./jsx": {
+      "types": "./dist/types/jsx/runtime/jsx_runtime.d.ts",
+      "react-server": null,
+      "import": "./dist/jsx/jsx-runtime.js"
     },
     "./jsx/jsx-runtime": {
       "types": "./dist/types/jsx/runtime/jsx_runtime.d.ts",
