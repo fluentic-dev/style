@@ -22,6 +22,7 @@ import {
   evaluateEnumDeclaration,
   evaluateNode,
 } from '../evaluator/evaluator';
+import { LazyBindings } from '../evaluator/lazy_bindings';
 import { getImportedName } from '../syntax';
 import { annotateAtRuleDeclaration } from '../syntax/static_ids';
 import { BabelCore } from '../utils/babel';
@@ -69,7 +70,7 @@ export function createExtractPlugin(args: PluginArgs) {
         this.styleNames = new Set();
         this.sheetNames = new Set();
         this.styleMetas = new Map();
-        this.bindings = new Map();
+        this.bindings = new LazyBindings();
         this.bindingNodes = new Map();
         this.imports = new Map();
         this.needsExtractImport = false;
@@ -137,11 +138,7 @@ export function createExtractPlugin(args: PluginArgs) {
             annotateAtRuleDeclaration(decl, state, t);
 
             const name = decl.id.name;
-            const scope = getEvalScope(state);
-            const result = evaluateNode(decl.init, scope);
-
-            state.bindings.set(name, result);
-            state.bindingNodes.set(name, decl.init);
+            recordLazyBinding(state, name, t.cloneNode(decl.init, true));
           });
         },
 
@@ -156,11 +153,7 @@ export function createExtractPlugin(args: PluginArgs) {
             annotateAtRuleDeclaration(decl, state, t);
 
             const name = decl.id.name;
-            const scope = getEvalScope(state);
-            const result = evaluateNode(decl.init, scope);
-
-            state.bindings.set(name, result);
-            state.bindingNodes.set(name, decl.init);
+            recordLazyBinding(state, name, t.cloneNode(decl.init, true));
           });
         },
 
@@ -326,6 +319,21 @@ export function createExtractPlugin(args: PluginArgs) {
       },
     };
   });
+}
+
+function recordLazyBinding(state: ExtractPluginState, name: string, initializer: BabelTypes.Node) {
+  // Capture the declaration environment without evaluating it. Later shadowed
+  // declarations must not change the meaning of a pending initializer.
+  const bindings = state.bindings.fork();
+  const scope = {
+    ...getEvalScope(state),
+    bindings,
+    bindingNodes: new Map(state.bindingNodes),
+    imports: new Map(state.imports),
+  };
+  bindings.setLazy(name, () => evaluateNode(initializer, scope));
+  state.bindings.setLazy(name, () => bindings.get(name)!);
+  state.bindingNodes.set(name, initializer);
 }
 
 function checkCompiledImportantUsage(

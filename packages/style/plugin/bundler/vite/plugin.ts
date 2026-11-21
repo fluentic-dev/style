@@ -1,6 +1,7 @@
 import type { Plugin } from 'vite';
 import { invalidateFiles, PLUGIN_NAME, type PluginOptions, transformCssOutput } from '../../utils';
 import { hasCssMarker, replaceCssMarker } from '../../utils/cssMarker';
+import { createTransformHookFilter } from '../../utils/filter';
 import { formatError } from '../../utils/misc';
 import { getVirtualModuleId, RESOLVED_RUNTIME_MODULE_ID } from '../../utils/virtual';
 import { createVitePluginState } from './state';
@@ -60,24 +61,26 @@ export function plugin(options: PluginOptions = {}): Plugin {
       },
     },
 
-    async transform(code, id) {
-      const current = state.getState();
-      await state.ensureSidecarStarted();
+    transform: {
+      filter: createTransformHookFilter(options),
+      async handler(code, id) {
+        const current = state.getState();
+        if (!current.filter(id)) return null;
+        if (current.dev) await state.ensureSidecarStarted();
 
-      if (!current.filter(id)) return null;
+        let result: ReturnType<typeof current.transform>;
+        try {
+          result = current.transform(code, id);
+        } catch (error) {
+          this.error(toCleanViteError(error, id));
+        }
+        if (!result) return null;
 
-      let result: ReturnType<typeof current.transform>;
-      try {
-        result = current.transform(code, id);
-      } catch (error) {
-        this.error(toCleanViteError(error, id));
-      }
-      if (!result) return null;
-
-      return {
-        code: result.code,
-        map: result.map ? JSON.parse(result.map) : null,
-      };
+        return {
+          code: result.code,
+          map: result.map ? JSON.parse(result.map) : null,
+        };
+      },
     },
 
     async generateBundle(_, bundle) {

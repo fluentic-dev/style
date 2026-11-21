@@ -1,6 +1,8 @@
 import './extracted-tokens.test';
 import './core.test';
 import './compiler.test';
+import './package-filter.test';
+import './lazy-evaluation.test';
 import './runtime.test';
 import './invariants.test';
 import './sheet.test';

@@ -3001,7 +3001,7 @@ test('vite plugin leaves style calls for runtime css mode', async () => {
   plugin.configResolved({ command: 'serve', root: '/tmp' });
   const source =
     `import { style } from '@fluentic/style';\nexport const styles = { root: style.slot({ color: 'red' }) };`;
-  const result = await plugin.transform.call({}, source, '/tmp/runtime-mode.ts');
+  const result = await plugin.transform.handler.call({}, source, '/tmp/runtime-mode.ts');
 
   equal(typeof result?.code, 'string');
   notIncludes(result.code, 'virtual:fluentic-style');
@@ -3015,7 +3015,7 @@ test('vite plugin extracts style calls for extracted css mode', async () => {
   plugin.configResolved({ command: 'build', root: '/tmp' });
   const source =
     `import { style } from '@fluentic/style';\nexport const styles = { root: style.slot({ color: 'red' }) };`;
-  const result = await plugin.transform.call({}, source, '/tmp/extracted-mode.ts');
+  const result = await plugin.transform.handler.call({}, source, '/tmp/extracted-mode.ts');
 
   equal(typeof result?.code, 'string');
   includes(result.code, 'createExtractedSlot');

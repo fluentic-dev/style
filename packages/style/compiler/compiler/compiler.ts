@@ -45,6 +45,7 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
   const collector = createCssCollector();
 
   const compileDebug = (args: TransformDebugArgs): TransformDebugResult | null => {
+    tracer.beginCompilation();
     return rewriteTransformResult(
       transformDebug(internal, args, { tracer }),
       internal.runtimeMode,
@@ -53,6 +54,7 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
   };
 
   const compileDebugRSC = (args: TransformDebugArgs): TransformDebugRscResult | null => {
+    tracer.beginCompilation();
     const debugResult = rewriteTransformResult(
       transformDebug(internal, args, { tracer }),
       internal.runtimeMode,
@@ -89,6 +91,7 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
   };
 
   const compileExtract = (args: TransformExtractArgs): TransformExtractResult | null => {
+    tracer.beginCompilation();
     const startIndex = collector.getItems().length;
 
     const result = transformExtract(internal, args, {
@@ -161,6 +164,10 @@ function rewriteCompilerRuntimeImports(
   runtimeMode: CompilerRuntimeMode,
   sourceCode: string,
 ) {
+  // All rewritable entry points share this prefix. Escaped specifiers still
+  // need parsing, so only take the fast path when no escapes are present.
+  if (!code.includes(STYLE_IMPORT_PATH) && !code.includes('\\')) return code;
+
   const importRuntimeMode = getImportRuntimeMode(runtimeMode, sourceCode);
 
   return rewriteImportSources(

@@ -57,6 +57,8 @@ stylePlugin({
 | --- | --- |
 | `include` | Limit files processed by the transform. |
 | `exclude` | Exclude files from the transform. |
+| `includePackages` | Include script files from exact npm package names, overriding file patterns. |
+| `excludePackages` | Exclude exact npm package names, overriding all other filter rules. |
 | `hoist` | Control supported style hoisting during extraction. |
 | `check` | Opt into compiler and runtime checks for discouraged style patterns. |
 | `css` | Configure extracted CSS behavior where supported. |
@@ -65,6 +67,37 @@ stylePlugin({
 | `importSources` | Configure recognized Fluentic import sources. |
 | `getSourcemapFilePath` | Customize source paths in CSS sourcemaps. |
 | `devSourcemap` | Choose how development source text is exposed to DevTools. |
+
+### Package Filters
+
+Use `includePackages` and `excludePackages` for exact npm package names, including
+scoped names. Each accepts a string or an array of strings; versions, subpaths,
+and glob patterns are not package names.
+
+```ts
+stylePlugin({
+  includePackages: ['@acme/ui', 'shared-styles'],
+  excludePackages: ['legacy-ui'],
+});
+```
+
+Precedence for a matching package is:
+
+1. `excludePackages` rejects it, even if it is also in `includePackages`.
+2. `includePackages` accepts its JavaScript/TypeScript files, overriding `include`
+   and `exclude`, including the default `node_modules` exclusion.
+3. Unmatched files use the existing `include` / `exclude` rules and defaults.
+
+Package inclusions do not select CSS, JSON, or other non-script assets. Empty
+package lists leave existing behavior unchanged. Matching uses the innermost
+`node_modules` package directory, supports pnpm layouts and Windows paths, and
+ignores query/hash suffixes. Nested dependencies are matched by their own names.
+For linked workspace sources resolved outside `node_modules`, use file patterns.
+
+Vite derives a native hook prefilter from this same configuration. The shared
+JavaScript check remains authoritative for custom file patterns and older Vite
+versions. These options select files to transform; they do not block tracing
+imported values needed to compile those files.
 
 ### CSS Prop
 

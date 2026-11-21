@@ -44,6 +44,7 @@
     "global-prod-classnames",
     "global-sheet-ordering",
     "jsx-create-element-fallback",
+    "lazy-compiler-package-filters",
     "named-sheet-layers",
     "optional-framework-jsx-types",
     "publish-generated-declarations",

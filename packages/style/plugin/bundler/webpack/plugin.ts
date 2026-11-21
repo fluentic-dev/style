@@ -223,7 +223,7 @@ function addTransformLoader(
     use: [loader],
     enforce: 'pre',
     test: DEFAULT_TRANSFORM_INCLUDE,
-    exclude: options.include ? undefined : [
+    exclude: options.include || options.includePackages?.length ? undefined : [
       DEFAULT_TRANSFORM_EXCLUDE,
       getStylePackageDistPath(),
     ],

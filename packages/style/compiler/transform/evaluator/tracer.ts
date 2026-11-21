@@ -22,16 +22,17 @@ import { babelTransformOptions } from '../utils/babel';
 import { getProjectFileId } from '../utils/path';
 import type { CompiledStyleObject, CompiledStyleObjectLocations, EvalScope } from './evaluator';
 import { COMPILED_STYLE_OBJECT_LOCATIONS, evalFail, evalOk, evaluateEnumDeclaration, evaluateNode } from './evaluator';
+import { LazyBindings } from './lazy_bindings';
 import type { EvalModuleBindings, EvalResult, EvalSlotRef, ImportMap, ResolveImportFn } from './types';
 
 export type Tracer = ReturnType<typeof createTracer>;
 
 type TraceCacheContent = {
-  bindings: Array<[string, EvalResult]>;
+  bindings: EvalModuleBindings;
   dependencies?: TraceDependency[];
 };
 
-const CACHE_TYPE = 'transform-trace';
+const CACHE_TYPE = 'transform-trace-lazy-v1';
 
 type TraceDependency = {
   filePath: string;
@@ -45,6 +46,11 @@ type TraceResult = TraceDependency & {
 
 export function createTracer(internal: CompilerInternal) {
   const active = new Set<string>();
+  const dependencyHashes = new Map<string, string | null>();
+  const getDependencyHash = (filePath: string) => {
+    if (!dependencyHashes.has(filePath)) dependencyHashes.set(filePath, hashFileContent(filePath));
+    return dependencyHashes.get(filePath) ?? null;
+  };
 
   const resolveImport = (
     babel: typeof BabelCore,
@@ -70,11 +76,11 @@ export function createTracer(internal: CompilerInternal) {
       cacheType: CACHE_TYPE,
     });
 
-    if (cached && areDependenciesFresh(cached.dependencies ?? [])) {
+    if (cached?.bindings instanceof Map && areDependenciesFresh(cached.dependencies ?? [], getDependencyHash)) {
       return {
         filePath: resolved.filePath,
         contentHash,
-        bindings: new Map(cached.bindings),
+        bindings: cached.bindings,
         dependencies: cached.dependencies ?? [],
       };
     }
@@ -84,11 +90,14 @@ export function createTracer(internal: CompilerInternal) {
 
     try {
       const dependencies = new Map<string, TraceDependency>();
+      const dependencyList: TraceDependency[] = [];
       const resolveDependency: ResolveImportFn = (source, fromFile) => {
         const traced = traceModuleResult(babel, source, fromFile);
         if (!traced) return null;
 
-        return createTrackedBindings(traced, dependencies);
+        return createTrackedBindings(traced, dependencies, () => {
+          dependencyList.splice(0, dependencyList.length, ...dependencies.values());
+        });
       };
 
       const bindings = parseAndExtractModule(
@@ -101,15 +110,13 @@ export function createTracer(internal: CompilerInternal) {
       );
       if (!bindings) return null;
 
-      const dependencyList = [...dependencies.values()];
-
       internal.cache.setItem<TraceCacheContent>({
         filePath: resolved.filePath,
         contentHash,
         cacheType: CACHE_TYPE,
         persistent: false,
         cacheContent: {
-          bindings: [...bindings.entries()],
+          bindings,
           dependencies: dependencyList,
         },
       });
@@ -136,6 +143,9 @@ export function createTracer(internal: CompilerInternal) {
   return {
     resolveImport,
     traceModule,
+    beginCompilation() {
+      dependencyHashes.clear();
+    },
   };
 }
 
@@ -163,7 +173,7 @@ function parseAndExtractModule(
 
   const imports: ImportMap = new Map();
   const rawBindings: Map<string, BabelTypes.Node> = new Map();
-  const bindings: EvalModuleBindings = new Map();
+  const bindings = new LazyBindings();
   const styleNames = new Set<string>();
   const styleMetas = new Map();
   const fileId = getProjectFileId(projectDir, filePath);
@@ -261,9 +271,9 @@ function parseAndExtractModule(
     if (stmt.type === 'ExportAllDeclaration') {
       const exported = resolveImport(stmt.source.value, filePath);
       if (exported) {
-        exported.forEach((value, key) => {
-          if (key !== 'default') bindings.set(key, value);
-        });
+        for (const key of exported.keys()) {
+          if (key !== 'default') bindings.setLazy(key, () => exported.get(key)!);
+        }
       }
     }
 
@@ -285,7 +295,14 @@ function parseAndExtractModule(
   };
 
   rawBindings.forEach((node, name) => {
-    bindings.set(name, evaluateResolvedNode(node, scope, styleNames, fileId, options));
+    bindings.setLazy(name, () => {
+      const imported = imports.get(name);
+      if (imported && node.type === 'Identifier' && node.name === name) {
+        return resolveImport(imported.source, filePath)?.get(imported.name) ??
+          evalFail(`Cannot resolve export: ${name}`);
+      }
+      return evaluateResolvedNode(node, scope, styleNames, fileId, options);
+    });
   });
 
   return bindings;
@@ -595,44 +612,34 @@ function addTraceDependency(
 function createTrackedBindings(
   traced: TraceResult,
   dependencies: Map<string, TraceDependency>,
+  onTrack: () => void,
 ): EvalModuleBindings {
   const track = () => {
     addTraceDependency(dependencies, traced);
     traced.dependencies.forEach((dependency) => addTraceDependency(dependencies, dependency));
+    onTrack();
   };
 
-  return new class extends Map<string, EvalResult> {
-    constructor() {
-      super(traced.bindings);
-    }
-
-    override get(key: string): EvalResult | undefined {
-      const value = super.get(key);
-      if (value !== undefined || super.has(key)) track();
-      return value;
-    }
-
-    override has(key: string): boolean {
-      const result = super.has(key);
-      if (result) track();
-      return result;
-    }
-
-    override forEach(
-      callbackfn: (value: EvalResult, key: string, map: Map<string, EvalResult>) => void,
-      thisArg?: unknown,
-    ): void {
+  const bindings = new LazyBindings();
+  for (const key of traced.bindings.keys()) {
+    bindings.setLazy(key, () => {
+      const value = traced.bindings.get(key)!;
       track();
-      super.forEach(callbackfn, thisArg);
-    }
-  }();
+      return value;
+    });
+  }
+  // Record the module itself even when a requested export is missing. Values
+  // add their transitive dependencies after lazy resolution has completed.
+  track();
+  return bindings;
 }
 
 function areDependenciesFresh(
   dependencies: TraceDependency[],
+  getHash: (filePath: string) => string | null,
 ): boolean {
   for (const dependency of dependencies) {
-    const currentHash = hashFileContent(dependency.filePath);
+    const currentHash = getHash(dependency.filePath);
     if (currentHash !== dependency.contentHash) return false;
   }
 

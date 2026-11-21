@@ -4,7 +4,8 @@ import type { CompilerOptions } from '../../../compiler/types';
 import type { CompilerCssCollector } from '../../../extract';
 import type { ImportSourceMatcher } from '../../../utils/import_source';
 import type { EvalScope } from '../../evaluator/evaluator';
-import type { EvalModuleBindings, ImportMap, ResolveImportFn } from '../../evaluator/types';
+import type { LazyBindings } from '../../evaluator/lazy_bindings';
+import type { ImportMap, ResolveImportFn } from '../../evaluator/types';
 import type { BabelTypes } from '../../utils/babel';
 
 export type HoistedDeclaration = {
@@ -21,7 +22,7 @@ export type ExtractPluginState = {
   styleNames: Set<string>;
   sheetNames: Set<string>;
   styleMetas: Map<string, StyleFnMeta>;
-  bindings: EvalModuleBindings;
+  bindings: LazyBindings;
   bindingNodes: Map<string, BabelTypes.Node>;
   imports: ImportMap;
   needsExtractImport: boolean;
