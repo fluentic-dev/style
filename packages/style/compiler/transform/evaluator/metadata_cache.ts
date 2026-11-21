@@ -15,6 +15,7 @@ type DiskEntry = { version: 1; filePath: string; contentHash: string; checksum: 
 export function createTraceMetadataCache(internal: CompilerInternal) {
   const memory = new Map<string, MemoryEntry>();
   let memoryBytes = 0;
+  let memoryVersion = internal.options.cache?.version;
   const stats = { parses: 0, memoryHits: 0, diskHits: 0, writes: 0 };
   const remember = (filePath: string, contentHash: string, json: string) => {
     const previous = memory.get(filePath);
@@ -30,6 +31,11 @@ export function createTraceMetadataCache(internal: CompilerInternal) {
     memoryBytes += json.length * 2;
   };
   const parse = (babel: typeof BabelCore, filePath: string, content: string): BabelTypes.File | null => {
+    if (!Object.is(memoryVersion, internal.options.cache?.version)) {
+      memory.clear();
+      memoryBytes = 0;
+      memoryVersion = internal.options.cache?.version;
+    }
     const supportedParser = babel.parseSync === defaultParser;
     const contentHash = hash(content);
     const cached = supportedParser ? memory.get(filePath) : undefined;
@@ -39,9 +45,17 @@ export function createTraceMetadataCache(internal: CompilerInternal) {
       memory.set(filePath, cached);
       return JSON.parse(cached.json) as BabelTypes.File;
     }
-    const identity = supportedParser && internal.options.persistentCache !== false ? getCompilerCacheIdentity() : null;
+    const identity = supportedParser && internal.options.cache?.persistent !== false
+      ? getCompilerCacheIdentity()
+      : null;
     const filename = identity
-      ? path.join(internal.cacheDir, 'trace-metadata-v1', identity, hash(filePath) + '.json')
+      ? path.join(
+        internal.cacheDir,
+        'trace-metadata-v1',
+        identity,
+        hash(JSON.stringify(internal.options.cache?.version ?? null)),
+        hash(filePath) + '.json',
+      )
       : null;
     if (filename) {
       try {

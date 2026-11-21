@@ -78,7 +78,7 @@ test('persistent extraction invalidates transitive content even with preserved t
     ok(f.css(instance).includes('color: tan'));
     equal(instance.getPersistentCacheStats().hits, 0);
     equal(instance.getPersistentCacheStats().writes, 2);
-    equal(f.css(f.compiler()), f.css(f.compiler({ persistentCache: false })));
+    equal(f.css(f.compiler()), f.css(f.compiler({ cache: { persistent: false } })));
   }));
 
 test('persistent extraction re-resolves added higher-priority files and symlink targets', () =>
@@ -145,7 +145,10 @@ test('persistent extraction keys source, sourcemaps, configuration and runtime m
     const production = f.compiler({}, CompilerRuntimeMode.Prod);
     const result = production.compileExtract(f.args);
     equal(production.getPersistentCacheStats().hits, 0);
-    deepStrictEqual(result, f.compiler({ persistentCache: false }, CompilerRuntimeMode.Prod).compileExtract(f.args));
+    deepStrictEqual(
+      result,
+      f.compiler({ cache: { persistent: false } }, CompilerRuntimeMode.Prod).compileExtract(f.args),
+    );
     const before = CSS_CONFIG.layerNamespace;
     try {
       CSS_CONFIG.layerNamespace = 'changed-cache-test';
@@ -157,7 +160,7 @@ test('persistent extraction keys source, sourcemaps, configuration and runtime m
     }
   }));
 
-test('persistent extraction supports style metadata but bypasses callbacks and diagnostics', () =>
+test('persistent extraction supports style metadata and can explicitly bypass callbacks', () =>
   fixture((f) => {
     const { style } = createStyleFn({ selectors: PrioritySelectors });
     const options = { importSources: [{ source: '@fluentic/style', name: 'style', styleFn: style }] };
@@ -168,11 +171,10 @@ test('persistent extraction supports style metadata but bypasses callbacks and d
     for (
       const unsafe of [
         { getSourcemapFilePath: () => 'dynamic.ts' },
-        { check: { important: { rawValue: 'warn' as const } } },
         { importSources: [{ ...options.importSources[0]!, check: () => true }] },
       ]
     ) {
-      const instance = f.compiler(unsafe);
+      const instance = f.compiler({ ...unsafe, cache: { dynamicConfig: false } });
       f.css(instance);
       equal(instance.getPersistentCacheStats().bypasses, 1);
       equal(instance.getPersistentCacheStats().writes, 0);
@@ -240,7 +242,7 @@ test('persistent extraction reuses disk output in a separate Node process', () =
 test('Vite production options permit persistent cache hits', () =>
   fixture((f) => {
     const create = () => {
-      const state = createVitePluginState({ cacheDir: f.cacheDir });
+      const state = createVitePluginState({ cache: { location: f.cacheDir } });
       state.setConfig({ root: f.root, command: 'build' } as ResolvedConfig);
       return state.getState().compiler;
     };
@@ -254,7 +256,7 @@ test('Vite production options permit persistent cache hits', () =>
 
 test('persistent extraction bypasses inherited options and metadata accessors', () =>
   fixture((f) => {
-    const options = Object.assign(Object.create({ css: { layer: false } }), { persistentCache: true });
+    const options = Object.assign(Object.create({ css: { layer: false } }), { cache: { persistent: true } });
     const inherited = createCompiler({ projectDir: f.root, cacheDir: f.cacheDir, runtimeMode: null }, options);
     f.css(inherited);
     equal(inherited.getPersistentCacheStats().bypasses, 1);
@@ -287,8 +289,218 @@ test('persistent extraction can explicitly opt out of the default disk cache', (
     const cached = f.compiler();
     const expected = cached.compileExtract(f.args);
     equal(cached.getPersistentCacheStats().writes, 1);
-    const disabled = f.compiler({ persistentCache: false });
+    const disabled = f.compiler({ cache: { persistent: false } });
     deepStrictEqual(disabled.compileExtract(f.args), expected);
     deepStrictEqual(disabled.compileExtract(f.args), expected);
     deepStrictEqual(disabled.getPersistentCacheStats(), { hits: 0, misses: 0, bypasses: 2, writes: 0 });
+  }));
+
+test('persistent check warnings replay on hits with identical output', () =>
+  fixture((f) => {
+    f.write('tokens.ts', "export const color = 'red !important';");
+    const options: CompilerOptions = { check: { important: { rawValue: 'warn' } } };
+    const messages: unknown[][] = [];
+    const previous = console.warn;
+    console.warn = (...args: unknown[]) => {
+      messages.push(args);
+    };
+    try {
+      const first = f.compiler(options);
+      const output = first.compileExtract(f.args);
+      const coldMessages = messages.splice(0);
+      equal(coldMessages.length, 1);
+      const warm = f.compiler(options);
+      deepStrictEqual(warm.compileExtract(f.args), output);
+      equal(warm.getPersistentCacheStats().hits, 1);
+      deepStrictEqual(messages.splice(0), coldMessages);
+      f.write('tokens.ts', "export const color = 'blue';");
+      f.css(warm);
+      equal(messages.length, 0);
+      equal(warm.getPersistentCacheStats().misses, 1);
+    } finally {
+      console.warn = previous;
+    }
+  }));
+
+function captureFailure(run: () => unknown): Error {
+  try {
+    run();
+  } catch (error) {
+    ok(error instanceof Error);
+    return error;
+  }
+  throw new Error('Expected compilation failure');
+}
+
+test('persistent check errors replay code frames and invalidate on dependency and severity changes', () =>
+  fixture((f) => {
+    f.write('tokens.ts', "export const color = 'red !important';");
+    const options: CompilerOptions = { check: { important: { rawValue: 'error' } } };
+    const first = f.compiler(options);
+    const cold = captureFailure(() => first.compileExtract(f.args));
+    equal(first.getPersistentCacheStats().writes, 1);
+    const warm = f.compiler(options);
+    const hit = captureFailure(() => warm.compileExtract(f.args));
+    deepStrictEqual([hit.name, hit.message, hit.stack], [cold.name, cold.message, cold.stack]);
+    ok(hit.message.includes(f.args.filePath));
+    ok(hit.message.includes('> 1 |'));
+    equal(warm.getPersistentCacheStats().hits, 1);
+    equal(warm.getExtractedCss(), '');
+    const disabled = f.compiler({ check: { important: { rawValue: false } } });
+    ok(f.css(disabled).includes('!important'));
+    equal(disabled.getPersistentCacheStats().hits, 0);
+    f.write('tokens.ts', "export const color = 'blue';");
+    ok(f.css(warm).includes('blue'));
+    equal(warm.getPersistentCacheStats().misses, 1);
+  }));
+
+test('cached outside-sheet errors preserve earlier warnings and roll back partial CSS', () =>
+  fixture((f) => {
+    const input = {
+      ...f.args,
+      code: `import { style } from '@fluentic/style';
+export const good = style({ color: 'blue' });
+export const warning = style({ color: 'red !important' });
+export const bad = style({ color: style.important('green') });`,
+    };
+    const options: CompilerOptions = { check: { important: { rawValue: 'warn', outsideSheet: 'error' } } };
+    const messages: unknown[][] = [];
+    const previous = console.warn;
+    console.warn = (...args: unknown[]) => {
+      messages.push(args);
+    };
+    try {
+      const first = f.compiler(options);
+      const cold = captureFailure(() => first.compileExtract(input));
+      const warnings = messages.splice(0);
+      equal(warnings.length, 1);
+      equal(first.getExtractedCss(), '');
+      const second = f.compiler(options);
+      equal(captureFailure(() => second.compileExtract(input)).message, cold.message);
+      equal(second.getPersistentCacheStats().hits, 1);
+      deepStrictEqual(messages.splice(0), warnings);
+      equal(second.getExtractedCss(), '');
+      const changed = {
+        ...input,
+        code: "import { style } from '@fluentic/style'; export const good = style({color:'pink'});",
+      };
+      ok(f.css(second, changed).includes('pink'));
+    } finally {
+      console.warn = previous;
+    }
+  }));
+
+test('callback caching defaults on, skips callback execution on hits, and detects changed source', () =>
+  fixture((f) => {
+    let calls = 0;
+    const format = ({ name }: { name: string | null; }) => {
+      calls++;
+      return 'one-' + name;
+    };
+    const input = {
+      ...f.args,
+      code:
+        "import { style, createToken } from '@fluentic/style'; const color = createToken('red', 'color'); export const card = style({color});",
+    };
+    const options: CompilerOptions = { css: { layer: false, tokenNameFormat: format } };
+    const cold = f.compiler(options).compileExtract(input);
+    ok(calls > 0);
+    calls = 0;
+    const warm = f.compiler(options);
+    deepStrictEqual(warm.compileExtract(input), cold);
+    equal(warm.getPersistentCacheStats().hits, 1);
+    equal(calls, 0);
+    const changed = f.compiler({ css: { layer: false, tokenNameFormat: ({ name }) => 'two-' + name } });
+    ok(changed.compileExtract(input)!.code.includes('two-'));
+    equal(changed.getPersistentCacheStats().hits, 0);
+    const off = f.compiler({ ...options, cache: { dynamicConfig: false } });
+    off.compileExtract(input);
+    equal(off.getPersistentCacheStats().bypasses, 1);
+    ok(calls > 0);
+  }));
+
+test('cache version invalidates callbacks with changed captured state and separates number/string namespaces', () =>
+  fixture((f) => {
+    let prefix = 'one';
+    const options: CompilerOptions = {
+      cache: { version: 1 },
+      css: { layer: false, tokenNameFormat: ({ name }) => prefix + '-' + name },
+    };
+    const input = {
+      ...f.args,
+      code:
+        "import { style, createToken } from '@fluentic/style'; const color = createToken('red', 'color'); export const card = style({color});",
+    };
+    const compiler = f.compiler(options);
+    ok(compiler.compileExtract(input)!.code.includes('one-'));
+    prefix = 'two';
+    options.cache!.version = 2;
+    ok(compiler.compileExtract(input)!.code.includes('two-'));
+    equal(compiler.getPersistentCacheStats().hits, 0);
+    const warm = f.compiler(options);
+    warm.compileExtract(input);
+    equal(warm.getPersistentCacheStats().hits, 1);
+    options.cache!.version = '2';
+    const separate = f.compiler(options);
+    separate.compileExtract(input);
+    equal(separate.getPersistentCacheStats().hits, 0);
+  }));
+
+test('custom cache location resolves from project root and contains both persistent caches', () =>
+  fixture((f) => {
+    const options: CompilerOptions = { cache: { location: 'custom/cache', version: 'test' } };
+    const compiler = f.compiler(options);
+    f.css(compiler);
+    const folder = path.join(f.root, 'custom/cache');
+    ok(readdirSync(folder).includes('extract-v1'));
+    ok(readdirSync(folder).includes('trace-metadata-v1'));
+    const warm = f.compiler(options);
+    f.css(warm);
+    equal(warm.getPersistentCacheStats().hits, 1);
+    const state = createVitePluginState(options);
+    state.setConfig({ root: f.root, command: 'build' } as ResolvedConfig);
+    equal(state.getState().cacheDir, folder);
+  }));
+
+test('unrelated compiler errors are not persisted as diagnostic failures', () =>
+  fixture((f) => {
+    const compiler = f.compiler({ check: { important: { rawValue: 'error' } } });
+    captureFailure(() => compiler.compileExtract({ ...f.args, code: 'export const = ;' }));
+    equal(compiler.getPersistentCacheStats().writes, 0);
+  }));
+
+test('diagnostic failures survive process restart without recompilation', () =>
+  fixture((f) => {
+    f.write('tokens.ts', "export const color = 'red !important';");
+    const modulePath = fileURLToPath(new URL('../compiler/index.ts', import.meta.url));
+    const script = f.write(
+      'diagnostic-process.mjs',
+      `
+      import { createCompiler } from ${JSON.stringify(modulePath)};
+      const compiler = createCompiler(${
+        JSON.stringify({ projectDir: f.root, cacheDir: f.cacheDir, runtimeMode: null })
+      },
+        { check: { important: { rawValue: 'error' } }, cache: { version: 'diagnostics' } });
+      try { compiler.compileExtract(${JSON.stringify(f.args)}); process.exitCode = 1; }
+      catch (error) { console.log(JSON.stringify({ message: error.message, stats: compiler.getPersistentCacheStats() })); }
+    `,
+    );
+    const require = createRequire(import.meta.url);
+    const execute = () => {
+      const child = spawnSync(process.execPath, ['--import', require.resolve('tsx'), script], { encoding: 'utf8' });
+      equal(child.status, 0, child.stderr);
+      return JSON.parse(child.stdout.trim()) as { message: string; stats: { hits: number; writes: number; }; };
+    };
+    const cold = execute();
+    equal(cold.stats.writes, 1);
+    const warm = execute();
+    equal(warm.stats.hits, 1);
+    equal(warm.message, cold.message);
+  }));
+
+test('opaque bound callbacks still bypass caching even with dynamic configuration enabled', () =>
+  fixture((f) => {
+    const compiler = f.compiler({ getSourcemapFilePath: (() => 'map.ts').bind(null) });
+    f.css(compiler);
+    equal(compiler.getPersistentCacheStats().bypasses, 1);
   }));

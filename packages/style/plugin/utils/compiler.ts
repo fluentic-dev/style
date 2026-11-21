@@ -11,7 +11,6 @@ export { CssPropPresets } from '../../compiler';
 export type { CompilerCssPropOptions } from '../../compiler';
 
 export type PluginOptions = CompilerOptions & TransformFilterOptions & {
-  cacheDir?: string;
   cssOutput?: PluginCssOutputOptions;
 };
 
@@ -32,7 +31,7 @@ export function createCompilerId(name?: string) {
 }
 
 export function getPluginCacheDir(projectDir: string, cacheDir?: string) {
-  return cacheDir ?? path.join(projectDir, PLUGIN_CACHE_DIR);
+  return cacheDir === undefined ? path.join(projectDir, PLUGIN_CACHE_DIR) : path.resolve(projectDir, cacheDir);
 }
 
 export function createPluginCompiler(args: PluginCompilerArgs) {

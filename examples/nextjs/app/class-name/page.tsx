@@ -16,8 +16,8 @@ export default function ClassNamePage() {
             <span css={s.eyebrow}>Class-name import source</span>
             <h1 css={s.h1}>Tailwind class-name chain</h1>
             <p css={s.lead}>
-              A compact route with a custom class-name preset, named tokens, local responsive selectors,
-              and dynamic grid utilities that still sourcemap back to source.
+              A compact route with a custom class-name preset, named tokens, local responsive selectors, and dynamic
+              grid utilities that still sourcemap back to source.
             </p>
             <div css={s.actions}>
               <a css={s.cta} href='#tasks'>Primary action</a>

@@ -54,7 +54,7 @@ export { Optimizer, Resolver, Runtime, Transformer };
 export function getParcelState(options: ParcelPluginOptions, pluginOptions: PluginOptions = {}) {
   const projectDir = options.projectRoot ?? process.cwd();
   const dev = options.mode !== 'production';
-  const cacheDir = getPluginCacheDir(projectDir, pluginOptions.cacheDir);
+  const cacheDir = getPluginCacheDir(projectDir, pluginOptions.cache?.location);
   const key = JSON.stringify({ projectDir, dev, cacheDir });
 
   if (state && stateKey === key) return state;

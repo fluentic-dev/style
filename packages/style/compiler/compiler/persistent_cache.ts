@@ -12,6 +12,7 @@ import { RUNTIME_CONFIG } from '../../config/config/runtime';
 import { PrioritySelectors } from '../../selector/presets';
 import { getStyleFnMeta } from '../../style/style';
 import { symbol } from '../../utils/symbol';
+import { type CheckDiagnostic, observeCheckDiagnostics } from '../utils/check_diagnostics';
 import { DEFAULT_CONFIG } from '../utils/constants';
 import { clearResolverCache, observeFileResolutions, resolveFile } from '../utils/file_resolver';
 import { getCompilerCacheIdentity } from './cache_identity';
@@ -19,23 +20,25 @@ import type { CompilerInternal } from './compiler';
 import type { TransformExtractArgs, TransformExtractResult } from './types';
 
 type Dependency = { source: string; fromFile: string; filePath: string | null; hash: string | null; };
-type RecordData = { key: string; dependencies: Dependency[]; result: TransformExtractResult; };
+type CachedError = { name: string; message: string; stack?: string; };
+type RecordData = {
+  key: string;
+  dependencies: Dependency[];
+  result: TransformExtractResult | null;
+  diagnostics: CheckDiagnostic[];
+  error: CachedError | null;
+};
 
 export function createPersistentTransformCache(internal: CompilerInternal) {
   const stats = { hits: 0, misses: 0, bypasses: 0, writes: 0 };
   const directory = path.join(internal.cacheDir, 'extract-v1');
   let previousContext: string | null = null;
   const contextFor = (): string | null => {
-    if (internal.options.persistentCache === false || DEV_CONFIG.isDev) return null;
+    if (internal.options.cache?.persistent === false || DEV_CONFIG.isDev) return null;
     try {
       const identity = getCompilerCacheIdentity();
       if (!identity) return null;
       const options = internal.options;
-      // Diagnostics must not disappear on hits. Until replay is supported, bypass checks.
-      if (
-        options.check?.important?.rawValue || options.check?.important?.outsideSheet ||
-        CHECK_CONFIG.important?.rawValue || CHECK_CONFIG.important?.outsideSheet
-      ) return null;
       // Reject accessors/proxies before inspecting or normalizing configuration.
       assertDataProperties(options);
       if (Object.getPrototypeOf(options) !== Object.prototype && Object.getPrototypeOf(options) !== null) {
@@ -76,7 +79,7 @@ export function createPersistentTransformCache(internal: CompilerInternal) {
           DEFAULT_CONFIG,
           PrioritySelectors,
         },
-      }));
+      }, options.cache?.dynamicConfig !== false));
     } catch {
       return null;
     }
@@ -96,24 +99,43 @@ export function createPersistentTransformCache(internal: CompilerInternal) {
     }
     // Different Node/compiler versions may build the same project concurrently.
     // Keep their records separate instead of repeatedly displacing each other.
-    const filename = path.join(directory, getCompilerCacheIdentity()!, digest(args.filePath) + '.bin');
+    const filename = path.join(
+      directory,
+      getCompilerCacheIdentity()!,
+      digest(encode(internal.options.cache?.version)),
+      digest(args.filePath) + '.bin',
+    );
     // A new snapshot for each compilation: never trust resolver or mtime caches across calls.
     clearResolverCache();
+    let hit: RecordData | undefined;
     try {
       const buffer = fs.readFileSync(filename);
       const body = buffer.subarray(65);
       if (buffer.subarray(0, 64).toString() === digest(body)) {
         const record = deserialize(body) as RecordData;
         if (
-          record.key === key && Array.isArray(record.dependencies) && validResult(record.result) &&
+          record.key === key && Array.isArray(record.dependencies) && validRecord(record) &&
           record.dependencies.every(isFresh)
         ) {
-          stats.hits++;
-          return { result: record.result, hit: true };
+          hit = record;
         }
       }
     } catch {
       // Missing, truncated, incompatible, or otherwise unreadable cache: compile normally.
+    }
+    // Replay outside the read/recovery catch: cached errors must still fail builds.
+    if (hit) {
+      stats.hits++;
+      for (const diagnostic of hit.diagnostics) {
+        if (diagnostic.level === 'warn') console.warn('[fluentic-style] ' + diagnostic.message);
+      }
+      if (hit.error) {
+        const error = new Error(hit.error.message);
+        error.name = hit.error.name;
+        error.stack = hit.error.stack;
+        throw error;
+      }
+      return { result: hit.result, hit: true };
     }
     stats.misses++;
     clearResolverCache();
@@ -122,23 +144,39 @@ export function createPersistentTransformCache(internal: CompilerInternal) {
     if (context !== previousContext) internal.cache.clear();
     previousContext = context;
     const dependencies = new Map<string, Dependency>();
-    const result = observeFileResolutions((source, fromFile, resolved) => {
-      dependencies.set(JSON.stringify([source, fromFile]), {
-        source,
-        fromFile,
-        filePath: resolved?.filePath ?? null,
-        hash: resolved ? digest(resolved.content) : null,
-      });
-    }, compile);
-    if (result) {
+    const diagnostics: CheckDiagnostic[] = [];
+    let result: TransformExtractResult | null = null;
+    let failure: Error | null = null;
+    try {
+      result = observeCheckDiagnostics(
+        (diagnostic) => diagnostics.push(diagnostic),
+        () =>
+          observeFileResolutions((source, fromFile, resolved) => {
+            dependencies.set(JSON.stringify([source, fromFile]), {
+              source,
+              fromFile,
+              filePath: resolved?.filePath ?? null,
+              hash: resolved ? digest(resolved.content) : null,
+            });
+          }, compile),
+      );
+    } catch (error) {
+      // Cache deliberate check failures only, not arbitrary compiler/I/O errors.
+      if (!(error instanceof Error) || diagnostics[diagnostics.length - 1]?.level !== 'error') throw error;
+      failure = error;
+    }
+    const cachedError = failure ? { name: failure.name, message: failure.message, stack: failure.stack } : null;
+    if (result || failure) {
       let temporary: string | undefined;
       try {
         encode(result); // Only persist plain data; never evaluator functions/symbols.
         const records = [...dependencies.values()];
         clearResolverCache();
         // Do not save a mixed snapshot if inputs/configuration changed during extraction.
-        if (!records.every(isFresh) || contextFor() !== context) return { result, hit: false };
-        const body = serialize({ key, dependencies: records, result } satisfies RecordData);
+        if (!records.every(isFresh) || contextFor() !== context) throw new Error('Cache snapshot changed');
+        const body = serialize(
+          { key, dependencies: records, result, diagnostics, error: cachedError } satisfies RecordData,
+        );
         fs.mkdirSync(path.dirname(filename), { recursive: true });
         temporary = filename + '.' + randomUUID() + '.tmp';
         fs.writeFileSync(temporary, Buffer.concat([Buffer.from(digest(body) + '\n'), body]));
@@ -154,6 +192,7 @@ export function createPersistentTransformCache(internal: CompilerInternal) {
         }
       }
     }
+    if (failure) throw failure;
     return { result, hit: false };
   };
   return { run, getStats: () => ({ ...stats }) };
@@ -166,7 +205,23 @@ function isFresh(dependency: Dependency): boolean {
     (resolved ? digest(resolved.content) : null) === dependency.hash;
 }
 
-function validResult(result: TransformExtractResult): boolean {
+function validRecord(record: RecordData): boolean {
+  if (
+    !Array.isArray(record.diagnostics) ||
+    !record.diagnostics.every((item) =>
+      item && (item.level === 'warn' || item.level === 'error') && typeof item.message === 'string'
+    )
+  ) return false;
+  if (record.error) {
+    return record.result === null && record.diagnostics[record.diagnostics.length - 1]?.level === 'error' &&
+      typeof record.error.name === 'string' && typeof record.error.message === 'string' &&
+      (record.error.stack === undefined || typeof record.error.stack === 'string');
+  }
+  return record.error === null && record.diagnostics.every((item) => item.level === 'warn') &&
+    validResult(record.result);
+}
+
+function validResult(result: TransformExtractResult | null): boolean {
   return !!result && typeof result.code === 'string' &&
     (result.sourcemap === null || typeof result.sourcemap === 'string') && Array.isArray(result.rules) &&
     result.rules.every((rule) =>
@@ -204,11 +259,24 @@ function assertPlainArray(value: unknown[]) {
 }
 
 /** Tagged, order-preserving encoding: property order can affect generated CSS. */
-function encode(value: unknown): string {
-  return JSON.stringify(encodeValue(value));
+function encode(value: unknown, dynamicConfig = false): string {
+  return JSON.stringify(encodeValue(value, new Set(), dynamicConfig));
 }
 
-function encodeValue(value: unknown, seen = new Set<object>()): unknown {
+function encodeValue(value: unknown, seen = new Set<object>(), dynamicConfig = false): unknown {
+  if (typeof value === 'function' && dynamicConfig) {
+    if (types.isProxy(value)) throw new Error('Proxy callback');
+    for (const key of Reflect.ownKeys(value)) {
+      if (typeof key !== 'string' || !['length', 'name', 'prototype', 'arguments', 'caller'].includes(key)) {
+        throw new Error('Callback with custom properties');
+      }
+      const descriptor = Object.getOwnPropertyDescriptor(value, key)!;
+      if (!('value' in descriptor)) throw new Error('Callback accessor');
+    }
+    const source = Function.prototype.toString.call(value);
+    if (source.includes('[native code]')) throw new Error('Opaque callback');
+    return ['function', source];
+  }
   if (value === undefined) return ['undefined'];
   if (value === null || typeof value === 'string' || typeof value === 'boolean') return value;
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -234,7 +302,7 @@ function encodeValue(value: unknown, seen = new Set<object>()): unknown {
   try {
     return [
       Array.isArray(value) ? ['array', value.length] : 'object',
-      Object.keys(value).map((key) => [key, encodeValue((value as Record<string, unknown>)[key], seen)]),
+      Object.keys(value).map((key) => [key, encodeValue((value as Record<string, unknown>)[key], seen, dynamicConfig)]),
     ];
   } finally {
     seen.delete(value);

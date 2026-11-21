@@ -98,7 +98,14 @@ const spreadProps = { key: 'spread', css };
 const fallback = <div {...spreadProps} key="explicit">Fallback</div>;
 pluginCreateElement('div', null, fallback);
 runtimeCreateElement('div', null, fallback);
-const vitePlugin = plugin();
+const vitePlugin = plugin({ cache: { persistent: true, dynamicConfig: true, version: 'ci-1', location: '.cache/fluentic' } });
+plugin({ cache: { version: 2 } });
+// @ts-expect-error Cache location is a path, not a boolean.
+plugin({ cache: { location: true } });
+// @ts-expect-error The old persistence option has been removed.
+plugin({ persistentCache: false });
+// @ts-expect-error The old cache directory option has been removed.
+plugin({ cacheDir: '.cache/old' });
 // @ts-expect-error A nonexistent API must still be rejected.
 style.notARealMethod();
 export { element, scopedReset, vitePlugin };

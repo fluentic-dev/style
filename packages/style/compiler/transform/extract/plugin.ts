@@ -3,6 +3,7 @@ import { hashString } from '../../../utils/hash';
 import type { CompilerRuntimeMode } from '../../compiler';
 import type { CompilerOptions } from '../../compiler/types';
 import type { CompilerCssCollector } from '../../extract/collector';
+import { recordCheckDiagnostic } from '../../utils/check_diagnostics';
 import {
   FN_CREATE_EXTRACTED_THEME,
   FN_CREATE_EXTRACTED_TOKEN,
@@ -243,6 +244,7 @@ export function createExtractPlugin(args: PluginArgs) {
           if (!result) return;
 
           checkCompiledImportantUsage(result, options.check?.important, (level, message) => {
+            recordCheckDiagnostic({ level, message });
             if (level === 'error') throw path.buildCodeFrameError(message);
             console.warn('[fluentic-style] ' + message);
           });

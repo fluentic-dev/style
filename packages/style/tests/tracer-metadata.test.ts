@@ -186,7 +186,7 @@ test('metadata corruption is reparsed and disk caching can be disabled', () =>
     ok(next.parse(BabelCore, file, code));
     equal(next.getStats().parses, 1);
     equal(next.getStats().writes, 1);
-    const off = createTraceMetadataCache(f.internal({ persistentCache: false }));
+    const off = createTraceMetadataCache(f.internal({ cache: { persistent: false } }));
     off.parse(BabelCore, file, code);
     off.parse(BabelCore, file, code);
     deepStrictEqual(off.getStats(), { parses: 1, memoryHits: 1, diskHits: 0, writes: 0 });
@@ -243,4 +243,25 @@ test('configuration changes rebuild evaluated tokens while reusing syntax metada
     equal(changed.includes('--one-'), false);
     equal(instance.getTraceMetadataCacheStats().parses, 3);
     ok(instance.getTraceMetadataCacheStats().memoryHits >= 3);
+  }));
+
+test('cache version changes invalidate in-memory and persistent tracer metadata', () =>
+  fixture((f) => {
+    const options = { cache: { version: 1 as string | number } };
+    const file = path.join(f.root, 'version.ts');
+    const code = 'export const value = 1;';
+    const cache = createTraceMetadataCache(f.internal(options));
+    cache.parse(BabelCore, file, code);
+    cache.parse(BabelCore, file, code);
+    equal(cache.getStats().memoryHits, 1);
+    options.cache.version = 2;
+    cache.parse(BabelCore, file, code);
+    equal(cache.getStats().parses, 2);
+    const fresh = createTraceMetadataCache(f.internal(options));
+    fresh.parse(BabelCore, file, code);
+    equal(fresh.getStats().diskHits, 1);
+    options.cache.version = '2';
+    const stringVersion = createTraceMetadataCache(f.internal(options));
+    stringVersion.parse(BabelCore, file, code);
+    equal(stringVersion.getStats().diskHits, 0);
   }));

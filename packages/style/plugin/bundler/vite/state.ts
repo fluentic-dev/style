@@ -89,7 +89,7 @@ export function createVitePluginState(options: PluginOptions) {
       if (state) return state;
 
       const dev = config.command === 'serve';
-      const cacheDir = getPluginCacheDir(config.root, options.cacheDir);
+      const cacheDir = getPluginCacheDir(config.root, options.cache?.location);
       const devSourcemap = resolveDevSourcemapMode(options.devSourcemap, dev);
 
       ensureSidecar(dev, config.root);
@@ -140,7 +140,7 @@ function createViteSidecar(args: {
 }) {
   return getSourcemapSidecar({
     projectDir: args.root,
-    cacheDir: getPluginCacheDir(args.root, args.options.cacheDir),
+    cacheDir: getPluginCacheDir(args.root, args.options.cache?.location),
   });
 }
 

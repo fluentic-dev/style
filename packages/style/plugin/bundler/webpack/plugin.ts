@@ -59,7 +59,7 @@ class WebpackPlugin implements WebpackPluginInstance {
 
     const buildConfig = getPluginBuildConfig(this.options);
     const buildDevConfig = getPluginBuildDevConfig(this.options);
-    const cacheDir = getPluginCacheDir(compiler.context, this.options.cacheDir);
+    const cacheDir = getPluginCacheDir(compiler.context, this.options.cache?.location);
     const devSourcemap = resolveDevSourcemapMode(this.options.devSourcemap, dev);
 
     const sourcemapSidecar = devSourcemap === 'sidecarServer'

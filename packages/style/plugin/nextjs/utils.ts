@@ -55,7 +55,7 @@ export function getTransformLoaderPath() {
 }
 
 export function getNextCacheDir(rootDir: string, cacheDir?: string) {
-  return cacheDir ?? path.join(rootDir, '.next/cache/fluentic-style');
+  return cacheDir === undefined ? path.join(rootDir, '.next/cache/fluentic-style') : path.resolve(rootDir, cacheDir);
 }
 
 export function getNextPrecollectCacheSubdir(dev: boolean) {

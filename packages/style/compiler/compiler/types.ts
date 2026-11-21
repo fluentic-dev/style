@@ -19,9 +19,19 @@ export type CompilerDevOptions = ReplaceProps<DevRuntimeOptions, {
 
 export type DevSourcemapMode = 'sourceUrl' | 'sourceContent' | 'sidecarServer';
 
+export type CompilerCacheOptions = {
+  /** Persist transform results and tracer syntax. Defaults to true. */
+  persistent?: boolean;
+  /** Cache callbacks by source. Defaults to true; bump version when captured/external inputs change. */
+  dynamicConfig?: boolean;
+  /** Manual invalidation namespace for external inputs. */
+  version?: string | number;
+  /** Cache directory; relative paths resolve from the project root. */
+  location?: string;
+};
+
 export type CompilerOptions = {
-  /** Disk cache for extraction, enabled by default. Set false to disable. Unsupported dynamic configuration bypasses it. */
-  persistentCache?: boolean;
+  cache?: CompilerCacheOptions;
   hoist?: boolean;
   check?: StyleCheckOptions;
   css?: CompilerCssOptions;

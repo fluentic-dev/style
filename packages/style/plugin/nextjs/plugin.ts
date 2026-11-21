@@ -94,7 +94,7 @@ function createNextConfig(
   dev: boolean,
 ): MaybePromise<NextConfig> {
   const rootDir = process.cwd();
-  const cacheDir = getNextCacheDir(rootDir, options.cacheDir);
+  const cacheDir = getNextCacheDir(rootDir, options.cache?.location);
 
   const cssCache = createFileCssCache({
     cacheDir,

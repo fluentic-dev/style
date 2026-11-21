@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { createCssCollector, extractCss } from '../extract';
 import { createTracer, transformDebug, transformExtract } from '../transform';
 import { getDebugSourceUrl } from '../transform/debug/utils/source_url';
@@ -93,9 +94,15 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
   };
 
   const compileExtract = (args: TransformExtractArgs): TransformExtractResult | null => {
-    const cached = persistentCache.run(args, () => compileExtractUncached(args));
-    if (cached.hit && cached.result) collector.addMany(cached.result.rules);
-    return cached.result;
+    const startIndex = collector.getItems().length;
+    try {
+      const cached = persistentCache.run(args, () => compileExtractUncached(args));
+      if (cached.hit && cached.result) collector.addMany(cached.result.rules);
+      return cached.result;
+    } catch (error) {
+      collector.getItems().splice(startIndex);
+      throw error;
+    }
   };
 
   const compileExtractUncached = (args: TransformExtractArgs): TransformExtractResult | null => {
@@ -143,7 +150,10 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
 }
 
 function createCompilerInternal(args: CompilerArgs, options: CompilerOptions) {
-  const { projectDir, cacheDir, runtimeMode } = args;
+  const { projectDir, runtimeMode } = args;
+  const cacheDir = options.cache?.location === undefined
+    ? args.cacheDir
+    : path.resolve(projectDir, options.cache.location);
 
   const cache = createCompilerCache({ cacheDir });
 

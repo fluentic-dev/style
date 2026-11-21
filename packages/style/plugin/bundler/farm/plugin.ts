@@ -66,7 +66,7 @@ export function plugin(options: FarmPluginOptions = {}) {
   const buildDevConfig = getPluginBuildDevConfig(options);
   const runtimeMode = getStyleRuntimeMode(dev);
   const projectDir = process.cwd();
-  const cacheDir = getPluginCacheDir(projectDir, options.cacheDir);
+  const cacheDir = getPluginCacheDir(projectDir, options.cache?.location);
 
   let state: PluginCompiler | null = null;
   let sourcemapSidecar: SourcemapSidecar | null = null;

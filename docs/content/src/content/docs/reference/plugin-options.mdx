@@ -60,7 +60,7 @@ stylePlugin({
 | `includePackages` | Include script files from exact npm package names, overriding file patterns. |
 | `excludePackages` | Exclude exact npm package names, overriding all other filter rules. |
 | `hoist` | Control supported style hoisting during extraction. |
-| `persistentCache` | Disk cache for production extraction; defaults to `true`. Set `false` to disable. |
+| `cache` | Configure persistent caching, callback reuse, version invalidation, and cache location. |
 | `check` | Opt into compiler and runtime checks for discouraged style patterns. |
 | `css` | Configure extracted CSS behavior where supported. |
 | `dev` | Configure development runtime behavior. |
@@ -450,27 +450,81 @@ sourcemap modes, and adapter-specific notes.
 
 ## Persistent extraction cache
 
-Completed production transforms are cached across build commands by default.
-Set `persistentCache: false` to disable this disk cache. The cache lives in `cacheDir` under `extract-v1`. It stores transformed
-JavaScript, source maps, and each visited module's extracted CSS. Development
-transforms and evaluator bindings are not persisted.
-Compiler/Node fingerprints have separate subdirectories, so alternating runtimes
-do not displace each other's entries.
+Completed production transforms are cached across build commands by default:
+
+```ts
+fluenticStyle({
+  cache: {
+    persistent: true,
+    dynamicConfig: true,
+    version: '1',
+    location: '.cache/fluentic-style',
+  },
+});
+```
+
+All fields are optional. `persistent` and `dynamicConfig` default to `true`.
+`version` accepts a string or number. `location` is a folder path, resolved from
+the project root when relative. Without a custom location, each adapter uses its
+normal cache folder. The old `persistentCache` and plugin `cacheDir` options have
+been removed; use `cache.persistent` and `cache.location` instead.
+
+The `extract-v1` cache stores transformed JavaScript, source maps, extracted CSS,
+and check diagnostics. Warning messages replay on every hit. Check failures also
+persist their error details and code frames, and a cache hit throws the same error
+without repeating extraction. Arbitrary compiler, parser, or I/O failures are not
+cached as check failures. Failed transforms do not leave partial collected CSS.
+Completed development transforms and evaluator bindings are not persisted.
 
 Reuse requires matching source and input source maps, compiler options and global
 configuration, runtime mode, working directory, Node runtime/flags, and
-compiler/dependency implementation fingerprints.
-Recorded imports are resolved again and their contents hashed, including transitive
-imports and previously missing modules. Timestamp-only changes are not used as proof
-of freshness. Removed or unvisited modules do not restore CSS into a new build.
+compiler/dependency implementation fingerprints. Recorded imports are resolved
+again and their contents hashed, including transitive imports and previously
+missing modules. Check severity changes invalidate diagnostics. Timestamp-only
+changes are not used as proof of freshness. Removed or unvisited modules do not
+restore CSS into a new build.
 
-Function-valued or inherited configuration, accessors, custom selector callbacks,
-stateful regular expressions, and enabled `important` diagnostics bypass the cache. A `styleFn` import source can
-be cached when its compiler metadata contains only supported data. Unreadable or
-corrupt entries cause normal compilation; writes are atomic and best-effort. Disable
-`persistentCache` to compare against uncached extraction or delete `extract-v1` for
-a cold run. The compiler implementation fingerprint is computed once per Node process;
-restart the build process after changing installed compiler dependencies.
+### Dynamic configuration and manual invalidation
+
+With `cache.dynamicConfig: true`, ordinary callback source text participates in
+configuration fingerprints. A changed callback implementation causes a miss.
+On a hit, the entire transform is restored without running callbacks: this is
+not a separate cache of each callback's arguments and return values.
+
+**Captured variables, environment values, external file reads, imported helper
+behavior, and other callback dependencies are not automatically tracked.** When
+these change, update `cache.version` or clear the cache. Enabling callback caching
+is an agreement to manage those inputs. Setting `cache.dynamicConfig: false`
+bypasses completed-transform caching whenever callback configuration is present.
+It does not disable tracer syntax reuse.
+
+Native/bound functions, proxies, accessors, non-plain objects, circular data,
+stateful regular expressions, and callbacks with custom properties still bypass
+completed-transform caching. A `styleFn` import source uses its compiler metadata
+rather than serializing the wrapper function.
+
+Changing `cache.version` selects a new namespace for both persistent caches and
+invalidates in-memory tracer reuse. Old namespaces are retained, not deleted;
+you can remove them when no concurrent build needs them. Strings and numbers
+are distinct versions. Use a stable version until relevant external inputs change.
+
+Unreadable or corrupt entries cause normal compilation; writes are atomic and
+best-effort. Set `cache.persistent: false` to compare against uncached extraction.
+The compiler fingerprint is computed once per Node process; restart the process
+after changing installed compiler dependencies.
+
+### CI restoration
+
+Cache transport is managed by your CI/deployment scripts: install dependencies,
+restore the chosen cache directory, run the build, then archive and upload the
+cache for later builds. Fluentic does not download or upload it.
+
+Use compatible Node/compiler versions and the same absolute checkout/dependency
+paths: current fingerprints and records include absolute paths. A restored archive
+is still validated and may produce misses on another runner layout. Restoration
+does not guarantee a cache hit. Include relevant callback external inputs in
+`cache.version` or your CI cache key. No credentials are needed in the cache; the
+archive does contain source syntax, generated code, diagnostics, and file paths.
 
 ### Tracer metadata
 
@@ -489,6 +543,6 @@ linked modules when first accessed, and partial circular export maps are rebuilt
 
 When a linked value changes, its dependants are reevaluated. Unchanged modules can
 still reuse their syntax metadata. Changing compiler configuration rebuilds evaluated
-bindings while keeping reusable syntax. `persistentCache: false` disables both disk
+bindings while keeping reusable syntax. `cache.persistent: false` disables both disk
 caches; bounded in-memory syntax reuse remains available. Unsupported parser hooks,
 non-JSON syntax values, and corrupt metadata fall back to normal parsing.
