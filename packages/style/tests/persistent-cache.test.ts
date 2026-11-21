@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { stripVTControlCharacters } from 'node:util';
 import type { ResolvedConfig } from 'vite';
 import { CompilerRuntimeMode, createCompiler } from '../compiler';
 import type { CompilerOptions, TransformExtractArgs } from '../compiler';
@@ -343,7 +344,7 @@ test('persistent check errors replay code frames and invalidate on dependency an
     const hit = captureFailure(() => warm.compileExtract(f.args));
     deepStrictEqual([hit.name, hit.message, hit.stack], [cold.name, cold.message, cold.stack]);
     ok(hit.message.includes(f.args.filePath));
-    ok(hit.message.includes('> 1 |'));
+    ok(stripVTControlCharacters(hit.message).includes('> 1 |'));
     equal(warm.getPersistentCacheStats().hits, 1);
     equal(warm.getExtractedCss(), '');
     const disabled = f.compiler({ check: { important: { rawValue: false } } });
@@ -500,7 +501,11 @@ test('diagnostic failures survive process restart without recompilation', () =>
 
 test('opaque bound callbacks still bypass caching even with dynamic configuration enabled', () =>
   fixture((f) => {
-    const compiler = f.compiler({ getSourcemapFilePath: (() => 'map.ts').bind(null) });
+    const compiler = f.compiler({
+      getSourcemapFilePath: function(this: { path: string; }) {
+        return this.path;
+      }.bind({ path: 'map.ts' }),
+    });
     f.css(compiler);
     equal(compiler.getPersistentCacheStats().bypasses, 1);
   }));
