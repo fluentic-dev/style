@@ -1391,6 +1391,36 @@ test('generated id counters are shared across duplicate module instances', async
   notEqual(first.value, second.value);
 });
 
+test('createTokens preserves callable token types and references for token inputs', () => {
+  const color = createValues(['#f7f8fa | canvas']);
+  const canvas = color('#f7f8fa | canvas');
+  const spacing = createToken(8);
+  const stops = createToken([0, 1]);
+  const tokens = createTokens({
+    rowBackground: canvas,
+    nested: { spacing, stops },
+  });
+
+  equal(tokens.rowBackground.ref, canvas);
+  equal(tokens.rowBackground('white').value, 'white');
+  equal(tokens.rowBackground(canvas).ref, canvas);
+  equal(tokens.nested.spacing.ref, spacing);
+  equal(tokens.nested.spacing(12).value, 12);
+  deepEqual(tokens.nested.stops([1, 2]).value, [1, 2]);
+  includes(String(getToken(tokens.rowBackground)), String(getToken(canvas)));
+
+  // Type-only assertions must never execute with invalid runtime arguments.
+  // eslint-disable-next-line no-constant-condition
+  if (false) {
+    // @ts-expect-error string token aliases reject numeric overrides
+    tokens.rowBackground(12);
+    // @ts-expect-error numeric token aliases reject string overrides
+    tokens.nested.spacing('12');
+    // @ts-expect-error array token aliases retain their element type
+    tokens.nested.stops(['1']);
+  }
+});
+
 test('createTokens supports nested object token groups', () => {
   const tokens = createStableTokens({
     color: {

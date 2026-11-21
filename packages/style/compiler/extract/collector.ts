@@ -10,8 +10,8 @@ export function createCssCollector() {
       items.push(item);
     },
 
-    addMany(items: CssExtractRule[]) {
-      items.push(...items);
+    addMany(rules: CssExtractRule[]) {
+      items.push(...rules);
     },
 
     getItems() {

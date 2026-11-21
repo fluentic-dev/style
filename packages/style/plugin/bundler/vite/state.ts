@@ -101,10 +101,9 @@ export function createVitePluginState(options: PluginOptions) {
         options: {
           ...options,
           devSourcemap,
-          getSourcemapFilePath: resolvePluginSourcemapFilePath(
-            options.getSourcemapFilePath,
-            sidecar,
-          ),
+          getSourcemapFilePath: dev
+            ? resolvePluginSourcemapFilePath(options.getSourcemapFilePath, sidecar)
+            : options.getSourcemapFilePath,
         },
         runtimeMode: getStyleRuntimeMode(dev),
       });

@@ -20,6 +20,8 @@ export type CompilerDevOptions = ReplaceProps<DevRuntimeOptions, {
 export type DevSourcemapMode = 'sourceUrl' | 'sourceContent' | 'sidecarServer';
 
 export type CompilerOptions = {
+  /** Disk cache for extraction, enabled by default. Set false to disable. Unsupported dynamic configuration bypasses it. */
+  persistentCache?: boolean;
   hoist?: boolean;
   check?: StyleCheckOptions;
   css?: CompilerCssOptions;

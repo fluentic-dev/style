@@ -34,6 +34,7 @@ docs/app/dist/
 docs/app/out/
 docs/app/next-env.d.ts
 packages/style/README.md
+packages/style/tests/.test-cache/
 
 # Generated from the canonical root llms.txt and llms/ guides
 docs/app/public/llms.txt

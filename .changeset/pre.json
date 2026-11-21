@@ -47,6 +47,7 @@
     "lazy-compiler-package-filters",
     "named-sheet-layers",
     "optional-framework-jsx-types",
+    "persistent-compiler-tracer-cache",
     "publish-generated-declarations",
     "resolve-tsconfig-path-aliases",
     "selector-sheets",

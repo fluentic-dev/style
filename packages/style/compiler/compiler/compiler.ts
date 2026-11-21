@@ -18,6 +18,7 @@ import {
 } from '../utils/imports';
 import { createCompilerCache } from './cache';
 import { CompilerRuntimeMode } from './constants';
+import { createPersistentTransformCache } from './persistent_cache';
 import type {
   CompilerInvalidateFileInfo,
   CompilerOptions,
@@ -43,6 +44,7 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
 
   const tracer = createTracer(internal);
   const collector = createCssCollector();
+  const persistentCache = createPersistentTransformCache(internal);
 
   const compileDebug = (args: TransformDebugArgs): TransformDebugResult | null => {
     tracer.beginCompilation();
@@ -91,6 +93,12 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
   };
 
   const compileExtract = (args: TransformExtractArgs): TransformExtractResult | null => {
+    const cached = persistentCache.run(args, () => compileExtractUncached(args));
+    if (cached.hit && cached.result) collector.addMany(cached.result.rules);
+    return cached.result;
+  };
+
+  const compileExtractUncached = (args: TransformExtractArgs): TransformExtractResult | null => {
     tracer.beginCompilation();
     const startIndex = collector.getItems().length;
 
@@ -129,6 +137,8 @@ export function createCompiler(args: CompilerArgs, options: CompilerOptions) {
     compileExtract,
     getExtractedCss,
     invalidateFile,
+    getPersistentCacheStats: persistentCache.getStats,
+    getTraceMetadataCacheStats: tracer.getMetadataCacheStats,
   };
 }
 

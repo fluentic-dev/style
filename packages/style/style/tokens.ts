@@ -8,7 +8,8 @@ export type TokenTuple<T extends readonly ValueBase[]> = {
 };
 
 export type TokenRecord<T extends object> = {
-  [P in keyof T]: T[P] extends readonly unknown[] ? StyleToken<T[P]>
+  [P in keyof T]: T[P] extends StyleToken<infer V> ? StyleToken<V>
+    : T[P] extends readonly unknown[] ? StyleToken<T[P]>
     : T[P] extends object ? TokenRecord<T[P]>
     : T[P] extends ValueBase ? StyleToken<InferValue<T[P]>>
     : StyleToken<T[P]>;

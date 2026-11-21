@@ -60,6 +60,7 @@ stylePlugin({
 | `includePackages` | Include script files from exact npm package names, overriding file patterns. |
 | `excludePackages` | Exclude exact npm package names, overriding all other filter rules. |
 | `hoist` | Control supported style hoisting during extraction. |
+| `persistentCache` | Disk cache for production extraction; defaults to `true`. Set `false` to disable. |
 | `check` | Opt into compiler and runtime checks for discouraged style patterns. |
 | `css` | Configure extracted CSS behavior where supported. |
 | `dev` | Configure development runtime behavior. |
@@ -446,3 +447,48 @@ Adapter-specific behavior may differ. Start with your integration page, such as
 [Next.js](../integrations/nextjs), then use the
 [Integration Plugin Options](../integrations/options) page for setup examples,
 sourcemap modes, and adapter-specific notes.
+
+## Persistent extraction cache
+
+Completed production transforms are cached across build commands by default.
+Set `persistentCache: false` to disable this disk cache. The cache lives in `cacheDir` under `extract-v1`. It stores transformed
+JavaScript, source maps, and each visited module's extracted CSS. Development
+transforms and evaluator bindings are not persisted.
+Compiler/Node fingerprints have separate subdirectories, so alternating runtimes
+do not displace each other's entries.
+
+Reuse requires matching source and input source maps, compiler options and global
+configuration, runtime mode, working directory, Node runtime/flags, and
+compiler/dependency implementation fingerprints.
+Recorded imports are resolved again and their contents hashed, including transitive
+imports and previously missing modules. Timestamp-only changes are not used as proof
+of freshness. Removed or unvisited modules do not restore CSS into a new build.
+
+Function-valued or inherited configuration, accessors, custom selector callbacks,
+stateful regular expressions, and enabled `important` diagnostics bypass the cache. A `styleFn` import source can
+be cached when its compiler metadata contains only supported data. Unreadable or
+corrupt entries cause normal compilation; writes are atomic and best-effort. Disable
+`persistentCache` to compare against uncached extraction or delete `extract-v1` for
+a cold run. The compiler implementation fingerprint is computed once per Node process;
+restart the build process after changing installed compiler dependencies.
+
+### Tracer metadata
+
+Imported modules also use a `trace-metadata-v1` cache. Its JSON records contain
+unmodified syntax trees, including declarations, source locations, and import/export
+links. The source content hash and compiler/parser fingerprint must match before
+restoring a record. Each restoration creates fresh nodes before compiler annotations
+and evaluation; functions, live bindings, and evaluated style objects are never
+serialized.
+
+Within a build, evaluated bindings can be reused under the same compiler
+configuration. Reuse re-resolves the recorded import requests and checks content
+hashes throughout the dependency chain, including failed lookups. Those checks also
+record dependencies for the completed-transform cache. Lazy re-exports refresh their
+linked modules when first accessed, and partial circular export maps are rebuilt.
+
+When a linked value changes, its dependants are reevaluated. Unchanged modules can
+still reuse their syntax metadata. Changing compiler configuration rebuilds evaluated
+bindings while keeping reusable syntax. `persistentCache: false` disables both disk
+caches; bounded in-memory syntax reuse remains available. Unsupported parser hooks,
+non-JSON syntax values, and corrupt metadata fall back to normal parsing.
