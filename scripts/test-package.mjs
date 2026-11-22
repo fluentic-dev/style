@@ -81,7 +81,7 @@ try {
   writeFileSync(
     join(temp, 'consumer.tsx'),
     `
-import { style } from '@fluentic/style';
+import { style, styleTransform, classNameTransform, type CSSPropertiesRaw } from '@fluentic/style';
 import { createElement as pluginCreateElement } from '@fluentic/style/plugin/jsx';
 import { createElement as runtimeCreateElement } from '@fluentic/style/jsx';
 import { plugin } from '@fluentic/style/plugin/vite';
@@ -92,6 +92,14 @@ const curried = createSheet({ layer: true }, [style.selector('h1')({ fontSize: '
 const scopedReset = <div css={reset}><section css={relative}><h1 css={curried} /></section></div>;
 // @ts-expect-error Sheet layers accept booleans and strings, not numbers.
 createSheet({ layer: 1 }, []);
+// Transformer outputs follow upstream csstype, retaining Fluentic numeric lengths.
+const raw: CSSPropertiesRaw = { padding: 4, color: '-moz-initial' };
+styleTransform<{ compact: boolean }>({
+  transform: () => raw,
+});
+classNameTransform({ transform: () => ({ margin: 8, color: '-moz-initial' }) });
+// @ts-expect-error Known CSS property values remain checked.
+styleTransform({ transform: () => ({ display: true }) });
 const css = style({ color: 'red', padding: 4 });
 const element = <div css={css}>Packed consumer</div>;
 const spreadProps = { key: 'spread', css };

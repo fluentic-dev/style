@@ -16,7 +16,13 @@ export function refreshOrderedSheets() {
   for (const refresh of refreshers) refresh();
 }
 
-type Group = { name: string; tagName?: string; rules: SheetRule[]; sheet: StyleSheet; };
+type Group = {
+  name: string;
+  tagName?: string;
+  rules: SheetRule[];
+  ordering: Map<string, SheetRule>;
+  sheet: StyleSheet;
+};
 
 /** Keep whole global sheets together; move DOM groups without rebuilding unrelated rules. */
 export function createOrderedSheet(
@@ -35,11 +41,14 @@ export function createOrderedSheet(
   let header: HTMLStyleElement | null = null;
   let serial = 0;
   let dirty = false;
+  let orderingDirty = true;
+  let order = '';
   let mode = DEV_CONFIG.stylePriorityMode;
   const pending = new Set<Group>();
   const regular = getGroup('regular');
   const refresh = () => {
     dirty = true;
+    orderingDirty = true;
     flush();
   };
   if (dev) refreshers.add(refresh);
@@ -50,7 +59,7 @@ export function createOrderedSheet(
     const tagName = name === 'regular'
       ? options.tagName
       : (options.tagName ? options.tagName + ' ' : '') + 'ordered-' + ++serial;
-    const group = { name, tagName, rules: [], sheet: create({ ...options, tagName }) };
+    const group: Group = { name, tagName, rules: [], ordering: new Map(), sheet: create({ ...options, tagName }) };
     group.sheet.updateLayers(activeLayers ?? []);
     groups.set(name, group);
     return group;
@@ -75,9 +84,26 @@ export function createOrderedSheet(
     const group = getGroup(sheetRuleGroup(item));
     const previous = group.rules[group.rules.length - 1];
     group.rules.push(item);
-    if (enabled && previous && compareSheetRules(previous, item) > 0) pending.add(group);
+    trackOrdering(group, item);
+    // Development sheets place late rules into their existing priority tag pools.
+    if (!dev && enabled && previous && compareSheetRules(previous, item) > 0) pending.add(group);
     if (!pending.has(group)) group.sheet.insert(route(item));
     dirty = true;
+  }
+
+  function trackOrdering(group: Group, rule: SheetRule) {
+    // The preamble depends on ordering metadata, never on rule bodies or keys.
+    const key = JSON.stringify([
+      rule.layer ?? 'style',
+      rule.priority ?? [0, 0, 0, 0, 0, 0, 0],
+      !!rule.sheet,
+      !!rule.important,
+      !!rule.importantNative,
+      rule.globalSheet?.order,
+    ]);
+    if (group.ordering.has(key)) return;
+    group.ordering.set(key, rule);
+    orderingDirty = true;
   }
 
   function rebuild(group: Group) {
@@ -86,6 +112,9 @@ export function createOrderedSheet(
     group.sheet = create({ ...options, tagName: group.tagName });
     group.sheet.updateLayers(activeLayers ?? []);
     group.rules.sort((a, b) => compareSheetRules(a, b));
+    group.ordering.clear();
+    orderingDirty = true;
+    for (const rule of group.rules) trackOrdering(group, rule);
     for (const rule of group.rules) group.sheet.insert(route(rule));
     group.sheet.flush();
     dirty = true;
@@ -112,14 +141,21 @@ export function createOrderedSheet(
     if (dev && mode !== DEV_CONFIG.stylePriorityMode) {
       mode = DEV_CONFIG.stylePriorityMode;
       dirty = true;
+      orderingDirty = true;
     }
     for (const group of pending) rebuild(group);
     pending.clear();
     for (const group of groups.values()) group.sheet.flush();
     if (!enabled || !dirty) return;
-    const config = { ...CSS_CONFIG, layers: activeLayers ? [...activeLayers] : undefined };
-    const all = [...groups.values()].flatMap((group) => group.rules);
-    const order = sheetOrderingPreamble(all, config, dev ? DEV_CONFIG.stylePriorityMode : 'layer');
+    if (orderingDirty) {
+      const config = { ...CSS_CONFIG, layers: activeLayers ? [...activeLayers] : undefined };
+      const all: SheetRule[] = [];
+      for (const group of groups.values()) {
+        for (const rule of group.ordering.values()) all.push(rule);
+      }
+      order = sheetOrderingPreamble(all, config, dev ? DEV_CONFIG.stylePriorityMode : 'layer');
+      orderingDirty = false;
+    }
     const head = document!.head || document!.documentElement;
     const groupTags = collectTags();
     if (!header) {
@@ -162,6 +198,7 @@ export function createOrderedSheet(
         return;
       }
       activeLayers = [...layers];
+      orderingDirty = true;
       for (const group of groups.values()) group.sheet.updateLayers(layers);
       dirty = true;
     },

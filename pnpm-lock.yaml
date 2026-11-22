@@ -1113,8 +1113,8 @@ importers:
         specifier: 8.0.0
         version: 8.0.0
       csstype:
-        specifier: 3.2.3
-        version: 3.2.3
+        specifier: ^3.2.4
+        version: 3.2.4
       lightningcss:
         specifier: ^1.32.0
         version: 1.32.0
@@ -5357,6 +5357,9 @@ packages:
     resolution: {integrity: sha512-/Tb/JcjK111nNScGob5MNtsntNM1aCNUDipB/TkwZFhyDrrE47SOx/18wF2bbjgc3ZzCSKW1T5nt5EbFoAz/Vg==}
     engines: {node: '>=4'}
     hasBin: true
+
+  csstype@3.2.4:
+    resolution: {integrity: sha512-PoKaoPzQapnEoqUSnHx1u6W6ku8CVEgKsnpmmzU3m1nwkidpPBQ8V/Zq2+bWNrsOKoKLwTGdbx6xF7BXP1zLVQ==}
 
   csstype@3.2.3:
     resolution: {integrity: sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ==}
@@ -13336,6 +13339,8 @@ snapshots:
   css-what@8.0.0: {}
 
   cssesc@3.0.0: {}
+
+  csstype@3.2.4: {}
 
   csstype@3.2.3: {}
 

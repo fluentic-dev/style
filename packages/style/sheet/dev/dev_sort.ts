@@ -39,6 +39,7 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
   const inserted = new Set<string>();
   const queued: QueuedRule[] = [];
   const groups: SortGroup[] = [];
+  const groupLookup = new Map<string, SortGroup>();
   const shouldLayer = isStyleLayerEnabled();
   const layerName = getStyleLayerName();
   const tagPrefix = options.tagName ? options.tagName + ' ' : '';
@@ -95,7 +96,7 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
     flush() {
       if (!queued.length) return;
 
-      const touched: DevRuleTag[] = [];
+      const touched = new Set<DevRuleTag>();
       let fragment: DocumentFragment | null = null;
       let fragmentTag: DevRuleTag | null = null;
 
@@ -119,7 +120,7 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
 
       for (let i = 0, len = queued.length; i < len; i++) {
         const item = queued[i];
-        const group = ensureGroup(groups, item.priority, item.layer);
+        const group = ensureGroup(groups, groupLookup, item.priority, item.layer);
         let active = group.tags[group.tags.length - 1] ?? null;
 
         if (!active || active.count >= maxRules) {
@@ -148,9 +149,7 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
 
         insertDevRule(document, active, fragment!, item.css, item.rule);
 
-        if (touched[touched.length - 1] !== active) {
-          touched.push(active);
-        }
+        touched.add(active);
       }
 
       flushFragment();
@@ -158,9 +157,7 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
 
       if (!sourcemap) return;
 
-      for (let i = 0, len = touched.length; i < len; i++) {
-        touched[i].updateSourceMap();
-      }
+      for (const tag of touched) tag.updateSourceMap();
     },
   };
 
@@ -192,21 +189,30 @@ export function createDevSortSheet(options: SheetOptions = {}): StyleSheet {
 
 function ensureGroup(
   groups: SortGroup[],
+  lookup: Map<string, SortGroup>,
   priority: LayerPriority,
   layer: NonNullable<SheetRule['layer']>,
 ) {
   const key = (typeof layer === 'object' ? 'named-' + layer.name + '-' : layer === 'sheet' ? 'sheet-' : '') +
     getPriorityKey(priority);
 
+  const lookupKey = JSON.stringify([layer, priority]);
+  const cached = lookup.get(lookupKey);
+  if (cached) return cached;
+
   for (let i = 0, len = groups.length; i < len; i++) {
     const group = groups[i];
     const order = getLayerRank(layer) - getLayerRank(group.layer) || compareLayerPriority(priority, group.priority);
 
-    if (order === 0 && key === group.key && (layer === false) === (group.layer === false)) return group;
+    if (order === 0 && key === group.key && (layer === false) === (group.layer === false)) {
+      lookup.set(lookupKey, group);
+      return group;
+    }
 
     if (order < 0) {
       const next = { key, priority, tags: [], layer };
       groups.splice(i, 0, next);
+      lookup.set(lookupKey, next);
       return next;
     }
   }
@@ -214,6 +220,7 @@ function ensureGroup(
   const group = { key, priority, tags: [], layer };
 
   groups.push(group);
+  lookup.set(lookupKey, group);
 
   return group;
 }

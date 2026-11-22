@@ -4,8 +4,10 @@ export type * as CSS from 'csstype';
 
 export type CSSValueExclude = '-moz-initial';
 
+export type CSSPropertiesRaw = CSS.Properties<string | number>;
+
 export type CSSProperties = {
-  [P in keyof CSS.Properties<string | number>]: Exclude<CSS.Properties<string | number>[P], CSSValueExclude>;
+  [P in keyof CSSPropertiesRaw]: Exclude<CSSPropertiesRaw[P], CSSValueExclude>;
 };
 
-export type CSSPropertyName = keyof CSS.Properties<string | number>;
+export type CSSPropertyName = keyof CSSPropertiesRaw;

@@ -201,3 +201,58 @@ test('server seeds sort positive globals after regular styles and retain earlier
     configureTestRuntime();
   }
 });
+
+for (const mode of ['sort', 'layer'] as const) {
+  for (const layer of ['style', false, { name: 'vendor' }] as const) {
+    for (const globalGroup of [false, true]) {
+      test(`late priorities preserve existing tags and maps (${mode}, ${JSON.stringify(layer)}, global=${globalGroup})`, () => {
+        configureTestRuntime({ dev: true, priorityMode: mode, css: { layer: true } });
+        const document = createFakeDocument();
+        const sheet = createDevSheet({ document: document as never, sourcemap: true, maxRules: 2 });
+        const rule = (name: string, weight: number): SheetRule => ({
+          key: name,
+          css: '.' + name + '{color:red}',
+          priority: priority(weight),
+          layer,
+          sheet: globalGroup,
+          globalSheet: globalGroup ? { id: 'incremental', order: -1 } : undefined,
+          callsite: { filePath: '/src/incremental.ts', line: weight + 20, column: 1 },
+        });
+        try {
+          sheet.insert({ key: 'reset', css: '.reset{margin:0}', sheet: true, layer: { name: 'reset' } });
+          sheet.insert(rule('high', 10));
+          sheet.flush();
+          const originalTags = [...document.head.childNodes];
+          const high = originalTags.find((tag) => tag.textContent.includes('.high{'));
+          const originalHigh = high.textContent;
+          let removals = 0;
+          const remove = document.head.removeChild.bind(document.head);
+          document.head.removeChild = (node: any) => {
+            removals++;
+            return remove(node);
+          };
+          for (let i = 0; i < 7; i++) {
+            sheet.insert(rule('low' + i, i % 2));
+            sheet.flush();
+          }
+          equal(removals, 0);
+          for (const tag of originalTags) equal(tag.parentNode, document.head);
+          equal(high.textContent, originalHigh);
+          const css = document.head.textContent;
+          assertOrder(css, ['.low0', '.low2', '.low4', '.low6', '.low1', '.low3', '.low5', '.high']);
+          const tags = [...document.head.childNodes];
+          for (let i = 0; i < 7; i++) {
+            sheet.insert(rule('low' + i, i % 2));
+            sheet.flush();
+          }
+          equal(document.head.textContent, css);
+          equal(document.head.childNodes.length, tags.length);
+          tags.forEach((tag, index) => equal(document.head.childNodes[index], tag));
+        } finally {
+          sheet.destroy?.();
+          configureTestRuntime();
+        }
+      });
+    }
+  }
+}

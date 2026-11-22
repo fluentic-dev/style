@@ -1,6 +1,7 @@
 import { getLayerBlockCss, getLayerOrderCss } from '../../atomic/layer';
 import { CSS_CONFIG, CSS_CONFIG_DEFAULT, isStyleLayerEnabled } from '../../config/config/css';
 import { DEV_CONFIG } from '../../config/config/dev';
+import { compareSheetRules } from '../ordering';
 import type { SheetOptions, SheetRule, StyleSheet } from '../types';
 import {
   createNoopSheet,
@@ -9,6 +10,7 @@ import {
   getSheetLayerName,
   getSheetLayerNames,
   getSheetRuleLayerPriority,
+  getSheetRulePriority,
   getStyleLayerName,
   insertStyleTagAfter,
   insertStyleTagAtTop,
@@ -20,6 +22,12 @@ import { createDevTag, type DevRuleTag, getDevSourcemapTags, insertDevRule, refr
 type QueuedRule = {
   css: string;
   rule: SheetRule | null;
+  group: RuleGroup;
+};
+
+type RuleGroup = {
+  rule: SheetRule;
+  tags: DevRuleTag[];
 };
 
 export { getDevSourcemapTags, refreshDevSourcemapTags };
@@ -40,8 +48,8 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
 
   let layerText = '';
   let activeLayers: readonly string[] = CSS_CONFIG.layers ?? CSS_CONFIG_DEFAULT.layers ?? [];
-  let active: DevRuleTag | null = null;
-  let lastTag: HTMLStyleElement = layerTag;
+  const groups: RuleGroup[] = [];
+  const groupLookup = new Map<string, RuleGroup>();
   let hasSheetLayer = false;
   const namedLayers = new Set<string>();
 
@@ -100,13 +108,14 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
       queued.push({
         css,
         rule: typeof rule === 'string' ? null : rule,
+        group: getGroup(typeof rule === 'string' ? { css: rule } : rule),
       });
     },
 
     flush() {
       if (!queued.length) return;
 
-      const touched: DevRuleTag[] = [];
+      const touched = new Set<DevRuleTag>();
       let fragment: DocumentFragment | null = null;
       let fragmentTag: DevRuleTag | null = null;
 
@@ -128,16 +137,35 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
 
       for (let i = 0, len = queued.length; i < len; i++) {
         const item = queued[i];
+        const group = item.group;
+        let active = group.tags[group.tags.length - 1];
 
         if (!active || active.count >= maxRules) {
           flushFragment();
-          active = createDevTag(document, lastTag, {
+          const index = groups.indexOf(group);
+          let before: HTMLStyleElement | undefined;
+          let previous: HTMLStyleElement = layerTag;
+          for (let i = index + 1; i < groups.length; i++) {
+            if (groups[i].tags.length) {
+              before = groups[i].tags[0].tag;
+              break;
+            }
+          }
+          for (let i = index; i >= 0; i--) {
+            const tags = groups[i].tags;
+            if (tags.length) {
+              previous = tags[tags.length - 1].tag;
+              break;
+            }
+          }
+          active = createDevTag(document, previous, {
+            before,
             sourcemap,
             nonce: options.nonce,
             className: tagPrefix + 'rules',
             top: options.top,
           });
-          lastTag = active.tag;
+          group.tags.push(active);
         }
 
         if (fragmentTag !== active) {
@@ -148,9 +176,7 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
 
         insertDevRule(document, active, fragment!, item.css, item.rule);
 
-        if (touched[touched.length - 1] !== active) {
-          touched.push(active);
-        }
+        touched.add(active);
       }
 
       flushFragment();
@@ -158,9 +184,27 @@ export function createDevLayerSheet(options: SheetOptions = {}): StyleSheet {
 
       if (!sourcemap) return;
 
-      for (let i = 0, len = touched.length; i < len; i++) {
-        touched[i].updateSourceMap();
-      }
+      for (const tag of touched) tag.updateSourceMap();
     },
   };
+
+  function getGroup(rule: SheetRule) {
+    // Layer-backed rules still need source ordering inside named/unlayered CSS.
+    // Isolate each priority so late inserts never replay another priority's rules.
+    const layer = rule.layer ?? 'style';
+    const rank = layer === false || (layer === 'style' && !isStyleLayerEnabled())
+      ? 2
+      : layer === 'style' || (typeof layer === 'object' && layer.name === getStyleLayerName())
+      ? 0
+      : 1;
+    const key = rank + ':' + getSheetRulePriority(rule.priority).join(',');
+    const cached = groupLookup.get(key);
+    if (cached) return cached;
+    const group: RuleGroup = { rule, tags: [] };
+    const index = groups.findIndex((existing) => compareSheetRules(rule, existing.rule) < 0);
+    if (index < 0) groups.push(group);
+    else groups.splice(index, 0, group);
+    groupLookup.set(key, group);
+    return group;
+  }
 }

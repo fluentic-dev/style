@@ -28,6 +28,7 @@ export type {
   //
   CSS,
   CSSProperties,
+  CSSPropertiesRaw,
   CSSPropertyName,
   CSSValueExclude,
 } from './atomic/utils/types';

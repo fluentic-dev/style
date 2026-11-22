@@ -43,6 +43,7 @@
     "first-public-beta-release-notes",
     "global-prod-classnames",
     "global-sheet-ordering",
+    "incremental-dev-sheet-flush",
     "jsx-create-element-fallback",
     "lazy-compiler-package-filters",
     "named-sheet-layers",

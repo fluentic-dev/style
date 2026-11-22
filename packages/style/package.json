@@ -1,6 +1,6 @@
 {
   "name": "@fluentic/style",
-  "version": "0.1.0-beta.18",
+  "version": "0.1.0-beta.19",
   "description": "Type-safe styles that scale with your components.",
   "homepage": "https://fluenticstack.com/style",
   "repository": {
@@ -359,7 +359,7 @@
     "@jridgewell/trace-mapping": "0.3.31",
     "@parcel/config-default": "^2.16.1",
     "css-what": "8.0.0",
-    "csstype": "3.2.3",
+    "csstype": "^3.2.4",
     "lightningcss": "^1.32.0",
     "oxc-resolver": "11.20.0",
     "picomatch": "4.0.4",

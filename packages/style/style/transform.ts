@@ -1,5 +1,6 @@
+import type { CSSPropertiesRaw } from '../atomic/utils/types';
 import { symbol } from '../utils/symbol';
-import type { CSSProperties, StyleObject, StyleValue } from './types';
+import type { StyleObject, StyleValue } from './types';
 
 const CLASS_NAME_VALUE: unique symbol = symbol('transform.classNameValue');
 
@@ -14,11 +15,11 @@ export type TransformStyleObject<Style = unknown> = {
 };
 
 export type StyleTransform<Style = unknown> = {
-  transform(style: StyleObject<Style>): TransformStyleObject<CSSProperties>;
+  transform(style: StyleObject<Style>): TransformStyleObject<CSSPropertiesRaw>;
 };
 
 export type ClassNameTransform<ClassName extends string = string> = {
-  transform(className: ClassName): TransformStyleObject<CSSProperties>;
+  transform(className: ClassName): TransformStyleObject<CSSPropertiesRaw>;
 };
 
 export function classNameValue<const Value>(

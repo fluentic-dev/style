@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "package": "@fluentic/style",
-  "version": "0.1.0-beta.18",
+  "version": "0.1.0-beta.19",
   "tools": {
     "vite": "8.0.16",
     "gzipLevel": 9
@@ -239,10 +239,10 @@
   "rows": [
     {
       "name": "dev runtime",
-      "graphRaw": 233905,
-      "graphGzip": 49352,
-      "minRaw": 89586,
-      "minGzip": 29617,
+      "graphRaw": 236116,
+      "graphGzip": 49799,
+      "minRaw": 90523,
+      "minGzip": 29932,
       "files": 21,
       "deps": "css-what, react, react/jsx-dev-runtime, react/jsx-runtime"
     },
@@ -284,26 +284,26 @@
     },
     {
       "name": "production runtime",
-      "graphRaw": 233312,
-      "graphGzip": 49163,
-      "minRaw": 89519,
-      "minGzip": 29590,
+      "graphRaw": 235523,
+      "graphGzip": 49612,
+      "minRaw": 90452,
+      "minGzip": 29910,
       "files": 20,
       "deps": "css-what, react, react/jsx-runtime"
     },
     {
       "name": "server dev rsc runtime",
-      "graphRaw": 235349,
-      "graphGzip": 50856,
-      "minRaw": 92805,
-      "minGzip": 30745,
+      "graphRaw": 237560,
+      "graphGzip": 51314,
+      "minRaw": 93744,
+      "minGzip": 31056,
       "files": 11,
       "deps": "css-what, react, react/jsx-runtime"
     },
     {
       "name": "server production runtime",
-      "graphRaw": 235575,
-      "graphGzip": 50537,
+      "graphRaw": 237786,
+      "graphGzip": 50960,
       "minRaw": 69588,
       "minGzip": 23094,
       "files": 5,
@@ -329,19 +329,19 @@
     },
     {
       "name": "optional client sheet helpers",
-      "graphRaw": 167774,
-      "graphGzip": 37773,
-      "minRaw": 51547,
-      "minGzip": 17860,
+      "graphRaw": 169985,
+      "graphGzip": 38202,
+      "minRaw": 52480,
+      "minGzip": 18168,
       "files": 4,
       "deps": "-"
     },
     {
       "name": "nextjs dev client support",
-      "graphRaw": 155876,
-      "graphGzip": 35401,
-      "minRaw": 54318,
-      "minGzip": 18982,
+      "graphRaw": 158087,
+      "graphGzip": 35857,
+      "minRaw": 55256,
+      "minGzip": 19282,
       "files": 14,
       "deps": "@jridgewell/trace-mapping, next/navigation.js, react"
     }
