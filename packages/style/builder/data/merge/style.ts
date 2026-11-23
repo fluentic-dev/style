@@ -1,7 +1,5 @@
 import { getAtomicClassName, getClassNameDedupe } from '../../../atomic/className';
 import { getTokenVar } from '../../../atomic/token';
-import { getCssVarRawFallback } from '../../../atomic/utils/cssVar';
-import { shouldAppendCssPx } from '../../../atomic/value';
 import { CHECK_CONFIG, type StyleCheckLevel } from '../../../config/config/check';
 import { CSS_CONFIG } from '../../../config/config/css';
 import { DEBUG_CONFIG } from '../../../config/config/debug';
@@ -21,19 +19,10 @@ import {
   BUILDER_TYPE_SLOT,
   BUILDER_TYPE_SLOT_OVERRIDE,
   BUILDER_TYPE_STYLE,
-  ITEM_VALUE_NUMBER_PX,
   ITEM_VALUE_TYPE_AT_RULE_REF,
-  ITEM_VALUE_TYPE_VARIABLE,
 } from '../const';
 import type { BuilderCallsite, BuilderData, StyleData } from '../data';
-import {
-  type DebugData,
-  type DebugLoc,
-  getDebugFieldCallsite,
-  getDebugFieldVarName,
-  TRACE_STYLE,
-  TRACE_VALUE,
-} from '../debug';
+import { type DebugData, type DebugLoc, getDebugFieldCallsite, TRACE_STYLE, TRACE_VALUE } from '../debug';
 import { isSlotData, isSlotOverrideData, isStyleData } from '../is';
 import type { BuilderType, ItemSelector, RuntimeItem, RuntimeItemData, StateItem } from '../state';
 import { cloneData, logInvalidData } from './utils';
@@ -80,7 +69,6 @@ export function mergeBuilderData<Data extends BuilderData>(
   let dedupe: string;
   let token: StyleTokenData | null;
   let ref: AtRuleRef | null;
-  let variableName: string | null;
   let transformClassName: string | null;
   let lookupIndex: number;
 
@@ -151,11 +139,8 @@ export function mergeBuilderData<Data extends BuilderData>(
       if (ref) valueRaw = ref.value;
 
       token = isStyleTokenData(valueRaw) ? valueRaw : null;
-      variableName = getDebugFieldVarName(debug, property);
 
-      value = variableName && token
-        ? getCssVarRawFallback(variableName, getTokenVar(token, CSS_CONFIG.tokenNameFormat ?? null))
-        : token
+      value = token
         ? getTokenVar(token, CSS_CONFIG.tokenNameFormat ?? null)
         : String(valueRaw ?? '');
 
@@ -174,15 +159,6 @@ export function mergeBuilderData<Data extends BuilderData>(
         value,
         transformClassName,
         variable: ref
-          ? [ITEM_VALUE_TYPE_AT_RULE_REF, ref]
-          : variableName && token
-          ? [
-            ITEM_VALUE_TYPE_VARIABLE,
-            variableName,
-            valueRaw,
-            shouldAppendCssPx(property) ? ITEM_VALUE_NUMBER_PX : undefined,
-          ]
-          : ref
           ? [ITEM_VALUE_TYPE_AT_RULE_REF, ref]
           : undefined,
         token,

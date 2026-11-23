@@ -1,0 +1,272 @@
+---
+title: createSheet
+description: Create scoped selector sheets for third-party DOM and app resets with optional cascade layers.
+---
+
+Use `createSheet(...)` for grouped selector styles, usually at boundaries with
+third-party components whose internal DOM has known class names or attributes.
+You can also attach a sheet to `body` or an app root for a scoped reset in a
+named cascade layer.
+
+Most component styles should use `style(...)`, `style.slot(...)`, and
+`style.scope(...)`. Reach for `createSheet(...)` when the style target is a DOM
+selector such as `.react-select__control` rather than a slot.
+
+```ts
+import { createTokens, style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+const selectTokens = createTokens({
+  accent: '#2563eb',
+  panel: '#eff6ff',
+  text: '#1e3a8a',
+});
+
+const selectPart = {
+  control: style.selector('.react-select__control'),
+  value: style.selector('.react-select__single-value'),
+};
+
+export const selectSheet = createSheet([
+  selectPart.control({
+    minHeight: 42,
+    border: '1px solid',
+    borderColor: selectTokens.accent,
+    borderRadius: 10,
+    backgroundColor: selectTokens.panel,
+  }).hover({
+    borderColor: '#1d4ed8',
+  }),
+
+  selectPart.value({
+    color: selectTokens.text,
+    fontWeight: 650,
+  }),
+]);
+```
+
+Apply the sheet with the normal `css` prop or compose it with
+`combineStyle(...)`:
+
+```tsx
+import { combineStyle, type StyleTheme } from '@fluentic/style';
+
+export function Select(props: {
+  compact?: boolean;
+  theme?: StyleTheme;
+}) {
+  return (
+    <div css={combineStyle(selectSheet, props.theme)}>
+      <ReactSelect unstyled />
+    </div>
+  );
+}
+```
+
+## Arguments
+
+Use either form:
+
+```ts
+createSheet(items);
+createSheet(options, items);
+```
+
+The options come first so exceptional cascade behavior is visible at the call
+site:
+
+| Option | Description |
+| --- | --- |
+| `layer?: boolean \| string` | Defaults to `false`. `true` shares the regular-style layer; an absolute name stays literal; a leading dot is relative to the enabled main namespace. |
+| `specificity?: number` | Non-negative integer; defaults to `1`. `0` uses `:where(.class)`, `1` uses `.class`, and `2` repeats `.class` twice. |
+
+### Layer option
+
+| `layer` value | Main namespace `fluentic` enabled | Main layer disabled |
+| --- | --- | --- |
+| Omitted / `false` | Unlayered | Unlayered |
+| `true` | Regular-style layer system (`fluentic`) | Unlayered |
+| `'reset'` | `reset` | `reset` |
+| `'.reset'` | `fluentic.reset` | `reset` |
+| `'vendor.reset'` | `vendor.reset` | `vendor.reset` |
+
+Sheets do not inherit `css.layer.sheet`, and `true` does not append `.sheet`.
+For source order, priority, layer precedence, and important handling, see
+[Style ordering and the cascade](./style-ordering.mdx).
+
+Pass a nonempty name with dot-separated identifier segments; do not include
+`@layer`, braces, commas, spaces, or a trailing dot. Invalid names throw at runtime.
+
+### Scoped app reset
+
+For a reset scoped to your app, include `&` to target the attached element and
+`*` to target its descendants:
+
+```tsx
+import { style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+export const resetSheet = createSheet({ layer: 'reset' }, [
+  style.selector(['&', '&::before', '&::after', '*', '*::before', '*::after'], {
+    boxSizing: 'border-box',
+  }),
+  style.selector('&', { margin: 0 }),
+  style.selector(['h1', 'h2', 'p'], { margin: 0 }),
+]);
+
+export function App() {
+  return <div css={resetSheet}>{/* app content */}</div>;
+}
+```
+
+When your framework renders `body`, attach the sheet there to include it in the
+reset:
+
+```tsx
+<body css={resetSheet}>{children}</body>
+```
+
+For an existing DOM element, use
+[`createStyleTarget`](./create-style-target.mdx) to attach and clean up the sheet, or
+[`getClassName`](./runtime-interop.mdx) at a class-name boundary.
+
+Selectors remain
+anchored to that element; naming a layer does not turn the sheet into unscoped
+global CSS. A sheet attached below `body` cannot reset `body` itself.
+
+### Ordering named layers
+
+Declare the reset's position in the plugin's CSS options:
+
+```ts
+stylePlugin({
+  css: {
+    layers: ['reset', '$layer', 'overrides'],
+  },
+});
+```
+
+`$layer` expands to generated layers. Explicitly listed named layers keep their
+specified position and are not duplicated at `$layer`. For `.reset`, list the
+resolved name, such as `css.reset` or `fluentic.reset`; the ordering list does not
+expand a leading dot. For example:
+
+```ts
+stylePlugin({
+  css: {
+    layerNamespace: 'fluentic',
+    layers: ['fluentic.reset', '$layer', 'overrides'],
+  },
+});
+// Pair this with createSheet({ layer: '.reset' }, items).
+```
+
+Later layers win over earlier layers for normal declarations. Normal unlayered
+CSS outranks all layered CSS; increasing a sheet's `weight` does not change that
+layer precedence. CSS reverses layer precedence for `!important` declarations.
+See [CSS options](./plugin-options.mdx#css-options) for the global configuration.
+
+### Selector specificity
+
+The default anchor is `.generated`. Use `specificity: 0` to contribute no anchor
+specificity, or a larger integer to repeat the anchor:
+
+```ts
+const strongerSheet = createSheet({ specificity: 2 }, [
+  style.selector('.control', { color: 'red' }),
+]);
+```
+
+The former sheet `weight` option is now `specificity`. Declaration priority still
+uses `style.weight(value, number)`.
+
+For layered sheets, `style.important(value)` places the declaration in the first
+`<resolved-layer>.important` child. `style.important(value, true)` keeps native
+layer placement. Unlayered sheets keep ordinary unlayered important declarations.
+See [the ordering guide](./style-ordering.mdx#important-declarations-managed-or-native)
+for examples and interaction with regular styles.
+
+The items argument accepts selector-oriented style input:
+
+| Item | Description |
+| --- | --- |
+| `style.selector(selector, style)` | Preferred inline form: add rules for a selector under the attached sheet class. |
+| `style.selector(selector)(style)` | Valid curried form, supported by the runtime and compiler. |
+| `style.selector(selector).hover(style)` | Add selector rules under pseudo-classes, media queries, supports queries, and other selector chains. |
+| Token overrides | Include token overrides that should apply inside the sheet target. |
+| Arrays | Group items and conditionally include falsy values. |
+
+Prefer passing styles as the second argument when declaring an inline selector.
+The curried form is also supported, as is calling a reusable named target:
+
+```ts
+const h1 = style.selector('h1');
+
+// Each form is valid inside createSheet(...).
+style.selector('h1', { fontSize: '1.5rem' }); // Preferred inline form
+style.selector('h1')({ fontSize: '1.5rem' }); // Supported curried form
+h1({ fontSize: '1.5rem' });                  // Reusable named target
+```
+
+All three forms keep the sheet's scope and layer settings during extraction.
+Selector chains such as `.hover(...)` also work after the curried call.
+
+If an item is not a selector item or token override, `createSheet(...)` throws.
+Use `style(...)` for normal element styles.
+
+## Return Value
+
+`createSheet(...)` returns a sheet style item. It can be passed directly
+to the `css` prop, or through `combineStyle(...)` when it needs themes,
+variants, or token overrides:
+
+```ts
+const css = combineStyle(selectSheet, compact && compactSheet);
+```
+
+Append incoming `StyleProp` values at the final attachment point:
+
+```tsx
+<div css={[css, props.css]} />
+```
+
+The sheet's generated class becomes the scope for its selector rules. If the
+same sheet is attached to multiple elements, each element becomes a scope for
+the same rules.
+
+## Selector Shape
+
+Prefer one selector per `style.selector(...)` call:
+
+```ts
+const control = style.selector('.react-select__control');
+const input = style.selector('.react-select__input-container');
+```
+
+Use an array when one logical part has several supported selectors:
+
+```ts
+const field = style.selector([
+  '.react-select__control',
+  '.react-select__input-container',
+]);
+```
+
+Avoid comma-separated selector strings. Arrays keep the selector structure
+visible to the selector parser.
+
+## When To Use It
+
+Use `createSheet(...)` for:
+
+- app or document resets scoped to the attached root in a named layer;
+- third-party component internals;
+- styling portal or overlay DOM with known selectors;
+- wrapper components that expose a controlled selector contract;
+- selector groups that need tokens, extraction, debug names, and sourcemaps.
+
+Use `style.slot(...)` and `style.scope(...)` when you own the component and can
+name its styling targets directly.
+
+For the guide version, see
+[Styling Third-Party Components](../beyond-the-basics/styling-third-party-components.mdx).

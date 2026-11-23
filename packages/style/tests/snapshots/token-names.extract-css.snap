@@ -1,12 +1,11 @@
-@layer css;
-@layer css.important;
-@layer css {.theme-light-i66w530{--token-theme--background--page-e1i47t0:#f8fafc}}
-@layer css {.theme-brand-eno7nq0{--token-theme--text--body-bynybyh:#0f172a}}
-@layer css {.box-shadow--hs3sjc0{box-shadow: var(--var-bn86woy, var(--token-anonymous-rwi1ju0, #f8fafc))}}
-@layer css {.color--b4s6gsg{color: var(--var-b64ooej, var(--token-theme--text--body-bynybyh, #111827))}}
-@layer css {.margin--bho9clm{margin: var(--var-yiirqk0, var(--token-space--sm-abkyyw0, 8))}}
-@layer css {.padding--bxmgc3b{padding: var(--var-luznnp0, var(--token-space--lg-b5tt13t, 16))}}
-@layer css {.border-color--bo01j9h{border-color: var(--var-qv6lvd0, var(--token-accent-fgi48a0, #2563eb))}}
-@layer css {.background-color--z7qj3j0{background-color: var(--var-bhj8q9c, var(--token-theme--background--page-e1i47t0, #ffffff))}}
-@layer css {.color-hover--guie3f0:hover{color: var(--var-y9cujx0, var(--token-tone--Text-b2x1kh5, #111827))}}
-@layer css {.background-color-hover--cu8ijf0:hover{background-color: var(--var-bm1icrq, var(--token-tone--Surface-zw6mvl0, #ffffff))}}
+@layer css, css.important;
+@layer css {.theme-light-i66w530{--token-theme--background--page-e1i47t0:#f8fafc}
+.theme-brand-eno7nq0{--token-theme--text--body-bynybyh:#0f172a}
+.box-shadow--boo85px{box-shadow: var(--token-anonymous-rwi1ju0, #f8fafc)}
+.color--m0616j0{color: var(--token-theme--text--body-bynybyh, #111827)}
+.margin--srk0pd0{margin: var(--token-space--sm-abkyyw0, 8)}
+.padding--gq0uqw0{padding: var(--token-space--lg-b5tt13t, 16)}
+.border-color--b1iwnog{border-color: var(--token-accent-fgi48a0, #2563eb)}
+.background-color--voqk2o0{background-color: var(--token-theme--background--page-e1i47t0, #ffffff)}
+.color-hover--bg6d9it:hover{color: var(--token-tone--Text-b2x1kh5, #111827)}
+.background-color-hover--up707k0:hover{background-color: var(--token-tone--Surface-zw6mvl0, #ffffff)}}

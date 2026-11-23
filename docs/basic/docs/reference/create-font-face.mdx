@@ -1,0 +1,24 @@
+---
+title: createFontFace
+description: Create a generated font-family name and emit @font-face.
+---
+
+Import from `@fluentic/style/css`:
+
+```ts
+import { createFontFace, fontSrc } from '@fluentic/style/css';
+```
+
+```ts
+const brandFont = createFontFace({
+  src: fontSrc('/fonts/Brand.woff2', 'woff2'),
+  fontDisplay: 'swap',
+  fontWeight: 400,
+});
+
+const title = style({
+  fontFamily: brandFont,
+});
+```
+
+`src` must be a static string.

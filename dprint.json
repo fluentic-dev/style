@@ -19,6 +19,8 @@
     "**/node_modules/**",
     "**/dist/**",
     "**/.next/**",
+    "**/.docusaurus/**",
+    "docs/basic/build/**",
     "**/.source/**",
     "**/coverage/**",
     "**/next-env.d.ts",

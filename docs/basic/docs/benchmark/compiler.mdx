@@ -1,0 +1,140 @@
+---
+title: Compiler
+description: Compiler transform benchmark report for generated source corpora.
+---
+
+Use the compiler benchmark when you want to measure Fluentic's transform cost
+across generated source shapes.
+
+```sh
+pnpm bench:compiler
+```
+
+The report writes JSON under `benchmark/main/results` by default, or under
+`BENCH_OUT_DIR` when that variable is set.
+
+## What It Measures
+
+The compiler benchmark generates source corpora, runs the Fluentic transform,
+and records transform timing. It is useful when changing extraction, evaluator,
+or sourcemap behavior.
+
+Use it for questions like:
+
+| Question | Example change |
+| --- | --- |
+| Did extraction get slower for many files? | Evaluator or import-resolution changes. |
+| Did a source pattern become expensive? | New chain methods, spreads, merges, or tokens. |
+| Does sourcemap/debug work change transform time? | Debug transform or source-location changes. |
+
+## Why Some Files Cost More
+
+Fluentic's compiler does more than replace one narrow static API call. It tries
+to let styles code stay close to ordinary TypeScript while still extracting the
+parts that are knowable at build time.
+
+That means files with more styles or richer style patterns can take longer to
+transform than files with fewer, simpler styles. The compiler may need to parse
+and evaluate local bindings, follow imported style values, preserve source
+metadata, collect CSS, and preserve runtime handling for values and choices
+that are only known during render.
+
+The supported surface is intentionally broad. Fluentic can extract or preserve
+patterns such as:
+
+- `style(...)` and `style.slot(...)` chains with selectors, media queries,
+  pseudo states, and priority-aware ordering;
+- `.merge(...)` chains, including merged style chains from supported custom
+  style functions configured with `importSources`;
+- `style.scope(...)`, slot overrides, `bindScope(...)`, and component-owned
+  styling hooks;
+- tokens and themes from `createToken(...)`, `createTokens(...)`, and
+  `createTheme(...)`, including extracted token CSS variables and render-time
+  token overrides;
+- inline `style(...)` / `style.slot(...)` usage that can be hoisted out of
+  render when supported;
+- dynamic values inside inline styles, where extractable static pieces are
+  hoisted and values that depend on props continue to work at runtime;
+- mixed static and dynamic style objects, where compile-time declarations can
+  still be extracted even when some values are only known at render time;
+- object spreads through supported `style.raw(...)` and `style.plain(...)`
+  values, including imported reusable fragments;
+- keyframes, font faces, and other CSS helper values;
+- explicit `getClassName(...)` / `css` prop usage that still needs production
+  runtime imports for dynamic composition.
+
+That breadth is the tradeoff: cold transform throughput is not the only design
+goal. The compiler pays some build-time analysis cost so authors can keep
+styles, themes, scopes, dynamic values, and composition in normal TS/TSX instead
+of moving every extractable case into a restricted side language.
+
+## Latest Local Report
+
+Report file: `benchmark/main/results/compiler-1783164671050.json`
+
+Created: `2026-07-04T11:31:11.047Z`
+
+Settings: 100 files per corpus, 8 components per file, 1 warmup, 5 measured
+runs, sourcemaps enabled.
+
+| Name | Corpus | LOC | Median ms | ms/file | Overhead vs Babel noop |
+| --- | --- | ---: | ---: | ---: | ---: |
+| babelNoopPlugin | unrelated-tsx | 9200 | 134.26 | 1.34 | 0.00 ms |
+| fluenticExtractWarm | unrelated-tsx | 9200 | 227.59 | 2.28 | 93.33 ms |
+| stylexBabelPlugin | unrelated-tsx | 9200 | 179.56 | 1.80 | 45.30 ms |
+| babelNoopPlugin | direct-styles | 23000 | 179.93 | 1.80 | 0.00 ms |
+| fluenticExtractWarm | direct-styles | 23000 | 423.02 | 4.23 | 243.09 ms |
+| stylexBabelPlugin | direct-styles | 23000 | 263.95 | 2.64 | 84.02 ms |
+| babelNoopPlugin | theme-slots | 33200 | 319.98 | 3.20 | 0.00 ms |
+| fluenticExtractWarm | theme-slots | 33200 | 707.27 | 7.07 | 387.29 ms |
+| stylexBabelPlugin | theme-slots | 33200 | 428.68 | 4.29 | 108.70 ms |
+| babelNoopPlugin | stylex-styles | 31000 | 227.30 | 2.27 | 0.00 ms |
+| fluenticExtractWarm | stylex-styles | 31000 | 448.19 | 4.48 | 220.89 ms |
+| stylexBabelPlugin | stylex-styles | 31000 | 468.51 | 4.69 | 241.21 ms |
+| babelNoopPlugin | mixed-app | 21674 | 199.19 | 1.99 | 0.00 ms |
+| fluenticExtractWarm | mixed-app | 21674 | 456.70 | 4.57 | 257.51 ms |
+| stylexBabelPlugin | mixed-app | 21674 | 267.54 | 2.68 | 68.35 ms |
+
+## Cold, Warm, And Incremental Cache
+
+The compiler benchmark is a transform-throughput benchmark. It asks: if this
+set of files must be transformed, how long does the transform take?
+
+`fluenticExtractCold` clears the benchmark cache directory before each measured
+sample, creates a compiler, transforms every generated file, then extracts CSS.
+This is closest to a fresh build with no useful Fluentic compiler cache.
+
+`fluenticExtractWarm` uses a stable benchmark cache directory and runs one
+untimed priming transform before each measured transform. It measures a warm
+compiler process with warmed evaluator/import-resolution caches, but it still
+calls `compileExtract()` for every file in the corpus. It is not the same thing
+as an incremental rebuild where the bundler skips unchanged modules.
+
+Real app rebuilds have an extra advantage that this microbenchmark does not
+model: bundlers can reuse prior transformed modules for files that did not
+change. Fluentic also keeps compiler cache data for dependency tracing and, in
+bundler integrations that need it, per-file extracted CSS records keyed by file
+content and config. In that incremental path, unchanged files and dependency
+graphs can reuse previous transformed code and extracted CSS work, while changed
+files and their invalidated graph edges are recomputed.
+
+Keep that cache during normal development and CI cache restores when possible.
+Clearing the cache is useful for cold benchmarks or diagnosing stale output, but
+it removes the reuse that makes repeated builds and small edits faster.
+
+Read the table above as the cost of transforming files that actually need work.
+Read incremental rebuild behavior separately: it should be much faster when a
+small edit leaves most files unchanged, because most of the graph can keep its
+previous transformed code and extracted CSS data.
+
+## Settings
+
+```sh
+FILES=200 COMPONENTS=20 pnpm bench:compiler
+WARMUPS=3 MEASURED=20 pnpm bench:compiler
+VARIANTS=theme-slots:fluenticExtractWarm pnpm bench:compiler
+BENCH_OUT_DIR=./tmp/compiler-report pnpm bench:compiler
+```
+
+Run this benchmark before and after compiler-heavy changes on the same machine.
+The before-and-after delta matters more than a single absolute number.

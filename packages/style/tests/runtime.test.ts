@@ -1537,7 +1537,7 @@ test('theme token aliases emit nested css variable fallbacks', () => {
   includes(rule, ', blue)');
 });
 
-test('runtime debug variables make tokens use property-local inline styles', () => {
+test('runtime debug variables leave direct tokens available for inheritance', () => {
   configureTestRuntime({ dev: true });
 
   const token = createToken('blue');
@@ -1558,10 +1558,7 @@ test('runtime debug variables make tokens use property-local inline styles', () 
   }, debug);
   const result = resolveStyleProp(css as any);
 
-  if (!result.style) throw new Error('expected token variable style');
-
-  includes(String((result.style as Record<string, unknown>)['--token-local-value']), 'var(--token-');
-  includes(String((result.style as Record<string, unknown>)['--token-local-value']), 'blue');
+  equal(result.style, undefined);
   equal(result.className.includes('background-color-'), true);
 });
 
@@ -2306,7 +2303,7 @@ test('rsc named sheet layers survive serialization and server CSS generation', (
       });
     }
     const css = getRscStyleCss();
-    includes(css, '@layer reset, style, sheet;');
+    includes(css, '@layer reset, reset.important, style, style.important, sheet, sheet.important;');
     for (const name of ['reset', 'style', 'sheet']) includes(css, '@layer ' + name + ' {');
   } finally {
     setBuildMeta({ dev: false, extract: false, hoist: false, rsc: false, css: null });

@@ -86,3 +86,13 @@ invalid inputs, and named-token collisions. Generated examples live in
 
 Run `pnpm --filter @fluentic/style test` and
 `pnpm --filter @example/snapshots generate-and-verify`.
+
+## Direct property token variables
+
+A property whose value is a token reads that token's CSS variable directly, with
+its default value as the fallback. It does not allocate a property-local variable.
+`combineStyle` writes supplied overrides to the token variable on each consuming
+element; it does not automatically place them on a component root. Without an
+override, the runtime leaves the variable unset so theme values can inherit.
+Overrides therefore share one token value per element and can inherit into its
+descendants. Dynamic non-token property values still use local variables.

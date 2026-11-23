@@ -1,0 +1,45 @@
+---
+title: Frameworks & rendering modes
+description: Choose the integration for your application.
+---
+
+import DocLink from '@site/src/components/DocLink';
+
+The style values stay the same across integrations. The setup determines how your framework handles `css` and how your build extracts styles.
+
+## React with Vite
+
+Choose the React tab in [Installation](./quick-start.mdx). It uses Fluentic's JSX runtime and the Vite plugin.
+
+<DocLink path='/docs/integrations/vite/'>The full Vite guide</DocLink> also covers the alternative React css-prop adapter, which keeps React's normal JSX runtime.
+
+## Next.js
+
+Choose the Next.js tab in [Installation](./quick-start.mdx) for the complete App Router setup. Development with React Server Components also uses `StyleDev` in the root layout.
+
+<DocLink path='/docs/integrations/nextjs/'>Set up Next.js</DocLink>
+
+## Preact and SolidJS
+
+Choose your framework's tab in [Installation](./quick-start.mdx). Keep your framework's normal JSX runtime. Use its css-prop preset in the Fluentic Vite plugin and add the type-only JSX import to your app entry.
+
+- <DocLink path='/docs/integrations/preact/'>Set up Preact</DocLink>
+- <DocLink path='/docs/integrations/solidjs/'>Set up SolidJS</DocLink>
+
+## Vue, Svelte, and Angular
+
+Released setup instructions for these frameworks are not available in this guide.
+
+## Other bundlers
+
+Existing integration guides cover <DocLink path='/docs/integrations/webpack/'>Webpack</DocLink>, <DocLink path='/docs/integrations/rspack/'>Rspack</DocLink>, <DocLink path='/docs/integrations/parcel/'>Parcel</DocLink>, and <DocLink path='/docs/integrations/farm/'>Farm</DocLink>.
+
+## Runtime-only React
+
+For a runtime-only React integration, set `jsxImportSource` to `@fluentic/style/jsx` in TypeScript and the tool that transforms your JSX. This is a different entry from the compiler-backed `@fluentic/style/plugin/jsx`.
+
+Runtime-only mode inserts rules as needed and has less source metadata. See the <DocLink path='/docs/integrations/runtime-only-mode/'>complete runtime-only setup</DocLink> for initialization and environment details.
+
+## What's next?
+
+The [reference map](./advanced.mdx) links to detailed guides, presets, and individual APIs.

@@ -1,0 +1,84 @@
+---
+title: Understand The Style Builder
+description: Learn how chained builder methods work for selectors, media queries, and custom style vocabulary.
+---
+
+The chained builder style may feel unfamiliar at first.
+
+Many CSS-in-JS APIs put selectors and media queries inside one large nested
+object. The builder keeps the first object as normal CSS declarations, then uses
+builder methods for conditions around those declarations.
+
+Read it as:
+
+```txt
+object -> what the element looks like
+method -> which state, selector, or media query changes that style
+```
+
+That gives the builder useful structure:
+
+- the base style object stays lean;
+- each condition has its own typed method;
+- state and media rules stay close to the style they modify;
+- the compiler can understand selectors as structured style data;
+- design systems can add their own selector vocabulary later.
+
+Builder methods can compose when the styling condition itself has more detail.
+You have seen a media query receive another `style(...)` value with its own
+state selectors.
+
+That keeps each condition readable:
+
+```txt
+default button style
+hover style
+media query
+  media-specific default style
+  media-specific hover style
+  media-specific focus-visible style
+```
+
+That chain covers several abilities without changing the style model:
+
+- base declarations stay in the first `style(...)` object;
+- self selectors such as `hover(...)` and `active(...)` add state rules;
+- `select(...)` handles a local selector for the same styled element;
+- `media(...)` wraps a separate style value for that media query;
+- the media style can still use its own builder methods.
+
+The default `style` function already includes common useful selector methods
+such as `hover(...)`, `active(...)`, `focusVisible(...)`, `disabled(...)`,
+`media(...)`, and `select(...)`. See the
+[full built-in method list](../reference/selectors.mdx#built-in-methods) in the
+Selectors reference.
+
+Different selector methods do not rely on call order to decide which state wins.
+For example, when `.hover(...)` and `.active(...)` both apply, selector priority
+decides which condition wins over the other, not by the order they appear in
+the chain. See
+[Priority](../reference/priority.mdx) for the full priority model.
+
+Advanced style builders can add project-specific methods:
+
+```ts
+const button = ui({
+  borderRadius: 8,
+}).pressed({
+  transform: 'translateY(1px)',
+}).tone('danger', {
+  color: 'white',
+});
+```
+
+The default `style` function is just the predefined common selector
+vocabulary. Custom style functions use the same model with your own method
+names.
+
+For the full selector API, see [Selectors](../reference/selectors.mdx). To build
+your own methods, see [Custom Chain Methods](../beyond-the-basics/custom-chain-methods.mdx)
+and [createStyleFn](../reference/create-style-fn.mdx).
+
+Continue to [Organize Styles In Files](./organize-styles-in-files.mdx)
+to move repeated element styles into shared TypeScript files without changing
+the model.

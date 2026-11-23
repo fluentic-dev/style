@@ -40,3 +40,7 @@ packages/style/tests/.test-cache/
 docs/app/public/llms.txt
 docs/app/public/llms-full.txt
 docs/app/public/llms/
+
+# New Docusaurus documentation app
+docs/basic/.docusaurus/
+docs/basic/build/

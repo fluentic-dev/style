@@ -1,0 +1,560 @@
+---
+title: Plugin Options
+description: Shared compiler and transform options.
+---
+
+The integrations share one option shape.
+
+Use the integration page for the adapter-specific wrapper, then use this page
+for the option names:
+
+```ts
+stylePlugin({
+  include: /\.[jt]sx?$/,
+  exclude: /node_modules/,
+  hoist: true,
+  check: {
+    important: {
+      rawValue: 'error',
+      outsideSheet: 'warn',
+    },
+  },
+  getSourcemapFilePath({ sourcePath, sourceUrl }) {
+    return sourcePath.startsWith('src/')
+      ? `source://@app/${sourcePath}`
+      : sourceUrl;
+  },
+  css: {
+    layer: true,
+    layers: ['reset', '$layer', 'app'],
+    layerNamespace: 'fluentic',
+    classNameFormat: 'f-[(property)]-$hash',
+    hashLength: 7,
+    scopeClassNameFormat: 'scope-$hash',
+    elementClassNameFormat: '@(name)',
+    themeNameFormat: 'theme-(name)-$hash',
+    tokenNameFormat: 'token-(name)-$hash',
+    varNameFormat: 'var-$hash',
+    debugClassName: true,
+  },
+  dev: {
+    priorityMode: 'sort',
+    sourcemapMode: 'style',
+    elementClassName: true,
+    checkSelector: true,
+    hashLength: 3,
+  },
+  cssProp: {
+    adapter: '@fluentic/style/adapter/react',
+  },
+});
+```
+
+## Top-Level Options
+
+| Option | Purpose |
+| --- | --- |
+| `include` | Limit files processed by the transform. |
+| `exclude` | Exclude files from the transform. |
+| `includePackages` | Include script files from exact npm package names, overriding file patterns. |
+| `excludePackages` | Exclude exact npm package names, overriding all other filter rules. |
+| `hoist` | Control supported style hoisting during extraction. |
+| `cache` | Configure persistent caching, callback reuse, version invalidation, and cache location. |
+| `check` | Opt into compiler and runtime checks for discouraged style patterns. |
+| `css` | Configure extracted CSS behavior where supported. |
+| `dev` | Configure development runtime behavior. |
+| `cssProp` | Compile intrinsic JSX `css` props through an adapter. |
+| `importSources` | Configure recognized Fluentic import sources. |
+| `getSourcemapFilePath` | Customize source paths in CSS sourcemaps. |
+| `devSourcemap` | Choose how development source text is exposed to DevTools. |
+
+### Package Filters
+
+Use `includePackages` and `excludePackages` for exact npm package names, including
+scoped names. Each accepts a string or an array of strings; versions, subpaths,
+and glob patterns are not package names.
+
+```ts
+stylePlugin({
+  includePackages: ['@acme/ui', 'shared-styles'],
+  excludePackages: ['legacy-ui'],
+});
+```
+
+Precedence for a matching package is:
+
+1. `excludePackages` rejects it, even if it is also in `includePackages`.
+2. `includePackages` accepts its JavaScript/TypeScript files, overriding `include`
+   and `exclude`, including the default `node_modules` exclusion.
+3. Unmatched files use the existing `include` / `exclude` rules and defaults.
+
+Package inclusions do not select CSS, JSON, or other non-script assets. Empty
+package lists leave existing behavior unchanged. Matching uses the innermost
+`node_modules` package directory, supports pnpm layouts and Windows paths, and
+ignores query/hash suffixes. Nested dependencies are matched by their own names.
+For linked workspace sources resolved outside `node_modules`, use file patterns.
+
+Vite derives a native hook prefilter from this same configuration. The shared
+JavaScript check remains authoritative for custom file patterns and older Vite
+versions. These options select files to transform; they do not block tracing
+imported values needed to compile those files.
+
+### CSS Prop
+
+`cssProp` enables compiler lowering for intrinsic JSX `css` props. This lets a
+framework keep its normal JSX runtime while the plugin compiles `css={...}` into
+framework props before JSX is transformed.
+
+```ts
+import { CssPropPresets, plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+
+stylePlugin({
+  cssProp: CssPropPresets.React,
+});
+```
+
+Built-in presets select an adapter module:
+
+| Preset | Adapter |
+| --- | --- |
+| `CssPropPresets.React` | `@fluentic/style/adapter/react` |
+| `CssPropPresets.Preact` | `@fluentic/style/adapter/preact` |
+| `CssPropPresets.Solid` | `@fluentic/style/adapter/solid` |
+
+Custom adapters are supported:
+
+```ts
+stylePlugin({
+  cssProp: {
+    adapter: '@acme/fluentic-jsx-adapter',
+  },
+});
+```
+
+The adapter module must export `mergeJsxProps`:
+
+```ts
+export function mergeJsxProps(parts: readonly unknown[]): Record<PropertyKey, unknown> {
+  // merge ordered JSX prop chunks and return framework props
+}
+```
+
+The compiler only lowers intrinsic elements such as `div`, `button`, and `svg`.
+Component props are preserved.
+
+### Import Sources
+
+`importSources` teaches the compiler about custom or re-exported style
+functions.
+
+The default `style` export from `@fluentic/style` is already known. Add
+`importSources` when your app imports a custom builder, such as `sx` or `ui`,
+from your own package.
+
+```ts
+stylePlugin({
+  importSources: [
+    {
+      source: './sx-style',
+      name: 'sx',
+      styleFn: sx,
+    },
+  ],
+});
+```
+
+Each entry supports:
+
+| Field | Meaning |
+| --- | --- |
+| `styleFn` | The actual style function created by `createStyleFn(...)`. |
+| `source` | Import source string, glob, RegExp, or array of those values. |
+| `name` | Imported binding name, or an array of names. |
+| `check` | Custom matcher receiving `{ source, name }`. |
+
+Use separate entries when one module exports multiple style functions.
+
+```ts
+stylePlugin({
+  importSources: [
+    {
+      source: '@acme/styles',
+      name: 'ui',
+      styleFn: ui,
+    },
+    {
+      source: '@acme/styles',
+      name: 'sx',
+      styleFn: sx,
+    },
+  ],
+});
+```
+
+Use a RegExp or glob when the import path has several possible forms:
+
+```ts
+stylePlugin({
+  importSources: [
+    {
+      source: /sx-style$/,
+      name: 'sx',
+      styleFn: sx,
+    },
+  ],
+});
+```
+
+This is what lets extraction understand merged chains from more than one style
+function. See
+[Multiple Style Functions](../beyond-the-basics/multiple-style-functions.mdx).
+
+## Check Options
+
+`check` enables opt-in compiler and runtime checks. Every check is disabled
+unless configured as `warn` or `error`:
+
+```ts
+stylePlugin({
+  check: {
+    important: {
+      rawValue: 'error',
+      outsideSheet: 'warn',
+    },
+  },
+});
+```
+
+| Option | Recommendation |
+| --- | --- |
+| `important.rawValue` | Reject or warn about string values containing raw `!important`. Use `style.important(value)` to preserve declaration priority. |
+| `important.outsideSheet` | Reject or warn about `style.important(...)` in ordinary styles. Prefer `style.weight(...)` for priority between styles. |
+
+`warn` reports during compilation. Runtime warnings are development-only so
+they do not add production console noise. `error` fails both compilation and
+runtime-authored styles, including dynamic styles the compiler cannot extract.
+
+The recommended strict setup is `rawValue: 'error'` and
+`outsideSheet: 'warn'`. Raw `!important` bypasses the value metadata and
+should be replaced directly. `style.important(...)` outside a sheet is valid,
+but warning first makes migrations less disruptive. Both settings remain off
+by default.
+
+## CSS Options
+
+`css` controls generated CSS names, layers, and debug readability:
+
+| Option | Purpose |
+| --- | --- |
+| `layer` | Enable ordinary style layers with a boolean or `{ style?: boolean }`. Choose each sheet’s layer on the sheet itself. |
+| `layers` | Configure layer order. Use `$layer` where generated priority layers should be inserted. |
+| `layerNamespace` | Prefix generated priority layer names. |
+| `classNameFormat` | Format atomic class names. Supports strings or functions. |
+| `sheetClassNameFormat` | Format selector sheet class names when `debugClassName` is enabled. |
+| `hashLength` | Set generated `$hash` length. Defaults to `7`. |
+| `scopeClassNameFormat` | Format scope target class names. |
+| `elementClassNameFormat` | Format development element marker class names. |
+| `themeNameFormat` | Format generated theme class names. |
+| `tokenNameFormat` | Format ordinary token CSS variable names. Explicit global named tokens from `/dialect` bypass this format. |
+| `varNameFormat` | Format generated local dynamic value variable names. |
+| `debugClassName` | Include readable property/value parts in class names. Defaults to `true` in development and `false` in production builds. |
+
+Most apps only change `layer`, `layers`, `layerNamespace`, or naming formats.
+Leave the rest at defaults unless you are aligning the generated output with existing CSS
+infrastructure.
+
+The boolean form remains shorthand for ordinary styles:
+
+```ts
+css: { layer: true }  // styles layered, sheets unlayered
+css: { layer: false } // styles and sheets unlayered by default
+```
+
+### Individual sheet layers
+
+Both `createSheet` and `createGlobalSheet` default to unlayered CSS:
+
+- `layer: true` uses the same layer system as regular styles, or stays unlayered
+  when the main layer is disabled. It never appends `.sheet`.
+- `layer: false` or omission emits unlayered CSS.
+- `'reset'` and `'vendor.reset'` are absolute layer names.
+- `'.reset'` resolves to `<layerNamespace>.reset` when the main layer is enabled,
+  or `reset` when it is disabled.
+
+The legacy `css.layer.sheet` setting no longer enables local sheet layers.
+Choose the layer on each sheet. See [Style ordering and the cascade](./style-ordering.mdx)
+for global `order`, local `specificity`, and managed important declarations.
+
+Use `css.layers` to declare the order of named layers alongside generated layers:
+
+```ts
+stylePlugin({
+  css: {
+    layerNamespace: 'fluentic',
+    layers: ['reset', 'fluentic.reset', '$layer', 'overrides'],
+  },
+});
+```
+
+This configuration puts sheets named `'reset'` and `'.reset'` before the other
+generated layers, and a sheet named `'overrides'` after them. `$layer` expands to
+generated layer names; a name explicitly listed elsewhere keeps that position
+and is not duplicated at `$layer`. Use the resolved name in this list, never
+`'.reset'`. Dots in resolved names represent nested CSS layers.
+
+Later layers take precedence for normal declarations. Normal unlayered CSS still
+outranks layered CSS, and `!important` reverses layer precedence. Layer options
+do not change selector scoping or specificity. See
+[createSheet](./create-sheet.mdx#scoped-app-reset) for a reset attached to `body` or an
+app root.
+
+Callsite-local class names are automatic in development and disabled for
+production builds. Production class names always include a stable hash, but the
+hash does not include the callsite, so equivalent extracted rules dedupe across
+files.
+
+### Class Name Formats
+
+`classNameFormat` controls atomic class names when `debugClassName` is enabled.
+Selector sheet classes use `sheetClassNameFormat`, which defaults to
+`sheet-(property)[-(value)]--$hash`.
+
+```ts
+stylePlugin({
+  css: {
+    debugClassName: true,
+    classNameFormat: '[(atRule)-][(scopeSelector)-](property)[-(selector)][-(value)]-$hash',
+    sheetClassNameFormat: 'sheet-[(selector)-](property)[-(value)]--$hash',
+  },
+});
+```
+
+For a rule like `style({ display: 'flex' }).hover(...)`, the formatter can use:
+
+| Placeholder | Meaning |
+| --- | --- |
+| `$hash` | The stable hash for this exact generated rule. |
+| `(property)` | The CSS property, such as `display` or `background-color`. |
+| `(value)` | A readable value when it can be named safely, such as `flex` or `center`. |
+| `(selector)` | The selector segment, such as `hover` or `focus-visible`. |
+| `(scopeSelector)` | The parent scope selector segment when a scoped rule is generated. |
+| `(atRule)` | The at-rule segment, such as a media or container marker. |
+
+`sheetClassNameFormat` supports the same placeholders. It omits `(selector)` by
+default because third-party selectors can be long, but you can include it when
+debugging selector sheets.
+
+Format strings support optional groups:
+
+```ts
+classNameFormat: '[(property)][-(selector)][-(value)]-$hash'
+```
+
+`[-(value)]` is omitted when the value cannot be named. This keeps names from
+ending with empty separators.
+
+You can limit placeholder length:
+
+```ts
+classNameFormat: '[(property:16!)][-(value:10)]-$hash'
+```
+
+`(property:16!)` truncates to 16 characters. `(value:10)` only appears when the
+value is 10 characters or shorter.
+
+If `$hash` is not present, the name formatter appends the hash to the formatted name. Keep
+`$hash` somewhere in production-facing formats unless you intentionally want to
+own uniqueness yourself.
+
+The other CSS name formats use the same formatter syntax with smaller
+placeholder sets:
+
+| Option | Placeholders |
+| --- | --- |
+| `scopeClassNameFormat` | `(className)` and `$hash` |
+| `sheetClassNameFormat` | `(property)`, `(value)`, `(selector)`, `(scopeSelector)`, `(atRule)`, and `$hash` |
+| `elementClassNameFormat` | `(name)` and `$hash` |
+| `themeNameFormat` | `(name)` and `$hash` |
+| `tokenNameFormat` | `(name)` and `$hash` |
+| `varNameFormat` | `(name)` and `$hash` |
+
+Each format option also accepts a function:
+
+```ts
+stylePlugin({
+  css: {
+    classNameFormat(info) {
+      return `${info.property}-${info.selector ?? 'base'}`;
+    },
+  },
+});
+```
+
+## Dev Options
+
+`dev` controls how development CSS is represented while debugging:
+
+| Option | Purpose |
+| --- | --- |
+| `priorityMode` | `layer` uses dev cascade layers. `sort` emits sorted rules. |
+| `sourcemapMode` | `style` traces merged/spread styles to the consuming style site. `value` traces to the original value source when possible. |
+| `elementClassName` | Add development marker classes to DOM elements with a `css` prop. |
+| `checkSelector` | Validate static selector arguments. Use `force` to keep checks even when runtime checks would normally be skipped. |
+| `hashLength` | Override development `$hash` length. Defaults to `3`. |
+
+## Sourcemap Options
+
+`devSourcemap` controls how source text is made available to browser DevTools:
+
+| Value | Behavior |
+| --- | --- |
+| `sidecarServer` | Start a separate local HTTP server at `127.0.0.1` that serves source files to DevTools. CSS source maps link to this server instead of embedding the source text. |
+| `sourceContent` | Embed source text in generated sourcemaps. |
+| `sourceUrl` | Write source URLs without embedded source text. |
+
+The separate server is called a **sidecar** because it runs alongside your app's development server. It keeps source maps small while letting DevTools open the original TypeScript files.
+
+`sidecarServer` is the development default for Vite, Webpack, Rspack, Farm, and Next.js. Parcel defaults to `sourceContent` in development. Production uses `sourceUrl`. You don't need to set these defaults explicitly; Next.js selects its mode automatically.
+
+For adapters that accept `devSourcemap`, you can choose another mode. For example, embed the source text instead of starting a sidecar server:
+
+```ts
+stylePlugin({
+  devSourcemap: 'sourceContent',
+});
+```
+
+
+### getSourcemapFilePath
+
+`getSourcemapFilePath` rewrites the source URL stored in generated CSS
+sourcemaps.
+
+Use it when the default source path is technically correct, but not the path you
+want to see in DevTools. For example, you may want source URLs to match your
+bundler's style, your monorepo aliases, or a shorter app-facing path that is
+easier to recognize while debugging.
+
+```ts
+stylePlugin({
+  getSourcemapFilePath({ sourcePath, sourceUrl }) {
+    if (sourcePath.startsWith('src/')) {
+      return `source://@app/${sourcePath}`;
+    }
+
+    if (sourcePath.startsWith('../ui/src/')) {
+      return `source://@ui/${sourcePath.slice('../ui/src/'.length)}`;
+    }
+
+    return sourceUrl;
+  },
+});
+```
+
+The returned string becomes the source URL used by CSS sourcemaps. Return
+`sourceUrl`, `null`, or `undefined` when you want to keep the default for
+that file.
+
+Adapter-specific behavior may differ. Start with your integration page, such as
+[Next.js](../integrations/nextjs.mdx), then use the
+[Integration Plugin Options](../integrations/options.mdx) page for setup examples,
+sourcemap modes, and adapter-specific notes.
+
+## Persistent extraction cache
+
+Completed production transforms are cached across build commands by default:
+
+```ts
+fluenticStyle({
+  cache: {
+    persistent: true,
+    dynamicConfig: true,
+    version: '1',
+    location: '.cache/fluentic-style',
+  },
+});
+```
+
+All fields are optional. `persistent` and `dynamicConfig` default to `true`.
+`version` accepts a string or number. `location` is a folder path, resolved from
+the project root when relative. Without a custom location, each adapter uses its
+normal cache folder. The old `persistentCache` and plugin `cacheDir` options have
+been removed; use `cache.persistent` and `cache.location` instead.
+
+The `extract-v1` cache stores transformed JavaScript, source maps, extracted CSS,
+and check diagnostics. Warning messages replay on every hit. Check failures also
+persist their error details and code frames, and a cache hit throws the same error
+without repeating extraction. Arbitrary compiler, parser, or I/O failures are not
+cached as check failures. Failed transforms do not leave partial collected CSS.
+Completed development transforms and evaluator bindings are not persisted.
+
+Reuse requires matching source and input source maps, compiler options and global
+configuration, runtime mode, working directory, Node runtime/flags, and
+compiler/dependency implementation fingerprints. Recorded imports are resolved
+again and their contents hashed, including transitive imports and previously
+missing modules. Check severity changes invalidate diagnostics. Timestamp-only
+changes are not used as proof of freshness. Removed or unvisited modules do not
+restore CSS into a new build.
+
+### Dynamic configuration and manual invalidation
+
+With `cache.dynamicConfig: true`, ordinary callback source text participates in
+configuration fingerprints. A changed callback implementation causes a miss.
+On a hit, the entire transform is restored without running callbacks: this is
+not a separate cache of each callback's arguments and return values.
+
+**Captured variables, environment values, external file reads, imported helper
+behavior, and other callback dependencies are not automatically tracked.** When
+these change, update `cache.version` or clear the cache. Enabling callback caching
+is an agreement to manage those inputs. Setting `cache.dynamicConfig: false`
+bypasses completed-transform caching whenever callback configuration is present.
+It does not disable tracer syntax reuse.
+
+Native/bound functions, proxies, accessors, non-plain objects, circular data,
+stateful regular expressions, and callbacks with custom properties still bypass
+completed-transform caching. A `styleFn` import source uses its compiler metadata
+rather than serializing the wrapper function.
+
+Changing `cache.version` selects a new namespace for both persistent caches and
+invalidates in-memory tracer reuse. Old namespaces are retained, not deleted;
+you can remove them when no concurrent build needs them. Strings and numbers
+are distinct versions. Use a stable version until relevant external inputs change.
+
+Unreadable or corrupt entries cause normal compilation; writes are atomic and
+best-effort. Set `cache.persistent: false` to compare against uncached extraction.
+The compiler fingerprint is computed once per Node process; restart the process
+after changing installed compiler dependencies.
+
+### CI restoration
+
+Cache transport is managed by your CI/deployment scripts: install dependencies,
+restore the chosen cache directory, run the build, then archive and upload the
+cache for later builds. Fluentic does not download or upload it.
+
+Use compatible Node/compiler versions and the same absolute checkout/dependency
+paths: current fingerprints and records include absolute paths. A restored archive
+is still validated and may produce misses on another runner layout. Restoration
+does not guarantee a cache hit. Include relevant callback external inputs in
+`cache.version` or your CI cache key. No credentials are needed in the cache; the
+archive does contain source syntax, generated code, diagnostics, and file paths.
+
+### Tracer metadata
+
+Imported modules also use a `trace-metadata-v1` cache. Its JSON records contain
+unmodified syntax trees, including declarations, source locations, and import/export
+links. The source content hash and compiler/parser fingerprint must match before
+restoring a record. Each restoration creates fresh nodes before compiler annotations
+and evaluation; functions, live bindings, and evaluated style objects are never
+serialized.
+
+Within a build, evaluated bindings can be reused under the same compiler
+configuration. Reuse re-resolves the recorded import requests and checks content
+hashes throughout the dependency chain, including failed lookups. Those checks also
+record dependencies for the completed-transform cache. Lazy re-exports refresh their
+linked modules when first accessed, and partial circular export maps are rebuilt.
+
+When a linked value changes, its dependants are reevaluated. Unchanged modules can
+still reuse their syntax metadata. Changing compiler configuration rebuilds evaluated
+bindings while keeping reusable syntax. `cache.persistent: false` disables both disk
+caches; bounded in-memory syntax reuse remains available. Unsupported parser hooks,
+non-JSON syntax values, and corrupt metadata fall back to normal parsing.

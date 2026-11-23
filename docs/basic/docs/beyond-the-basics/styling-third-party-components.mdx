@@ -1,0 +1,612 @@
+---
+title: Styling Third-Party Components
+description: Style third-party component internals with selector sheets.
+---
+
+Most component styles start with an element the component owns. The
+style is attached directly to that element:
+
+```tsx
+<button css={styles.root}>
+  <span css={styles.icon}>{icon}</span>
+  <span css={styles.label}>{children}</span>
+</button>
+```
+
+In that shape, there is no gap between the style and the DOM. Slots, scopes,
+variants, themes, and overrides all have real elements to attach to.
+
+Third-party components change the shape of the problem. A select library, date
+picker, combobox, editor, table, or menu often owns the interesting markup. You
+may get one `className` for the wrapper, while the element you actually need to
+style is hidden behind fixed library classes:
+
+```html
+<div class="react-select">
+  <div class="react-select__control">
+    <div class="react-select__single-value">Blue</div>
+  </div>
+</div>
+```
+
+At that point, `getClassName(...)` is only a partial answer. It can resolve
+style data into a class name, which is useful for low-level interop, but the
+real question is one level higher: the wrapper needs a way to name the library
+parts it wants to style.
+
+Selector sheets fill that gap. The selector names the part owned by the
+third-party library. The generated sheet class is still attached at the boundary
+owned by your wrapper.
+
+## DOM Ownership
+
+React Select is a good example because the outer component is yours, but the
+control, value, menu, and option elements are rendered by the library. The
+wrapper still has one stable place to attach styles:
+
+```tsx
+export function Select() {
+  return (
+    <div>
+      <ReactSelect classNamePrefix="react-select" unstyled />
+    </div>
+  );
+}
+```
+
+React Select's `classNamePrefix` option gives the internal elements stable class
+names:
+
+```txt
+.react-select__control
+.react-select__single-value
+.react-select__menu
+.react-select__option
+```
+
+The wrapper can define those classes as named parts:
+
+```ts
+import { createTokens, style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+const selectTokens = createTokens({
+  accent: '#2563eb',
+  panel: '#eff6ff',
+  text: '#1e3a8a',
+});
+
+const selectPart = {
+  control: style.selector('.react-select__control'),
+  value: style.selector('.react-select__single-value'),
+  menu: style.selector('.react-select__menu'),
+  option: style.selector('.react-select__option'),
+};
+```
+
+The strings still come from React Select. The important change is that they now
+sit at the edge of the wrapper, instead of being scattered through the styling
+code.
+
+## Selector Sheets
+
+After the parts are named, the sheet looks like ordinary style data:
+
+```ts
+const selectSheet = createSheet([
+  selectPart.control({
+    minHeight: 42,
+    border: '1px solid',
+    borderColor: selectTokens.accent,
+    borderRadius: 10,
+    backgroundColor: selectTokens.panel,
+    boxShadow: 'none',
+  }).hover({
+    borderColor: '#1d4ed8',
+  }),
+
+  selectPart.value({
+    color: selectTokens.text,
+    fontWeight: 650,
+  }),
+]);
+
+const compactSheet = createSheet([
+  selectPart.control({
+    minHeight: 34,
+    borderRadius: 6,
+  }),
+  selectPart.value({
+    fontSize: 13,
+  }),
+]);
+```
+
+Only the selector string is tied to the third-party library. Everything inside
+the style object is ordinary style data: tokens, selector chains, ordering,
+extraction, debug names, and sourcemaps.
+
+At render time, the wrapper composes the sheet with its local variants and sends
+the result through the `css` prop:
+
+```tsx
+import { combineStyle, type StyleTheme } from '@fluentic/style';
+
+export function Select(props: {
+  compact?: boolean;
+  theme?: StyleTheme;
+}) {
+  const css = combineStyle(
+    selectSheet,
+    props.theme,
+    props.compact && compactSheet,
+  );
+
+  return (
+    <div css={css}>
+      <ReactSelect classNamePrefix="react-select" unstyled />
+    </div>
+  );
+}
+```
+
+The `css` prop gives the wrapper its generated sheet class. The emitted CSS is
+not a loose global rule; it is scoped by that class.
+
+The selectors above are plain descendant selectors. They match the DOM shape
+React Select renders under the wrapper:
+
+```css
+.sheetClass .react-select__control { ... }
+```
+
+This is the usual case for third-party wrappers: the generated class is on the
+wrapper, and the library class is somewhere below it.
+
+## Same Element Selectors
+
+The first selector form assumes the library class is below the element that
+receives the generated sheet class. Sometimes the class you care about belongs
+to that element itself.
+
+For example, the wrapper might also be the library container:
+
+```tsx
+<div className="react-select" css={css}>
+  <ReactSelect classNamePrefix="react-select" unstyled />
+</div>
+```
+
+That is a different selector shape. The selector describes the attached element,
+not one of its children:
+
+```ts
+const selectTarget = {
+  root: style.selector('&.react-select'),
+};
+```
+
+Here, `&` means the element that receives the generated sheet class:
+
+```css
+.sheetClass.react-select { ... }
+```
+
+The difference is the DOM relationship:
+
+```ts
+style.selector('.react-select');
+// the attached element contains a child with this class
+
+style.selector('&.react-select');
+// the attached target itself has this class
+```
+
+```txt
+.react-select   descendant under the attached class
+&.react-select  the same element as the attached class
+```
+
+## Why Not getClassName?
+
+`getClassName(...)` is still the escape hatch for direct interop. It is useful
+when a library gives access to the exact `className` or `style` prop that should
+receive the resolved style.
+
+Selector sheets solve a different problem. They keep the library-specific code
+small when the wrapper is styling fixed internal classes:
+
+Once the selectors are named, the rest of the wrapper follows the same path as
+your own components:
+
+```txt
+tokens -> selector parts -> sheets -> combineStyle(...) -> css prop
+```
+
+That matters as soon as the wrapper grows. A small border override can become
+compact mode, danger tone, brand theme, disabled state, portal menu styles, and
+consumer overrides. With selector sheets, those pieces remain style
+data. They can use tokens, compose through `combineStyle(...)`, participate in
+extraction, and show up in the same debugging tools as your own components.
+
+## Local Themes
+
+Third-party wrappers often want local themes without turning the whole app theme
+inside out. A select might need a blue tone, a rose tone, and a compact mode,
+all scoped to this one wrapper:
+
+```ts
+const blueSelect = createSheet([
+  selectTokens.accent('#2563eb'),
+  selectTokens.panel('#eff6ff'),
+  selectTokens.text('#1e3a8a'),
+]);
+
+const roseSelect = createSheet([
+  selectTokens.accent('#c0265a'),
+  selectTokens.panel('#fce7ef'),
+  selectTokens.text('#8f1238'),
+]);
+```
+
+The selected theme composes with the structural sheet:
+
+```tsx
+const css = combineStyle(
+  selectSheet,
+  props.tone === 'rose' ? roseSelect : blueSelect,
+  props.compact && compactSheet,
+);
+```
+
+Append incoming `StyleProp` values at the final attachment point:
+
+```tsx
+<div css={[css, props.css]} />
+```
+
+The selectors still read the same token values as ordinary styles. You
+get a local component theme without introducing global CSS variables by hand or
+forcing every app theme to know about React Select.
+
+## Portal Menus
+
+Portals introduce another DOM shape. The control may render inside your wrapper,
+while the menu appears somewhere else:
+
+```txt
+<div class="select-wrapper sheetClass">
+  <div class="react-select__control">...</div>
+</div>
+
+<body>
+  <div class="react-select__menu">...</div>
+</body>
+```
+
+A wrapper sheet cannot reach across the document. Once the menu moves under
+`body`, the wrapper class is no longer an ancestor of `.react-select__menu`.
+
+The menu container is the part whose position changes. In the normal case it is
+below the wrapper. In the portal case, the sheet class may need to be attached
+to the menu container or portal container itself.
+
+The two earlier selector forms can represent those two attachment shapes:
+
+```ts
+const selectPortalPart = {
+  menuInWrapper: style.selector('.react-select__menu'),
+  menuTarget: style.selector('&.react-select__menu'),
+  option: style.selector('.react-select__option'),
+};
+```
+
+The descendant selector matches a menu rendered under the wrapper:
+
+```css
+.sheetClass .react-select__menu { ... }
+```
+
+The `&` selector matches a portal menu when the sheet class is attached to the
+menu element itself:
+
+```css
+.sheetClass.react-select__menu { ... }
+```
+
+The option does not need the same duplication here. It is still a child under
+the attached container, whether that container is the wrapper or the menu.
+
+The container rule is the part that starts to repeat:
+
+```ts
+const menuSheet = createSheet([
+  selectPortalPart.menuInWrapper({
+    border: '1px solid',
+    borderColor: selectTokens.accent,
+    backgroundColor: '#fff',
+  }),
+  selectPortalPart.menuTarget({
+    border: '1px solid',
+    borderColor: selectTokens.accent,
+    backgroundColor: '#fff',
+  }),
+  selectPortalPart.option({
+    color: selectTokens.text,
+    fontSize: 14,
+  }).hover({
+    backgroundColor: selectTokens.panel,
+  }),
+]);
+```
+
+This duplication is the reason `&?` exists. It means "match the attached element
+if it has this class, or match a descendant with this class."
+
+```ts
+const selectPortalPart = {
+  menu: style.selector('&?.react-select__menu'),
+  option: style.selector('.react-select__option'),
+};
+```
+
+The menu sheet can go back to one rule per part:
+
+```ts
+const menuSheet = createSheet([
+  selectPortalPart.menu({
+    border: '1px solid',
+    borderColor: selectTokens.accent,
+    backgroundColor: '#fff',
+  }),
+  selectPortalPart.option({
+    color: selectTokens.text,
+    fontSize: 14,
+  }).hover({
+    backgroundColor: selectTokens.panel,
+  }),
+]);
+```
+
+The three selector forms have distinct meanings:
+
+```txt
+.part   the library class is below the attached class
+&.part  the library class is on the attached element
+&?.part either of those DOM shapes is valid
+```
+
+A resolved sheet can be applied to more than one element. Each element that
+receives the generated class becomes a scope for the same rules. That is useful
+for interop, but it is not the first pattern to reach for. In the menu example,
+the menu or portal container is the target; options remain descendants inside
+that target.
+
+There are a few guardrails:
+
+```ts
+// Good: one selector.
+const control = style.selector('.react-select__control');
+
+// Good: several selectors as an array.
+const field = style.selector([
+  '.react-select__control',
+  '.react-select__input-container',
+]);
+
+// Avoid: comma-separated selector strings.
+const field = style.selector('.a, .b');
+```
+
+`createStyleTarget()` applies a resolved style prop to an element you
+do not render directly.
+
+```tsx
+import { createStyleTarget } from '@fluentic/style/css';
+import { useEffect, useRef, useState } from 'react';
+
+function useStyleTarget() {
+  const [target] = useState(() => createStyleTarget());
+  const destroyTimer = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (destroyTimer.current !== null) {
+      window.clearTimeout(destroyTimer.current);
+      destroyTimer.current = null;
+    }
+
+    return () => {
+      destroyTimer.current = window.setTimeout(() => {
+        target.destroy();
+        destroyTimer.current = null;
+      });
+    };
+  }, [target]);
+
+  return target;
+}
+```
+
+The delayed cleanup avoids removing the target class during React Strict Mode's
+development remount.
+
+The wrapper carries the normal in-tree styles. The portal target receives the
+menu sheet when the menu is rendered outside the wrapper:
+
+```tsx
+import { combineStyle, type StyleProp, type StyleTheme } from '@fluentic/style';
+
+export function Select(props: {
+  compact?: boolean;
+  css?: StyleProp;
+  portalTarget: HTMLElement | null;
+  theme?: StyleTheme;
+}) {
+  const target = useStyleTarget();
+
+  const rootCss = combineStyle(
+    [selectSheet, menuSheet],
+    props.theme,
+    props.compact && compactSheet,
+  );
+
+  const portalCss = combineStyle(
+    menuSheet,
+    props.theme,
+  );
+
+  target.apply(props.portalTarget, portalCss, {
+    enabled: !!props.portalTarget,
+  });
+
+  return (
+    <div css={[rootCss, props.css]}>
+      <ReactSelect menuPortalTarget={props.portalTarget} unstyled />
+    </div>
+  );
+}
+```
+
+Including `menuSheet` in `rootCss` keeps the non-portal case working. Applying
+`portalCss` to the portal target covers the detached menu.
+
+If different select instances need different menu themes, give each one a
+separate portal target. Attaching conflicting themed selector sheets to
+`document.body` means both sheets can match the same third-party class names.
+
+## When A Global Override Fits
+
+Prefer `createSheet(...)` attached to your wrapper or portal root. Its generated
+parent class keeps the override local, so two instances can use different themes
+without changing every matching component on the page.
+
+A global sheet is useful when you deliberately want one rule for every instance,
+or the integration exposes selectors but no suitable element on which to attach
+a sheet. For example, an app-wide policy for a library's toast containers:
+
+```ts title="global.styles.ts"
+import { style } from '@fluentic/style';
+import { createGlobalSheet } from '@fluentic/style/css';
+
+createGlobalSheet([
+  style.selector('.vendor-toast__container', {
+    fontFamily: 'inherit',
+  }),
+]);
+```
+
+Import this module from your application entry. The rule reaches every matching
+container, including those rendered through portals; it is not scoped to the
+component that imported the module. If the library accepts a portal class or
+container element, prefer attaching a local sheet there first.
+
+Global styles come before regular styles by default. You can change this with
+`order`, or put the rules in a CSS layer with `layer`. These are optional; see
+[global style options](./add-global-styles.mdx#options) when you need them.
+
+With extraction, the global CSS exists in the built stylesheet even if the call
+was written inside a component or event handler. For conditional behavior, declare
+a selector based on a class or data attribute and toggle that on the target.
+
+Follow [Add Global Styles](./add-global-styles.mdx) for document defaults
+and conditional selectors, and [Style ordering and the cascade](../reference/style-ordering.mdx)
+for the full precedence rules.
+
+## Choosing The Pattern
+
+Selector sheets fit the case where a library exposes stable class names,
+class-name prefixes, data attributes, or portal targets, but does not expose the
+exact elements that need styles.
+
+Normal `css={...}` is still the right shape when the component owns the element.
+Slots and scopes are still the right shape when the component owns reusable
+parts. Low-level interop helpers are still available when a library accepts a
+direct `className` or `style` prop for the exact element you want.
+
+Selector sheets sit between those worlds. They acknowledge that the DOM belongs
+to someone else, while keeping your styling language, tokens, extraction, and
+debugging in the same authoring model.
+
+Selector sheets are emitted outside the generated cascade layers by default. That
+is intentional: third-party CSS is commonly unlayered, and normal unlayered
+rules outrank normal layered rules. If the third-party stylesheet participates
+in your layer architecture, opt a sheet in with `createSheet({ layer: true },
+items)` to share the regular-style layer. A particular sheet can instead
+choose its own layer with `createSheet({ layer: 'vendorOverrides' }, items)`.
+Use `'.vendorOverrides'` to put it under `css.layerNamespace` (for example,
+`css.vendorOverrides`). List the resolved name in `css.layers` to choose its
+position relative to other layers. A local `layer: false` opts back out.
+
+Named layers also support app-wide styles such as resets while preserving the
+sheet's class scope. See [the scoped reset example](../reference/create-sheet.mdx#scoped-app-reset)
+for attaching a reset to `body` or an app root. Layer selection does not scope a
+third-party stylesheet or pull its existing rules into your chosen layer.
+
+Some libraries also ship their own CSS with high specificity or load it after
+your app styles. The runtime can order the rules it owns, but it cannot move a
+third-party stylesheet into your layer system. Try a sheet `specificity` first when
+increased selector specificity is enough:
+
+```ts
+const selectSheet = createSheet({ specificity: 2 }, [
+  selectPart.control({
+    borderColor: selectTokens.accent,
+  }),
+]);
+```
+
+When a wrapper must override external declarations that already use
+`!important`, mark the value itself:
+
+```ts
+const selectSheet = createSheet([
+  selectPart.control({
+    borderColor: style.important(selectTokens.accent),
+    boxShadow: style.important('none'),
+  }),
+]);
+```
+
+`style.important(...)` emits the final declaration with `!important`. It is an
+interop tool, mostly useful in selector sheets and component wrappers that need
+to beat library CSS. Ordinary styles usually should not need it,
+because composition, variants, scopes, and sheet order already describe the
+priority inside the generated styles. Prefer `style.weight(...)` when
+you need to adjust priority between ordinary styles.
+
+Always use the wrapper form. Do not write raw strings such as
+`'red !important'`; raw values bypass the important-value metadata. The
+opt-in `check.important.rawValue` and `check.important.outsideSheet` plugin
+options can warn or fail when these recommendations are violated.
+
+CSS reverses cascade-layer order for important declarations. The runtime accounts
+for that reversal in its generated priority layers, so `style.important(...)`
+keeps the intended priority instead of accidentally becoming weaker
+inside the layer system.
+
+## Debugging
+
+Selector sheets still produce atomic rules. If a later sheet sets the same
+selector property, the later class wins for that resolved style prop.
+
+In debug mode, sheet selector classes use a shorter default format than ordinary
+atomic classes:
+
+```css
+.sheet-color-red--abc .react-select__single-value { color: red }
+```
+
+The full selector is omitted by default because third-party selectors can get
+long. If you want it while debugging, configure `sheetClassNameFormat`:
+
+```ts
+configureStyleRuntime({
+  css: {
+    debugClassName: true,
+    sheetClassNameFormat: 'sheet-[(selector)-](property)[-(value)]--$hash',
+  },
+});
+```
+
+See [Style ordering and the cascade](../reference/style-ordering.mdx) for global sheets,
+local specificity, layer ordering, and managed/native important declarations.

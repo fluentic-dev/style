@@ -1,0 +1,111 @@
+---
+title: Vite
+description: Configure Fluentic Style with Vite and React.
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Install the package:
+
+<div className="package-install">
+<Tabs groupId="package-manager" defaultValue="pnpm">
+  <TabItem value="pnpm" label="pnpm">
+
+```sh
+pnpm add @fluentic/style
+```
+
+  </TabItem>
+  <TabItem value="npm" label="npm">
+
+```sh
+npm install @fluentic/style
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```sh
+yarn add @fluentic/style
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```sh
+bun add @fluentic/style
+```
+
+  </TabItem>
+</Tabs>
+</div>
+
+Add the Vite plugin and configure React's automatic JSX runtime:
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+
+export default defineConfig({
+  plugins: [
+    stylePlugin(),
+    react({
+      jsxImportSource: '@fluentic/style/plugin/jsx',
+    }),
+  ],
+});
+```
+
+Set the JSX import source in TypeScript too:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+If you prefer to keep React's normal JSX runtime, enable the React css-prop
+preset instead of setting `jsxImportSource` to Fluentic:
+
+```ts title="vite.config.ts"
+import { CssPropPresets, plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: [
+    stylePlugin({
+      cssProp: CssPropPresets.React,
+    }),
+    react(),
+  ],
+});
+```
+
+With this mode, keep your normal React TypeScript JSX settings:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx"
+  }
+}
+```
+
+Vite is the smallest full setup path: write styles in TypeScript, extract
+static CSS when possible, and keep runtime support for prop-driven or
+theme-driven styles.
+
+It is recommended to place the plugin before `@vitejs/plugin-react` so Fluentic
+sees the source before the React JSX transform. The JSX runtime setup handles
+`css` at element creation time. The css-prop preset compiles intrinsic JSX
+elements before React sees them. If you intentionally run without the plugin,
+configure the style runtime yourself before rendering the app.
+
+See [Plugin Options](./options.mdx) for `include`, `exclude`, `devSourcemap`,
+`getSourcemapFilePath`, and the development sourcemap modes.

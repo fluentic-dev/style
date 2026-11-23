@@ -1,0 +1,199 @@
+---
+title: Next.js
+description: Configure Fluentic Style for the Next.js App Router.
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Use the Next.js integration when your app uses the App Router and you want the
+runtime entries, development CSS, sourcemaps, production extraction, and static
+export support wired through one config helper. The adapter patches both the
+Webpack and Turbopack paths that Next uses internally.
+
+Install the package:
+
+<div className="package-install">
+<Tabs groupId="package-manager" defaultValue="pnpm">
+  <TabItem value="pnpm" label="pnpm">
+
+```sh
+pnpm add @fluentic/style
+```
+
+  </TabItem>
+  <TabItem value="npm" label="npm">
+
+```sh
+npm install @fluentic/style
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```sh
+yarn add @fluentic/style
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```sh
+bun add @fluentic/style
+```
+
+  </TabItem>
+</Tabs>
+</div>
+
+Configure Next:
+
+```js title="next.config.mjs"
+import stylePlugin from '@fluentic/style/plugin/nextjs';
+
+const nextConfig = {
+  // your Next config
+};
+
+export default stylePlugin(nextConfig);
+```
+
+The second argument accepts shared plugin options such as `include`, `exclude`,
+`css`, `dev`, `importSources`, and `getSourcemapFilePath`. See
+[Plugin Options](./options.mdx) for the common option shape and sourcemap details.
+
+Configure TypeScript JSX import source:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+If you prefer to keep Next's normal React JSX runtime, enable the React css-prop
+preset in the plugin options instead of setting `jsxImportSource` to Fluentic:
+
+```js title="next.config.mjs"
+import stylePlugin, { CssPropPresets } from '@fluentic/style/plugin/nextjs';
+
+const nextConfig = {
+  // your Next config
+};
+
+export default stylePlugin(nextConfig, {
+  cssProp: CssPropPresets.React,
+});
+```
+
+With this mode, keep your normal React TypeScript JSX settings:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx"
+  }
+}
+```
+
+Add the development RSC bridge in your root layout:
+
+```tsx title="app/layout.tsx"
+import { StyleDev } from '@fluentic/style/dev/rsc';
+import type { ReactNode } from 'react';
+
+import './globals.css';
+
+export default function RootLayout(props: { children: ReactNode }) {
+  return (
+    <html lang="en">
+      <body>{props.children}</body>
+
+      {process.env.NODE_ENV === 'development' && <StyleDev enableStyleDevUtils />}
+    </html>
+  );
+}
+```
+
+`StyleDev` is a development-only bridge for App Router styles.
+
+On the server, it uses `useServerInsertedHTML` to send newly changed Fluentic
+CSS during development renders. On the client, it starts the RSC development
+observer, which reads Fluentic style payloads from streamed server-rendered
+elements and inserts any missing rules into the development stylesheet.
+
+When `enableStyleDevUtils` is enabled, it also installs the browser console
+helper. `StyleDev` returns `null`, so it does not render visible UI.
+
+## StyleDev Props
+
+`StyleDev` accepts one main prop:
+
+```ts
+type StyleDevProps = {
+  enableStyleDevUtils?: boolean | {
+    name?: string;
+    silent?: boolean;
+  };
+};
+```
+
+`enableStyleDevUtils` controls the browser console helper:
+
+| Value | Behavior |
+| --- | --- |
+| omitted | Enables the helper as `window.StyleDevUtils`. |
+| `true` | Enables the helper as `window.StyleDevUtils`. |
+| `false` | Starts the RSC style observer, but does not install the console helper. |
+| `{ name: 'MyStyleTools' }` | Installs the helper on `window.MyStyleTools`. |
+| `{ silent: true }` | Installs the helper without the startup console message. |
+
+For example:
+
+```tsx title="app/layout.tsx"
+{process.env.NODE_ENV === 'development' && (
+  <StyleDev enableStyleDevUtils={{ name: 'FluenticStyleDev', silent: true }} />
+)}
+```
+
+With the default helper enabled, you can inspect and change development
+debugging behavior from the browser console:
+
+```ts
+StyleDevUtils.info();
+StyleDevUtils.usage();
+StyleDevUtils.getConfig();
+StyleDevUtils.setSourcemapMode.toStyle();
+StyleDevUtils.setSourcemapMode.toValue();
+StyleDevUtils.setElementMarker.toOn();
+StyleDevUtils.setElementMarker.toOff();
+StyleDevUtils.setPriorityMode.toLayer();
+StyleDevUtils.setPriorityMode.toSort();
+StyleDevUtils.reset();
+```
+
+The plugin owns the Fluentic CSS entry in development and production. Keep your
+normal app CSS imports in `app/layout.tsx`; you do not need to import a Fluentic
+plugin CSS file manually.
+
+For production builds, run your normal Next build:
+
+```sh
+next build
+```
+
+Static export works through normal Next configuration:
+
+```js title="next.config.mjs"
+import stylePlugin from '@fluentic/style/plugin/nextjs';
+
+export default stylePlugin({
+  output: 'export',
+  trailingSlash: true,
+});
+```
+
+Supported static style chains are extracted into CSS. Values that depend on
+props, themes, or app composition continue to resolve through the runtime.

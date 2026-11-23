@@ -1,0 +1,22 @@
+---
+title: Custom Compiler
+description: Notes for custom build systems.
+---
+
+Use a custom integration only when the provided adapters do not fit your build
+system. The stable public path is to use a bundler adapter; the compiler APIs
+used by those adapters currently live in the package source.
+
+A custom integration is responsible for the same work the provided adapters do:
+
+- passing supported source files to the compiler;
+- preserving source maps;
+- emitting extracted CSS;
+- writing or aliasing the Fluentic runtime entry;
+- leaving runtime imports available for dynamic styles;
+- keeping JSX configured with `@fluentic/style/plugin/jsx`.
+
+The compiler should see source files before another transform hides
+`style(...)`, `style.slot(...)`, `style.scope(...)`, `createTheme(...)`, or JSX.
+The component code should stay ordinary Fluentic: style, slot, scope, and
+`combineStyle`.

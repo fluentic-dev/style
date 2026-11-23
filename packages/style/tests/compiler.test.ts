@@ -2389,10 +2389,10 @@ const styles = {
 
   includes(result.code, 'createExtractedSlot');
   includes(result.code, 'createExtractedToken');
-  includes(result.code, '[1, "--var-');
+  includes(result.code, '[1, "--token-');
   includes(result.code, 'createExtractedToken(');
-  includes(css, 'background-color: var(--var-');
-  includes(css, ', var(--token-');
+  includes(css, 'background-color: var(--token-');
+  notIncludes(css, 'var(--var-');
   includes(css, ', blue)');
 });
 
@@ -2536,10 +2536,10 @@ const styles = {
 
   includes(result.code, '[1, "--custom-token-');
   includes(css, 'background-color: var(--custom-token-');
-  includes(css, ', var(--custom-token-');
+  notIncludes(css, 'var(--var-');
 });
 
-test('compiler uses property-local variables for token values', () => {
+test('compiler uses direct token variables for token values', () => {
   const compiler = createCompiler({
     layer: false,
     css: { debugClassName: true },
@@ -2562,9 +2562,9 @@ const styles = {
   if (!result) throw new Error('expected compiler transform result');
 
   const css = result.css.join('\n');
-  const match = css.match(/background-color: var\((--var-[a-z0-9]+), var\(--token-[^,]+, blue\)/);
+  const match = css.match(/background-color: var\((--token-[^,]+), blue\)/);
 
-  if (!match) throw new Error('expected property-local token variable');
+  if (!match) throw new Error('expected direct token variable');
 
   includes(result.code, `[1, "${match[1]}", token`);
 });
@@ -2811,7 +2811,7 @@ export const styles = {
 
   includes(result.code, 'createExtractedSlot');
   includes(css, 'display: flex');
-  includes(css, 'background-color: var(--var-');
+  includes(css, 'background-color: var(--token-');
   includes(css, 'gap: 12px');
   includes(css, 'min-height: 100vh');
   includes(css, 'color: red');
@@ -2934,9 +2934,8 @@ const rule = style({ color: 'red' });
 
   const css = result.css.join('\n');
 
-  includes(css, '@layer css;');
+  includes(css, '@layer css, css.important;');
   includes(css, '@layer css {');
-  includes(css, '@layer css.important;');
   equal(countOccurrences(css, '@layer css {'), 1);
   includes(css, 'color: red');
 });
@@ -3380,11 +3379,11 @@ export const card = style({
   const borderVar = result.code.match(/"borderColor": "(--var-[^"]+)"/)?.[1];
 
   includes(css, 'border: 1px solid');
-  includes(css, 'background-color: var(--var-');
-  includes(css, 'border-color: var(--var-');
+  includes(css, 'background-color: var(--token-');
+  includes(css, 'border-color: var(--token-');
   if (!backgroundVar || !borderVar) throw new Error('expected debug css variables');
-  includes(css, `background-color: var(${backgroundVar},`);
-  includes(css, `border-color: var(${borderVar},`);
+  notIncludes(css, backgroundVar);
+  notIncludes(css, borderVar);
 });
 
 test('compiler extracts imported createValues through tsconfig path aliases', () => {
@@ -3502,8 +3501,8 @@ export const priceCard = style({
   const css = result.rules.map((rule) => rule.css).join('\n');
 
   includes(css, 'border: 1px solid');
-  includes(css, 'background-color: var(--var-');
-  includes(css, 'border-color: var(--var-');
+  includes(css, 'background-color: var(--token-');
+  includes(css, 'border-color: var(--token-');
   includes(css, 'background: linear-gradient(180deg, var(--token-sympl-theme-color-wave2');
 });
 
@@ -4173,10 +4172,9 @@ const rule = style({ color: 'red' });
 
   const css = result.css.join('\n');
 
-  includes(css, '@layer reset, app, overrides;');
+  includes(css, '@layer reset, app, app.important, overrides;');
   includes(css, ', overrides;');
   includes(css, '@layer app {');
-  includes(css, '@layer app.important;');
   equal(countOccurrences(css, '@layer app {'), 1);
 });
 
@@ -4501,8 +4499,8 @@ export const styles = {
   includes(css, 'var(--token-');
   includes(css, 'blue');
 
-  const textVar = css.match(/color: var\(--var-[^,]+, var\(--token-([^,)]+)/)?.[1];
-  const bgVar = css.match(/background-color: var\(--var-[^,]+, var\(--token-([^,)]+)/)?.[1];
+  const textVar = css.match(/color: var\(--token-([^,)]+)/)?.[1];
+  const bgVar = css.match(/background-color: var\(--token-([^,)]+)/)?.[1];
 
   if (!textVar || !bgVar) {
     throw new Error(`expected imported token styles in ${css}`);
@@ -4600,9 +4598,9 @@ test('compiler keeps token identity across separately extracted theme and style 
   const themeTextVar = css.match(/(--token-color--text[^:;{]*):#0f172a/)?.[1];
   const themeSurfaceVar = css.match(/(--token-color--surface[^:;{]*):var\(--token-/)?.[1];
   const themeSpaceVar = css.match(/(--token-space--panel[^:;{]*):32/)?.[1];
-  const styleTextVar = css.match(/color: var\(--var-[^,]+, var\((--token-[^,)]+)/)?.[1];
-  const styleSurfaceVar = css.match(/background-color: var\(--var-[^,]+, var\((--token-[^,)]+)/)?.[1];
-  const styleSpaceVar = css.match(/padding: var\(--var-[^,]+, var\((--token-[^,)]+)/)?.[1];
+  const styleTextVar = css.match(/color: var\((--token-[^,)]+)/)?.[1];
+  const styleSurfaceVar = css.match(/background-color: var\((--token-[^,)]+)/)?.[1];
+  const styleSpaceVar = css.match(/padding: var\((--token-[^,)]+)/)?.[1];
 
   if (!themeTextVar || !themeSurfaceVar || !themeSpaceVar) {
     throw new Error(`expected extracted theme token variables in ${css}`);
@@ -4830,7 +4828,10 @@ test('compiler extracts absolute and relative sheet layers with explicit root or
   includes(result.code, 'createExtractedSheet');
   notIncludes(result.code, 'createSheet(');
   includes(result.code, '".reset"');
-  includes(css, '@layer reset, fluentic, sheet, overrides;');
+  includes(
+    css,
+    '@layer reset, reset.important, fluentic, fluentic.important, fluentic.reset, fluentic.reset.important, sheet, sheet.important, overrides, overrides.important;',
+  );
   for (const name of ['reset', 'fluentic.reset', 'overrides', 'sheet']) includes(css, '@layer ' + name + ' {');
   notIncludes(css, ':where(.');
   notIncludes(css, '@layer fluentic.sheet');
@@ -4849,7 +4850,7 @@ test('compiler keeps named sheet layers when ordinary style layers are disabled'
   );
   if (!result) throw new Error('expected compiler output');
   const css = result.css.join('\n');
-  includes(css, '@layer reset;');
+  includes(css, '@layer reset, reset.important;');
   includes(css, '@layer reset {');
   notIncludes(css, '@layer css.reset {');
 });

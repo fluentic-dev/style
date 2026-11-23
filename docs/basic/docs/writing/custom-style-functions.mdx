@@ -1,0 +1,259 @@
+---
+title: Custom style functions
+description: Define your own style properties, utility names, and design-system conventions.
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+You can choose the properties and utility names your team writes. For example, `row: true` can set up a flex row, and `'bg-brand'` can set your brand color. A transform maps those inputs to CSS; the selector configuration supplies the chain methods.
+
+Both are independent choices. Keep the built-in methods and customize the properties, use your own methods with normal CSS properties, or customize both.
+
+## Define custom object properties
+
+This function accepts normal CSS properties plus `row` and `gapX`:
+
+```ts title="src/styles.ts"
+import { createStyleFn, styleTransform, type CSSProperties } from '@fluentic/style';
+import { PrioritySelectors } from '@fluentic/style/selector';
+
+type UiStyle = CSSProperties & {
+  row?: boolean;
+  gapX?: CSSProperties['columnGap'];
+};
+
+const objectTransform = styleTransform<UiStyle>({
+  transform({ row, gapX, ...css }) {
+    if (row) {
+      css.display = 'flex';
+      css.flexDirection = 'row';
+    }
+    if (gapX !== undefined) {
+      css.columnGap = gapX;
+    }
+    return css;
+  },
+});
+
+export const { style: ui } = createStyleFn({
+  selectors: PrioritySelectors,
+  transform: objectTransform,
+});
+```
+
+`row: true` produces `display: 'flex'` and `flexDirection: 'row'`. `gapX` sets `columnGap`. The remaining CSS properties pass through unchanged.
+
+```tsx
+import { ui } from './styles';
+
+const toolbar = ui({
+  row: true,
+  gapX: 12,
+  padding: 16,
+})
+  .hover({
+    gapX: 16,
+  });
+
+<header css={toolbar}>Your tools</header>
+```
+
+The chain methods accept your custom properties too. Here, hovering the toolbar changes its column gap.
+
+Your transform decides what happens when inputs overlap. In this implementation, `row: true` sets `display: 'flex'` even if the same object supplies another `display` value. That behavior comes from the order of assignments in your function.
+
+## Define custom utility class names
+
+Your transform is a regular TypeScript function: it takes a utility name and returns CSS properties. With compiler extraction enabled, Fluentic runs it at build time to generate CSS. Extracted styles don't call the transform in the browser, and the bundler removes the transform and its style map when no runtime code uses them. You can focus on making the transform easy to read instead of optimizing it for browser speed or bundle size.
+
+You choose the utility names and how to convert them to CSS. Fluentic doesn't require a switch statement or a lookup map: both are regular TypeScript implementations of the same transform. Use whichever you find easier to read and maintain.
+
+### Write the transform
+
+<Tabs className="framework-tabs" defaultValue="switch">
+<TabItem value="switch" label="Union + switch">
+
+Declare the accepted names as a union, then return CSS properties for each name:
+
+```ts title="src/styles.ts"
+import { classNameTransform } from '@fluentic/style';
+
+type Utility =
+  | 'inline-flex'
+  | 'items-center'
+  | 'px-4'
+  | 'py-2'
+  | 'bg-brand'
+  | 'bg-brand-hover'
+  | 'text-white';
+
+const transform = classNameTransform<Utility>({
+  transform(className) {
+    switch (className) {
+      case 'inline-flex':
+        return {
+          display: 'inline-flex',
+        };
+      case 'items-center':
+        return {
+          alignItems: 'center',
+        };
+      case 'px-4':
+        return {
+          paddingLeft: 16,
+          paddingRight: 16,
+        };
+      case 'py-2':
+        return {
+          paddingTop: 8,
+          paddingBottom: 8,
+        };
+      case 'bg-brand':
+        return {
+          backgroundColor: '#7043ce',
+        };
+      case 'bg-brand-hover':
+        return {
+          backgroundColor: '#31205e',
+        };
+      case 'text-white':
+        return {
+          color: 'white',
+        };
+    }
+  },
+});
+```
+
+`Utility` gives you autocomplete and type checking for the names. Each `case` defines the CSS that name produces.
+
+</TabItem>
+<TabItem value="lookup" label="Lookup map">
+
+Alternatively, store the CSS in an object and return the entry for each name:
+
+```ts title="src/styles.ts"
+import { classNameTransform, type CSSProperties } from '@fluentic/style';
+
+const styles = {
+  'inline-flex': {
+    display: 'inline-flex',
+  },
+  'items-center': {
+    alignItems: 'center',
+  },
+  'px-4': {
+    paddingLeft: 16,
+    paddingRight: 16,
+  },
+  'py-2': {
+    paddingTop: 8,
+    paddingBottom: 8,
+  },
+  'bg-brand': {
+    backgroundColor: '#7043ce',
+  },
+  'bg-brand-hover': {
+    backgroundColor: '#31205e',
+  },
+  'text-white': {
+    color: 'white',
+  },
+} satisfies Record<string, CSSProperties>;
+
+const transform = classNameTransform<keyof typeof styles>({
+  transform(className) {
+    return styles[className];
+  },
+});
+```
+
+`satisfies` checks the CSS properties. `keyof typeof styles` infers the accepted utility names from the keys, so there is no separate union to maintain.
+
+</TabItem>
+</Tabs>
+
+### Create the function
+
+Pass the transform to `createClassNameFn`. The `selectors` option defines the available chain methods and the CSS selectors or queries they apply. Here, `PrioritySelectors` adds methods such as `.hover()` and `.focusVisible()`. See the [selector reference](../reference/selectors.mdx) for the built-in sets, or [custom chain methods](../beyond-the-basics/custom-chain-methods.mdx) to define your own methods, selectors, and priorities.
+
+```ts title="src/styles.ts (continued)"
+import { createClassNameFn } from '@fluentic/style';
+import { PrioritySelectors } from '@fluentic/style/selector';
+
+export const { className: cx } = createClassNameFn({
+  selectors: PrioritySelectors,
+  transform,
+});
+```
+
+The returned function is named `cx` here. It now accepts your utility names and supports state chains.
+
+### Use your utility names
+
+As with `style`, chain methods control states and conditions. Object-based methods take CSS properties or your custom style objects; class-name methods take a list of utility names. That list can include conditional entries, such as `compact && 'px-4'`, which is skipped when `compact` is false.
+
+```tsx title="src/App.tsx"
+import { cx } from './styles';
+
+const button = cx(
+  'inline-flex',
+  'items-center',
+  'px-4',
+  'py-2',
+  'bg-brand',
+  'text-white',
+)
+  .hover('bg-brand-hover');
+
+export default function App() {
+  return <button css={button}>Save changes</button>;
+}
+```
+
+`cx(...)` combines the CSS for those utility names. `.hover('bg-brand-hover')` changes the background when the button is hovered. Pass the completed style through `css`, just as you would with an object-based style.
+
+You don't need to write separate CSS classes for these names: Fluentic generates the CSS from your transform. Keep the chain connected to `cx(...)` so the compiler can recognize it.
+
+## Register your functions with the compiler
+
+Extend the React + Vite configuration from Installation:
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+import { cx, ui } from './src/styles';
+
+export default defineConfig({
+  plugins: [
+    stylePlugin({
+      importSources: [{
+        source: '**/styles',
+        name: 'cx',
+        styleFn: cx,
+      }, {
+        source: '**/styles',
+        name: 'ui',
+        styleFn: ui,
+      }],
+    }),
+    react({ jsxImportSource: '@fluentic/style/plugin/jsx' }),
+  ],
+});
+```
+
+The `source` glob matches imports ending in `/styles`, such as `'./styles'`, `'../styles'`, or `'@/styles'`. Use a pattern that matches the module exporting your configured `cx` function. See [import sources](../reference/plugin-options.mdx#import-sources) for string, glob, and regular-expression matching.
+
+## Combine properties, utility names, and custom methods
+
+The object transform and class-name transform can use the same selector configuration. Replace `PrioritySelectors` with the configuration from [Custom chain methods](./custom-chains.mdx) to add methods such as `.open()` or `.mobile()` to either function.
+
+For a design system, use transforms for repeated styling conventions, [tokens and themes](../themes.mdx) for configurable values, and [component parts](../components.mdx) for styling a component from outside. These features work together: a custom object function also provides `ui.slot(...)` and `ui.scope(...)`.
+
+You can keep normal CSS properties for one-off styles. You don't need to invent a custom name for every declaration.
+
+## What's next?
+
+[Composition](./composition.mdx) covers combining styles and overrides. [Organizing styles](./organize-styles.mdx) covers where to keep definitions as your components grow.

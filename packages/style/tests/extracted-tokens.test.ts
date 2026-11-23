@@ -6,8 +6,11 @@ import { BUILDER_STATE } from '../builder/data/const';
 import * as extracted from '../builder/extract';
 import { CompilerRuntimeMode, createCompiler as createProductionCompiler } from '../compiler';
 import { createNamedToken, createNamedTokens, getNamedToken } from '../dialect';
+import { combineStyle as combineExtractedStyle } from '../runtime/extract/combineStyle';
+import { getClassName as getExtractedClassName } from '../runtime/extract/getClassName';
 import { getToken } from '../runtime/extract/token';
 import { getStyleTokenVarName, type StyleTokenData } from '../style/token';
+import { resolveStyleProp } from './setup';
 import { createCompiler, deepEqual, equal, includes, notEqual, notIncludes, style, test } from './setup';
 
 function execute(code: string, names: string[], imports: Record<string, unknown> = {}) {
@@ -242,4 +245,51 @@ test('unresolved token group leaves produce a diagnostic instead of empty object
     message = String(error);
   }
   includes(message, 'factory inputs must be statically resolvable');
+});
+
+test('direct token variables preserve inheritance and apply combineStyle overrides on consumers', () => {
+  const result = compile(`
+import { createToken, style } from '@fluentic/style';
+const accent = createToken('blue');
+const unrelated = createToken('black');
+const label = style({ color: accent });
+const icon = style({ backgroundColor: accent });
+`);
+  const values = execute(result.code, ['accent', 'unrelated', 'label', 'icon']);
+  const tokenName = getStyleTokenVarName(values.accent);
+  if (!tokenName) throw new Error('expected extracted token variable name');
+  notIncludes(result.css.join('\n'), '--var-');
+  includes(result.css.join('\n'), `color: var(${tokenName}, blue)`);
+  for (const resolve of [getExtractedClassName, resolveStyleProp]) {
+    equal(resolve(values.label).style, undefined);
+    equal(resolve(combineExtractedStyle(values.label, values.unrelated('white'))).style, undefined);
+    for (const item of [values.label, values.icon]) {
+      const overridden = resolve(combineExtractedStyle(item, values.accent('green')));
+      deepEqual(overridden.style, { [tokenName]: 'green' });
+    }
+  }
+});
+
+test('direct token overrides support aliases, removal, and one shared value per element', () => {
+  const result = compile(`
+import { createToken, style } from '@fluentic/style';
+const accent = createToken('blue');
+const replacement = createToken('purple');
+const label = style({ color: accent });
+const icon = style({ backgroundColor: accent });
+`);
+  const values = execute(result.code, ['accent', 'replacement', 'label', 'icon']);
+  const tokenName = getStyleTokenVarName(values.accent);
+  if (!tokenName) throw new Error('expected extracted token variable name');
+  for (const resolve of [getExtractedClassName, resolveStyleProp]) {
+    const red = combineExtractedStyle(values.label, values.accent('red'));
+    const blue = combineExtractedStyle(values.icon, values.accent('blue'));
+    deepEqual(resolve([red, blue]).style, { [tokenName]: 'blue' });
+    deepEqual(resolve([blue, red]).style, { [tokenName]: 'red' });
+    const alias = combineExtractedStyle(values.label, values.accent(values.replacement));
+    deepEqual(resolve(alias).style, { [tokenName]: getToken(values.replacement) });
+    equal(resolve(values.label).style, undefined);
+    deepEqual(resolve(red).style, { [tokenName]: 'red' });
+    equal(resolve(values.label).style, undefined);
+  }
 });

@@ -1,0 +1,157 @@
+---
+title: Add Global Styles
+description: Set document defaults and write global selectors with createGlobalSheet.
+---
+
+Use `createGlobalSheet(...)` for styles that belong to the document: a small reset,
+base typography, or a shared selector that should apply throughout the app.
+Unlike an element style, a global sheet does not need a `css` prop or a generated
+class attached to an element.
+
+## Start With Document Defaults
+
+Create a normal TypeScript module:
+
+```ts title="global.styles.ts"
+import { style } from '@fluentic/style';
+import { createGlobalSheet } from '@fluentic/style/css';
+
+createGlobalSheet([
+  style.selector(['*', '*::before', '*::after'], {
+    boxSizing: 'border-box',
+  }),
+  style.selector('body', {
+    margin: 0,
+    fontFamily: 'system-ui, sans-serif',
+    lineHeight: 1.5,
+  }),
+  style.selector(['button', 'input', 'select', 'textarea'], {
+    font: 'inherit',
+  }),
+]);
+```
+
+Each `style.selector(...)` names the elements to style. The selectors are used
+as written: `body` targets the document body, and `button` targets every matching
+button. There is no parent selector added around them.
+
+Import this module once from your application entry:
+
+```ts title="main.tsx"
+import './global.styles';
+
+// Mount your application as usual.
+```
+
+In Next.js, import it from the root layout instead. Keep the normal Fluentic
+plugin and `StyleDev` integration enabled for development. A global sheet
+returns nothing; do not pass the call to a `css` prop.
+
+## Options
+
+Start with `createGlobalSheet(items)`. Add an options object only when you need
+to change the order or use a CSS layer.
+
+### Order
+
+By default, global styles come before regular styles. Set `order: 1` to put them
+after regular styles instead:
+
+```ts
+createGlobalSheet({ order: 1 }, [
+  style.selector('.announcement', { textDecorationLine: 'underline' }),
+]);
+```
+
+`order` defaults to `0`. Zero and negative numbers place a global sheet before
+regular styles; positive numbers place it after them. This includes styles
+created with `style(...)` and `createSheet(...)`.
+
+When you have several global sheets, lower numbers come first. Sheets with the
+same number stay in the order Fluentic first encounters them. Use different
+numbers when their relative order matters.
+
+A later rule wins when the other CSS precedence rules are equal. `order` changes
+where the CSS appears; it does not make a selector more specific. See
+[Style ordering and the cascade](../reference/style-ordering.mdx) for details.
+
+### Layer
+
+Global styles have no layer by default. If your app uses CSS layers, choose one
+with `layer`:
+
+```ts
+createGlobalSheet({ layer: 'reset' }, [
+  style.selector('body', { margin: 0 }),
+]);
+```
+
+This puts the rule in a layer named `reset`. To place that layer before Fluentic's
+regular style layers, add it to your plugin configuration:
+
+```ts
+css: {
+  layers: ['reset', '$layer'],
+}
+```
+
+`$layer` represents Fluentic's generated layers. With this configuration, normal
+regular styles can override the reset defaults.
+
+Use `layer: true` to share the layer used by regular styles. You can combine
+`layer` and `order` when you need both. The
+[API reference](../reference/create-global-sheet.mdx) covers all layer options.
+
+## Make Conditional Styles Depend On A Selector
+
+With extraction enabled, a statically extractable global sheet becomes build-time
+CSS. This also happens when the source call is inside a function: putting the call
+in a click handler does not make its extracted CSS wait for the click.
+
+Declare the rule once, then change a class or attribute on the element:
+
+```ts title="global.styles.ts"
+createGlobalSheet([
+  style.selector('[data-announcement="active"]', {
+    textDecorationLine: 'underline',
+  }),
+]);
+```
+
+```tsx
+<p data-announcement={active ? 'active' : undefined}>
+  A new release is available.
+</p>
+```
+
+In client runtime mode, the global call injects and flushes its CSS immediately.
+In an extracted production build, the CSS is already in the generated stylesheet.
+The attribute controls whether the selector matches in either mode.
+
+## Keep Component Overrides Local
+
+Prefer `style(...)` for elements you own. For a third-party component's internal
+selectors, prefer `createSheet(...)` attached to your wrapper:
+
+```tsx
+import { style } from '@fluentic/style';
+import { createSheet } from '@fluentic/style/css';
+
+const editorSheet = createSheet([
+  style.selector('.vendor-editor__toolbar', { gap: 8 }),
+]);
+
+export function EditorWrapper() {
+  return <div css={editorSheet}><VendorEditor /></div>;
+}
+```
+
+The sheet's generated parent class limits those selectors to that wrapper.
+Use a global sheet when the same policy should reach every matching element,
+or when an integration gives you no suitable attachment point. For portal
+content, first check whether the library lets you attach a class to the portal
+root; a local sheet can still be scoped there.
+
+See [Styling Third-Party Components](./styling-third-party-components.mdx)
+for wrapper and portal examples, or the
+[createGlobalSheet reference](../reference/create-global-sheet.mdx) for the API.

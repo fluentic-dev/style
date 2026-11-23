@@ -1,0 +1,137 @@
+---
+title: Runtime And Dev
+description: Runtime configuration and development utility APIs.
+---
+
+## configureStyleRuntime
+
+Import from `@fluentic/style/config`:
+
+```ts
+import { configureStyleRuntime } from '@fluentic/style/config';
+```
+
+Use it when runtime-only setup needs to configure CSS output before rendering.
+Most bundler integrations configure this for you.
+
+```ts
+configureStyleRuntime({
+  check: {
+    important: {
+      rawValue: 'error',
+      outsideSheet: 'warn',
+    },
+  },
+  css: {
+    debugClassName: true,
+    classNameFormat: '(property)-$hash',
+    sheetClassNameFormat: 'sheet-(property)[-(value)]--$hash',
+  },
+});
+```
+
+`check.important.rawValue` checks for raw string values containing
+`!important`; use `style.important(value)` instead. The
+`check.important.outsideSheet` check recommends `style.weight(...)` when an
+ordinary style only needs higher internal priority. Each check accepts
+`false`, `'warn'`, or `'error'` and is disabled by default. Runtime warnings are
+development-only, while runtime errors remain active when explicitly enabled.
+
+When a bundler plugin is installed, configure `check` on the plugin instead so
+the compiler can report static cases and pass the same settings to the runtime.
+See [Plugin Options](./plugin-options.mdx#check-options).
+
+### Stylesheet injection
+
+Use `document` to control where the runtime injects stylesheets:
+
+```ts
+configureStyleRuntime({ document: false }); // Disable stylesheet injection.
+configureStyleRuntime({ document: true }); // Use globalThis.document when available.
+configureStyleRuntime({ document: dom.window.document }); // Use a supplied document, e.g. jsdom.
+```
+
+Automatic document selection is the default. Without a document, injection is
+skipped safely. Omitting `document` in a later configuration call preserves the
+existing setting. This option is also available when using a bundler plugin.
+
+Configure the destination before rendering. Changing it disposes of the previous
+runtime sheets; subsequent renders insert styles into the new destination.
+Previously rendered styles are not automatically replayed. Reapplying the same
+setting does not reset sheets. Do not manually delete style tags while retaining
+the same runtime sheet: its insertion tracking still remembers those rules.
+
+Disabling injection preserves resolved classes and inline variables.
+`createStyleTarget` still applies those values to its explicit element; your hook
+owns its lifecycle and calls `destroy()` for cleanup. The option does not suppress
+CSS loaded separately by a bundler or collect server CSS.
+
+For component tests, `document: false` avoids stylesheet side effects. The `css`
+prop still requires the Fluentic JSX runtime. For CSS inspection, provide a DOM
+document and inspect its stylesheets; production insertion can use `cssRules`
+instead of style-tag text. Development CSS may include debug metadata. Use a real
+browser to verify cascade and layout. This configuration is global within the
+runtime environment, so concurrent tests cannot select independent destinations.
+
+## configureStyleDev
+
+Import from `@fluentic/style/dev`:
+
+```ts
+import { configureStyleDev } from '@fluentic/style/dev';
+```
+
+Use it in development when you need to enable dev behavior manually.
+
+```ts
+configureStyleDev({
+  sourcemapMode: 'style',
+  elementClassName: true,
+  utils: { name: 'StyleDevUtils' },
+});
+```
+
+## enableStyleDevUtils
+
+Import from `@fluentic/style/dev`:
+
+```ts
+import { enableStyleDevUtils } from '@fluentic/style/dev';
+```
+
+It installs the browser console helper, usually as `StyleDevUtils`:
+
+```ts
+enableStyleDevUtils();
+
+StyleDevUtils.info();
+StyleDevUtils.setSourcemapMode.toStyle();
+StyleDevUtils.setElementMarker.toOn();
+```
+
+## StyleDev
+
+Import from `@fluentic/style/dev/rsc`:
+
+```tsx
+import { StyleDev } from '@fluentic/style/dev/rsc';
+```
+
+Use it near the root of a Next.js App Router or RSC app during development:
+
+```tsx
+export default function RootLayout(props: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        {props.children}
+        {process.env.NODE_ENV === 'development'
+          ? <StyleDev enableStyleDevUtils />
+          : null}
+      </body>
+    </html>
+  );
+}
+```
+
+For the workflow guide, see [DevTools And Sourcemaps](../beyond-the-basics/devtools-and-sourcemaps.mdx).

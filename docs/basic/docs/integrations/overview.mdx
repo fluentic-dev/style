@@ -1,0 +1,32 @@
+---
+title: Integration Overview
+description: Choose the setup path for your build system.
+---
+
+The integration layer wires Fluentic into the build system you already use.
+
+Your component code still uses the same APIs:
+
+```txt
+style -> slot -> scope -> combineStyle
+```
+
+The integration handles the pieces that differ by build system: JSX runtime
+wiring, development CSS, sourcemaps, runtime entries, and static extraction.
+
+| Environment | Start here |
+| --- | --- |
+| Shared plugin options | [Plugin Options](./options.mdx) |
+| Next.js App Router | [Next.js](./nextjs.mdx) |
+| Vite + React | [Vite](./vite.mdx) |
+| Vite + SolidJS | [SolidJS](./solidjs.mdx) |
+| Vite + Preact | [PreactJS](./preact.mdx) |
+| Webpack | [Webpack](./webpack.mdx) |
+| Rspack | [Rspack](./rspack.mdx) |
+| Farm | [Farm](./farm.mdx) |
+| Parcel 2 | [Parcel](./parcel.mdx) |
+| No compiler plugin | [Runtime-Only Mode](./runtime-only-mode.mdx) |
+| Custom build system | [Custom Compiler](./custom-compiler.mdx) |
+
+Production apps should use a bundler adapter when one exists. Runtime-only usage
+works with the JSX runtime configured, but it keeps more work in the browser.

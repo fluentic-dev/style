@@ -1,0 +1,128 @@
+---
+title: Writing styles
+description: CSS properties, interaction states, responsive rules, and variants.
+---
+
+import LessonPreview from '@site/src/components/LessonPreview';
+import DocLink from '@site/src/components/DocLink';
+
+If you've written CSS in JavaScript, this will look familiar. Pass your CSS properties to `style` and apply the result through `css`. Your editor provides autocomplete for properties and values.
+
+```tsx title="Button.tsx"
+import { style } from '@fluentic/style';
+
+const button = style({
+  padding: '12px 24px',
+  backgroundColor: '#7043ce',
+  color: 'white',
+  border: 0,
+  borderRadius: 10,
+  cursor: 'pointer',
+});
+
+export function Button() {
+  return <button type="button" css={button}>Save changes</button>;
+}
+```
+
+Fluentic knows which CSS properties are unitless: `borderRadius: 10` becomes `10px`, while `opacity: 1` stays `1`. See the <DocLink path='/docs/reference/numeric-values/'>numeric values reference</DocLink> for details.
+
+## Add states with chains
+
+Fluentic uses chain methods to apply styles for states such as `.hover()` and `.active()`, or conditions such as `.media()` and `.container()` queries.
+
+```tsx title="Button.tsx"
+const button = style({
+  padding: '12px 24px',
+  backgroundColor: '#7043ce',
+  color: 'white',
+  border: 0,
+  borderRadius: 10,
+  cursor: 'pointer',
+})
+  .hover({
+    backgroundColor: '#31205e',
+    boxShadow: '0 6px 16px rgb(49 32 94 / 0.35)',
+  })
+  .focusVisible({
+    outline: '2px solid #7043ce',
+    outlineOffset: 3,
+  });
+
+<button type="button" css={button}>Save changes</button>
+```
+
+Keep each chain connected to `style(...)` so the compiler can recognize it. For reuse, combine completed styles through `css`, as shown below. [Understand style chains](./style-chains.mdx) covers the available methods and how states work together.
+
+<LessonPreview kind="states" />
+
+## Change styles based on props
+
+A button might need a smaller size in a toolbar. You can give it a `compact` prop that reduces its padding while keeping its colors, border, and interaction states. This alternate appearance is often called a **variant**.
+
+The `css` prop accepts an array of styles. In this example, `button` provides the default appearance, and `props.compact && compact` adds smaller padding only when the `compact` prop is `true`:
+
+```tsx title="Button.tsx"
+const compact = style({
+  padding: '6px 12px',
+});
+
+type ButtonProps = {
+  compact?: boolean;
+};
+
+export function Button(props: ButtonProps) {
+  return (
+    // highlight-next-line
+    <button type="button" css={[button, props.compact && compact]}>
+      Save changes
+    </button>
+  );
+}
+```
+
+When `compact` is true, its padding replaces the base padding. The colors, hover, and focus styles still come from `button`. When it is false, that entry is skipped. You can use the same pattern for selected items, error states, or any appearance controlled by your app.
+
+<LessonPreview kind="composition" />
+
+For declarations under the same condition, later styles in the array override earlier ones. A base style and a hover style have different conditions; change the hover rule itself when you want a different hover appearance.
+
+## Add responsive styles
+
+Use `.media()` to change styles at a breakpoint. Here, the buttons sit side by side on wider screens and stack on smaller ones:
+
+You can define the query as a constant and reuse it across files. The compiler resolves imported constants as long as it can trace them to a value at build time.
+
+```ts title="breakpoints.ts"
+export const smallScreen = '(max-width: 600px)';
+```
+
+```tsx title="Actions.tsx"
+import { style } from '@fluentic/style';
+import { Button } from './Button';
+import { smallScreen } from './breakpoints';
+
+const actions = style({
+  display: 'flex',
+  gap: 16,
+})
+  .media(smallScreen, {
+    flexDirection: 'column',
+    gap: 8,
+  });
+
+export function Actions() {
+  return (
+    <div css={actions}>
+      <Button />
+      <Button compact />
+    </div>
+  );
+}
+```
+
+Media queries use normal CSS syntax. You can also use them for preferences such as `prefers-reduced-motion` or `prefers-color-scheme`.
+
+## What's next?
+
+[Class-name styles](./class-name-styles.mdx) let you write utility names similar to [Tailwind CSS](https://tailwindcss.com/) or [UnoCSS](https://unocss.dev/). Start with Fluentic's built-in Tailwind preset, then explore [style chains](./style-chains.mdx) for more states and conditions.

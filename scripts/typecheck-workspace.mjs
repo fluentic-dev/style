@@ -7,6 +7,8 @@ const ignoredDirs = new Set([
   '.dprint-cache',
   '.git',
   '.next',
+  '.docusaurus',
+  'build',
   '.source',
   '.tmp',
   '.temp',

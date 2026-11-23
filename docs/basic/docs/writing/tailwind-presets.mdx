@@ -1,0 +1,114 @@
+---
+title: Tailwind presets
+description: Use built-in Tailwind-like utilities as class names or object properties.
+---
+
+Fluentic includes Tailwind presets for two ways of writing styles: utility class names such as `'px-4'`, and object properties such as `{ px: '$4' }`. Both use the preset's spacing, color, and other theme values.
+
+## Configure the presets
+
+This module creates `cx` for class-name styles and `tw` for object-based styles, using the same default theme:
+
+```ts title="src/styles.ts"
+import { createClassNameFn, createStyleFn } from '@fluentic/style';
+import {
+  createTailwindClassNamePreset,
+  createTailwindStyleTransform,
+  defaultTailwindTheme,
+  TailwindSelectors,
+} from '@fluentic/style/presets/tailwind';
+
+const config = { theme: defaultTailwindTheme };
+const classNamePreset = createTailwindClassNamePreset(config);
+
+export const { className: cx } = createClassNameFn({
+  selectors: classNamePreset.selectors,
+  transform: classNamePreset.transform,
+});
+
+export const { style: tw } = createStyleFn({
+  selectors: TailwindSelectors,
+  transform: createTailwindStyleTransform(config),
+});
+```
+
+You can configure just the function you want to use.
+
+## Write utility class names
+
+```tsx
+import { cx } from './styles';
+
+const button = cx(
+  'px-4',
+  'py-2',
+  'bg-violet-600',
+  'text-white',
+  'rounded-lg',
+)
+  .hover('bg-violet-700')
+  .md('px-6');
+
+<button css={button}>Save changes</button>
+```
+
+The utility names look like Tailwind classes. For hover and responsive styles, use `.hover()` and `.md()` instead of prefixes such as `hover:` and `md:` inside the strings. `.md()` applies its styles at viewport widths of 768px and above.
+
+The [Tailwind class-name reference](../presets/tailwind/class-name.mdx) covers supported utilities, custom theme values, and differences from Tailwind CSS.
+
+## Write utility properties
+
+Here is the same button using the object-based preset:
+
+```tsx
+import { tw } from './styles';
+
+const button = tw({
+  px: '$4',
+  py: '$2',
+  bg: '$violet.600',
+  text: '$white',
+  rounded: '$lg',
+})
+  .hover({
+    bg: '$violet.700',
+  })
+  .md({
+    px: '$6',
+  });
+
+<button css={button}>Save changes</button>
+```
+
+`px` sets left and right padding; `py` sets top and bottom padding. Values beginning with `$` refer to the preset's theme: `'$4'` selects spacing step 4, and `'$violet.600'` selects shade 600 from the violet palette.
+
+Object values can also use JavaScript expressions, such as `px: compact ? '$2' : '$4'`. See the [Tailwind object preset reference](../presets/tailwind/style-object.mdx) for supported properties and theme configuration.
+
+## Register the functions with the compiler
+
+Add the functions you use to your plugin's `importSources` option:
+
+```ts
+import { cx, tw } from './src/styles';
+
+stylePlugin({
+  importSources: [
+    {
+      source: '**/styles',
+      name: 'cx',
+      styleFn: cx,
+    },
+    {
+      source: '**/styles',
+      name: 'tw',
+      styleFn: tw,
+    },
+  ],
+});
+```
+
+The `source` glob matches imports ending in `/styles`, such as `'./styles'`, `'../styles'`, or `'@/styles'`. Use a pattern that matches the module exporting your configured functions. The [class-name styles guide](./class-name-styles.mdx#register-it-with-the-compiler) shows this option in a complete Vite configuration.
+
+## What's next?
+
+Explore [states and responsive styles](./states-and-responsive.mdx) for more ways to apply styles on hover, focus, and different screen sizes.

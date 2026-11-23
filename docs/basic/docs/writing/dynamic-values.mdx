@@ -1,0 +1,82 @@
+---
+title: Dynamic values
+description: Choose between predefined variants and values from props or state.
+---
+
+import LessonPreview from '@site/src/components/LessonPreview';
+
+import DocLink from '@site/src/components/DocLink';
+
+Some styles have a few known variants; others depend on a measurement or user input. For known variants, define the styles once and select them from props:
+
+```tsx
+import { style } from '@fluentic/style';
+
+const badge = style({
+  padding: '4px 8px',
+  borderRadius: 6,
+});
+const success = style({
+  color: '#166534',
+  backgroundColor: '#dcfce7',
+});
+const warning = style({
+  color: '#854d0e',
+  backgroundColor: '#fef9c3',
+});
+
+export function Badge(props: { ready: boolean }) {
+  return (
+    <span css={[badge, props.ready ? success : warning]}>
+      {props.ready ? 'Ready' : 'Pending'}
+    </span>
+  );
+}
+```
+
+## Values you only know at runtime
+
+Some values come from a user, a request, or component state. Fluentic supports styles that use those values too:
+
+```tsx
+const track = style({
+  height: 8,
+  backgroundColor: '#eee8f8',
+});
+const fill = style({
+  height: '100%',
+  backgroundColor: '#7043ce',
+});
+
+// React example: clamp the visual and accessible values together.
+export function Progress({ percent }: { percent: number }) {
+  const value = Math.min(100, Math.max(0, percent));
+  return (
+    <div css={track} role="progressbar" aria-label="Upload progress" aria-valuenow={value} aria-valuemin={0} aria-valuemax={100}>
+      <div css={[fill, style({ width: `${value}%` })]} />
+    </div>
+  );
+}
+```
+
+The compiler can extract the track and fill styles. The width depends on props and resolves at runtime.
+
+For frequently changing values, consider normal inline styles or CSS custom properties where they fit. See <DocLink path='/docs/beyond-the-basics/runtime-and-dynamic-styles/'>runtime and dynamic styles</DocLink> for the full behavior and tradeoffs.
+
+## Frequently changing values
+
+<LessonPreview kind="dynamic" />
+
+For measurements that update frequently, such as pointer position or animation progress, native inline styles or CSS custom properties can carry the changing value while Fluentic handles the rest.
+
+For a frequently updated width, you can keep Fluentic's structural style and use the native inline-style path for the changing value:
+
+```tsx
+<div css={fill} style={{ width: `${value}%` }} />
+```
+
+This example uses React's inline-style shape. Follow your framework's inline-style conventions when porting it.
+
+## What's next?
+
+Explore [global styles, motion, and existing UI](./global-and-external.mdx) for styling beyond the `css` prop.

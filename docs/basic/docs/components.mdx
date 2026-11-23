@@ -1,0 +1,97 @@
+---
+title: Reusable components
+description: Make component parts customizable with slots and scopes.
+---
+
+import LessonPreview from '@site/src/components/LessonPreview';
+
+import DocLink from '@site/src/components/DocLink';
+
+A `css` prop handles overrides on a component’s outer element. Slots extend that idea to its title, icon, label, or other parts.
+
+Define the parts with `style.slot`, then group their overrides with `style.scope`.
+
+## Define component parts
+
+```tsx title="Card.tsx"
+import { style, bindScope, combineStyle, type StyleProp, type StyleTheme } from '@fluentic/style';
+
+export const cardStyle = {
+  root: style.slot({
+    padding: 24,
+    borderRadius: 12,
+  }),
+  title: style.slot({
+    fontSize: 20,
+    fontWeight: 600,
+  }),
+};
+
+type CardProps = {
+  title: string;
+  css?: StyleProp;
+  theme?: StyleTheme;
+};
+
+export function Card(props: CardProps) {
+  const css = combineStyle(cardStyle, bindScope(cardStyle.root, props.theme));
+
+  return (
+    <article css={[css.root, props.css]}>
+      <h2 css={css.title}>{props.title}</h2>
+    </article>
+  );
+}
+```
+
+A slot names a styleable part. The component resolves incoming styles and decides which element receives each result.
+
+## Style parts together {#customize-those-parts}
+
+```tsx title="Dashboard.tsx"
+import { style } from '@fluentic/style';
+import { Card, cardStyle } from './Card';
+
+const compactCard = style.scope([
+  cardStyle.root({
+    padding: 12,
+  }),
+  cardStyle.title({
+    fontSize: 16,
+  }),
+]);
+
+export function Dashboard() {
+  return <Card title="Revenue" theme={compactCard} />;
+}
+```
+
+A scope groups overrides for the exposed parts. Keep slot calls inline inside `style.scope(...)` so the compiler can extract them.
+
+## Choosing which parts to expose
+
+Only export parts consumers should depend on. A stable slot can keep an override attached to the title even if you add a wrapper. Layout, inheritance, and scope boundaries still follow CSS, so arbitrary DOM changes are not automatically harmless.
+
+The detailed guides cover <DocLink path='/docs/learn/name-component-parts/'>naming parts</DocLink>, <DocLink path='/docs/learn/accept-and-resolve-outside-styles/'>resolving outside styles</DocLink>, and <DocLink path='/docs/learn/expose-styleable-parts/'>exposing a supported surface</DocLink> in depth.
+
+## How the styles resolve
+
+<LessonPreview kind="parts" />
+
+`Card` keeps its default styles unless a theme provides overrides. Here, `compactCard` changes the container padding and title size together. Exported slots give the component a defined customization surface without coupling it to internal class names or DOM selectors.
+
+Here is how the values move through the component:
+
+| Piece | Responsibility |
+| --- | --- |
+| `style.slot` | Defines an identifiable part with default styles. |
+| `style.scope` | Collects overrides for those parts. |
+| `bindScope` | Binds incoming themed styles to the component's root scope. |
+| `combineStyle` | Resolves the parts the component applies to its elements. |
+| `props.css` | Supplies the final root-only override in this example. |
+
+Keep `cardStyle` at module scope so every instance shares the intended part identities. Resolve incoming values inside the component so each instance can receive different customization. The `theme` prop is resolved through `bindScope` and `combineStyle`; `css` provides an additional override on the outer element.
+
+## What's next?
+
+[Themes](./themes.mdx) covers design tokens and themeable values that work across components.

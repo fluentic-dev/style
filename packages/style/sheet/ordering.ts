@@ -1,4 +1,4 @@
-import { compareLayerPriority, createLayerPool, getLayerBlockCss, getLayerOrderCss } from '../atomic/layer';
+import { compareLayerPriority, createLayerPool, flattenCssLayers, getLayerBlockCss } from '../atomic/layer';
 import { CSS_CONFIG, CSS_CONFIG_DEFAULT, type CssConfig, isStyleLayerEnabled } from '../config/config/css';
 import type { SheetRule } from './types';
 import { getSheetRuleLayerPriority, getSheetRulePriority } from './utils/layer';
@@ -81,16 +81,22 @@ export function sheetLayerOrder(
   for (
     const name of [...(config.layers ?? CSS_CONFIG_DEFAULT.layers ?? []).filter((name) => name !== '$layer'), ...names]
   ) add(name);
-  const rootOrder = getLayerOrderCss(
+  const rootOrder = flattenCssLayers(
     (config.layers ?? CSS_CONFIG_DEFAULT.layers ?? []).map((name) => name === '$layer' ? name : name.split('.')[0]),
     roots,
   );
-  const declarations = [rootOrder];
-  for (const [parent, list] of children) {
-    if (parent.endsWith('.important')) continue;
-    declarations.push('@layer ' + [...new Set([parent + '.important', ...list])].join(', ') + ';');
-  }
-  return declarations.filter(Boolean).join('\n');
+  const ordered = new Set<string>();
+  const append = (name: string) => {
+    ordered.add(name);
+    const list = children.get(name);
+    if (!list || name.endsWith('.important')) return;
+    ordered.add(name + '.important');
+    for (const child of list) append(child);
+  };
+  // Parents absent from the configured root list were previously introduced by
+  // their separate sublayer declarations. Keep those roots after explicit ones.
+  for (const root of new Set([...rootOrder, ...roots.filter((name) => children.has(name))])) append(root);
+  return ordered.size ? '@layer ' + [...ordered].join(', ') + ';' : '';
 }
 
 function layerNameForRule(
@@ -130,9 +136,21 @@ export function serializeOrderedRules(
   mode: 'sort' | 'layer' = 'sort',
 ) {
   const pool = createLayerPool(config.layerNamespace || 'css');
-  const rendered = orderSheetRules(rules, config).map((rule) => {
+  const rendered: string[] = [];
+  let currentLayer: string | null = null;
+  let group: string[] = [];
+  const flush = () => {
+    if (!group.length) return;
+    const css = group.join('\n');
+    rendered.push(currentLayer ? getLayerBlockCss(currentLayer, css) : css);
+    group = [];
+  };
+  for (const rule of orderSheetRules(rules, config)) {
     const name = layerNameForRule(rule, config, mode, pool);
-    return name ? getLayerBlockCss(name, rule.css) : rule.css;
-  });
+    if (name !== currentLayer) flush();
+    currentLayer = name;
+    group.push(rule.css);
+  }
+  flush();
   return [sheetOrderingPreamble(rules, config, mode), ...rendered].filter(Boolean).join('\n');
 }

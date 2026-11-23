@@ -1,0 +1,59 @@
+---
+title: Organize styles
+description: Keep styles near their component and share them when useful.
+---
+
+Styles are ordinary TypeScript values. Keep them beside the component or export them from a separate file; Fluentic does not require a naming convention or folder structure.
+
+```ts title="Card.styles.ts"
+import { style } from '@fluentic/style';
+
+export const card = {
+  root: style({
+    padding: 24,
+    borderRadius: 12,
+  }),
+  title: style({
+    fontSize: 20,
+    fontWeight: 600,
+  }),
+  body: style({
+    lineHeight: 1.6,
+  }),
+};
+```
+
+```tsx title="Card.tsx"
+import { card } from './Card.styles';
+
+export function Card() {
+  return (
+    <article css={card.root}>
+      <h2 css={card.title}>A place for your ideas</h2>
+      <p css={card.body}>Keep the styles with the thing they describe.</p>
+    </article>
+  );
+}
+```
+
+## Keep stable styles outside renders
+
+Module-level definitions are a straightforward default for styles that do not depend on props. Use [dynamic values](./dynamic-values.mdx) when a value does depend on runtime data.
+
+## Shared builders
+
+If you use class-name styles, keep your configured `cx` in one module and import it consistently. That also makes compiler registration easier to maintain.
+
+A plain object groups styles for local use. [Slots and scopes](../components.mdx) add explicit styling targets when a component needs to support customization.
+
+## What to share
+
+Component styles usually belong with their component. Tokens, themes, and configured builders belong in shared modules when several components use them.
+
+Avoid copying styles into a shared module just because two values happen to match today. Share a value when it has a common meaning, and share a component when it has a common behavior. This keeps later design changes local.
+
+If you use a custom builder, keep its import path consistent and register that path with the compiler. Moving a built-in `style` definition to another file does not itself require a new builder registration.
+
+## What's next?
+
+[Reusable components](../components.mdx) adds slots and scopes for customizable component parts.

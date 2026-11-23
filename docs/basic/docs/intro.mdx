@@ -1,0 +1,41 @@
+---
+title: Introduction
+description: Type-safe styling, component customization, and theming for your application.
+---
+
+import LessonPreview from '@site/src/components/LessonPreview';
+
+Fluentic Style is a TypeScript styling library for components and applications. It combines typed CSS, style composition, component customization, and theming in one system.
+
+You write styles with familiar CSS properties and apply them through a `css` prop. Interaction states and responsive rules stay with the styles they modify. Fluentic supports design tokens, component variants, style overrides, and theming—everything you need to build reusable components and a complete design system.
+
+## Styling an element
+
+```tsx
+import { style } from '@fluentic/style';
+
+const button = style({
+  backgroundColor: '#7043ce',
+  color: 'white',
+  border: 0,
+  borderRadius: 10,
+  padding: '12px 24px',
+}).hover({
+  backgroundColor: '#31205e',
+  boxShadow: '0 6px 16px rgb(49 32 94 / 0.35)',
+});
+
+export function SaveButton() {
+  return <button css={button}>Save changes</button>;
+}
+```
+
+Write familiar CSS properties with `style`, add states like `.hover()`, `.active()`, and `.focus()` as chained methods, then pass the style to an element through its `css` prop. That’s all you need to style an element.
+
+<LessonPreview kind="states" />
+
+## What's next?
+
+[Install Fluentic](./quick-start.mdx) with the setup for your framework. The next few pages cover [writing styles](./writing/object-styles.mdx), adding states and responsive rules, and [combining styles](./writing/composition.mdx) for different component variants. Prefer utility classes? You can use [class-name styles](./writing/class-name-styles.mdx) too.
+
+Explore [component styling](./components.mdx), [tokens and themes](./themes.mdx), and [custom style builders](./design-system.mdx) for your design system. The guides also cover [debugging styles](./debugging.mdx) in DevTools and [building for production](./production.mdx).

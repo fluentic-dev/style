@@ -74,18 +74,21 @@ There is no Fluentic `jsxImportSource` here:
 {
   "compilerOptions": {
     "jsx": "preserve",
-    "types": ["vite/client", "solid-js"]
+    "types": ["vite/client"]
   }
 }
 ```
 
-Add Fluentic's SolidJS JSX types once in a project declaration file. This makes
-the `css` prop available to Solid JSX without loading SolidJS types for React
-projects:
+Add Fluentic's SolidJS JSX types in your app entry:
 
-```ts title="src/fluentic.d.ts"
-import '@fluentic/style/types/solid';
+```ts title="src/main.tsx"
+import type {} from '@fluentic/style/types/solid';
 ```
+
+This enables the `css` prop in TypeScript. Use `import type` because this
+package entry contains declarations only; a regular side-effect import would
+ask the bundler to load a runtime module that does not exist. You do not need a
+separate declaration file or an extra `compilerOptions.types` entry for Fluentic.
 
 Then write normal styles:
 

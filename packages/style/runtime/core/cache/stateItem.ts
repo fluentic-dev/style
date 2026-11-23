@@ -82,6 +82,9 @@ export function getStateItemVariableValue(
   const value = getStateItemValue(item);
 
   if (Array.isArray(value) && value[0] === ITEM_VALUE_TYPE_VARIABLE) {
+    if (isStyleTokenData(value[2]) && value[1] === getTokenVarName(value[2], CSS_CONFIG.tokenNameFormat ?? null)) {
+      if (!tokens || !hasOwn(tokens.lookup, getStyleTokenId(value[2]))) return null;
+    }
     return [
       value[1],
       resolveMarkedVariableValue(value[2], value[3], tokens),

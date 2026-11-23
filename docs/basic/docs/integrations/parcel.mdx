@@ -1,0 +1,78 @@
+---
+title: Parcel
+description: Configure Fluentic Style with Parcel 2.
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Install the package:
+
+<div className="package-install">
+<Tabs groupId="package-manager" defaultValue="pnpm">
+  <TabItem value="pnpm" label="pnpm">
+
+```sh
+pnpm add @fluentic/style
+```
+
+  </TabItem>
+  <TabItem value="npm" label="npm">
+
+```sh
+npm install @fluentic/style
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```sh
+yarn add @fluentic/style
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```sh
+bun add @fluentic/style
+```
+
+  </TabItem>
+</Tabs>
+</div>
+
+Use the bundled Parcel config when running Parcel:
+
+```json title="package.json"
+{
+  "scripts": {
+    "dev": "parcel index.html --config @fluentic/style/plugin/parcel/config",
+    "build": "parcel build index.html --config @fluentic/style/plugin/parcel/config"
+  }
+}
+```
+
+Keep TypeScript aligned with Fluentic's JSX import source:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+The config extends Parcel's default config and adds Fluentic's transformer,
+resolver, and CSS optimizer. Your HTML entry can stay ordinary:
+
+```html title="index.html"
+<div id="root"></div>
+<script type="module" src="./src/main.tsx"></script>
+```
+
+Parcel owns the emitted JavaScript and CSS assets, including production
+extraction output.
+
+See [Plugin Options](./options.mdx) for the shared compiler options used internally by
+the adapter and for an explanation of development sourcemap modes.

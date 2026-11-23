@@ -1,0 +1,81 @@
+---
+title: Compiler Hoisting
+description: How inline styles stay reusable while props and state remain dynamic.
+---
+
+Write a style where you use it, even when a value comes from props:
+
+```tsx
+import { style } from '@fluentic/style';
+
+function Swatch({ color }: { color: string }) {
+  return (
+    <div
+      css={style({
+        width: 40,
+        height: 40,
+        backgroundColor: color,
+      })}
+    />
+  );
+}
+```
+
+With build-time extraction enabled, Fluentic can **hoist** supported style
+chains: move their prepared definition outside the component so it is reused
+across renders. You keep the inline authoring; the compiler prepares the
+reusable work.
+
+## What happens to dynamic values?
+
+Hoisting does not freeze props or state. The compiler separates the stable style
+structure from the values that change:
+
+- Static values, such as `width: 40`, become literal CSS declarations.
+- Dynamic values, such as `color`, use generated CSS variables.
+- Each render supplies the current dynamic values to the prepared style.
+
+Conceptually, the extracted CSS for the example looks like this (generated names
+will differ):
+
+```css
+.swatch {
+  width: 40px;
+  height: 40px;
+  background-color: var(--swatch-color);
+}
+```
+
+The element uses the prepared class and receives its current color through the
+CSS variable. Changing from blue to purple changes the variable value; it does
+not require a separate CSS rule for every possible color.
+
+## Why does this help performance?
+
+Without extraction, calling `style(...)` inside a component creates style values
+during render. Hoisting lets supported chains reuse prepared style data instead
+of rebuilding the same chain on each render. Static CSS is already emitted at
+build time, and render-time work carries the dynamic values into the generated
+variable bindings.
+
+Dynamic styling still has work to do: the app evaluates its expressions, the
+runtime applies the current values, and the browser updates the affected styles.
+Hoisting removes repeated style construction; it does not eliminate rendering or
+make expensive application expressions cheaper. This is inline **authoring**
+with extracted CSS, not a claim that every case has the same cost as a native
+`style` attribute.
+
+## When does it apply?
+
+Hoisting is enabled by default during extraction and can be controlled with the
+[`hoist` plugin option](../reference/plugin-options.mdx). It applies to supported
+style chains whose structure the compiler can analyze. Arbitrary dynamic style
+construction and unsupported control flow may remain on the runtime path.
+
+Use module-scope styles for reusable component contracts and public APIs. Use
+inline styles for local element styling; supported dynamic property values can
+remain close to the component that owns them.
+
+See [Build for production](../learn/build-for-production.mdx) for the extraction
+setup and [Runtime and dynamic styles](../beyond-the-basics/runtime-and-dynamic-styles.mdx)
+for more ways to supply changing values.

@@ -1,0 +1,21 @@
+{
+  "name": "@docs/playground",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/PlaygroundApp.tsx",
+    "./babel-browser": "./babel-browser.cjs"
+  },
+  "dependencies": {
+    "@babel/standalone": "^7.29.7",
+    "monaco-editor": "^0.55.1"
+  },
+  "peerDependencies": {
+    "react": "^19.2.7"
+  },
+  "devDependencies": {
+    "react": "19.2.7",
+    "@types/react": "^19.2.14"
+  }
+}

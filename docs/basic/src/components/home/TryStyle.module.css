@@ -1,0 +1,39 @@
+.demo { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); box-shadow: 0 24px 70px -32px #46217b55; }
+.file { display: flex; justify-content: space-between; gap: 12px; padding: 15px 20px; border-bottom: 1px solid var(--line); color: var(--ink); font: 500 .875rem var(--ifm-font-family-monospace); }
+.file span:last-child { color: var(--muted); font-size: .75rem; }
+ .tabs { display: flex; align-items: center; gap: 4px; padding: 8px 12px 0; border-bottom: 1px solid var(--line); }
+.tabs button { border: 0; border-bottom: 2px solid transparent; padding: 10px 12px; background: transparent; color: var(--muted); font: 500 .875rem var(--ifm-font-family-base); cursor: pointer; }
+.tabs button[aria-pressed='true'] { border-color: var(--accent); color: var(--accent); }
+.tabs > span { margin-left: auto; color: var(--muted); font: .75rem var(--ifm-font-family-monospace); }
+.code { position: relative; height: 288px; overflow: auto; overscroll-behavior: contain; scrollbar-gutter: stable; background: var(--surface); }
+.source { margin: 0; padding: 14px 0; border-radius: 0; background: transparent; color: var(--ink); font: .8125rem/1.8 var(--ifm-font-family-monospace); overflow: visible; min-width: max-content; }
+.source code { padding: 0; background: transparent; border: 0; font: inherit; }
+.codeLine { display: block; padding-right: 18px; border-left: 3px solid transparent; white-space: pre; }
+.lineNumber { display: inline-block; width: 42px; padding-right: 12px; text-align: right; color: var(--muted); user-select: none; opacity: .65; }
+.highlighted { border-left-color: var(--accent); background: var(--soft); animation: reveal 1.4s ease-out; }
+@keyframes reveal { from { background: color-mix(in srgb, var(--accent) 30%, var(--surface)); } to { background: var(--soft); } }
+.guide { min-height: 62px; margin: 0; padding: 12px 18px; border-top: 1px solid var(--line); color: var(--ink); font-size: .875rem; line-height: 1.5; }
+.compact { display: flex; align-items: center; gap: 6px; color: var(--ink); font-size: .875rem; cursor: pointer; }
+.compact input { accent-color: var(--accent); }
+.exampleButton { display: block; margin-top: 16px; border: 1px solid currentColor; border-radius: 8px; color: var(--demo-accent); background: transparent; font: 600 .875rem/1.5 var(--ifm-font-family-base); cursor: pointer; }
+.exampleButton:hover { opacity: .75; }
+.exampleButton:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.tabs button:focus-visible, .code:focus-visible { outline: 2px solid var(--accent); outline-offset: -3px; }
+@media (prefers-reduced-motion: reduce) { .highlighted { animation: none; } }
+@media (max-width: 640px) { .tabs > span { display: none; } .tabs button { flex: 1; padding: 10px 6px; } }
+.preview { border-top: 1px solid var(--line); background: var(--soft); }
+.controls { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 14px 18px; }
+.colors { display: flex; gap: 5px; }
+.colors button { display: inline-flex; align-items: center; gap: 6px; border: 1px solid transparent; border-radius: 7px; padding: 7px; font: 500 .875rem var(--ifm-font-family-base); background: transparent; color: var(--muted); cursor: pointer; }
+.colors button[aria-pressed='true'] { background: var(--surface); color: var(--ink); border-color: var(--line); box-shadow: 0 2px 4px #00000008; }
+.colors button span { width: 10px; height: 10px; border-radius: 50%; }
+.controlLabel { color: var(--ink); font-size: .875rem; font-weight: 600; }
+.workspace { margin: 0 18px; padding: 24px; border: 1px solid var(--line); border-radius: 10px; background: var(--demo-surface); color: var(--demo-text); }
+.workspace h2 { margin: 0 0 10px; color: var(--demo-accent); font-size: 1.5rem; letter-spacing: -.03em; }
+.workspace p { margin: 0; font-size: 1rem; line-height: 1.6; }
+.hint { margin: 0; padding: 14px 18px; color: var(--muted); font-size: .8125rem; text-align: center; }
+.caption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding: 13px 18px; font-size: .8125rem; border-top: 1px solid var(--line); }
+.caption span { color: var(--muted); }
+.caption a { color: var(--accent); font-weight: 550; }
+.colors button:focus-visible, .caption a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 640px) { .file { padding: 13px 15px; } .file span:last-child { display: none; } .controls { padding: 12px; } .colors button { padding: 6px; } }

@@ -1,0 +1,91 @@
+---
+title: Global styles, motion & existing UI
+description: Set document defaults, add animation, and connect styles to components you do not own.
+---
+
+import DocLink from '@site/src/components/DocLink';
+
+Fluentic also supports global selectors, keyframes, and components that accept `className` instead of `css`. Existing stylesheets can stay alongside your Fluentic styles.
+
+## Global styles
+
+You can keep your existing global CSS file. If you want typed global rules, create a global sheet:
+
+```ts title="src/global.styles.ts"
+import { style } from '@fluentic/style';
+import { createGlobalSheet } from '@fluentic/style/css';
+
+createGlobalSheet([
+  style.selector(['*', '*::before', '*::after'], { boxSizing: 'border-box' }),
+  style.selector('body', {
+    margin: 0,
+    fontFamily: 'system-ui, sans-serif',
+    lineHeight: 1.5,
+  }),
+  style.selector(['button', 'input', 'select', 'textarea'], { font: 'inherit' }),
+]);
+```
+
+Import `./global.styles` once from `src/main.tsx`, or from your Next.js root layout using the appropriate relative path. The import makes the module part of your app. `createGlobalSheet` does not return an element style, so do not pass it to `css`.
+
+Global selectors affect every matching element. Keep component-specific colors and spacing on the component to avoid accidental changes elsewhere. See the <DocLink path='/docs/beyond-the-basics/add-global-styles/'>global sheet guide</DocLink> when you need explicit rule order or CSS layers.
+
+## Keyframes
+
+```tsx
+import { style } from '@fluentic/style';
+import { createKeyframes } from '@fluentic/style/css';
+
+const pulse = createKeyframes({
+  '0%': { opacity: 1 },
+  '50%': { opacity: 0.6 },
+  '100%': { opacity: 1 },
+});
+
+const indicator = style({
+  animationName: pulse,
+  animationDuration: '1200ms',
+  animationIterationCount: 'infinite',
+}).media('(prefers-reduced-motion: reduce)', {
+  animationName: 'none',
+});
+
+export function SyncStatus() {
+  return <span css={indicator}>Syncing changes…</span>;
+}
+```
+
+The keyframes define the animation; the element style controls its duration and repetition. The media rule disables motion for users who request it, while the text still communicates the status.
+
+The CSS helpers also cover fonts and other at-rules. Use the <DocLink path='/docs/beyond-the-basics/using-css-at-rules/'>at-rule guide</DocLink> when you need those features.
+
+## Components with className
+
+A third-party component may accept `className` and `style` but not Fluentic's `css` prop. Resolve your style at that boundary:
+
+```tsx
+import { getClassName, style } from '@fluentic/style';
+
+const action = style({
+  color: '#7043ce',
+  padding: '8px 16px',
+});
+
+export function Action() {
+  const resolved = getClassName(action);
+  // Components accepting className and style use the same props.
+  return (
+    <button className={resolved.className} style={resolved.style}>
+      Open details
+    </button>
+  );
+}
+```
+
+Forward both values: the inline style can carry dynamic values needed by the generated class. If callers also provide these props, use `mergeClassName` and `mergeStyle` as shown in the <DocLink path='/docs/beyond-the-basics/interop-with-non-fluentic-apis/'>interop guide</DocLink>.
+
+For a library's internal parts, use its documented styling hooks. A portal can render outside your themed subtree, so verify that it receives the values it needs. Avoid relying on private DOM structure; the <DocLink path='/docs/beyond-the-basics/styling-third-party-components/'>third-party styling guide</DocLink> covers selector-based integration.
+
+## What's next?
+
+[Organizing styles](./organize-styles.mdx) covers local definitions, shared modules, and reuse.

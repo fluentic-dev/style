@@ -1,0 +1,125 @@
+---
+title: Class-name styles
+description: Write utility class names with Fluentic's built-in Tailwind preset.
+---
+
+Class-name styles let you write utility names, similar to [Tailwind CSS](https://tailwindcss.com/) or [UnoCSS](https://unocss.dev/). Fluentic includes a Tailwind preset, so you can start with familiar names without implementing a transform.
+
+## Use the Tailwind preset
+
+Configure the preset once and export a function named `cx`:
+
+```ts title="src/styles.ts"
+import { createClassNameFn } from '@fluentic/style';
+import {
+  createTailwindClassNamePreset,
+  defaultTailwindTheme,
+} from '@fluentic/style/presets/tailwind';
+
+const tailwind = createTailwindClassNamePreset({
+  theme: defaultTailwindTheme,
+});
+
+export const { className: cx } = createClassNameFn({
+  selectors: tailwind.selectors,
+  transform: tailwind.transform,
+});
+```
+
+The preset supplies both the utility definitions and the chain methods. You only need to connect them to `createClassNameFn`.
+
+## Style an element
+
+```tsx title="src/App.tsx"
+import { cx } from './styles';
+
+const button = cx(
+  'px-4',
+  'py-2',
+  'bg-violet-600',
+  'text-white',
+  'rounded-lg',
+)
+  .hover('bg-violet-700')
+  .md('px-6');
+
+export function Button() {
+  return <button css={button}>Save changes</button>;
+}
+```
+
+`cx(...)` supplies the base styles. `.hover()` changes the background on hover, and `.md()` increases the horizontal padding at viewport widths of 768px and above. Use these methods instead of putting `hover:` or `md:` prefixes in the strings.
+
+As with object-based styles, the chain methods describe states and conditions. Each method takes utility names instead of a style object. Keep the chain connected to `cx(...)` so the compiler can recognize it.
+
+## Use conditional utilities
+
+Utility lists accept conditional entries. A false entry is skipped:
+
+```tsx
+export function Button({ compact = false }: { compact?: boolean }) {
+  const button = cx(
+    'bg-violet-600',
+    'text-white',
+    'py-2',
+    compact ? 'px-2' : 'px-4',
+    !compact && 'rounded-lg',
+  )
+    .hover('bg-violet-700');
+
+  return <button css={button}>Save changes</button>;
+}
+```
+
+Here, `compact` selects the horizontal padding and controls whether the button has rounded corners.
+
+## Register it with the compiler
+
+Add `cx` to your plugin's `importSources`. For React with Vite, this extends the setup from [Installation](../quick-start.mdx):
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+import { cx } from './src/styles';
+
+export default defineConfig({
+  plugins: [
+    stylePlugin({
+      importSources: [{
+        source: '**/styles',
+        name: 'cx',
+        styleFn: cx,
+      }],
+    }),
+    react({ jsxImportSource: '@fluentic/style/plugin/jsx' }),
+  ],
+});
+```
+
+The `source` glob matches imports such as `'./styles'`, `'../styles'`, and `'@/styles'`. Set it to match the module that exports your configured function. See [import sources](../reference/plugin-options.mdx#import-sources) for the matching options.
+
+## Use Tailwind utilities as objects
+
+Prefer object syntax? The [Tailwind presets guide](./tailwind-presets.mdx) also shows how to configure `tw` for the same utilities:
+
+```tsx
+const button = tw({
+  px: '$4',
+  py: '$2',
+  bg: '$violet.600',
+  text: '$white',
+  rounded: '$lg',
+})
+  .hover({
+    bg: '$violet.700',
+  });
+```
+
+`'$4'` selects spacing step 4 from the theme, and `'$violet.600'` selects a color. The [class-name reference](../presets/tailwind/class-name.mdx) and [object preset reference](../presets/tailwind/style-object.mdx) cover supported utilities and theme customization.
+
+You can also [define your own utility names or object properties](./custom-style-functions.mdx), such as `'bg-brand'` or `row: true`.
+
+## What's next?
+
+[Understand style chains](./style-chains.mdx) explains the methods behind states, media queries, and container queries.

@@ -1,0 +1,94 @@
+---
+title: Farm
+description: Configure Fluentic Style with Farm and React.
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Install the package:
+
+<div className="package-install">
+<Tabs groupId="package-manager" defaultValue="pnpm">
+  <TabItem value="pnpm" label="pnpm">
+
+```sh
+pnpm add @fluentic/style
+```
+
+  </TabItem>
+  <TabItem value="npm" label="npm">
+
+```sh
+npm install @fluentic/style
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```sh
+yarn add @fluentic/style
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```sh
+bun add @fluentic/style
+```
+
+  </TabItem>
+</Tabs>
+</div>
+
+Add the Farm adapter and configure the React plugin with Fluentic's JSX import
+source:
+
+```js title="farm.config.mjs"
+import { defineConfig } from '@farmfe/core';
+import { plugin as stylePlugin } from '@fluentic/style/plugin/farm';
+
+export default defineConfig(({ mode }) => {
+  const dev = mode !== 'production';
+
+  return {
+    plugins: [
+      ['@farmfe/plugin-react', {
+        runtime: 'automatic',
+        importSource: '@fluentic/style/plugin/jsx',
+        development: dev,
+      }],
+      stylePlugin({
+        dev,
+      }),
+    ],
+    compilation: {
+      script: {
+        parser: {
+          tsConfig: {
+            tsx: true,
+          },
+        },
+      },
+      sourcemap: dev ? true : 'all',
+    },
+  };
+});
+```
+
+Keep TypeScript aligned with the same JSX import source:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+The Farm adapter emits extracted CSS through the bundler and keeps runtime
+support for dynamic style values.
+
+See [Plugin Options](./options.mdx) for `include`, `exclude`, `devSourcemap`,
+`getSourcemapFilePath`, and the development sourcemap modes.

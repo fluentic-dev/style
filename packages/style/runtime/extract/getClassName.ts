@@ -12,7 +12,12 @@ import {
 } from '../../builder/data/const';
 import type { StateItem } from '../../builder/data/state';
 import { getExtractedTokenBoundData, isExtractedTokenBoundData } from '../../builder/extract/withTokens';
-import { getStyleTokenId, isStyleTokenData, isStyleTokenOverrideData } from '../../builder/token/data';
+import {
+  getStyleTokenId,
+  getStyleTokenVarName,
+  isStyleTokenData,
+  isStyleTokenOverrideData,
+} from '../../builder/token/data';
 import { RUNTIME_CONFIG } from '../../config/config/runtime';
 import type { StyleTokenData, StyleTokenOverride } from '../../style/token';
 import { getStylePropCacheValue } from '../core/cache/propCache';
@@ -388,7 +393,10 @@ function addStateItemStyle(
 
   if (Array.isArray(value)) {
     if (value[0] === ITEM_VALUE_TYPE_VARIABLE) {
-      if (!tokens && isStyleTokenData(value[2])) return style;
+      if (isStyleTokenData(value[2]) && value[1] === getStyleTokenVarName(value[2])) {
+        const id = getStyleTokenId(value[2]);
+        if (!tokens || tokens[id] === undefined) return style;
+      } else if (!tokens && isStyleTokenData(value[2])) return style;
       return setStyleValue(style, value[1], normalizeValue(resolveValue(value[2], tokens), value[3]));
     }
 

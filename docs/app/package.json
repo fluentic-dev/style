@@ -13,7 +13,6 @@
     "typecheck": "pnpm run source:gen && tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@babel/standalone": "^7.29.7",
     "@fontsource/inter": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
     "@fontsource/source-sans-3": "^5.2.9",
@@ -22,13 +21,13 @@
     "fumadocs-core": "16.9.3",
     "fumadocs-mdx": "15.0.11",
     "fumadocs-ui": "16.9.3",
-    "monaco-editor": "^0.55.1",
     "next": "16.2.9",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "sharp": "^0.34.5",
     "shiki": "4.2.0",
-    "tailwindcss": "4.3.0"
+    "tailwindcss": "4.3.0",
+    "@docs/playground": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^24.13.1",

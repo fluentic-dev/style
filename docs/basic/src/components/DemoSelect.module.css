@@ -1,0 +1,11 @@
+.field { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 12px; color: var(--ifm-font-color-base); font-size: .8125rem; }
+.trigger { display: inline-flex; align-items: center; justify-content: space-between; gap: 22px; min-width: 112px; padding: 7px 12px; border: 1px solid var(--doc-border); border-radius: 8px; background: var(--ifm-background-surface-color); color: var(--ifm-font-color-base); font: inherit; line-height: 1.4; cursor: pointer; box-shadow: 0 2px 4px #30205005; }
+.trigger:hover, .trigger[aria-expanded='true'] { border-color: #a78bfa; }
+.caret { flex-shrink: 0; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; color: var(--ifm-font-color-secondary); }
+.trigger[aria-expanded='true'] .caret { transform: rotate(180deg); }
+.menu { position: fixed; z-index: 1000; padding: 5px; border: 1px solid var(--doc-border); border-radius: 10px; background: var(--ifm-background-surface-color); color: var(--ifm-font-color-base); box-shadow: 0 10px 30px #24133c20, 0 2px 5px #24133c08; font: 400 .8125rem/1.4 var(--ifm-font-family-base); }
+.option { display: flex; align-items: center; gap: 9px; min-height: 36px; padding: 7px 9px; border-radius: 6px; cursor: pointer; }
+.active { background: var(--doc-accent-soft); color: var(--ifm-color-primary); }
+.swatch { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.check { margin-left: auto; color: var(--ifm-color-primary); }
+@media (forced-colors: active) { .active { outline: 1px solid Highlight; } }

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "package": "@fluentic/style",
-  "version": "0.1.0-beta.19",
+  "version": "0.1.0-beta.20",
   "tools": {
     "vite": "8.0.16",
     "gzipLevel": 9
@@ -239,28 +239,28 @@
   "rows": [
     {
       "name": "dev runtime",
-      "graphRaw": 236116,
-      "graphGzip": 49799,
-      "minRaw": 90523,
-      "minGzip": 29932,
+      "graphRaw": 236188,
+      "graphGzip": 49802,
+      "minRaw": 90548,
+      "minGzip": 29913,
       "files": 21,
       "deps": "css-what, react, react/jsx-dev-runtime, react/jsx-runtime"
     },
     {
       "name": "extracted production runtime",
-      "graphRaw": 38658,
-      "graphGzip": 8410,
-      "minRaw": 14501,
-      "minGzip": 5097,
+      "graphRaw": 38847,
+      "graphGzip": 8450,
+      "minRaw": 14591,
+      "minGzip": 5122,
       "files": 4,
       "deps": "-"
     },
     {
       "name": "extracted jsx runtime",
-      "graphRaw": 21095,
-      "graphGzip": 5016,
-      "minRaw": 7453,
-      "minGzip": 2849,
+      "graphRaw": 21284,
+      "graphGzip": 5059,
+      "minRaw": 7542,
+      "minGzip": 2875,
       "files": 5,
       "deps": "react, react/jsx-runtime"
     },
@@ -284,37 +284,37 @@
     },
     {
       "name": "production runtime",
-      "graphRaw": 235523,
-      "graphGzip": 49612,
-      "minRaw": 90452,
-      "minGzip": 29910,
+      "graphRaw": 235595,
+      "graphGzip": 49616,
+      "minRaw": 90479,
+      "minGzip": 29888,
       "files": 20,
       "deps": "css-what, react, react/jsx-runtime"
     },
     {
       "name": "server dev rsc runtime",
-      "graphRaw": 237560,
-      "graphGzip": 51314,
-      "minRaw": 93744,
-      "minGzip": 31056,
+      "graphRaw": 237652,
+      "graphGzip": 51284,
+      "minRaw": 93870,
+      "minGzip": 31095,
       "files": 11,
       "deps": "css-what, react, react/jsx-runtime"
     },
     {
       "name": "server production runtime",
-      "graphRaw": 237786,
-      "graphGzip": 50960,
-      "minRaw": 69588,
-      "minGzip": 23094,
+      "graphRaw": 237966,
+      "graphGzip": 51019,
+      "minRaw": 69542,
+      "minGzip": 23049,
       "files": 5,
       "deps": "css-what"
     },
     {
       "name": "server extracted production runtime",
-      "graphRaw": 38742,
-      "graphGzip": 8414,
-      "minRaw": 14723,
-      "minGzip": 5163,
+      "graphRaw": 38931,
+      "graphGzip": 8454,
+      "minRaw": 14813,
+      "minGzip": 5189,
       "files": 4,
       "deps": "-"
     },
@@ -329,19 +329,19 @@
     },
     {
       "name": "optional client sheet helpers",
-      "graphRaw": 169985,
-      "graphGzip": 38202,
-      "minRaw": 52480,
-      "minGzip": 18168,
+      "graphRaw": 169976,
+      "graphGzip": 38222,
+      "minRaw": 52423,
+      "minGzip": 18129,
       "files": 4,
       "deps": "-"
     },
     {
       "name": "nextjs dev client support",
-      "graphRaw": 158087,
-      "graphGzip": 35857,
-      "minRaw": 55256,
-      "minGzip": 19282,
+      "graphRaw": 158563,
+      "graphGzip": 35896,
+      "minRaw": 55433,
+      "minGzip": 19335,
       "files": 14,
       "deps": "@jridgewell/trace-mapping, next/navigation.js, react"
     }

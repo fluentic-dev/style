@@ -1,0 +1,61 @@
+---
+title: createGlobalSheet
+description: Emit unscoped global selectors immediately at runtime or as extracted CSS at build time.
+---
+
+`createGlobalSheet` declares selectors without a generated parent class. Nothing
+needs to be attached to the DOM, and the call returns `void`.
+
+```ts
+import { style } from '@fluentic/style';
+import { createGlobalSheet } from '@fluentic/style/css';
+
+createGlobalSheet([
+  style.selector('*', { boxSizing: 'border-box' }),
+  style.selector('body', { margin: 0 }),
+]);
+```
+
+Import this module from the application entry or Next.js root layout.
+
+## Options
+
+Use `createGlobalSheet(items)` or `createGlobalSheet(options, items)`.
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `order?: number` | `0` | Finite number sorting the whole sheet. Values `<= 0` precede regular/local rules; positive values follow them. Equal orders keep first discovery first. |
+| `layer?: boolean \| string` | `false` | Same policy as local sheets: `true` shares the regular layer, `.name` is relative to an enabled main namespace, and `name` is literal. |
+
+Global sheets do not support `specificity` or the former sheet `weight` option.
+Use `style.weight(...)` for declaration priority within a sheet. See
+[Style ordering and the cascade](./style-ordering.mdx) for how source order interacts
+with layers, specificity, and important declarations.
+
+Items can be selector declarations, selector chains, nested arrays, or falsy
+conditional items. Selectors are used directly; parent anchors such as `&` are
+invalid. Token overrides must live inside an explicit selector such as `:root`.
+
+## Runtime and extraction
+
+Client runtime calls insert and flush CSS immediately in both dev and production
+runtime modes. With compiler extraction enabled, the compiler emits static CSS
+and removes the global call and inputs that become unused.
+
+This also applies to calls inside functions: a statically extractable global
+sheet is present in the built CSS before that function runs. Do not use a click
+handler around a global call as a way to conditionally enable extracted CSS.
+Use a selector controlled by a class or data attribute for conditional behavior.
+
+## Next.js and RSC
+
+Production uses the extracted CSS. In development, server global declarations
+travel as usable seed CSS (`data-css-global-seed-dev`) plus structured rules
+(`data-css-global-rules-dev`). The client observer adopts them into Fluentic's
+shared ordering engine, including navigation, streamed content, and HMR updates.
+The seed supplies styles before adoption; the payload retains ordering, layers,
+important metadata, and debug locations. Keep the normal Next.js plugin and
+`StyleDev` integration enabled.
+
+See the `third-party-selectors` example for client globals and the `nextjs`
+example for globals declared from a server layout and route.

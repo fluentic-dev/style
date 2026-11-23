@@ -1,0 +1,71 @@
+---
+title: Debug your styles
+description: Trace generated CSS back to authored styles in browser DevTools.
+---
+
+import DocLink from '@site/src/components/DocLink';
+
+Fluentic’s development metadata connects generated CSS to the style definitions in your source. Source links in DevTools can point to the style call or the original value behind a declaration.
+
+## Source maps
+
+The bundler plugin provides development source maps by default. See [source-map options](./reference/plugin-options.mdx#sourcemap-options) to change how DevTools loads your source files.
+
+Use a development build and enable CSS source maps in your browser's DevTools settings. Source metadata depends on the bundler integration and selected mode; runtime-only mode does not have compiler metadata for every call site.
+
+## Source links in DevTools
+
+The Styles and Computed panels show which declaration wins. With source maps enabled, its source link points back to the authored style. This is useful when a value comes from several composed styles or a shared definition.
+
+If a source link is unavailable, check the configured source-map mode and whether DevTools can load the referenced source.
+
+## Development utilities
+
+Optionally enable the browser console helper in your app's development entry:
+
+```ts title="src/main.tsx"
+import { enableStyleDevUtils } from '@fluentic/style/dev';
+
+if (import.meta.env.DEV) {
+  enableStyleDevUtils();
+}
+```
+
+Then run this in the browser console:
+
+```js
+StyleDevUtils.info();
+```
+
+The output shows the current sourcemap, class-name, element-marker, and priority modes.
+
+## Style and value traces
+
+When shared or spread values are involved, switch the trace mode:
+
+```js
+StyleDevUtils.setSourcemapMode.toStyle();
+StyleDevUtils.setSourcemapMode.toValue();
+```
+
+The first mode follows the style call that assembled the values. The second follows the original value source where metadata is available. These are alternative views; choose the one that answers your current question.
+
+For the complete walkthrough, read <DocLink path='/docs/beyond-the-basics/tracing-styles-in-real-apps/'>Tracing Styles In Real Apps</DocLink>. The <DocLink path='/docs/beyond-the-basics/devtools-and-sourcemaps/'>DevTools reference</DocLink> covers element markers, RSC setup, and additional controls.
+
+## Understand style conflicts
+
+A conflicting value can come from composition order, an active selector, or another stylesheet. The computed property identifies the winning declaration; its source link connects that result to the authored style.
+
+| Symptom | Start here |
+| --- | --- |
+| No generated style | Check the `css` prop setup and whether the source file is included by the compiler. |
+| A value loses unexpectedly | Inspect composed order, active states, and CSS from other stylesheets. |
+| A scope does nothing | Confirm the component resolves the incoming theme and applies the resolved part. |
+| Theme changes miss one element | Confirm it uses the same shared token or value and is inside the themed subtree. |
+| Source link does not open | Keep the dev server running and check source-map settings and integration mode. |
+
+The entry example uses Vite’s `import.meta.env.DEV`. Next.js provides development utilities through the `StyleDev` bridge shown in [Installation](./quick-start.mdx).
+
+## What's next?
+
+[Production builds](./production.mdx) explains how static extraction and runtime styling work together.

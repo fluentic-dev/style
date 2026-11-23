@@ -1,0 +1,142 @@
+---
+title: Custom style builders
+description: Define custom style properties, transforms, and chain methods.
+---
+
+import DocLink from '@site/src/components/DocLink';
+
+A custom builder lets you choose both the properties you write and the methods you chain. Transforms map custom fields to CSS; selectors define methods for states, breakpoints, and other conditions. You can customize either part independently, or combine them in one builder.
+
+## Map custom fields to CSS
+
+```ts title="src/styles.ts"
+import { createStyleFn, styleTransform, type CSSProperties } from '@fluentic/style';
+import { MinimalPrioritySelectors } from '@fluentic/style/selector';
+
+type UiStyle = CSSProperties & {
+  row?: boolean;
+  center?: boolean;
+  gapX?: CSSProperties['columnGap'];
+};
+
+const transform = styleTransform<UiStyle>({
+  transform({ row, center, gapX, ...css }) {
+    if (row) {
+      css.display = 'flex';
+      css.flexDirection = 'row';
+    }
+    if (center) {
+      css.alignItems = 'center';
+      css.justifyContent = 'center';
+    }
+    if (gapX !== undefined) css.columnGap = gapX;
+    return css;
+  },
+});
+
+export const { style: ui } = createStyleFn({
+  selectors: MinimalPrioritySelectors,
+  transform,
+});
+```
+
+Here, `row` creates a flex row, `center` aligns items on both axes, and `gapX` sets the column gap. Normal CSS fields remain available and typed.
+
+## Write styles with the builder
+
+```tsx title="src/App.tsx"
+import { ui } from './styles';
+
+const toolbar = ui({
+  row: true,
+  center: true,
+  gapX: 12,
+  padding: 16,
+});
+
+export default function App() {
+  return <header css={toolbar}>Your tools</header>;
+}
+```
+
+## Define custom chain methods
+
+A named method is useful for a state used across several components. For example, `.open()` can represent `[data-state="open"]` instead of repeating the selector in each style.
+
+The `selectors` option defines the available methods. This configuration pairs custom selectors with the `transform` above:
+
+```ts title="src/styles.ts — selector configuration"
+import { selector, selectorPriority } from '@fluentic/style/selector';
+
+const selectors = selectorPriority({
+  hover: selector(':hover'),
+  focusVisible: selector(':focus-visible'),
+  open: selector('[data-state="open"]'),
+}, ['hover', 'focusVisible', 'open']);
+
+export const { style: ui } = createStyleFn({
+  selectors,
+  transform,
+});
+```
+
+```tsx title="MenuButton.tsx"
+const menuButton = ui({
+  row: true,
+  gapX: 8,
+  padding: 12,
+})
+  .open({
+    backgroundColor: '#eee8f8',
+  })
+  .focusVisible({
+    outline: '2px solid #7043ce',
+    outlineOffset: 3,
+  });
+
+<button css={menuButton} data-state="open">Projects</button>
+```
+
+The method supplies the selector; the style object supplies its declarations. `selectorPriority` sets the order when these states overlap. This configuration replaces the earlier `MinimalPrioritySelectors` configuration, so it explicitly includes the built-in states it uses.
+
+You can retain a built-in selector set, extend one, or define your own. The <DocLink path='/docs/reference/selectors/'>selector reference</DocLink> covers presets and media-query methods; <DocLink path='/docs/beyond-the-basics/custom-chain-methods/'>custom chain methods</DocLink> covers parameterized selectors and priority in more detail.
+
+## Register the builder for extraction
+
+Start with the JSX and TypeScript setup in [Installation](./quick-start.mdx). Add your builder to the compiler's `importSources`:
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+import { ui } from './src/styles';
+
+export default defineConfig({
+  plugins: [
+    stylePlugin({
+      importSources: [{ source: './styles', name: 'ui', styleFn: ui }],
+    }),
+    react({ jsxImportSource: '@fluentic/style/plugin/jsx' }),
+  ],
+});
+```
+
+The registered `source` must match the import string in your components. If you import `ui` through an alias, register that alias instead.
+
+## Slots, themes, and custom chains
+
+Use [tokens and themes](./themes.mdx) for shared values, and [slots and scopes](./components.mdx) for customizable component parts. Your builder supports `ui.slot(...)` and `ui.scope(...)` with the same custom fields.
+
+For semantic fields such as tone or elevation, extend the transform with your team's CSS rules. For custom states or breakpoints, see <DocLink path='/docs/beyond-the-basics/custom-chain-methods/'>custom chain methods</DocLink>. The <DocLink path='/docs/beyond-the-basics/custom-style-builders/'>builder guide</DocLink> covers the full extension model.
+
+## What belongs in a builder
+
+Custom fields work best for repeated conventions. A field such as `row` replaces a familiar group of layout declarations; one-off spacing can stay in the component’s style.
+
+The transform above applies custom fields after spreading normal CSS. For example, `row: true` sets `display: 'flex'` even if the same object supplies another `display` value. Decide and document that precedence as part of your team's API.
+
+Keep custom fields predictable, with a clear mapping to CSS.
+
+## What's next?
+
+[Debugging styles](./debugging.mdx) connects generated rules to the code that defines them.

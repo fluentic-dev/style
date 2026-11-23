@@ -1,0 +1,127 @@
+---
+title: React App
+description: React dashboard benchmark report for app render, update, and remount timings.
+---
+
+Use the React app benchmark when you want an app-shaped browser timing report
+instead of a tiny style-only loop.
+
+```sh
+pnpm bench
+```
+
+For more reportable local numbers, use the stable run:
+
+```sh
+pnpm bench:stable
+```
+
+For larger row-count scenarios, use the stress run:
+
+```sh
+pnpm bench:stress
+```
+
+## What It Measures
+
+The benchmark runs the same dashboard/table shape across styling approaches. It
+keeps the DOM shape, data, viewport, keys, React version, and browser automation
+aligned so the report is about the styling path as much as possible.
+
+The default Fluentic rows use extracted production output and public authoring
+patterns:
+
+- direct DOM: stable `style.slot()` values declared outside render and passed
+  directly as `css={styles.row}`;
+- scoped DOM: stable slots, scopes, and token-backed themes declared outside
+  render, composed with `combineStyle()` and `bindScope()`;
+- direct components: row/cell work split into React components, each using its
+  own stable local styles;
+- scoped components: componentized rows using stable scopes and theme tokens.
+
+The main suite does not use ever-changing per-row token overrides. Theme/token
+links are still present through stable scopes and status themes. Open-ended
+high-cardinality values belong in separate diagnostics because browsers spend
+extra work invalidating CSS custom properties in the real DOM.
+
+Fluentic benefits from stable module-scope style objects and cache reuse across
+repeated component instances. That is intentional and mirrors long-lived browser
+apps. For the underlying resolver model, see
+[Runtime Resolution And Cache](../design/runtime-resolution-and-cache.mdx).
+
+The report includes:
+
+| Metric | Meaning |
+| --- | --- |
+| `initialMount` | First render for a scenario. |
+| `updateStyle` | Known visual variant updates against the existing tree. |
+| `remount` | Recreating the dashboard tree. |
+| `route` | Switching between dashboard views. |
+
+Median is the headline timing. Mean, p95, cold first-run mount, and raw samples
+stay in the JSON report so regressions can be inspected later.
+
+## Latest Local Report
+
+Report file: `benchmark/main/results/bench-1783164575520.json`
+
+Created: `2026-07-04T11:29:35.518Z`
+
+Settings: quick preset, 100/500/1500 rows, 2 repeats, production builds, Vite
+preview, and compiled Fluentic/StyleX output.
+
+The 100-row and 500-row scenarios are close to the browser frame floor, so tiny
+differences there should be read as noise unless they repeat across local runs.
+The 1500-row scenario is the clearest scaling signal in this quick report.
+
+### 500 Rows
+
+| Library | Shape | Mount median | Style update median | Remount median |
+| --- | --- | ---: | ---: | ---: |
+| Fluentic direct | DOM | 16.88 ms | 16.63 ms | 18.63 ms |
+| Fluentic scoped | DOM | 17.37 ms | 16.62 ms | 18.98 ms |
+| Fluentic direct | components | 17.40 ms | 16.62 ms | 18.77 ms |
+| Fluentic scoped | components | 18.07 ms | 16.60 ms | 18.86 ms |
+| StyleX | DOM | 17.68 ms | 16.66 ms | 19.13 ms |
+| StyleX | components | 16.58 ms | 16.64 ms | 19.23 ms |
+| Goober | DOM | 16.59 ms | 16.62 ms | 18.54 ms |
+| Goober | components | 16.48 ms | 16.64 ms | 18.64 ms |
+| Emotion | DOM | 18.10 ms | 16.62 ms | 19.55 ms |
+| Emotion | components | 19.77 ms | 16.66 ms | 19.78 ms |
+| styled-components | DOM | 18.69 ms | 16.65 ms | 19.75 ms |
+| vanilla-extract | DOM | 17.11 ms | 16.66 ms | 18.79 ms |
+| vanilla-extract | components | 16.42 ms | 16.65 ms | 18.98 ms |
+| CSS Modules | DOM | 16.52 ms | 16.68 ms | 18.73 ms |
+| CSS Modules | components | 16.68 ms | 16.64 ms | 18.79 ms |
+
+### 1500 Rows
+
+| Library | Shape | Mount median | Style update median | Remount median |
+| --- | --- | ---: | ---: | ---: |
+| Fluentic direct | DOM | 39.64 ms | 17.74 ms | 41.86 ms |
+| Fluentic scoped | DOM | 41.27 ms | 19.43 ms | 41.90 ms |
+| Fluentic direct | components | 40.81 ms | 17.82 ms | 42.09 ms |
+| Fluentic scoped | components | 41.42 ms | 19.51 ms | 42.75 ms |
+| StyleX | DOM | 40.70 ms | 17.86 ms | 43.03 ms |
+| StyleX | components | 42.71 ms | 17.86 ms | 43.04 ms |
+| Goober | DOM | 39.74 ms | 17.75 ms | 42.00 ms |
+| Goober | components | 40.58 ms | 17.70 ms | 42.12 ms |
+| Emotion | DOM | 52.23 ms | 20.75 ms | 54.10 ms |
+| Emotion | components | 55.20 ms | 23.77 ms | 56.53 ms |
+| styled-components | DOM | 45.37 ms | 18.14 ms | 49.23 ms |
+| vanilla-extract | DOM | 40.06 ms | 17.80 ms | 41.99 ms |
+| vanilla-extract | components | 41.54 ms | 17.78 ms | 42.20 ms |
+| CSS Modules | DOM | 39.62 ms | 17.67 ms | 41.97 ms |
+| CSS Modules | components | 41.04 ms | 17.80 ms | 41.98 ms |
+
+## Filtering
+
+```sh
+APP=fluentic-style-extract-direct-dom,stylex pnpm bench
+ROWS=100,500,1500 pnpm bench
+REPEATS=5 WARMUPS=3 MEASURED=30 pnpm bench
+INCLUDE_EXPERIMENTAL=1 pnpm bench
+```
+
+Use filtering when you are checking one regression or one competitor lane. Use
+the full run when publishing a local comparison.

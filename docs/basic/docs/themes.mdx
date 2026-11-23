@@ -1,0 +1,99 @@
+---
+title: Themes
+description: Define themeable colors and design tokens, then apply themes through css.
+---
+
+import LessonPreview from '@site/src/components/LessonPreview';
+
+import DocLink from '@site/src/components/DocLink';
+
+Themes let the same styles use different colors, spacing, or other design choices. Fluentic supports named tokens with `createTokens` and themeable literals with `createValues`.
+
+## Themeable CSS values {#keep-app-values-visible}
+
+```tsx
+import { style, createValues, createTheme } from '@fluentic/style';
+
+const color = createValues(['#ffffff', '#251b39']);
+
+const panel = style({
+  backgroundColor: color('#ffffff'),
+  color: color('#251b39'),
+  padding: 24,
+});
+
+const dark = createTheme([
+  color('#ffffff', '#251b39'),
+  color('#251b39', '#ffffff'),
+]);
+
+export function Panel(props: { darkMode?: boolean }) {
+  return (
+    <section css={[panel, props.darkMode && dark]}>
+      The same component, with different theme values.
+    </section>
+  );
+}
+```
+
+`createValues` keeps the authored literals visible. `createTheme` provides replacements in the styled subtree.
+
+## Named design tokens {#use-named-tokens-for-a-shared-contract}
+
+Use tokens for named design choices such as surface, text, or accent colors:
+
+```tsx
+import { createTokens, style } from '@fluentic/style';
+
+export const colors = createTokens({
+  surface: '#ffffff',
+  text: '#251b39',
+});
+
+const card = style({
+  backgroundColor: colors.surface,
+  color: colors.text,
+});
+```
+
+Tokens give components shared names to depend on. Themeable values keep the original CSS literals visible in application styles.
+
+Read more about <DocLink path='/docs/learn/theming-with-tokens/'>tokens</DocLink>, <DocLink path='/docs/learn/theming-with-values/'>values</DocLink>, and <DocLink path='/docs/learn/combine-app-and-component-themes/'>combining application and component themes</DocLink>.
+
+## Theme a subtree
+
+<LessonPreview kind="theme" />
+
+A theme applies to the element that receives it and its descendants. Nested elements using the same tokens or themeable values pick up the theme; siblings outside that subtree keep their own values. Apply a theme near the app root for an app-wide appearance, or on a component for a local variation.
+
+Named tokens work with `createTheme` too:
+
+```tsx
+import { createTheme, createTokens, style } from '@fluentic/style';
+
+const colors = createTokens({
+  surface: '#ffffff',
+  text: '#251b39',
+});
+const dark = createTheme([
+  colors.surface('#251b39'),
+  colors.text('#ffffff'),
+]);
+const panel = style({
+  backgroundColor: colors.surface,
+  color: colors.text,
+  padding: 24,
+});
+
+export function ThemedPanel() {
+  return <section css={[panel, dark]}>A named theme contract.</section>;
+}
+```
+
+Define shared tokens once and import them wherever they are consumed. Creating another token with the same default color does not express the same shared identity. Keep a theme's foreground and background choices together and check their contrast in every state.
+
+The `darkMode` prop in the earlier example can come from your app's state. Fluentic applies the selected theme; your app decides how to store the preference, read system settings, and provide the toggle. For Next.js, that interactive toggle belongs in a client component.
+
+## What's next?
+
+[Custom style builders](./design-system.mdx) add typed properties for your styling conventions.

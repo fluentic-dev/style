@@ -1,6 +1,6 @@
 import { buildGlobalSheetRules } from '../css/globalSheet';
 import { refreshDevStyleTags } from '../sheet/dev';
-import { serializeOrderedRules } from '../sheet/ordering';
+import { serializeOrderedRules, sheetLayerOrder } from '../sheet/ordering';
 import type { SheetRule } from '../sheet/types';
 import {
   configureTestRuntime,
@@ -121,7 +121,7 @@ test('sheet layer resolution and managed important are shared by runtime, seeds,
         })]));
         const css = serializeOrderedRules(rules);
         if (expected) {
-          includes(css, `@layer ${expected}.important;`);
+          includes(css, `${expected}.important`);
           includes(css, `@layer ${expected}.important {`);
           includes(css, `@layer ${expected} {`);
         } else notIncludes(css, '@layer');
@@ -256,3 +256,29 @@ for (const mode of ['sort', 'layer'] as const) {
     }
   }
 }
+
+test('serialization groups adjacent layers without crossing intervening rules', () => {
+  const rules = [
+    { css: '.a{color:red}', layer: { name: 'global' } },
+    { css: '.b{color:blue}', layer: { name: 'global' } },
+    { css: '.c{color:green}', layer: { name: 'vendor' } },
+    { css: '.d{color:black}', layer: { name: 'global' } },
+  ];
+  const css = serializeOrderedRules(rules, { layer: true, layers: [], layerNamespace: 'css' });
+  includes(css, '@layer global {.a{color:red}\n.b{color:blue}}');
+  includes(css, '@layer vendor {.c{color:green}}\n@layer global {.d{color:black}}');
+  equal(css.match(/@layer global \{/g)?.length, 2);
+  assertOrder(css, ['.a', '.b', '.c', '.d']);
+});
+
+test('layer preamble declares roots and nested priorities once in configured order', () => {
+  equal(
+    sheetLayerOrder(['reset', 'global', 'css'], { layer: true, layers: ['reset', 'global', '$layer'] }),
+    '@layer reset, reset.important, global, global.important, css, css.important;',
+  );
+  equal(
+    sheetLayerOrder(['css.forms.controls', 'css.forms', 'css'], { layer: true, layers: ['$layer'] }),
+    '@layer css, css.important, css.forms, css.forms.important, css.forms.controls, css.forms.controls.important;',
+  );
+  equal(sheetLayerOrder([], { layer: true, layers: [] }), '');
+});

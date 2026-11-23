@@ -1,0 +1,249 @@
+---
+title: Priority
+description: Ordering controls for generated atomic CSS.
+---
+
+For the combined behavior of regular styles, local sheets, global sheets, layers,
+and important declarations, see [Style ordering and the cascade](./style-ordering.mdx).
+
+Atomic CSS is emitted in a stable priority order. The order is nested, not a
+single flat score.
+
+Lower buckets are emitted first. Higher buckets win later in the cascade.
+
+```txt
+value weight
+  direct selector bucket
+    parent selector bucket
+      media bucket
+        property bucket
+```
+
+Most app code does not need to think about this. It matters when a component has
+base styles, state styles, responsive styles, slot scopes, and explicit override
+weights all touching the same CSS property.
+
+For the full mental model, see [Priority And Rule Order](../design/priority-and-rule-order.mdx). For
+the guide version of this topic, see
+[Priority And Rule Order](../beyond-the-basics/priority-and-rule-order.mdx). For
+debugging generated priority buckets, see
+[Devtools And Sourcemaps](../beyond-the-basics/devtools-and-sourcemaps.mdx).
+
+## Value Weight
+
+Explicit value weight is the outermost override layer.
+
+```ts
+const strong = style({
+  color: style.weight('red', 1),
+});
+```
+
+A higher value weight wins over a lower value weight, even when the lower value
+is inside a selector or media rule.
+
+```ts
+const button = style({
+  color: style.weight('#111827', 1),
+}).hover({
+  color: '#2563eb',
+});
+```
+
+Here the weighted base color can still beat the unweighted hover color. Treat
+weights as the escape hatch for design-system rules that must stay above normal
+composition.
+
+## Selector Buckets
+
+Selector buckets keep state rules from being crossed by unrelated responsive or
+parent rules.
+
+```txt
+base
+parent selector
+direct selector
+parent + direct selector
+priority direct selector
+```
+
+Direct selectors come from methods like `.hover(...)`, `.active(...)`,
+`.focusVisible(...)`, and `.select(...)`.
+
+Parent selectors come from scopes:
+
+```ts
+const card = {
+  button: style.slot({ color: 'black' }).active({ color: 'red' }),
+};
+
+const parentHover = style.scope().hover([
+  card.button({ color: 'blue' }),
+]);
+```
+
+The parent hover rule is contextual. It does not beat the direct button active
+rule. If the parent state should override the button's active state, write the
+same direct state inside the scope:
+
+```ts
+const parentHoverButtonActive = style.scope().hover([
+  card.button().active({ color: 'purple' }),
+]);
+```
+
+That produces a parent + direct selector context.
+
+## Default State Priority
+
+The default `style` export uses `PrioritySelectors`. When matching states set
+the same CSS property, **each state below wins over every state above it**:
+
+| Priority | Chain method | CSS selector |
+| --- | --- | --- |
+| 1 — lowest | `.link()` | `:link` |
+| 2 | `.visited()` | `:visited` |
+| 3 | `.hover()` | `:hover` |
+| 4 | `.focusWithin()` | `:focus-within` |
+| 5 | `.focus()` | `:focus` |
+| 6 | `.focusVisible()` | `:focus-visible` |
+| 7 | `.active()` | `:active` |
+| 8 — highest | `.disabled()` | `:disabled` |
+
+For example, active wins over hover, and disabled wins over both. Placing
+`.active()` before `.hover()` or after it does not change that priority.
+
+Design systems can change this order with `selectorPriority(...)`:
+
+```ts
+import { selector, selectorPriority } from '@fluentic/style/selector';
+
+const selectors = {
+  hover: selector(':hover'),
+  focusVisible: selector(':focus-visible'),
+  active: selector(':active'),
+  pressed: selector('[aria-pressed="true"]'),
+  disabled: selector(':disabled'),
+};
+
+const prioritySelectors = selectorPriority(selectors, [
+  'hover',
+  'focusVisible',
+  'active',
+  'pressed',
+  'disabled',
+]);
+```
+
+The list is ordered from lower priority to higher priority.
+
+## Media Buckets
+
+Media is a convenience override inside the current selector bucket.
+
+```txt
+base
+base media
+base weighted media
+
+state selector
+state selector media
+state selector weighted media
+```
+
+This means base media can override base, but base media cannot override a state
+selector like hover, active, focus, or a custom selected state.
+
+```ts
+const button = style({
+  color: 'black',
+}).media('(max-width: 700px)', {
+  color: 'blue',
+}).hover({
+  color: 'red',
+});
+```
+
+At small widths, the media rule can override the base color. It still does not
+override the hover color.
+
+To override a state in media, write the media rule in the same state bucket:
+
+```ts
+const button = style({
+  color: 'black',
+}).hover({
+  color: 'red',
+}).media(
+  '(max-width: 700px)',
+  style({
+    color: 'blue',
+  }).hover({
+    color: 'purple',
+  }),
+);
+```
+
+Now the media block has a base media override and a hover media override.
+
+Media methods also accept a numeric priority as the first argument:
+
+```ts
+const panel = style().media(2, '(max-width: 700px)', {
+  padding: 12,
+});
+```
+
+Weighted media only wins inside the same selector bucket. It still cannot jump
+over a direct selector bucket.
+
+## Property Bucket
+
+Property priority is the innermost bucket. Longhands are emitted after the
+shorthands they refine.
+
+```ts
+const box = style({
+  margin: 4,
+  marginTop: 8,
+});
+```
+
+`marginTop` is emitted after `margin`.
+
+## Full Practical Order
+
+The practical order looks like this:
+
+```txt
+value weight 0
+  base
+    base media
+    base weighted media
+
+  parent selector
+    parent selector media
+    parent selector weighted media
+
+  direct selector
+    direct selector media
+    direct selector weighted media
+
+  parent + direct selector
+    parent + direct selector media
+    parent + direct selector weighted media
+
+  priority direct selector
+    priority direct selector media
+    priority direct selector weighted media
+
+value weight 1
+  ...same expansion...
+
+value weight 2
+  ...same expansion...
+```
+
+Use normal composition first. Use selector priority when a design system needs a
+consistent state order. Use value weights only when a rule must deliberately sit
+above normal selector and media behavior.

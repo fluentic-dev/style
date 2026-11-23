@@ -1,0 +1,173 @@
+---
+title: Installation
+description: Install Fluentic and configure the integration for your framework.
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Install Fluentic and add the integration for your framework to use the `css` prop in your app.
+
+## Install the package
+
+Fluentic is currently available as a beta release.
+
+<div className="package-install">
+<Tabs groupId="package-manager" defaultValue="pnpm">
+<TabItem value="pnpm" label="pnpm">
+
+```bash
+pnpm add @fluentic/style@beta
+```
+
+</TabItem>
+<TabItem value="npm" label="npm">
+
+```bash
+npm install @fluentic/style@beta
+```
+
+</TabItem>
+<TabItem value="yarn" label="yarn">
+
+```bash
+yarn add @fluentic/style@beta
+```
+
+</TabItem>
+<TabItem value="bun" label="bun">
+
+```bash
+bun add @fluentic/style@beta
+```
+
+</TabItem>
+</Tabs>
+</div>
+
+## Configure your framework
+
+Add the following options to your existing configuration.
+
+<Tabs groupId="framework" defaultValue="react" className="framework-tabs">
+<TabItem value="react" label="React + Vite">
+
+Place Fluentic before React so it can process your source before JSX is transformed.
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+
+export default defineConfig({
+  plugins: [
+    stylePlugin(),
+    react({ jsxImportSource: '@fluentic/style/plugin/jsx' }),
+  ],
+});
+```
+
+Set `jsxImportSource` in your app’s TypeScript config:
+
+```json title="tsconfig.app.json — compilerOptions"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+</TabItem>
+<TabItem value="next" label="Next.js">
+
+For the App Router, wrap your Next config with `stylePlugin`:
+
+```js title="next.config.mjs"
+import stylePlugin from '@fluentic/style/plugin/nextjs';
+
+export default stylePlugin({
+  // Keep your existing Next.js options here.
+});
+```
+
+```json title="tsconfig.json — compilerOptions"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+Add `StyleDev` to your root layout for development styles:
+
+```tsx title="app/layout.tsx"
+import { StyleDev } from '@fluentic/style/dev/rsc';
+import type { ReactNode } from 'react';
+import './globals.css';
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+      {process.env.NODE_ENV === 'development' && <StyleDev enableStyleDevUtils />}
+    </html>
+  );
+}
+```
+
+Static styles work in both server and client components.
+
+</TabItem>
+<TabItem value="preact" label="Preact + Vite">
+
+For client-side Preact, add Fluentic before the Preact plugin and keep your existing Preact JSX settings:
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite';
+import preact from '@preact/preset-vite';
+import { CssPropPresets, plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+
+export default defineConfig({
+  plugins: [stylePlugin({ cssProp: CssPropPresets.Preact }), preact()],
+});
+```
+
+Add the JSX types in your app entry:
+
+```ts title="src/main.tsx"
+import type {} from '@fluentic/style/types/preact';
+```
+
+Use `import type` here; this entry provides JSX types only.
+
+</TabItem>
+<TabItem value="solid" label="SolidJS + Vite">
+
+For client-side Solid, add Fluentic before the Solid plugin and keep your existing Solid JSX settings:
+
+```ts title="vite.config.ts"
+import { defineConfig } from 'vite';
+import solid from 'vite-plugin-solid';
+import { CssPropPresets, plugin as stylePlugin } from '@fluentic/style/plugin/vite';
+
+export default defineConfig({
+  plugins: [stylePlugin({ cssProp: CssPropPresets.Solid }), solid()],
+});
+```
+
+Add the JSX types in your app entry:
+
+```ts title="src/main.tsx"
+import type {} from '@fluentic/style/types/solid';
+```
+
+Use `import type` here; this entry provides JSX types only.
+
+</TabItem>
+</Tabs>
+
+## What's next?
+
+Continue to [Writing styles](./writing/object-styles.mdx) to explore CSS properties, states, responsive rules, and composition. For other bundlers or runtime-only setup, see [frameworks and rendering modes](./frameworks.mdx).

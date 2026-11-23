@@ -1,4 +1,7 @@
 import { createMDX } from 'fumadocs-mdx/next';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
 
 const docsBase = normalizeBase(process.env.DOCS_BASE ?? '/style');
 
@@ -23,12 +26,12 @@ const config = {
   output: 'export',
   reactStrictMode: true,
   trailingSlash: true,
+  transpilePackages: ['@docs/playground'],
   webpack(webpackConfig) {
     webpackConfig.resolve.alias = {
       ...webpackConfig.resolve.alias,
-      '#playground': new URL('./src/playground', import.meta.url).pathname,
+      '@babel/core$': require.resolve('@docs/playground/babel-browser'),
     };
-
     return webpackConfig;
   },
 };

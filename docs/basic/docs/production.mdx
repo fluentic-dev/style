@@ -1,0 +1,41 @@
+---
+title: Production builds
+description: How static extraction and runtime styling work together.
+---
+
+import DocLink from '@site/src/components/DocLink';
+
+The Fluentic plugin extracts statically known styles into atomic CSS during your normal application build. Styles that depend on props, state, or composition continue to resolve at runtime.
+
+## Static and dynamic styles
+
+```tsx title="Progress.tsx"
+import { style } from '@fluentic/style';
+
+const fill = style({
+  height: 8,
+  backgroundColor: '#7043ce',
+});
+
+export function Progress(props: { percent: number }) {
+  return <div css={[fill, style({ width: `${props.percent}%` })]} />;
+}
+```
+
+The height and background color are known at build time. The width comes from a prop. Keeping stable declarations outside the component makes that distinction clear without restricting dynamic styling.
+
+## Custom builders and source files
+
+The compiler needs to recognize the builders and files it processes. Built-in `style` imports are supported directly. Configured builders such as `cx` or `ui` need an `importSources` entry matching their import path.
+
+The [class-name guide](./writing/class-name-styles.mdx) and [custom builder guide](./design-system.mdx) show those registrations. Files outside the plugin's processing scope may remain on the runtime path.
+
+## Development metadata
+
+Development builds include metadata for tracing styles in DevTools. Production builds extract supported static declarations while preserving the behavior of composition, states, and themes. Dynamic inputs can still require runtime work.
+
+The [framework setup](./quick-start.mdx) selects the appropriate integration: the compiler-backed React JSX runtime, a framework adapter, or a runtime-only setup. These paths have different configuration requirements.
+
+## What's next?
+
+Explore <DocLink path='/docs/integrations/static-extraction/'>static extraction</DocLink> for compiler constraints and the <DocLink path='/docs/reference/plugin-options/'>plugin reference</DocLink> for processing options. [Frameworks and rendering modes](./frameworks.mdx) covers the available integrations.

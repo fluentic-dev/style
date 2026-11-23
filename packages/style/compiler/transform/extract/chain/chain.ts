@@ -2,7 +2,6 @@ import { getAtomicClassName, getClassNameDedupe, getClassNameHashLength } from '
 import { LayerDefaultPriority } from '../../../../atomic/layer';
 import { buildAtomicRule, getAtomicRuleLayerPriority } from '../../../../atomic/rule';
 import { getTokenOverrideValue, getTokenVar, getTokenVarName } from '../../../../atomic/token';
-import { getCssVarRawFallback } from '../../../../atomic/utils/cssVar';
 import { shouldAppendCssPx } from '../../../../atomic/value';
 import { getLocalVarName } from '../../../../atomic/var';
 import {
@@ -3114,7 +3113,14 @@ function addRuntimeStyleItem(
     ? combineSelectors(selector, sourceItem.selector)
     : selector ?? sourceItem.selector;
   const itemAtRules = mergeAtRules(atRules, sourceItem.atRule);
-  const variable = sourceItem.variable;
+  const variable: ExtractedItemValue | undefined = sourceItem.token
+    ? [
+      ITEM_VALUE_TYPE_VARIABLE,
+      getTokenVarName(sourceItem.token, cssConfig.tokenNameFormat),
+      sourceItem.token,
+      shouldAppendCssPx(sourceItem.property) ? ITEM_VALUE_NUMBER_PX : undefined,
+    ]
+    : sourceItem.variable;
   const runtimeValue = variable?.[0] === ITEM_VALUE_TYPE_VARIABLE
     ? getCompiledRuntimeValue(variable[2])
     : undefined;
@@ -3351,7 +3357,7 @@ function addStyleItems(
 
     const shouldUseVariable = !!(token || runtimeValue);
 
-    const variableName = shouldUseVariable && propertyLoc && propertyLoc.variable !== false
+    const variableName = !token && shouldUseVariable && propertyLoc && propertyLoc.variable !== false
       ? getLocalVarName(
         cssConfig.runtimeMode === CompilerRuntimeMode.RscDev
           ? fileId
@@ -3367,9 +3373,7 @@ function addStyleItems(
       : null;
 
     const valueStr = variableName
-      ? token
-        ? getCssVarRawFallback(variableName, getTokenVar(token, cssConfig.tokenNameFormat))
-        : `var(${variableName})`
+      ? `var(${variableName})`
       : token
       ? getTokenVar(token, cssConfig.tokenNameFormat)
       : String(value);

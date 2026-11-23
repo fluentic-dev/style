@@ -8,12 +8,22 @@ This file keeps repository-only details out of the public package README.
 | --------------------- | ------------------------------------------------------------------------------------ |
 | `packages/style`      | The publishable `@fluentic/style` package.                                           |
 | `docs/app`            | Next.js/Fumadocs static documentation app.                                           |
-| `docs/content`        | MDX documentation content package, including the browser playground.                 |
+| `docs/content`        | MDX documentation content package.                                                   |
+| `docs/basic`          | Docusaurus guided documentation app.                                                 |
+| `docs/playground`     | Shared editor, compiler, examples, and preview for both docs apps.                   |
 | `examples/basic`      | Basic Vite example.                                                                  |
 | `examples/bundlers/*` | Minimal bundler integration examples.                                                |
 | `examples/nextjs`     | Next.js App Router example for Turbopack, Webpack, SSR, SSG, RSC, and client routes. |
 | `examples/snapshots`  | Snapshot fixture generation for compiler output.                                     |
 | `benchmark`           | Benchmark runner and benchmark apps.                                                 |
+
+The new guided documentation app lives in `docs/basic`. Run `pnpm --filter @docs/basic dev`
+to preview it at `http://localhost:6790/style/`, or `pnpm --filter @docs/basic build`
+to generate `docs/basic/build`. The existing docs app and content remain in their current locations.
+Both apps serve their own `/playground/` route from the shared `@docs/playground` package;
+see [the playground guide](docs/playground/README.md) for architecture and checks.
+Set `ADVANCED_DOCS_URL=http://localhost:6789/style` to link the new app to a locally running
+existing docs app instead of the live documentation.
 
 ## Local Development
 

@@ -1,0 +1,78 @@
+---
+title: Compose & override styles
+description: Combine base styles, variants, and parent-provided styles.
+---
+
+import LessonPreview from '@site/src/components/LessonPreview';
+
+import DocLink from '@site/src/components/DocLink';
+
+Composition keeps base styles, variants, and overrides separate. A reusable component can combine its own styles with a `css` prop, giving each instance room to customize its appearance.
+
+```tsx
+import { style, type StyleProp } from '@fluentic/style';
+import type { ReactNode } from 'react';
+
+const button = style({
+  border: 0,
+  padding: '12px 24px',
+  borderRadius: 10,
+  backgroundColor: '#7043ce',
+  color: 'white',
+});
+const compact = style({
+  padding: '6px 12px',
+});
+
+type ButtonProps = {
+  compact?: boolean;
+  css?: StyleProp;
+  children: ReactNode;
+};
+
+export function Button(props: ButtonProps) {
+  return (
+    <button type="button" css={[button, props.compact && compact, props.css]}>
+      {props.children}
+    </button>
+  );
+}
+```
+
+## Override order
+
+Base styles come first, variants next, and external overrides last.
+
+Falsy entries are ignored. For matching declarations under the same condition, the later value wins. Here, `props.css` can override the variant because it appears last.
+
+```tsx
+const wide = style({
+  width: '100%',
+});
+
+<Button compact css={wide}>Save changes</Button>
+```
+
+## Overrides within states
+
+Base, hover, and media declarations apply under different conditions. To change a hover color, compose another hover rule; a later base color does not remove the earlier hover rule.
+
+If an override looks surprising, inspect which conditions are active. See [debugging](../debugging.mdx) and the <DocLink path='/docs/beyond-the-basics/priority-and-rule-order/'>priority guide</DocLink>.
+
+## Root styling and component parts
+
+A `css` prop only styles the element your component forwards it to. If consumers need to customize a label, icon, or other internal part, continue to [reusable components](../components.mdx).
+
+## Component defaults and overrides
+
+<LessonPreview kind="composition" />
+
+The array order is part of the component’s styling behavior. Put `props.css` before a variant when that variant should take precedence over external overrides.
+
+The `ReactNode` type above is React-specific. In Preact use its children types; in Solid use its JSX types and read reactive props inside JSX. The style values and ordering stay the same.
+
+The example focuses on styling props. A reusable button can also forward the native attributes and events its component interface supports.
+
+## What's next?
+
+[Dynamic values](./dynamic-values.mdx) covers styles driven by measurements, props, and state.

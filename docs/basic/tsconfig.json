@@ -1,0 +1,13 @@
+{
+  "extends": "@docusaurus/tsconfig",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "strict": true
+  },
+  "include": [
+    "src",
+    "docusaurus.config.ts",
+    "sidebars.ts",
+    "../playground/src/babel-standalone.d.ts"
+  ]
+}

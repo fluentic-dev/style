@@ -1,0 +1,77 @@
+---
+title: States & responsive styles
+description: Keep interaction states and media rules with your styles.
+---
+
+import LessonPreview from '@site/src/components/LessonPreview';
+
+A chain keeps each condition beside the style it changes. Use selectors for interaction states, media queries for viewport and user preferences, and composition for application state.
+
+## Hover and focus
+
+`.hover()` and `.focusVisible()` accept the same CSS properties as the base style:
+
+```tsx
+import { style } from '@fluentic/style';
+
+const button = style({
+  backgroundColor: '#7043ce',
+  color: 'white',
+  padding: '12px 24px',
+}).hover({
+  backgroundColor: '#31205e',
+  boxShadow: '0 6px 16px rgb(49 32 94 / 0.35)',
+}).focusVisible({
+  outline: '2px solid #7043ce',
+  outlineOffset: 3,
+});
+
+<button css={button}>Save changes</button>
+```
+
+These chains produce CSS selectors. Use `.focusVisible()` for a keyboard-focus outline and keep the native `disabled` attribute for disabled controls.
+
+## Media queries
+
+Use `.media()` with a CSS media query:
+
+```tsx
+const layout = style({
+  display: 'grid',
+  gridTemplateColumns: 'repeat(3, 1fr)',
+  gap: 24,
+}).media('(max-width: 700px)', {
+  gridTemplateColumns: '1fr',
+  gap: 12,
+});
+```
+
+The query stays with the style it changes. Custom selector configurations and presets can also supply named breakpoint methods.
+
+## Class-name chains
+
+With the configured `cx` from [class-name styles](./class-name-styles.mdx), use the same pattern:
+
+```tsx
+const button = cx('bg-violet-600', 'px-4', 'py-2')
+  .hover('bg-violet-700')
+  .md('px-6');
+```
+
+The `md` method comes from the Tailwind preset. Its meaning follows your preset configuration.
+
+## Conditions from application state
+
+For conditions that come from props or state, compose values in a `css` array. See [composing and overriding styles](./composition.mdx).
+
+## Choose the right condition
+
+<LessonPreview kind="states" />
+
+Use selector chains for browser states such as hover and focus, `.media()` for viewport and user preferences, and style arrays for conditions from application data. This keeps the condition with the style it affects.
+
+Pair hover styles with visible keyboard-focus styles. Keep behavior on the element: a disabled appearance still needs the native `disabled` attribute.
+
+## What's next?
+
+[Composition](./composition.mdx) covers how base styles, variants, and external overrides work together.

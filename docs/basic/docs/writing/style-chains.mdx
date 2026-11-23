@@ -1,0 +1,167 @@
+---
+title: Understand style chains
+description: Apply styles for states, selectors, media queries, and container queries.
+---
+
+Chain methods describe when styles apply. `.hover()` uses a CSS pseudo-class; `.media()` wraps styles in a media query. The style object supplies the properties that change.
+
+## Each state has its own styles
+
+```tsx
+import { style } from '@fluentic/style';
+
+const button = style({
+  backgroundColor: '#7043ce',
+  color: 'white',
+})
+  .hover({
+    backgroundColor: '#31205e',
+  })
+  .active({
+    backgroundColor: '#251b39',
+  })
+  .focusVisible({
+    outline: '2px solid #7043ce',
+    outlineOffset: 3,
+  });
+
+<button css={button}>Save changes</button>
+```
+
+These methods define separate states. `.active()` after `.hover()` means “when active,” not “only when hovered and active.” To require both states together, use `.select(':hover:active', { ... })`.
+
+The same idea applies to class-name styles: `.hover('bg-violet-700')` describes a hover state, with utility names in place of CSS properties.
+
+## Built-in methods
+
+The default `style` function includes methods for common CSS selectors and queries:
+
+| Method | Applies styles when… |
+| --- | --- |
+| `.hover(...)` | The element matches `:hover`. |
+| `.active(...)` | The element matches `:active`. |
+| `.focusVisible(...)` | The element matches `:focus-visible`. |
+| `.disabled(...)` | The element matches `:disabled`. |
+| `.checked(...)` | The element matches `:checked`. |
+| `.before(...)`, `.after(...)` | Styling the element's `::before` or `::after`. |
+| `.select('[data-state="open"]', ...)` | The element matches a custom selector. |
+| `.media('(min-width: 768px)', ...)` | The viewport or device matches the media query. |
+| `.container('(min-width: 400px)', ...)` | A query container matches the size condition. |
+| `.supports('(display: grid)', ...)` | The browser supports the CSS feature. |
+
+Your editor can suggest the available methods. The [selector reference](../reference/selectors.mdx#built-in-methods) lists the full set. Presets and custom functions can provide a different set—for example, the Tailwind preset adds `.md()`.
+
+## State priority is explicit
+
+You can place `.hover()`, `.active()`, and `.disabled()` in any order. With the built-in `style`, active beats hover, and disabled beats both when they set the same property. Their configured selector priority decides the winner, not where the methods appear in the chain.
+
+For the built-in `style`, **each state below wins over every state above it** when they match and set the same property at the same value weight:
+
+| Priority | Chain method | CSS selector |
+| --- | --- | --- |
+| 1 — lowest | `.link()` | `:link` |
+| 2 | `.visited()` | `:visited` |
+| 3 | `.hover()` | `:hover` |
+| 4 | `.focusWithin()` | `:focus-within` |
+| 5 | `.focus()` | `:focus` |
+| 6 | `.focusVisible()` | `:focus-visible` |
+| 7 | `.active()` | `:active` |
+| 8 — highest | `.disabled()` | `:disabled` |
+
+This describes precedence between different states. For repeated declarations under the same condition, composition order still matters. [Understand style priorities](./style-priorities.mdx) brings those rules together.
+
+## Put states inside a media query
+
+`.media()` accepts either a style object or a complete `style(...)` chain. Use a chain when states should apply only within that query:
+
+```tsx
+const smallScreen = '(max-width: 600px)';
+
+const button = style({
+  padding: '12px 24px',
+  backgroundColor: '#7043ce',
+})
+  .media(smallScreen, style({
+    padding: '6px 12px',
+  })
+    .hover({
+      backgroundColor: '#31205e',
+    }));
+```
+
+On small screens, the button gets smaller padding and a darker background on hover. On wider screens, neither change applies.
+
+Query constants can be imported from another file. The compiler resolves them as long as it can trace them to a value at build time.
+
+## Respond to a container
+
+Use `.container()` when a component should respond to the space its container gives it:
+
+```tsx
+const region = style({
+  containerType: 'inline-size',
+});
+
+const card = style({
+  padding: 12,
+})
+  .container('(min-width: 400px)', style({
+    padding: 24,
+  })
+    .hover({
+      backgroundColor: '#eee8f8',
+    }));
+
+<section css={region}>
+  <article css={card}>Your workspace</article>
+</section>
+```
+
+`region` establishes the size-query container. The card gets the larger padding and hover background when that container is at least 400px wide. The query measures the container, not the viewport.
+
+## Combine conditions
+
+At-rule methods can contain another chain, including other at-rule methods:
+
+```ts
+const panel = style({
+  display: 'block',
+})
+  .supports('(display: grid)', style({
+    display: 'grid',
+    gap: 12,
+  })
+    .media('(min-width: 768px)', {
+      gridTemplateColumns: 'repeat(2, 1fr)',
+    }));
+```
+
+The two-column layout requires both grid support and a viewport at least 768px wide. Nest conditions when both must match; keep them at the same level when they should apply independently.
+
+## Keep the chain connected
+
+The compiler needs the methods connected to the original function call:
+
+```ts
+// ❌ Continuing a chain from a variable.
+const base = style({
+  color: 'white',
+});
+const button = base.hover({
+  color: '#eee8f8',
+});
+
+// ✅ Keep the chain connected to style(...).
+const button = style({
+  color: 'white',
+})
+  .hover({
+    color: '#eee8f8',
+  });
+```
+
+For reuse, compose completed styles through the `css` prop. This applies to custom functions and class-name functions too.
+
+## What's next?
+
+You can define `.open()` for a data attribute or `.mobile()` for a breakpoint, and choose which state wins. [Custom chain methods](./custom-chains.mdx) shows how to configure those methods and their selectors.

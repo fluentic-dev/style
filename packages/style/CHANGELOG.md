@@ -1,5 +1,13 @@
 # @fluentic/style
 
+## 0.1.0-beta.20
+
+### Patch Changes
+
+- Use token CSS variables directly for token-valued properties and apply combineStyle overrides on consuming elements. Overrides share one token value per element and inherit into descendants; dynamic non-token values retain property-local variables.
+
+  Reduce extracted CSS output by grouping consecutive rules in the same layer and emitting one ordered layer declaration. Preserve important sublayer reservations so late-loaded rules keep their cascade precedence.
+
 ## 0.1.0-beta.19
 
 ### Patch Changes

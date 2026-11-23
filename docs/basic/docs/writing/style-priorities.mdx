@@ -1,0 +1,270 @@
+---
+title: Understand style priorities
+description: Know which declaration wins across composition, states, queries, scopes, and explicit weights.
+---
+
+A button can be hovered, active, and inside a small-screen media query at the same time. If all three set its background, which one wins?
+
+Fluentic gives those relationships explicit rules. You can change a state order once for your design system, give one responsive rule priority over another, or raise a particular value above the normal state rules.
+
+## Start with a concrete conflict
+
+```ts
+import { style } from '@fluentic/style';
+
+const button = style({
+  color: 'black',
+})
+  .hover({
+    color: 'red',
+  })
+  .media('(max-width: 600px)', {
+    color: 'blue',
+  });
+```
+
+| Element state | Winning color | Why |
+| --- | --- | --- |
+| Wider than 600px, not hovered | Black | Only the base color applies. |
+| At most 600px, not hovered | Blue | A matching media rule overrides the base color. |
+| Hovered, at any width | Red | The direct hover state has higher priority than a base media rule. |
+
+Putting `.media()` last doesn't make blue beat red. The media rule changes the base color; it doesn't replace the hover color.
+
+To change hover on small screens, put a hover style inside the query:
+
+```ts
+const button = style({
+  color: 'black',
+})
+  .hover({
+    color: 'red',
+  })
+  .media('(max-width: 600px)', style({
+    color: 'blue',
+  })
+    .hover({
+      color: 'purple',
+    }));
+```
+
+Now the hovered button is purple on small screens and red on wider screens. Both declarations describe hover, so the matching media condition can decide between them.
+
+## Composition resolves matching declarations
+
+Use `css` arrays to combine styles. For the same property, selector, query context, weight, and importance, the later declaration replaces the earlier one:
+
+```tsx
+const base = style({
+  color: 'black',
+  padding: 16,
+});
+
+const compact = style({
+  padding: 8,
+});
+
+<button css={[base, compact]}>Save changes</button>
+```
+
+The button keeps `color: 'black'` and gets `padding: 8`. Fluentic resolves the competing padding declarations while composing the styles. It does not depend on the order of class names in the DOM.
+
+Different conditions remain separate. A later base color does not remove an earlier hover color. Two different media queries also remain separate, even if both happen to match the current viewport.
+
+Repeated declarations in the same chain follow this matching-context behavior too. Repeating `.hover({ color: ... })` replaces an earlier hover color; moving `.active()` before `.hover()` does not change their configured state priority.
+
+## States have their own priority
+
+With the built-in `style`, active wins over hover, and disabled wins over both. The [default state table](./style-chains.mdx#state-priority-is-explicit) lists the full order.
+
+A custom function can choose a different order with `selectorPriority`. For example, a component library can make its selected state beat hover but still lose to disabled. [Custom chain methods](./custom-chains.mdx#choose-which-state-wins) shows that configuration.
+
+Media, container, and supports rules are evaluated **within each selector context**. You can think of a context as a group of declarations for the same state:
+
+| Within one state context, lower to higher priority | Example |
+| --- | --- |
+| No query | Hover color at all widths |
+| A matching query | Hover color on small screens |
+| A matching query with explicit priority | A hover color you deliberately rank above other hover queries |
+
+The same ordering exists separately for base styles, hover, active, and other states. Increasing a base query's priority doesn't move it into the active-state group.
+
+## Choose between overlapping queries
+
+When two queries can match, assign priorities if their relationship needs to be explicit:
+
+```ts
+const panel = style({
+  padding: 24,
+})
+  .media(1, '(max-width: 900px)', {
+    padding: 16,
+  })
+  .media(2, '(max-width: 600px)', {
+    padding: 8,
+  });
+```
+
+| Viewport width | Winning padding |
+| --- | --- |
+| More than 900px | 24px |
+| 601–900px | 16px |
+| At most 600px | 8px: both queries match, and priority 2 beats priority 1. |
+
+The number is the first argument. A positive query priority beats an unweighted query in the same selector and parent context. Fluentic doesn't infer your intended priority from which breakpoint is narrower.
+
+Container queries support the same argument:
+
+```ts
+const panel = style({
+  padding: 24,
+})
+  .media(1, '(max-width: 900px)', {
+    padding: 16,
+  })
+  .container(2, '(max-width: 400px)', {
+    padding: 8,
+  });
+```
+
+If both match, the container rule wins. Attach `containerType: 'inline-size'` to an ancestor to establish the query container. Media and container queries share the same query-priority comparison; neither kind automatically outranks the other.
+
+For a custom query method, you can set its default priority in the selector definition:
+
+```ts
+const selectors = {
+  narrow: selector('@container (max-width: 400px)', 2, 'container'),
+};
+```
+
+This gives `.narrow({ ... })` query priority 2. Custom at-rule definitions can carry priority metadata too; the numeric call argument is supported by media and container methods, not `.supports()`.
+
+### Nested conditions
+
+When query priorities tie, a declaration nested in more at-rules is ordered later. For example, a rule inside both `@supports` and `@media` comes after a rule inside just `@supports`, provided the earlier priority comparisons also tie.
+
+For nested at-rules, Fluentic uses the **highest query priority** in the nesting chain, not the sum. Nesting another condition doesn't multiply its priority.
+
+When different matching queries have equal priority and depth, source discovery order can decide the result. Give them explicit priorities when one must always win; don't rely on module loading order.
+
+## Raise one value above the state rules
+
+`style.weight` applies to an individual value:
+
+```ts
+const button = style({
+  color: style.weight('black', 1),
+})
+  .hover({
+    color: 'red',
+  })
+  .media(10, '(max-width: 600px)', {
+    color: 'blue',
+  });
+```
+
+Black wins in all three cases. Its value weight is 1; the other colors have the default weight of 0. Fluentic compares value weight before state or query priority.
+
+This is different from media priority: **value weight can cross state contexts; media priority stays inside its context**. A media priority of 10 doesn't beat a value weight of 1 because they are different controls, not points added to one score.
+
+If the competing values have the same weight, the usual state and query rules decide again. Use `style.weight` when a specific declaration should deliberately override those rules. It changes Fluentic's priority; it does not add `!important`.
+
+## Parent states and component overrides
+
+A scope can style a component part based on a parent state. A state on the part itself takes precedence over a parent-only condition:
+
+```ts
+const parts = {
+  button: style.slot({
+    color: 'black',
+  })
+    .active({
+      color: 'red',
+    }),
+};
+
+const parentHover = style.scope().hover([
+  parts.button({
+    color: 'blue',
+  }),
+]);
+```
+
+When this scope is applied to the component, parent hover supplies blue, but the button's active state still supplies red while active.
+
+To override that active color under parent hover, target active inside the scope too:
+
+```ts
+const parentHover = style.scope().hover([
+  parts.button().active({
+    color: 'purple',
+  }),
+]);
+```
+
+Both competing declarations now target active on the button. The one with the additional parent-hover condition wins when that condition matches.
+
+A direct scope override without a parent selector also has a tiebreaker over the slot's original declarations in the same state and query context. That lets an outside `background` override a slot's `backgroundColor`, rather than losing solely because it is a shorthand. [Reusable components](../components.mdx) explains how slots and scopes are applied.
+
+## Longhands refine shorthands
+
+When the earlier priority comparisons tie, a longhand comes after the shorthand it refines:
+
+```ts
+const box = style({
+  marginTop: 8,
+  margin: 4,
+});
+```
+
+The top margin is 8px; the other sides have 4px spacing. Writing `margin` last doesn't erase `marginTop`. Fluentic orders broad shorthands first, intermediate properties next, and longhands last.
+
+Property order is the final comparison. A shorthand with a higher value weight can still beat a lower-weight longhand. To replace an existing longhand through ordinary composition, set that longhand explicitly.
+
+## The complete comparison order
+
+For competing generated declarations, Fluentic compares these fields from top to bottom. **The first difference decides their priority**; later fields only break ties.
+
+| Compared first → last | What it decides |
+| --- | --- |
+| 1. Value weight | Higher `style.weight` wins; ordinary values use 0. |
+| 2. Direct selector context | Base, parent-only, ordinary direct selector, then explicitly prioritized direct selectors. |
+| 3. Parent selector context | Within the same direct state, an additional parent condition and its selector priority. |
+| 4. Query priority | No at-rule, ordinary at-rule, then explicitly prioritized at-rule. Media and container weights participate here. |
+| 5. At-rule depth | More nested at-rules come later when query priority ties. |
+| 6. Scope origin | A direct scope override without a parent selector comes after the original slot rule in an otherwise matching context. |
+| 7. Property priority | Shorthand, intermediate property, then longhand. |
+
+This order explains why a heavily weighted media query doesn't beat a higher-priority state, and why a weighted value can. Matching declarations are resolved by composition; declarations with different contexts remain available for the browser to match.
+
+## Atomic CSS and deduplication
+
+Fluentic generates atomic rules: individual property/value declarations with their selector and query context. That makes a padding override independent of the button's color or hover rules.
+
+There are two related kinds of deduplication:
+
+- **During composition:** later declarations replace earlier declarations with the same property and matching context, weight, and importance.
+- **In production CSS:** identical declarations can share one generated rule across different style definitions. Different states, query conditions, or weights keep their own identities.
+
+For example, two independent `style({ color: 'purple' })` definitions can share a production rule. A purple hover color is a different rule. Development can keep rules separate by call site so DevTools can trace each declaration to its source.
+
+## How this meets the CSS cascade
+
+These priorities control Fluentic's generated rule ordering. The browser still applies importance, cascade layers, and selector specificity. The examples above use ordinary Fluentic styles within the same priority system; value weight isn't a universal override for unrelated CSS selectors.
+
+Extracted CSS uses sorted rule order. Runtime priority layers can encode the same ordering in CSS sublayers. Equal-specificity rules have the intended priority in either form, but arbitrary external selectors need their cascade relationship considered too.
+
+For styles that must compete with global CSS or a third-party stylesheet, choose the appropriate control:
+
+| Control | Use it for |
+| --- | --- |
+| `css.layers` and sheet `layer` | Ordering groups such as reset, component, and override layers. |
+| Global sheet `order` | Placing a whole global sheet before or after other generated rules. |
+| Local sheet `specificity` | Changing the generated anchor's specificity. |
+| `style.important(...)` | Marking a declaration important, with Fluentic's layer handling. |
+
+The [style ordering and cascade reference](../reference/style-ordering.mdx) covers those controls, including the reversed layer order for important declarations.
+
+## What's next?
+
+[Custom style functions](./custom-style-functions.mdx) lets you package your choice of selectors, priorities, object properties, and utility names into functions your components can use.

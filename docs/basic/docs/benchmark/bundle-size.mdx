@@ -1,0 +1,103 @@
+---
+title: Bundle Size
+description: Bundle size report for Fluentic runtime entry points.
+---
+
+Fluentic includes a bundle report script for the package entry points that
+matter to app builds.
+
+Run it from the workspace root:
+
+```sh
+pnpm --filter @fluentic/style build
+pnpm --filter @fluentic/style report:bundle
+```
+
+After building the package, the report follows the compiled dependency graph for each
+entry, then creates a small minified bundle for the imported public surface.
+
+## Current Report
+
+The following table is generated from the current package build. Run
+`pnpm report:bundle:update` to refresh this page, `reports/bundle-size.md`, and
+`reports/bundle-size.json`. Run `pnpm report:bundle:check` to fail on stale values
+or mismatched package/tool versions. Release preparation requires both commands;
+`pnpm release:check` runs the check automatically after building the package.
+
+{/* bundle-report:start */}
+
+Measured package: **@fluentic/style@0.1.0-beta.19**.
+
+Vite 8.0.16; gzip level 9; KiB = 1,024 bytes.
+Each row is an independent bundle; rows are not additive.
+
+| Entry | Graph raw | Graph gzip | Min raw | Min gzip | Exact min gzip (bytes) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| dev runtime | 230.58 KiB | 48.63 KiB | 88.40 KiB | 29.23 KiB | 29932 |
+| extracted production runtime | 37.75 KiB | 8.21 KiB | 14.16 KiB | 4.98 KiB | 5097 |
+| extracted jsx runtime | 20.60 KiB | 4.90 KiB | 7.28 KiB | 2.78 KiB | 2849 |
+| extracted generated helpers | 7.28 KiB | 1.93 KiB | 1.81 KiB | 878 B | 878 |
+| optional named tokens | 7.98 KiB | 2.23 KiB | 2.70 KiB | 1.20 KiB | 1225 |
+| production runtime | 230.00 KiB | 48.45 KiB | 88.33 KiB | 29.21 KiB | 29910 |
+| server dev rsc runtime | 231.99 KiB | 50.11 KiB | 91.55 KiB | 30.33 KiB | 31056 |
+| server production runtime | 232.21 KiB | 49.77 KiB | 67.96 KiB | 22.55 KiB | 23094 |
+| server extracted production runtime | 37.83 KiB | 8.22 KiB | 14.38 KiB | 5.04 KiB | 5163 |
+| optional extracted sheet helper | 7.28 KiB | 1.93 KiB | 792 B | 430 B | 430 |
+| optional client sheet helpers | 166.00 KiB | 37.31 KiB | 51.25 KiB | 17.74 KiB | 18168 |
+| nextjs dev client support | 154.38 KiB | 35.02 KiB | 53.96 KiB | 18.83 KiB | 19282 |
+
+{/* bundle-report:end */}
+
+The generated-helper measurement includes `createExtractedValues`. The optional
+named-token row retains `createNamedToken`, `createNamedTokens`, and
+`getNamedToken` from `@fluentic/style/dialect`; these are not automatically
+included by the main entry.
+
+Each row is an independent bundle, not an additive cost: shared code is deduplicated
+when an app bundles these imports together. The extracted production runtime row
+retains `getClassName`, `combineStyle`, `mergeClassName`, and `mergeStyle`; it does
+not measure every export, such as standalone `getToken`. The report excludes
+React and Next.js host externals, extracted CSS, and application-specific token/style definitions.
+
+The optional extracted sheet row retains `createExtractedSheet` separately from
+the historical generated-helper surface, making the local-sheet helper visible
+without changing the earlier comparison surface.
+
+The optional client sheet row retains `createSheet` and `createGlobalSheet` from
+the production CSS entry. The Next.js dev client row retains `StyleDev`, including
+seed adoption, rule ordering, and devtools. These optional rows overlap with the
+full runtime; adding their numbers to other rows would double-count shared code.
+Global sheets disappear from extracted JavaScript and become CSS during builds.
+
+The `externals` field in the JSON report lists bare imports in the unbundled graph.
+Only the `externalized` host imports are excluded from the minified measurements;
+other dependencies, including `css-what`, are bundled. This distinguishes graph
+imports from dependencies actually omitted from the measured bundle.
+
+## Reading The Columns
+
+| Column | Meaning |
+| --- | --- |
+| `graph raw` | Total size of compiled files reachable from the entry before bundling. |
+| `graph gzip` | Gzip size of those reachable files. |
+| `min raw` | Size of the generated minified bundle for the selected public imports. |
+| `min gzip` | Gzip size of that generated minified bundle. |
+
+## What To Compare
+
+For an app using static extraction, the most relevant client-side entries are:
+
+| Entry | Why it matters |
+| --- | --- |
+| extracted production runtime | Runtime helpers used by extracted styles. |
+| extracted jsx runtime | JSX runtime used with extracted production output. |
+| extracted generated helpers | Helpers used by generated extracted modules. |
+
+For runtime-only app styling, compare `production runtime`.
+
+For React Server Components, compare `server production runtime` or `server
+extracted production runtime`, depending on whether your build extracts styles.
+
+Development entries include debug metadata, sourcemaps, element markers, and
+runtime inspection helpers. They are useful for development ergonomics, but they
+are not the production budget to optimize first.

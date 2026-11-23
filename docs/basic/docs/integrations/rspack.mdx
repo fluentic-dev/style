@@ -1,0 +1,116 @@
+---
+title: Rspack
+description: Configure Fluentic Style with the Rspack adapter and SWC.
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Install the package:
+
+<div className="package-install">
+<Tabs groupId="package-manager" defaultValue="pnpm">
+  <TabItem value="pnpm" label="pnpm">
+
+```sh
+pnpm add @fluentic/style
+```
+
+  </TabItem>
+  <TabItem value="npm" label="npm">
+
+```sh
+npm install @fluentic/style
+```
+
+  </TabItem>
+  <TabItem value="yarn" label="yarn">
+
+```sh
+yarn add @fluentic/style
+```
+
+  </TabItem>
+  <TabItem value="bun" label="bun">
+
+```sh
+bun add @fluentic/style
+```
+
+  </TabItem>
+</Tabs>
+</div>
+
+Add the Fluentic Rspack plugin and configure React's automatic JSX runtime to
+use Fluentic's JSX entry:
+
+```js title="rspack.config.mjs"
+import { plugin as stylePlugin } from '@fluentic/style/plugin/rspack';
+import rspack from '@rspack/core';
+
+export default (_, argv) => {
+  const dev = argv.mode === 'development';
+
+  return {
+    devtool: dev ? 'cheap-module-source-map' : 'source-map',
+    resolve: {
+      extensions: ['.tsx', '.ts', '.jsx', '.js'],
+    },
+    module: {
+      rules: [
+        {
+          test: /\.[jt]sx?$/,
+          type: 'javascript/auto',
+          use: {
+            loader: 'builtin:swc-loader',
+            options: {
+              jsc: {
+                parser: {
+                  syntax: 'typescript',
+                  tsx: true,
+                },
+                transform: {
+                  react: {
+                    runtime: 'automatic',
+                    importSource: '@fluentic/style/plugin/jsx',
+                  },
+                },
+              },
+            },
+          },
+        },
+        {
+          test: /\.css$/i,
+          type: 'css/auto',
+        },
+      ],
+    },
+    experiments: {
+      css: true,
+    },
+    plugins: [
+      stylePlugin(),
+      new rspack.HtmlRspackPlugin({
+        template: './index.html',
+      }),
+    ],
+  };
+};
+```
+
+Keep TypeScript aligned with the same JSX import source:
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fluentic/style/plugin/jsx"
+  }
+}
+```
+
+Enable Rspack CSS support so the adapter can emit extracted CSS through the
+bundler.
+
+See [Plugin Options](./options.mdx) for `include`, `exclude`, `devSourcemap`,
+`getSourcemapFilePath`, and the development sourcemap modes.

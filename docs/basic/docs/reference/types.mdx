@@ -1,0 +1,50 @@
+---
+title: Types
+description: Common public TypeScript types.
+---
+
+```ts
+import type {
+  CSSProperties,
+  CSS,
+  CSSPropertyName,
+  CSSValueExclude,
+  StyleProp,
+  StyleTheme,
+  StyleTokenInput,
+  TokenTheme,
+  CombinedStyle,
+  CombinedStyleFor,
+  ClassNameProps,
+  ClassNameResult,
+  ClassNameFn,
+  ClassNameTransform,
+  StyleFn,
+  StyleTransform,
+} from '@fluentic/style';
+```
+
+Use `StyleProp` for one rendered element.
+
+Use `StyleTheme` for component scopes, arrays, and conditional theme inputs.
+
+Use `TokenTheme` for values returned by `createTheme(...)`.
+
+Use `CombinedStyleFor<typeof styles>` for values returned by `combineStyle`.
+
+Use `StyleTokenInput<T>` when a prop accepts either a plain value or a
+token.
+
+Use `ClassNameProps` and `ClassNameResult` with [Runtime Interop](./runtime-interop.mdx).
+
+`CSS`, `CSSProperties`, `CSSPropertyName`, and `CSSValueExclude` describe CSS
+property/value types used by style builders and custom transforms.
+
+Use `StyleFn` when a helper accepts a style builder created by
+`createStyleFn(...)`.
+
+Use `StyleTransform` with custom object builders and `ClassNameTransform` with
+custom class-name builders.
+
+Use `ClassNameFn` when a helper accepts a builder returned by
+`createClassNameFn(...)`.

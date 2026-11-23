@@ -1,0 +1,61 @@
+---
+title: Start Here
+description: Learn the core styling model in the order you are likely to need it.
+---
+
+Start here if you are new to Fluentic.
+
+Learn is the practical path through the core model.
+
+Need setup first? Start with [Installation](../quick-start.mdx).
+
+Need API details? Go to [Reference](../reference/style.mdx).
+
+Need bundler details? Follow [Integrations](../integrations/overview.mdx).
+
+The path is:
+
+```txt
+element styles       -> style() + css prop
+style composition    -> css arrays
+local states/media   -> style chains
+style builder        -> selectors + custom methods
+component parts      -> style.slot()
+outside styles       -> style.scope()
+style resolution     -> StyleTheme + combineStyle()
+styling cases        -> scopes
+public style surface -> exposeStyle()
+theme tokens         -> createToken() / createTokens()
+theme values         -> createValues()
+themes               -> createTheme()
+debugging            -> source-aware styles
+shipping             -> bundler integration + static extraction
+```
+
+You do not need all of this on day one.
+
+Start with `style()` and the `css` prop. Add the next concept only when the
+component or app needs it.
+
+| Step | What you learn |
+| --- | --- |
+| Style one element | Use `style()` with the `css` prop. |
+| Compose element styles | Combine base, conditional, and override styles in order. |
+| Add local states and media | Keep hover, focus, and media changes readable. |
+| Understand the style builder | See how builder methods handle selectors and media. |
+| Organize styles | Move repeated element styles into shared TypeScript files. |
+| Build components | See why reusable components need named styleable parts. |
+| Name component parts | Use slots for the component parts other code can style. |
+| Style component parts from outside | Use scopes to describe outside styles for public parts. |
+| Accept and resolve outside styles | Pass scopes through props and resolve them inside the component. |
+| Use scopes for component styling cases | Cover variants, state, responsive rules, and parent interactions. |
+| Expose styleable parts | Export only the slots consumers may depend on. |
+| Theming with tokens | Use tokens for stable themeable names. |
+| Theming with values | Use values when app literals should stay visible. |
+| Create themes | Use `createTheme()` to provide values for a subtree. |
+| Combine app and component themes | Use app themes and component themes together. |
+| Debug styles | Trace generated CSS back to authored styles. |
+| Build for production | Choose the production integration for your build system. |
+
+Continue to [Style One Element](./style-one-element.mdx) to write the
+smallest useful style.

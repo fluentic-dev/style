@@ -1,0 +1,71 @@
+---
+title: Reference Overview
+description: Public APIs grouped by import path.
+---
+
+Reference pages document the public APIs you import when building with
+Fluentic.
+
+Use Learn for the usage path, Beyond the Basics for advanced patterns, and
+Design for architecture.
+
+The main import is:
+
+```ts
+import { style, combineStyle, createTheme } from '@fluentic/style';
+```
+
+Other public subpaths are:
+
+```txt
+@fluentic/style/css       named CSS at-rule helpers
+@fluentic/style/selector  custom selector builders and presets
+@fluentic/style/utils     component-library utilities
+@fluentic/style/dev       development utilities
+@fluentic/style/dev/rsc   RSC development bridge
+```
+
+## Core Styling
+
+- [style](./style.mdx) creates styles for one rendered element.
+- [style.slot](./style-slot.mdx) names component styling targets.
+- [style.scope](./style-scope.mdx) groups slot overrides into reusable component
+  themes.
+- [combineStyle](./combine-style.mdx) resolves styles, themes, scopes, and caller
+  overrides for one component boundary.
+- [bindScope](./bind-scope.mdx) binds scopes to component style objects.
+- [exposeStyle](./expose-style.mdx) helps component libraries expose their style
+  contract.
+
+## Tokens And Themes
+
+- [createTokens](./create-tokens.mdx) creates named token families.
+- [createValues](./create-values.mdx) creates reusable value scales.
+- [createTheme](./create-theme.mdx) groups token overrides into a theme.
+- [Numeric Values](./numeric-values.mdx) explains how numbers become CSS values.
+
+## Custom Builders
+
+- [createStyleFn](./create-style-fn.mdx) creates object-style builders for design
+  systems.
+- [Transforms](./transforms.mdx) map custom style fields or class names to CSS.
+- [createClassNameFn](./create-class-name-fn.mdx) creates class-name style chains.
+- [Selectors](./selectors.mdx) documents selector constructors and presets.
+- [Priority](./priority.mdx) explains resolution and rule ordering.
+
+## Runtime And CSS Interop
+
+- [Runtime Interop](./runtime-interop.mdx) covers `getClassName(...)`,
+  `getToken(...)`, `mergeClassName(...)`, and `mergeStyle(...)`.
+- [Runtime And Dev](./runtime-and-dev.mdx) covers runtime configuration and
+  development utilities.
+- [CSS Helpers](./css-helpers.mdx) covers named at-rules.
+- [createSheet](./create-sheet.mdx) creates scoped selector sheets for third-party DOM and named-layer app resets.
+- [createStyleTarget](./create-style-target.mdx) applies styles to external
+  elements.
+
+## Supporting Pages
+
+- [Imports](./imports.mdx) lists public import paths.
+- [Types](./types.mdx) lists common TypeScript types.
+- [Plugin Options](./plugin-options.mdx) lists shared adapter and compiler options.

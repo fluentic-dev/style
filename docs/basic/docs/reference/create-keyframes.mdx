@@ -1,0 +1,29 @@
+---
+title: createKeyframes
+description: Create a named @keyframes reference for animationName.
+---
+
+Import from `@fluentic/style/css`:
+
+```ts
+import { createKeyframes } from '@fluentic/style/css';
+```
+
+```ts
+const pulse = createKeyframes({
+  '0%': { opacity: 1 },
+  '50%': { opacity: 0.6 },
+  '100%': { opacity: 1 },
+});
+
+const dot = style({
+  animationName: pulse,
+  animationDuration: '1200ms',
+});
+```
+
+The optional second argument is a stable id object:
+
+```ts
+createKeyframes(frames, { name: 'pulse', id: 'pulse' });
+```

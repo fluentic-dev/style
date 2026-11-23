@@ -1,0 +1,20 @@
+---
+title: fontSrc
+description: Build a safe font src descriptor string for createFontFace.
+---
+
+Import from `@fluentic/style/css`:
+
+```ts
+import { fontSrc } from '@fluentic/style/css';
+```
+
+```ts
+const src = fontSrc('/fonts/Brand.woff2', 'woff2');
+```
+
+Use it inside `createFontFace(...)` when the source should be emitted as:
+
+```css
+url("...") format("...")
+```

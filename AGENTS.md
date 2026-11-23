@@ -16,3 +16,11 @@ implementation sources. Keep copy-ready GitHub notes in `releases/v<VERSION>.md`
 Before every release, build the package, run `pnpm report:bundle:update`, and review
 the generated reports and bundle-size docs. `pnpm release:check` must confirm that
 these measurements match the release version and current build.
+
+## Public repository confidentiality
+
+Do not include private consumer application or organization names, identifying
+local checkout paths, or internal project details in source, tests, documentation,
+release notes, commit messages, or tags. Describe consumer validation generically
+and omit identifying measurements or examples. Audit staged content and outgoing
+history before pushing. Keep local test tarballs out of commits.

@@ -1,0 +1,38 @@
+---
+title: exposeStyle
+description: Export only the slots and tokens that are part of a component's public styling contract.
+---
+
+Import from `@fluentic/style/utils`:
+
+```ts
+import { exposeStyle } from '@fluentic/style/utils';
+```
+
+`exposeStyle(styles)` walks an object and keeps only public styling values:
+
+- slots;
+- tokens;
+- nested objects containing slots or tokens.
+
+Plain `style()` values are dropped because they are implementation details.
+
+```ts
+const styles = {
+  root: style.slot({ borderRadius: 12 }),
+  title: style.slot({ fontWeight: 700 }),
+  measure: style({ position: 'absolute' }),
+};
+
+export const CardStyle = exposeStyle({
+  root: styles.root,
+  title: styles.title,
+  measure: styles.measure,
+});
+```
+
+`CardStyle` exposes `root` and `title`.
+
+It does not expose `measure`.
+
+Use it when publishing a component library or shared component API.

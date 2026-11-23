@@ -1,0 +1,144 @@
+---
+title: Custom chain methods
+description: Define your own selectors, breakpoint methods, and state priorities.
+---
+
+A chain method is a name for a CSS selector or query. You can define `.open()` once for `[data-state="open"]`, then use it anywhere without repeating that selector.
+
+## Name a state and a breakpoint
+
+The keys in `selectors` become method names. `selector(...)` defines the CSS behind each method:
+
+```ts title="src/styles.ts"
+import { createStyleFn } from '@fluentic/style';
+import { selector, selectorPriority } from '@fluentic/style/selector';
+
+const selectors = selectorPriority({
+  hover: selector(':hover'),
+  focusVisible: selector(':focus-visible'),
+  open: selector('[data-state="open"]'),
+  disabled: selector(':disabled'),
+  mobile: selector('@media (max-width: 600px)', 'media'),
+}, ['hover', 'focusVisible', 'open', 'disabled']);
+
+export const { style: ui } = createStyleFn({
+  selectors,
+});
+```
+
+This function uses normal CSS properties. Only its chain methods are customized:
+
+```tsx
+import { ui } from './styles';
+
+const menuButton = ui({
+  padding: '12px 24px',
+  backgroundColor: '#7043ce',
+})
+  .hover({
+    backgroundColor: '#31205e',
+  })
+  .open({
+    backgroundColor: '#251b39',
+  })
+  .disabled({
+    backgroundColor: '#64748b',
+  })
+  .mobile({
+    padding: '6px 12px',
+  });
+
+<button data-state="open" css={menuButton}>Projects</button>
+```
+
+`.open()` matches the attribute on the element; it doesn't set the attribute. `.mobile()` wraps its styles in the media query you defined.
+
+## Choose which state wins
+
+`selectorPriority` lists states from lower to higher priority. In this configuration:
+
+| When these states overlap | Winning background |
+| --- | --- |
+| Hover + open | Open: `#251b39` |
+| Hover + disabled | Disabled: `#64748b` |
+| Open + disabled | Disabled: `#64748b` |
+
+Moving `.open()` before `.hover()` in a component doesn't change these outcomes. Change the priority list when you want a different relationship across all components using this function.
+
+The list sets priority for the named selectors. A selector omitted from the list keeps its existing priority; it is not removed. Media and container priorities are configured separately, as explained in [style priorities](./style-priorities.mdx#choose-between-overlapping-queries).
+
+## Keep built-in methods or replace them
+
+`createStyleFn({ selectors })` uses exactly the set you pass. The example above doesn't include `.active()` or `.container()` because it doesn't define them.
+
+To keep the full built-in set and add methods, spread `Selectors` and assign the state order you want:
+
+```ts
+import { Selectors, selector, selectorPriority } from '@fluentic/style/selector';
+
+const selectors = selectorPriority({
+  ...Selectors,
+  open: selector('[data-state="open"]'),
+}, [
+  'link',
+  'visited',
+  'hover',
+  'focusWithin',
+  'focus',
+  'focusVisible',
+  'active',
+  'open',
+  'disabled',
+]);
+```
+
+Here, open beats active, and disabled beats open. The [selector reference](../reference/selectors.mdx) describes the full and minimal built-in sets.
+
+## Accept an argument
+
+Methods can also accept values. For a finite set of state names, use an enum validator:
+
+```ts
+import { assertEnumSelector, selector } from '@fluentic/style/selector';
+
+const selectors = {
+  tone: selector('[data-tone="$"]', assertEnumSelector('neutral', 'danger')),
+};
+```
+
+Add this definition to your selector configuration. Then `.tone('danger', { color: '#b91c1c' })` applies to elements with `data-tone="danger"`. The validator checks the argument and provides its accepted TypeScript values.
+
+For a query argument, use `$$` and the corresponding query validator:
+
+```ts
+const selectors = {
+  above: selector('@media (min-width: $$)', 'media'),
+  containerAbove: selector('@container (min-width: $$)', 'container'),
+};
+```
+
+These definitions provide `.above('768px', { ... })` and `.containerAbove('400px', { ... })`. They can also accept a complete style chain, just like `.media()` and `.container()`.
+
+The [custom selector reference guide](../beyond-the-basics/custom-chain-methods.mdx#selector-arguments) covers templates and validators for other argument types.
+
+## Register the custom function
+
+Add `ui` to your existing plugin configuration so the compiler uses its selectors:
+
+```ts
+import { ui } from './src/styles';
+
+stylePlugin({
+  importSources: [{
+    source: '**/styles',
+    name: 'ui',
+    styleFn: ui,
+  }],
+});
+```
+
+The glob should match the imports your components use. The [class-name setup example](./class-name-styles.mdx#register-it-with-the-compiler) shows where this option goes in a full Vite configuration.
+
+## What's next?
+
+Selector priority handles competing states. [Understand style priorities](./style-priorities.mdx) explains how it combines with composition, media and container queries, value weights, and shorthand properties.

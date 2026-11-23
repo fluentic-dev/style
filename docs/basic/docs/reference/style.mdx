@@ -1,0 +1,83 @@
+---
+title: style
+description: Default style builder for one rendered element.
+---
+
+`style(...)` creates style data for one rendered element.
+
+```ts
+import { style } from '@fluentic/style';
+
+const button = style({
+  padding: '8px 12px',
+}).hover({
+  opacity: 0.86,
+});
+```
+
+Pass the result to the `css` prop:
+
+```tsx
+export function Button() {
+  return <button css={button}>Save</button>;
+}
+```
+
+## Arguments
+
+`style(styleObject)` accepts a style object whose keys are CSS properties and
+whose values can be plain CSS values, tokens, CSS helper values, weighted
+values, or important values.
+
+```ts
+const panel = style({
+  display: 'grid',
+  gap: 12,
+  padding: 16,
+  backgroundColor: color.surface,
+});
+```
+
+Numbers are converted using the numeric value rules. See
+[Numeric Values](./numeric-values.mdx).
+
+## Chain Methods
+
+The returned style chain has selector methods:
+
+```ts
+const item = style({
+  opacity: 0.78,
+})
+  .hover({ opacity: 1 })
+  .focusVisible({ outline: '2px solid currentColor' })
+  .media('(max-width: 640px)', { padding: 12 });
+```
+
+The default `style` export uses the priority selector set, so common
+states such as hover, focus, active, and disabled resolve predictably.
+
+## Helpers
+
+`style` also exposes helper methods:
+
+| Helper | Use |
+| --- | --- |
+| `style.slot(...)` | Name a component part that callers may style. |
+| `style.scope(...)` | Group slot overrides into a reusable component theme. |
+| `style.selector(...)` | Target descendant or external DOM selectors for sheets. |
+| `style.weight(value, weight)` | Give one declaration value explicit priority over another. |
+| `style.important(value, native?)` | Emit an important declaration. Layered sheets use a first `.important` child by default; pass `true` to keep native layer placement. See [ordering](./style-ordering.mdx#important-declarations-managed-or-native). |
+| `style.raw(...)` | Create a reusable style object fragment. |
+| `style.plain(...)` | Create a reusable plain object fragment for object spreads. |
+| `style.keyframes(...)` | Create keyframes that use the same style shape. |
+| `style.merge(target, style)` | Merge another style chain into an existing chain. |
+
+## When To Use It
+
+Use `style(...)` for local element styles and reusable style constants.
+
+Use [style.slot](./style-slot.mdx) when the style belongs to a component part that
+callers should override. Use [createStyleFn](./create-style-fn.mdx) when a design
+system needs custom typed fields. Use [createClassNameFn](./create-class-name-fn.mdx)
+when authors should write class-name tokens instead of object fields.
